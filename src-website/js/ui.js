@@ -12,7 +12,6 @@ import {
 // ---------------------------------------------------------
 export function initSidebar() {
 
-    // Nur echte Navigationseinträge (mit data-target)
     document.querySelectorAll(".sidebar li[data-target]").forEach(li => {
 
         li.addEventListener("click", () => {
@@ -31,24 +30,26 @@ export function initSidebar() {
                 sec.classList.remove("active")
             );
 
-            // Spezialfall: Items → Übersicht anzeigen
+            // Spezialfall: Items
             if (target === "editor-items") {
 
-                // Items-Container aktivieren
-                document.getElementById("editor-items").classList.add("active");
+                const editor = document.getElementById("editor-items");
+                const overview = document.getElementById("items-overview");
+                const form = document.getElementById("item-editor-form");
 
-                // Übersicht aktivieren
-                document.getElementById("items-overview").classList.add("active");
-                document.getElementById("item-editor-form").classList.remove("active");
+                editor.classList.add("active");
+                overview.classList.add("active");
+                form.classList.remove("active");
 
                 return;
             }
 
-            // Standard: Ziel anzeigen
+            // Standard
             const section = document.getElementById(target);
             if (section) section.classList.add("active");
         });
     });
+
 
 
     // -----------------------------------------------------
@@ -79,9 +80,9 @@ export function initSidebar() {
 
         mapData.items.push(newItem);
 
-        // Sidebar aktualisieren
+        /* Sidebar aktualisieren
         const event = new CustomEvent("items-updated");
-        document.dispatchEvent(event);
+        document.dispatchEvent(event);*/
 
         // Übersicht aktualisieren
         const overviewEvent = new CustomEvent("items-overview-update");

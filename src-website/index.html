@@ -15,8 +15,7 @@
     <!-- HEADER 1 -->
     <header class="header">
         <div class="header-left">
-            <button id="btn-back">← Zurück</button>
-            <button id="btn-forward">Vor →</button>
+            <button id="btn-new-map">+ NEW MAP</button>
         </div>
 
         <div class="header-center">
@@ -32,7 +31,6 @@
 
     <!-- HEADER 2 -->
     <header class="header-secondary">
-        <button id="btn-new-map">+ NEW MAP</button>
         <div class="map-list" id="map-list"></div>
     </header>
 
@@ -126,150 +124,361 @@
                 </div>
             </div>
 
-<!-- ITEM OVERVIEW (Tabelle) -->
-<div id="items-overview" class="editor-section active">
-    <h2>Alle Items</h2>
-    <button id="btn-save-item" class="small-btn">Speichern</button>
-    <button id="btn-create-item" class="small-btn">+ Neues Item</button>
-
-    <table class="item-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Effect</th>
-                <th>Trigger</th>
-                <th>Spawn-Typ</th>
-                <th>Wahrscheinlichkeit</th>
-            </tr>
-        </thead>
-        <tbody id="item-table-body"></tbody>
-    </table>
-</div>
-
-<!-- ITEM EDITOR (Formular) -->
+<!-- ITEM EDITOR (GANZER BEREICH) -->
 <div id="editor-items" class="editor-section">
-    <h2>Item bearbeiten</h2>
 
-    <!-- IDENTITY -->
-    <h3>IDENTITY</h3>
-    <div class="editor-grid">
-        <div class="field">
-            <label for="item-id">ID</label>
-            <input type="text" id="item-id">
-        </div>
+    <!-- ITEM OVERVIEW (Tabelle) -->
+    <div id="items-overview" class="items-overview active">
+        <h2>Alle Items</h2>
+        <button id="btn-save-item" class="small-btn">Speichern</button>
+        <button id="btn-create-item" class="small-btn">+ Neues Item</button>
 
-        <div class="field">
-            <label for="item-name">Name</label>
-            <input type="text" id="item-name">
-        </div>
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Effect</th>
+                    <th>Trigger</th>
+                    <th>Spawn-Typ</th>
+                    <th>Wahrscheinlichkeit</th>
+                </tr>
+            </thead>
+            <tbody id="item-table-body"></tbody>
+        </table>
     </div>
 
-    <!-- BEHAVIOR -->
-    <h3>BEHAVIOR</h3>
-    <div class="editor-grid">
-        <div class="field">
-            <label for="item-effect-type">Effect Type</label>
-            <select id="item-effect-type">
-                <option value="impulse">Impulse</option>
-                <option value="heal">Heal</option>
-                <option value="buff">Buff</option>
-                <option value="debuff">Debuff</option>
-            </select>
-        </div>
+    <!-- ITEM FORMULAR -->
+    <div id="item-editor-form" class="editor-form">
+        <h2>Item bearbeiten</h2>
 
-        <div class="field">
-            <label for="item-trigger">Trigger</label>
-            <select id="item-trigger">
-                <option value="onUse">On Use</option>
-                <option value="onHit">On Hit</option>
-                <option value="onPickup">On Pickup</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- FREQUENCY -->
-    <h3>FREQUENCY</h3>
-
-    <div class="tab-bar" id="freq-tabs">
-        <button data-tab="freq-rounds" class="active">Rundenbasiert</button>
-        <button data-tab="freq-player">Spielerbasiert</button>
-        <button data-tab="freq-dynamic">Dynamisch</button>
-    </div>
-
-    <div class="tab-content active" id="freq-rounds">
-        <div class="field">
-            <label>Intervall (Runden)</label>
-            <input type="number" id="freq-rounds-interval" min="1" value="3">
-        </div>
-    </div>
-
-    <div class="tab-content" id="freq-player">
-        <div class="field">
-            <label>Modus</label>
-            <div class="radio-row">
-                <label><input type="radio" name="player-mode" value="kills" checked> Nach Kills</label>
-                <label><input type="radio" name="player-mode" value="last"> Letzte Spieler</label>
-            </div>
-        </div>
-
-        <div class="editor-grid">
-            <div class="field" id="field-player-kills">
-                <label>Kills‑Intervall</label>
-                <input type="number" id="freq-player-kills" min="1" value="3">
-            </div>
-
-            <div class="field" id="field-player-last" style="display:none;">
-                <label>Letzte‑Spieler‑Schwelle</label>
-                <input type="number" id="freq-player-last" min="1" value="4">
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-content" id="freq-dynamic">
+        <!-- IDENTITY -->
+        <h3>IDENTITY</h3>
         <div class="editor-grid">
             <div class="field">
-                <label>Health‑Threshold (%)</label>
-                <input type="number" id="freq-dyn-health" min="1" max="100" value="20">
+                <label for="item-id">ID</label>
+                <input type="text" id="item-id">
             </div>
 
             <div class="field">
-                <label>Boost‑Factor</label>
-                <input type="number" id="freq-dyn-boost" min="1" value="5">
+                <label for="item-name">Name</label>
+                <input type="text" id="item-name">
             </div>
         </div>
-    </div>
 
-    <!-- PROBABILITY -->
-    <h3>PROBABILITY</h3>
-    <div class="field">
-        <label>Wahrscheinlichkeit (%)</label>
-        <input type="number" id="item-probability" min="0" max="100" value="25">
-    </div>
+        <!-- BEHAVIOR -->
+        <h3>BEHAVIOR</h3>
+        <div class="editor-grid">
+            <div class="field">
+                <label for="item-effect-type">Effect Type</label>
+                <select id="item-effect-type">
+                    <option value="impulse">Impulse</option>
+                    <option value="heal">Heal</option>
+                    <option value="buff">Buff</option>
+                    <option value="debuff">Debuff</option>
+                </select>
+            </div>
 
-    <!-- SPAWN -->
-    <h3>SPAWN</h3>
+            <div class="field">
+                <label for="item-trigger">Trigger</label>
+                <select id="item-trigger">
+                    <option value="onUse">On Use</option>
+                    <option value="onHit">On Hit</option>
+                    <option value="onPickup">On Pickup</option>
+                </select>
+            </div>
+        </div>
 
-    <div class="tab-bar" id="spawn-tabs">
-        <button data-tab="spawn-points" class="active">Spawnpunkte</button>
-        <button data-tab="spawn-areas">Spawnbereiche</button>
-    </div>
+        <!-- FREQUENCY -->
+        <h3>FREQUENCY</h3>
+        <div class="tab-bar" id="freq-tabs">
+            <button data-tab="freq-rounds" class="active">Rundenbasiert</button>
+            <button data-tab="freq-player">Spielerbasiert</button>
+            <button data-tab="freq-dynamic">Dynamisch</button>
+        </div>
 
-    <div class="tab-content active" id="spawn-points">
-        <button id="btn-add-spawnpoint" class="small-btn">+ Spawnpunkt</button>
-        <ul id="spawnpoint-list" class="spawn-list"></ul>
-    </div>
+        <div class="tab-content active" id="freq-rounds">
+            <div class="field">
+                <label>Intervall (Runden)</label>
+                <input type="number" id="freq-rounds-interval" min="1" value="3">
+            </div>
+        </div>
 
-    <div class="tab-content" id="spawn-areas">
-        <button id="btn-add-area" class="small-btn">+ Bereich</button>
-        <div id="area-list" class="accordion"></div>
+        <div class="tab-content" id="freq-player">
+            <div class="field">
+                <label>Modus</label>
+                <div class="radio-row">
+                    <label><input type="radio" name="player-mode" value="kills" checked> Nach Kills</label>
+                    <label><input type="radio" name="player-mode" value="last"> Letzte Spieler</label>
+                </div>
+            </div>
+
+            <div class="editor-grid">
+                <div class="field" id="field-player-kills">
+                    <label>Kills‑Intervall</label>
+                    <input type="number" id="freq-player-kills" min="1" value="3">
+                </div>
+
+                <div class="field" id="field-player-last" style="display:none;">
+                    <label>Letzte‑Spieler‑Schwelle</label>
+                    <input type="number" id="freq-player-last" min="1" value="4">
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="freq-dynamic">
+            <div class="editor-grid">
+                <div class="field">
+                    <label>Health‑Threshold (%)</label>
+                    <input type="number" id="freq-dyn-health" min="1" max="100" value="20">
+                </div>
+
+                <div class="field">
+                    <label>Boost‑Factor</label>
+                    <input type="number" id="freq-dyn-boost" min="1" value="5">
+                </div>
+            </div>
+        </div>
+
+        <!-- PROBABILITY -->
+        <h3>PROBABILITY</h3>
+        <div class="field">
+            <label>Wahrscheinlichkeit (%)</label>
+            <input type="number" id="item-probability" min="0" max="100" value="25">
+        </div>
+
+        <!-- SPAWN -->
+        <h3>SPAWN</h3>
+        <div class="tab-bar" id="spawn-tabs">
+            <button data-tab="spawn-points" class="active">Spawnpunkte</button>
+            <button data-tab="spawn-areas">Spawnbereiche</button>
+        </div>
+
+        <div class="tab-content active" id="spawn-points">
+            <button id="btn-add-spawnpoint" class="small-btn">+ Spawnpunkt</button>
+            <ul id="spawnpoint-list" class="spawn-list"></ul>
+        </div>
+
+        <div class="tab-content" id="spawn-areas">
+            <button id="btn-add-area" class="small-btn">+ Bereich</button>
+            <div id="area-list" class="accordion"></div>
+        </div>
     </div>
 </div>
+
 
 
             <!-- OTHER EDITORS -->
-            <div id="editor-hazards" class="editor-section"><h2>Hazards</h2></div>
-            <div id="editor-modes" class="editor-section"><h2>Modi</h2></div>
-            <div id="editor-ai" class="editor-section"><h2>AI Parameter</h2></div>
+            <div id="editor-hazards" class="editor-section">
+
+    <h2>Hazards</h2>
+
+    <div class="editor-split">
+
+        <!-- Liste links -->
+        <div class="editor-list-panel">
+            <button id="btn-add-hazard" class="small-btn">+ Neuer Hazard</button>
+            <ul id="hazard-list" class="editor-list"></ul>
+        </div>
+
+        <!-- Details rechts -->
+        <div class="editor-detail-panel">
+
+            <div class="field-small">
+                <label for="hazard-type">Typ</label>
+                <select id="hazard-type">
+                    <option value="push_zone">Push Zone</option>
+                    <option value="slide_zone">Slide Zone</option>
+                    <option value="sticky_zone">Sticky Zone</option>
+                    <option value="kill_zone">Kill Zone</option>
+                </select>
+            </div>
+
+            <div class="editor-grid">
+
+                <div class="field">
+                    <label>Position X</label>
+                    <input type="number" id="haz-pos-x">
+                </div>
+
+                <div class="field">
+                    <label>Position Y</label>
+                    <input type="number" id="haz-pos-y">
+                </div>
+
+                <div class="field">
+                    <label>Breite</label>
+                    <input type="number" id="haz-size-w">
+                </div>
+
+                <div class="field">
+                    <label>Höhe</label>
+                    <input type="number" id="haz-size-h">
+                </div>
+
+            </div>
+
+            <div id="hazard-params" class="field"></div>
+
+            <div class="editor-row">
+                <button id="btn-delete-hazard" class="small-btn danger">Löschen</button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+            <div id="editor-modes" class="editor-section">
+
+    <h2>Modus</h2>
+
+    <!-- MODUS-AUSWAHL -->
+    <div class="editor-row">
+        <div class="field-small">
+            <label for="mode-select">Modus wählen</label>
+            <select id="mode-select">
+                <option value="last_man_standing">Last Man Standing</option>
+                <option value="knockout_race">Knockout Race</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- LAST MAN STANDING -->
+    <div id="mode-lms" class="editor-block">
+        <h3>Last Man Standing</h3>
+
+        <div class="editor-grid">
+
+            <div class="field">
+                <label>Items aktiv</label>
+                <input type="checkbox" id="lms-items">
+            </div>
+
+            <div class="field">
+                <label>Hazards aktiv</label>
+                <input type="checkbox" id="lms-hazards">
+            </div>
+
+            <div class="field">
+                <label>Unentschieden erlauben</label>
+                <input type="checkbox" id="lms-ties">
+            </div>
+
+        </div>
+    </div>
+
+    <!-- KNOCKOUT RACE -->
+    <div id="mode-ko" class="editor-block" style="display:none;">
+        <h3>Knockout Race</h3>
+
+        <div class="editor-grid">
+
+            <div class="field">
+                <label>Punkte zum Sieg</label>
+                <input type="number" id="ko-points" min="1" value="5">
+            </div>
+
+            <div class="field">
+                <label>Respawn aktiv</label>
+                <input type="checkbox" id="ko-respawn">
+            </div>
+
+            <div class="field">
+                <label>Respawn Delay (Runden)</label>
+                <input type="number" id="ko-delay" min="1" value="2">
+            </div>
+
+            <div class="field">
+                <label>Max. Respawns pro Runde</label>
+                <input type="number" id="ko-maxrespawn" min="1" value="1">
+            </div>
+
+            <div class="field">
+                <label>Items aktiv</label>
+                <input type="checkbox" id="ko-items">
+            </div>
+
+            <div class="field">
+                <label>Hazards aktiv</label>
+                <input type="checkbox" id="ko-hazards">
+            </div>
+
+        </div>
+    </div>
+
+    <button id="btn-save-mode" class="small-btn">Speichern</button>
+
+</div>
+
+
+            <!-- AI PARAMETER -->
+<div id="editor-ai" class="editor-section">
+
+    <h2>AI Parameter</h2>
+
+    <div class="editor-row">
+        <div class="field-small">
+            <label for="ai-difficulty">Schwierigkeitsgrad</label>
+            <select id="ai-difficulty">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+                <option value="insane">Insane</option>
+                <option value="custom" disabled>Custom</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="editor-grid">
+
+        <div class="field ai-field">
+            <label>Aggressivität</label>
+            <div class="ai-slider-row">
+                <input type="range" id="ai-aggressiveness" min="0" max="100">
+                <input type="number" id="ai-aggressiveness-num" min="0" max="100">
+            </div>
+        </div>
+
+        <div class="field ai-field">
+            <label>Risikobereitschaft</label>
+            <div class="ai-slider-row">
+                <input type="range" id="ai-risk" min="0" max="100">
+                <input type="number" id="ai-risk-num" min="0" max="100">
+            </div>
+        </div>
+
+        <div class="field ai-field">
+            <label>Item-Priorität</label>
+            <div class="ai-slider-row">
+                <input type="range" id="ai-item" min="0" max="100">
+                <input type="number" id="ai-item-num" min="0" max="100">
+            </div>
+        </div>
+
+        <div class="field ai-field">
+            <label>Hazard-Awareness</label>
+            <div class="ai-slider-row">
+                <input type="range" id="ai-hazard" min="0" max="100">
+                <input type="number" id="ai-hazard-num" min="0" max="100">
+            </div>
+        </div>
+
+        <div class="field ai-field">
+            <label>Fehlerquote</label>
+            <div class="ai-slider-row">
+                <input type="range" id="ai-error" min="0" max="100">
+                <input type="number" id="ai-error-num" min="0" max="100">
+            </div>
+        </div>
+
+    </div>
+
+    <button id="btn-save-ai" class="small-btn">Speichern</button>
+
+</div>
+
 
         </main>
 

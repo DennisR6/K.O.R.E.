@@ -1,3 +1,5 @@
+import { mapData } from "./state.js";
+
 import { initSidebar, initNewMapButton, initDownload, initImport } from "./ui.js";
 import { initMapEditor } from "./editor-map.js";
 import { initItemsEditor } from "./editor-items.js";
@@ -12,13 +14,13 @@ window.addEventListener("DOMContentLoaded", () => {
     initDownload();
     initImport();
 
-    initMapEditor();
-    initItemsEditor();
-    initHazardsEditor();
-    initModesEditor();
-    initAIEditor();
+    initMapEditor(mapData);
+    initItemsEditor(mapData);
+    initHazardsEditor(mapData);
+    initModesEditor(mapData);
+    initAIEditor(mapData);
 
-    initPreview();
+    initPreview(mapData);
 
     console.log("Slipstrike Editor vollständig initialisiert");
 });
