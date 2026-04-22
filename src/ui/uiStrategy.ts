@@ -1,8 +1,8 @@
 import type { Drawer, RenderContext, Renderer } from "../engine/RenderContext";
 
-export interface UIStrategy extends Drawer, Renderer {
+import assets from "../assets/assets.ts";
 
-}
+export interface UIStrategy extends Drawer, Renderer { }
 
 
 
@@ -44,6 +44,7 @@ export class DefaultUI implements UIStrategy {
 			})
 		}
 		{//Text for the Turn
+			assets.Textborder(ctx, 60, 60, 100, 50, "blue", "123", () => { })
 			ctx.setFillColor("white")
 			ctx.drawRect(495, 80, 80, 30)
 			ctx.setFillColor("black")

@@ -9,11 +9,12 @@ import { initAIEditor } from "./editor-ai.js";
 import { initPreview } from "./preview.js";
 
 window.addEventListener("DOMContentLoaded", () => {
-    initSidebar();
-    initNewMapButton();
-    initDownload();
-    initImport();
+	initSidebar();
+	initNewMapButton();
+	initDownload();
+	initImport();
 
+<<<<<<< HEAD
     initMapEditor(mapData);
     initItemsEditor(mapData);
     initHazardsEditor(mapData);
@@ -21,6 +22,15 @@ window.addEventListener("DOMContentLoaded", () => {
     initAIEditor(mapData);
 
     initPreview(mapData);
+=======
+	initMapEditor();
+	initItemsEditor();
+	initHazardsEditor();
+	initModesEditor();
+	initAIEditor();
 
-    console.log("Slipstrike Editor vollständig initialisiert");
+	initPreview();
+>>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
+
+	console.log("Slipstrike Editor vollständig initialisiert");
 });
