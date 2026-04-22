@@ -12,12 +12,7 @@ import {
 // ---------------------------------------------------------
 export function initSidebar() {
 
-<<<<<<< HEAD
     document.querySelectorAll(".sidebar li[data-target]").forEach(li => {
-=======
-	// Nur echte Navigationseinträge (mit data-target)
-	document.querySelectorAll(".sidebar li[data-target]").forEach(li => {
->>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
 
 		li.addEventListener("click", () => {
 
@@ -35,7 +30,6 @@ export function initSidebar() {
 				sec.classList.remove("active")
 			);
 
-<<<<<<< HEAD
             // Spezialfall: Items
             if (target === "editor-items") {
 
@@ -46,22 +40,10 @@ export function initSidebar() {
                 editor.classList.add("active");
                 overview.classList.add("active");
                 form.classList.remove("active");
-=======
-			// Spezialfall: Items → Übersicht anzeigen
-			if (target === "editor-items") {
-
-				// Items-Container aktivieren
-				document.getElementById("editor-items").classList.add("active");
-
-				// Übersicht aktivieren
-				document.getElementById("items-overview").classList.add("active");
-				document.getElementById("item-editor-form").classList.remove("active");
->>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
 
 				return;
 			}
 
-<<<<<<< HEAD
             // Standard
             const section = document.getElementById(target);
             if (section) section.classList.add("active");
@@ -74,19 +56,6 @@ export function initSidebar() {
     // NEUES ITEM AUS DER NAVIGATION
     // -----------------------------------------------------
     document.getElementById("btn-add-item").addEventListener("click", () => {
-=======
-			// Standard: Ziel anzeigen
-			const section = document.getElementById(target);
-			if (section) section.classList.add("active");
-		});
-	});
-
-
-	// -----------------------------------------------------
-	// NEUES ITEM AUS DER NAVIGATION
-	// -----------------------------------------------------
-	document.getElementById("btn-add-item").addEventListener("click", () => {
->>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
 
 		const newItem = {
 			id: "item_" + Math.random().toString(36).substr(2, 6),
@@ -111,15 +80,9 @@ export function initSidebar() {
 
 		mapData.items.push(newItem);
 
-<<<<<<< HEAD
         /* Sidebar aktualisieren
         const event = new CustomEvent("items-updated");
         document.dispatchEvent(event);*/
-=======
-		// // Sidebar aktualisieren
-		// const event = new CustomEvent("items-updated");
-		// document.dispatchEvent(event);
->>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
 
 		// Übersicht aktualisieren
 		const overviewEvent = new CustomEvent("items-overview-update");

@@ -14,7 +14,6 @@ window.addEventListener("DOMContentLoaded", () => {
 	initDownload();
 	initImport();
 
-<<<<<<< HEAD
     initMapEditor(mapData);
     initItemsEditor(mapData);
     initHazardsEditor(mapData);
@@ -22,15 +21,6 @@ window.addEventListener("DOMContentLoaded", () => {
     initAIEditor(mapData);
 
     initPreview(mapData);
-=======
-	initMapEditor();
-	initItemsEditor();
-	initHazardsEditor();
-	initModesEditor();
-	initAIEditor();
-
-	initPreview();
->>>>>>> a1cded1ecef2d1a08c918766c100d408632e3ea1
 
 	console.log("Slipstrike Editor vollständig initialisiert");
 });
