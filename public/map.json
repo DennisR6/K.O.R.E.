@@ -1,15 +1,21 @@
 {
   "name": "",
-  "background": {
-    "type": "image",
-    "url": "/MagmaMap.png"
-  },
+  "background": null,
   "screenResolution": {
     "x": 1600,
     "y": 900,
     "factor": 100
   },
-  "mapBoundarys": [],
+  "mapBoundarys": [
+    {
+      "type": "rectangle",
+      "x": 209,
+      "y": 379,
+      "w": 100,
+      "h": 20,
+      "color": "#4da3ff"
+    }
+  ],
   "holes": [],
   "players": [],
   "friction": 1,
@@ -17,7 +23,7 @@
   "items": [],
   "effects": [
     {
-      "id": "8e5bf86e-9d79-4dd0-b1fd-ebbdb9d3cd10",
+      "id": "0f270ad9-1e80-410a-bb2b-e7feaf5368ce",
       "type": "push_zone",
       "position": {
         "x": 0,

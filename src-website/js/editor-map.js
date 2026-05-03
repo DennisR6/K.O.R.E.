@@ -63,8 +63,6 @@ export function initMapEditor() {
         console.log(url)
         if (!file) return;
         mapData.background = { type: "image", url: file.name };
-        //window.updatePreview(JSON.stringify(mapData));
-        document.getElementById("preview-frame").updatePreview(JSON.stringify(mapData))
     });
 
     // FRICTION SLIDER
