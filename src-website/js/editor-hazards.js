@@ -249,4 +249,5 @@ export function initHazardsEditor(mapData) {
 
     renderList();
     loadSelectedHazard();
+
 }

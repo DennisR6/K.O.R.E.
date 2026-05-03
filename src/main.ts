@@ -3,9 +3,9 @@ import { P5Renderer } from "./engine/drawingEngine"
 import { Handler } from './engine/handler'
 import p5 from 'p5'
 import setttings from './settings/settings'
+import json from "../public/map.json"
 
-
-const handler = new Handler(setttings)
+const handler = new Handler(json)
 
 const sketch = (p: p5) => {
 	const ctx = new P5Renderer(p)

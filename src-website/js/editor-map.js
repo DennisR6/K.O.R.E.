@@ -58,8 +58,13 @@ export function initMapEditor() {
     // BACKGROUND IMAGE
     document.getElementById("map-image").addEventListener("change", e => {
         const file = e.target.files[0];
+        console.log(file)
+        const url = URL.createObjectURL(file)
+        console.log(url)
         if (!file) return;
         mapData.background = { type: "image", url: file.name };
+        //window.updatePreview(JSON.stringify(mapData));
+        document.getElementById("preview-frame").updatePreview(JSON.stringify(mapData))
     });
 
     // FRICTION SLIDER

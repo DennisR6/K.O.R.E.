@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Slipstrike Preview</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+let arenaData = null;
+let arenaImg = null;
+let imgLoaded = false;
+let lastImgUrl = null;
+
+function preload() {
+    // kein Bild hier laden — passiert dynamisch in updateArena()
+}
+
+function setup() {
+    createCanvas(960, 540);
+    noLoop();
+}
+
+function draw() {
+    background(30);
+
+    // Hintergrundbild
+    if (imgLoaded && arenaImg) {
+        image(arenaImg, 0, 0, width, height);
+    } else {
+        fill(255);
+        textSize(20);
+        text("Kein Bild geladen…", 20, 40);
+    }
+
+    // Zonen
+    if (arenaData) {
+        drawZones(arenaData);
+    }
+}
+
+function drawZones(data) {
+    noFill();
+    strokeWeight(2);
+
+    // Kill-Zonen
+    stroke(255, 0, 0);
+    data.holes?.forEach(z => {
+        if (z.type === "circle") {
+            ellipse(z.x, z.y, z.r * 2);
+        } else if (z.type === "rectangle") {
+            rect(z.x, z.y, z.w, z.h);
+        }
+    });
+
+    // Wände
+    stroke(0, 255, 0);
+    data.mapBoundarys?.forEach(z => {
+        rect(z.x, z.y, z.w, z.h);
+    });
+
+    // Hindernisse (falls später)
+    stroke(0, 128, 255);
+    data.obstacle_zone?.forEach(z => {
+        rect(z.x, z.y, z.w, z.h);
+    });
+}
+
+// Dynamisches Laden des Bildes aus der JSON
+function loadArenaImage(url) {
+    if (!url) {
+        console.warn("Kein Hintergrundbild in JSON gefunden.");
+        arenaImg = null;
+        imgLoaded = false;
+        redraw();
+        return;
+    }
+
+    if (url === lastImgUrl) return;
+
+    lastImgUrl = url;
+    imgLoaded = false;
+
+    loadImage(
+        url,
+        img => {
+            arenaImg = img;
+            imgLoaded = true;
+            redraw();
+        },
+        err => {
+            console.error("Bild konnte nicht geladen werden:", fullPath);
+            arenaImg = null;
+            imgLoaded = false;
+            redraw();
+        }
+    );
+}
+
+// Wird vom Editor aufgerufen
+window.updateArena = function(jsonString) {
+    try {
+        arenaData = JSON.parse(jsonString);
+
+        // Bild aus JSON laden
+        if (arenaData.background?.type === "image") {
+            loadArenaImage(arenaData.background.url);
+        }
+
+        redraw();
+    } catch (err) {
+        console.error("JSON Fehler:", err);
+    }
+};
+</script>
+
+</body>
+</html>

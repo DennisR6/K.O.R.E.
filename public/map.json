@@ -1,0 +1,52 @@
+{
+  "name": "",
+  "background": {
+    "type": "image",
+    "url": "/MagmaMap.png"
+  },
+  "screenResolution": {
+    "x": 1600,
+    "y": 900,
+    "factor": 100
+  },
+  "mapBoundarys": [],
+  "holes": [],
+  "players": [],
+  "friction": 1,
+  "drift": 0,
+  "items": [],
+  "effects": [
+    {
+      "id": "8e5bf86e-9d79-4dd0-b1fd-ebbdb9d3cd10",
+      "type": "push_zone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "params": {
+        "direction": 0,
+        "force": 1
+      }
+    }
+  ],
+  "mode": {
+    "type": "last_man_standing",
+    "params": {
+      "itemsEnabled": true,
+      "hazardsEnabled": false,
+      "allowTies": false
+    }
+  },
+  "ai": {
+    "difficulty": "normal",
+    "aggressiveness": 50,
+    "riskTaking": 40,
+    "itemPriority": 50,
+    "hazardAwareness": 60,
+    "errorRate": 20
+  }
+}
