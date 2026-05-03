@@ -27,7 +27,7 @@ export class Handler implements Renderer, Drawer {
 			10,
 			5
 		)
-		switch (settings?.background!.type) {
+		switch (settings?.background?.type) {
 			case "color": {
 				this.background = new BackgroundColor(settings.background.color)
 				break
