@@ -30,3 +30,8 @@
     border: 1px solid var(--bg-border);
     border-radius: var(--radius);
 }
+
+iframe {
+    width: 100%;
+    height: 100%;
+}

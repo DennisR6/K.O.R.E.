@@ -108,14 +108,14 @@ export function initNewMapButton() {
 
 		mapData.background = null;
 		document.getElementById("map-image").value = "";
-		document.getElementById("preview-canvas").style.backgroundImage = "";
-		document.getElementById("preview-canvas").innerHTML = "";
+        document.getElementById("map-image-url").value = "";
 
 		document.getElementById("wall-list").innerHTML = "";
 		document.getElementById("hole-list").innerHTML = "";
 		document.getElementById("player-list").innerHTML = "";
 
 		console.log("Neue Map erstellt:", mapData);
+        console.log("NEUE MAP BUTTON WURDE GETRIGGERT");
 	});
 }
 
@@ -143,42 +143,63 @@ export function initDownload() {
 // JSON IMPORT
 // ---------------------------------------------------------
 export function initImport() {
-	const fileInput = document.getElementById("file-import");
+    const fileInput = document.getElementById("file-import");
 
-	document.getElementById("btn-import").addEventListener("click", () => {
-		fileInput.click();
-	});
+    document.getElementById("btn-import").addEventListener("click", () => {
+        fileInput.click();
+    });
 
-	fileInput.addEventListener("change", async () => {
-		const file = fileInput.files[0];
-		if (!file) return;
+    fileInput.addEventListener("change", async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
 
-		const text = await file.text();
-		const json = JSON.parse(text);
+        const text = await file.text();
+        const json = JSON.parse(text);
 
-		Object.assign(mapData, json);
+        // mapData korrekt überschreiben (Referenz behalten!)
+        Object.assign(mapData, json);
 
-		restoreMapFields();
+        // Basisfelder wiederherstellen (Name, friction, drift, etc.)
+        restoreMapFields();
 
-		document.getElementById("map-image").value = "";
+        // Map-Name ins HTML schreiben
+        const nameField = document.getElementById("map-name");
+        if (nameField && mapData.name) {
+            nameField.value = mapData.name;
+        }
 
-		if (mapData.background?.url) {
-			document.getElementById("preview-canvas").style.backgroundImage =
-				`url(${mapData.background.url})`;
-			document.getElementById("preview-canvas").style.backgroundSize = "contain";
-			document.getElementById("preview-canvas").style.backgroundRepeat = "no-repeat";
-			document.getElementById("preview-canvas").style.backgroundPosition = "center";
-		} else {
-			document.getElementById("preview-canvas").style.backgroundImage = "";
-		}
+        // Bild-Inputs referenzieren
+        const fileImageInput = document.getElementById("map-image");      // <input type="file">
+        const urlImageInput  = document.getElementById("map-image-url");  // <input type="text">
 
-		renderWalls();
-		renderHoles();
-		renderPlayers();
+        // Reset
+        fileImageInput.value = "";
+        urlImageInput.value = "";
+        fileImageInput.disabled = false;
+        urlImageInput.disabled = false;
 
-		console.log("Map erfolgreich geladen:", mapData);
-	});
+        // Hintergrund aus JSON setzen
+        if (mapData.background?.url) {
+            const bg = mapData.background.url;
+
+            // Immer in das URL-Feld schreiben
+            urlImageInput.value = bg;
+
+            // Wenn es eine externe URL ist → Datei-Input deaktivieren
+            if (bg.startsWith("http://") || bg.startsWith("https://")) {
+                fileImageInput.disabled = true;
+            }
+        }
+
+        // ALLE Editor-Sektionen neu rendern
+        renderWalls();
+        renderHoles();
+        renderPlayers();
+
+        console.log("Map erfolgreich geladen:", mapData);
+    });
 }
+
 
 // Sidebar aktualisieren
 document.addEventListener("items-updated", () => {
