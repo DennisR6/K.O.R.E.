@@ -1,13 +1,36 @@
 import p5 from "p5";
 import type { RenderContext } from "./RenderContext";
+import { GameLogger } from "../utils/log";
 
 export class P5Renderer implements RenderContext {
 	p5ctx: p5
 	assets: Map<string, p5.Image>
-	constructor(p: p5) {
+	WORLD_SCALE_X: number = 1
+	WORLD_SCALE_Y: number = 1
+	public WORLD_SIZE_X: number = 16
+	public WORLD_SIZE_Y: number = 9
+	private renderScale = 1;
+	constructor(p: p5, scale: number, worldWidth: number) {
 		this.p5ctx = p
 		this.assets = new Map<string, p5.Image>()
 		this.p5ctx.rectMode(p5.CENTER)
+
+		this.renderScale = scale
+		this.WORLD_SCALE_X = scale * 16
+		this.WORLD_SCALE_Y = scale * 9
+		this.WORLD_SIZE_X = worldWidth
+		this.WORLD_SIZE_Y = worldWidth / 16 * 9
+	}
+	setWorldSize(x: number, y: number) {
+		this.WORLD_SIZE_X = x
+		this.WORLD_SIZE_Y = y
+	}
+	setScaleFactor(x: number) {
+		this.p5ctx.resetMatrix()
+		this.renderScale = x
+	}
+	getScaleFactor(): number {
+		return this.renderScale
 	}
 	setFillColor(color: string): void {
 		this.p5ctx.fill(color)
@@ -16,21 +39,38 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.stroke(color)
 	}
 	drawCircle(x: number, y: number, radius: number) {
-		this.p5ctx.circle(x, y, radius * 2)
+		if (isNaN(x) || isNaN(y) || isNaN(radius)) {
+			GameLogger.error("Variable not Specified")
+			return
+		}
+		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), radius)
 	}
 	drawRect(x: number, y: number, width: number, height: number) {
-		this.p5ctx.rect(x, y, width, height)
+		this.p5ctx.rect(this.toPixel(x), this.toPixel(y), this.toPixel(width), this.toPixel(height))
 	}
 	drawText(text: string, x: number, y: number, fontSize?: number) {
+		if (isNaN(x) || isNaN(y)) {
+			GameLogger.error("Variable not Specified")
+			return
+		}
 		this.p5ctx.textSize(fontSize || 12)
-		this.p5ctx.text(text, x, y)
+		this.p5ctx.text(text, this.toPixel(x), this.toPixel(y))
+	}
+	line(x: number, y: number, x1: number, y1: number) {
+		this.p5ctx.line(this.toPixel(x), this.toPixel(y), this.toPixel(x1), this.toPixel(y1))
 	}
 	clear(color?: string): void {
+		this.p5ctx.clear();
+
 		if (color) {
-			this.setFillColor(color)
-			this.p5ctx.rect(0, 0, this.p5ctx.width, this.p5ctx.height)
+			this.p5ctx.push();
+			this.p5ctx.rectMode(this.p5ctx.CORNER);
+			this.setFillColor(color);
+			this.p5ctx.noStroke();
+
+			this.p5ctx.rect(0, 0, this.p5ctx.width, this.p5ctx.height);
+			this.p5ctx.pop();
 		}
-		else this.p5ctx.clear()
 	}
 	loadImage(url: string): void {
 		if (!this.assets.has(url)) {
@@ -41,18 +81,24 @@ export class P5Renderer implements RenderContext {
 					this.assets.get(url)!.resize(img.width, img.height);
 					this.assets.get(url)!.copy(img, 0, 0, img.width, img.height, 0, 0, img.width, img.height)
 				},
-				() => { console.log("Error Loading from URL: " + url) }
+				() => { console.error("Error Loading from URL: " + url) }
 			)
 		}
 	}
-	drawImage(url: string, dx: number, dy: number, dWidth: number, dHeight: number, sx: number, sy: number, sWidth: number, sHeight: number): void {
-		if (!this.assets.has(url)) {
-			console.log(url + " is not loaded! Did you forgot to call loadImage(url)?\n loading it for you")
-			this.loadImage(url)
-			return
-		}
+	drawImage(url: string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0): void {
+		const img = this.assets.get(url);
+		if (!img) { this.loadImage(url); return; }
 
-		this.p5ctx.image(this.assets.get(url)!, dx, dy, dWidth, dHeight, sx, sy, sWidth, sHeight)
+		this.p5ctx.imageMode(this.p5ctx.CORNER);
+		if (dw == 0) dw = this.WORLD_SIZE_X
+		if (dh == 0) dh = this.WORLD_SIZE_Y
+		this.p5ctx.image(img, this.toPixel(dx), this.toPixel(dy), this.toPixel(dw), this.toPixel(dh));
+	}
+	beginClip() {
+		this.p5ctx.beginClip()
+	}
+	endClip() {
+		this.p5ctx.endClip()
 	}
 	getScreenSize(): { width: number, height: number } {
 		return {
@@ -64,9 +110,24 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.stroke(weight)
 	}
 	rotate(x: number): void {
+		if (Number.isNaN(x)) {
+			GameLogger.error("Variable not Specified")
+			return
+		}
 		this.p5ctx.rotate(x)
 	}
+	scale(x: number): void {
+		if (isNaN(x)) {
+			GameLogger.error("Variable not Specified")
+			return
+		}
+		this.p5ctx.scale(x)
+	}
 	translate(x: number, y: number): void {
+		if (Number.isNaN(x) || Number.isNaN(y)) {
+			GameLogger.error("Variable not Specified")
+			return
+		}
 		this.p5ctx.translate(x, y)
 	}
 	push(): void {
@@ -79,4 +140,12 @@ export class P5Renderer implements RenderContext {
 		//@ts-ignore
 		this.p5ctx.mouseWheel = func
 	}
+	resizeCanvas(x: number, y: number): void {
+		this.p5ctx.resizeCanvas(x * .9, y * .9)
+		this.setScaleFactor(x / this.WORLD_SIZE_X)
+	}
+	toWorld(val: number) { return val / this.renderScale; }
+	toPixel(val: number): number { return val * this.renderScale; }
+
+	windowScale = () => (window.window.innerWidth * 0.9) / 16
 }

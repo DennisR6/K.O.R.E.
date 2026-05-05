@@ -1,4 +1,4 @@
-import type { Drawer, RenderContext } from "../engine/RenderContext"
+import type { IDrawer, IRenderer } from "../engine/RenderContext"
 import type { StructureCircle } from "./structureCircle.ts"
 import type { StructureLine } from "./structureLine.ts"
 import type { StructureRectangle } from "./structureRectangle.ts"
@@ -9,7 +9,7 @@ export { StructureRectangle } from "./structureRectangle.ts"
 export { StructureLine } from "./structureLine.ts"
 
 export type Structure = StructureCircle | StructureLine | StructureRectangle
-export interface IStructure extends Drawer {
-	draw(ctx: RenderContext): void;
+export interface IStructure extends IDrawer, IRenderer {
+	getShape(): string
 }
 

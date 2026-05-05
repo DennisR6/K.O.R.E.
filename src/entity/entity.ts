@@ -1,83 +1,89 @@
-import type { Drawer, RenderContext, Renderer } from "../engine/RenderContext";
+import type { IDrawer, IRenderer, RenderContext } from "../engine/RenderContext";
 import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics";
+import { GameLogger } from "../utils/log";
 
-export interface IEntity extends Drawer, Renderer, IPhysicsCircle {
-	position: Vector2D
+export interface IEntity extends IDrawer, IRenderer, IPhysicsCircle {
+	getPos(): Vector2D
+	getId(): number | string
 }
 
-const dottedLinecfg = {
-	distance: 10,
-	width: 10,
-	height: 10,
-	amount: 7,
-};
+export interface IPlayer {
+	id?: number | string,
+	x: number,
+	y: number,
+	team?: string[];
+	color?: string,
+	playericon?: string
+	size?: number
+}
 export class Player implements IEntity {
-	position: Vector2D
-	team: string;
-	color: string;
-	playericon: string;
-	id: number;
-	shape: "circle";
-	velocity: Vector2D;
-	bouncyness: number;
-	friction: number;
-	weight: number
-	mass: number = 1;
-	constructor(x: number, y: number, team: string, color: string, playericon: string, id?: number) {
-		this.position = { x, y }
-		this.team = team
-		this.color = color
-		this.playericon = playericon
-		this.id = id || 0
+	private id: number | string;
+	private position: Vector2D
+	private team: string[];
+	private color: string;
+	private playericon: string;
+	private shape: "circle"
+	private velocity: Vector2D;
+	private bouncyness: number;
+	private mass: number = 1;
+	private size: number;
+	private friction: number | undefined
+
+	constructor() {
+		this.id = 0
+		this.position = { x: 0, y: 0 }
+		this.team = []
+		this.color = "red"
+		this.playericon = ""
 		this.shape = "circle"
-		// NOTE: This if is only for tests to "crash" the first entity into the second player and the wall
 		this.velocity = { x: 0, y: 0 } as Vector2D
-		if (id == 0) this.velocity = { x: 100, y: -5 } as Vector2D
 		this.bouncyness = 0.1
-		this.friction = 1;
-		this.weight = 1
+		this.friction = undefined;
+		this.size = 20;
+		this.mass = 1
+	}
+	new(player: IPlayer) {
+		this.id = player.id || crypto.randomUUID();
+		this.position = {
+			x: player.x - (player.size ?? 20),
+			y: player.y - (player.size ?? 20)
+		};
+
+		this.velocity = {
+			x: (player as any).vx ?? 0,
+			y: (player as any).vy ?? 0
+		};
+		this.team = player.team ?? this.team;
+		this.color = player.color ?? this.color;
+		this.playericon = player.playericon ?? this.playericon;
+		this.size = player.size ?? 20;
+		this.shape = "circle";
+		return this;
 	}
 	draw(ctx: RenderContext): void {
-		ctx.setFillColor(this.color)
-		ctx.drawCircle(this.position.x, this.position.y, 12)
-		{
-			ctx.push()
-			const angle = Math.atan2(this.velocity.y, this.velocity.x)
-			if (angle === 0) return
-			ctx.translate(this.position.x, this.position.y)
-			ctx.rotate(angle)
-			for (let index = 0; index < dottedLinecfg.amount; index++) {
-				if (index < 7) ctx.setFillColor("blue")
-				if (index < 6) ctx.setFillColor("green")
-				if (index < 4) ctx.setFillColor("yellow")
-				if (index < 2) ctx.setFillColor("red")
-				ctx.drawRect(index * (dottedLinecfg.distance + dottedLinecfg.width), -5, 10, 10)
-			}
-			ctx.pop()
+		ctx.setFillColor(this.color);
+		ctx.drawCircle(this.position.x + this.size, this.position.y + + this.size, this.size * 2);
+		const nextX = this.position.x + this.velocity.x * 3;
+		const nextY = this.position.y + this.velocity.y * 3;
+		if (this.velocity.x !== 0 || this.velocity.y !== 0) {
+			ctx.line(this.getPos().x, this.getPos().y, nextX, nextY)
 		}
 	}
-	render(deltaTime: number): void {
-		const dt = deltaTime / 1000;
-		this.position.x += this.velocity.x / this.mass * dt;
-		this.position.y += this.velocity.y / this.mass * dt;
+	update(deltaTime: number, _globalFriction: number) {
+		this.position.x += this.velocity.x * deltaTime;
+		this.position.y += this.velocity.y * deltaTime;
+	}
 
-		this.velocity.x *= Math.pow(this.friction, dt);
-		this.velocity.y *= Math.pow(this.friction, dt);
-	}
 	getBounds(): { radius: number; } {
-		return { radius: 12 }
+		return { radius: this.size }
 	}
-	getPos(): Vector2D {
-		return this.position
-	}
-	getVelocity(): Vector2D {
-		return this.velocity
-	}
+	getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
 	getBounceFactor(): number {
 		return this.bouncyness
 	}
-	setVel(vel: Vector2D): void {
-		this.velocity = vel
+	setVel(v: { x: number, y: number }) {
+		this.velocity.x = v.x;
+		this.velocity.y = v.y;
 	}
 	getMass(): number {
 		return this.mass
@@ -86,15 +92,48 @@ export class Player implements IEntity {
 		this.mass = Math.min(inertia, 1)
 	}
 	setPos(pos: Vector2D): void {
-		this.position = pos
+		if (
+			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
+			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
+		) {
+			GameLogger.error("neue Position weicht massiv ab: ", pos, "\nOldPosition: ", this.getPos())
+		}
+		this.position = { x: pos.x - this.size, y: pos.y - this.size }
 	}
-	onCollision({ entity }: { entity: IPhysics; }): void {
-		console.log(entity)
-	}
-	getFriction(): number {
+	getPos(): Vector2D { return { x: this.position.x + this.size, y: this.position.y + this.size } }
+	onCollision({ entity: _ }: { entity: IPhysics; }): void { }
+	getFriction(): number | undefined {
 		return this.friction
 	}
 	setFriction(friction: number): void {
 		this.friction = friction
 	}
+	getId(): number | string {
+		return this.id
+	}
+	setId(id: string | number): void {
+		this.id = id
+	}
+	getShape(): "circle" {
+		return this.shape
+	}
+	public enableMutationTracking() {
+		this.position = createTrackingProxy(this.position, "POSITION", this.id.toString());
+		this.velocity = createTrackingProxy(this.velocity, "VELOCITY", this.id.toString());
+	}
+}
+
+export function createTrackingProxy(target: any, label: string, entityId: string) {
+	return new Proxy(target, {
+		set(obj, prop, value) {
+			// Wir ignorieren Änderungen von 0 auf 0, um Rauschen zu vermeiden
+			if (obj[prop] === value) return true;
+
+			console.warn(`[MUTATION] Entity ${entityId} | ${label}.${String(prop)}: ${obj[prop]} -> ${value}`);
+			console.trace(); // Das zeigt uns die exakte Datei und Zeile des Übeltäters
+
+			obj[prop] = value;
+			return true;
+		}
+	});
 }

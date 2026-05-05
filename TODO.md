@@ -4,12 +4,12 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 ---
 
 ## Grundprinzip (verbindlich)
-- [ ] Engine = deterministischer Simulator
-- [ ] Engine kennt **keine Spielregeln**
-- [ ] Gameplay = Daten (JSON / Mods)
-- [ ] Bewegung basiert auf:
-  - [ ] Rotation (Richtung)
-  - [ ] Force (Stoßstärke)
+- [x] Engine = deterministischer Simulator
+- [x] Engine kennt **keine Spielregeln**
+- [x] Gameplay = Daten (JSON / Mods)
+- [x] Bewegung basiert auf:
+  - [x] Rotation (Richtung)
+  - [x] Force (Stoßstärke)
 
 ---
 
@@ -19,16 +19,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 - [x] Git-Repository
 - [x] Ordnerstruktur
   - [x] `/engine`
-  - [ ] `/rules`
-  - [ ] `/content`
-    - [ ] `/items`
-    - [ ] `/maps`
-    - [ ] `/hazards`
-    - [ ] `/modes`
-    - [ ] `/ai`
-    - [ ] `/ui`
-  - [ ] `/mods`
-  - [ ] `/assets`
+  - [x] `/assets`
 
 ---
 
@@ -36,8 +27,8 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Game Loop
 - [x] Fester Tick (`update(dt)`)
-- [ ] Render-Pass
-- [ ] Deterministische Reihenfolge
+- [x] Render-Pass
+- [x] Deterministische Reihenfolge
 
 ---
 
@@ -75,12 +66,12 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Kollisionen
 - [x] Figur ↔ Figur
-- [ ] Figur ↔ Arena
-- [ ] Impuls-Weitergabe
-- [ ] Richtungsänderung durch Normalen
+- [x] Figur ↔ Arena
+- [x] Impuls-Weitergabe
+- [x] Richtungsänderung durch Normalen
 
 ### Arena-Grenzen
-- [ ] Out-of-Bounds-Erkennung
+- [x] Out-of-Bounds-Erkennung
 - [ ] Death-Event
 
 ---
@@ -91,12 +82,12 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 - [ ] Item-Phase
 - [ ] Stoß-Phase
 - [ ] Physik-Phase
-- [ ] Spielerwechsel
+- [x] Spielerwechsel
 
 ### Regeln (datengetrieben)
 - [ ] Items pro Runde
-- [ ] Stoßstärke-Limits
-- [ ] Zug-Reihenfolge
+- [x] Stoßstärke-Limits
+- [x] Zug-Reihenfolge
 
 ---
 
@@ -129,10 +120,10 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 ## Phase 6 – Maps & Hazards (Modding)
 
 ### Maps
-- [ ] Map-Schema
-  - [ ] Reibung
-  - [ ] Drift
-  - [ ] Arena-Form
+- [x] Map-Schema
+  - [x] Reibung
+  - [x] Drift
+  - [x] Arena-Form
 
 ### Hazards
 - [ ] Hazard-Registry
@@ -147,12 +138,12 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Actions
 - [ ] Aim (Rotation setzen)
-- [ ] Charge (Force aufladen)
-- [ ] Push (Force anwenden)
+- [x] Charge (Force aufladen)
+- [x] Push (Force anwenden)
 - [ ] UseItem
 
 ### Mapping
-- [ ] Mouse
+- [x] Mouse
 - [ ] Touch
 - [ ] Controller
 
@@ -166,7 +157,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 - [ ] Risikoabschätzung (Out-of-Bounds)
 
 ### Schwierigkeit
-- [ ] Leicht – Zufallswinkel
+- [x] Leicht – Zufallswinkel
 - [ ] Mittel – Heuristik
 - [ ] Schwer – Simulation (Winkel × Force)
 
@@ -175,9 +166,9 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 ## Phase 9 – UI & UX
 
 ### UI
-- [ ] Richtungsanzeige
-- [ ] Force-Meter
-- [ ] Aktives Item
+- [x] Richtungsanzeige
+- [x] Force-Meter
+- [x] Aktives Item
 
 ---
 
@@ -185,23 +176,23 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Desktop
 - [ ] Electron / Tauri
-- [ ] Savegames
+- [x] Savegames
 
 ### Mobile
 - [ ] Touch-Steuerung
-- [ ] Offline-Modus
+- [x] Offline-Modus
 
 ---
 
 ## Phase 11 – Discord
 
 ### Rich Presence
-- [ ] Status
-- [ ] Map
-- [ ] Runde
+- [x] Status
+- [x] Map
+- [x] Runde
 
 ---
 
 ## Optional
-- [ ] Replays (Rotation + Force = perfekt deterministisch)
-- [ ] Mod-Workshop
+- [x] Replays (Rotation + Force = perfekt deterministisch)
+- [ ] Mod-Workshop??

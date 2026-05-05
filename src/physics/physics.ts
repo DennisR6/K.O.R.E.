@@ -1,4 +1,3 @@
-export { defaultPhysics } from "./defaultPhysics.ts"
 export interface Vector2D {
 	x: number;
 	y: number;
@@ -21,29 +20,33 @@ export interface PhysicsStrategy {
 	checkCollision(entityA: IPhysics, entityB: IPhysics): boolean
 	checkCollisionCircleRect(entityA: IPhysicsCircle, entityB: IPhysicsRectangle): boolean;
 	handleCollision(entityA: IPhysics, entityB: IPhysics): void
+	getFriction(): number
+	applyImpulse(entity: IPhysics, angle: number, power: number): void;
+	applyFriction(entity: IPhysics, dt: number): void
+	calculateStop(startPos: Vector2D, initialVel: Vector2D): Vector2D;
+	calculateStopFromInput(startPos: Vector2D, angle: number, power: number): Vector2D;
+
+	//DEBUG
+	printSettings(who?: string): void;
 }
 export type IPhysics = IPhysicsCircle | IPhysicsRectangle
 export interface IdefaultPhysics {
-	shape: string
 	setVel(vel: Vector2D): void;
 	setMass(mass: number): void;
 	setPos(pos: Vector2D): void
 	getPos(): Vector2D;
-	getFriction(): number;
+	getFriction(): number | undefined;
 	setFriction(friction: number): void;
 	getMass(): number
-	getVelocity(): Vector2D;
+	getVel(): Vector2D;
 	onCollision({ entity }: { entity: IPhysics }): void
 	getBounceFactor(): number;
 }
 export interface IPhysicsCircle extends IdefaultPhysics {
-	shape: "circle"
+	getShape(): "circle"
 	getBounds(): { radius: number }
 }
 export interface IPhysicsRectangle extends IdefaultPhysics {
-	shape: "rectangle"
+	getShape(): "rectangle"
 	getBounds(): { width: number, height: number }
 }
-
-
-

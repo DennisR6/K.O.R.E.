@@ -1,5 +1,24 @@
+import type { FrictionSettings } from "../settings/settings";
+import { GameLogger } from "../utils/log";
 import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics";
 export class defaultPhysics implements PhysicsStrategy {
+	friction: number
+	linearDrag: number
+	stopThreshold: number
+	linearFriction: number = 0.1
+	constructor(settings?: FrictionSettings) {
+		const defaults = this.getDefaults()
+		this.friction = settings?.friction ?? defaults.friction
+		this.linearDrag = settings?.linearDrag ?? defaults.linearDrag
+		this.stopThreshold = settings?.stopThreshold ?? defaults.stopThreshold
+	}
+	getDefaults(): FrictionSettings {
+		return {
+			friction: 0.995,
+			linearDrag: 0.01,
+			stopThreshold: 0.1,
+		}
+	}
 	calculateBounce(vel: Vector2D, normal: Vector2D): Vector2D {
 		const n = this.normalize(normal)
 		const dot = this.dot(vel, normal)
@@ -17,6 +36,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	dot(a: Vector2D, b: Vector2D) {
 		return a.x * b.x + a.y * b.y;
 	}
+
 	magSq(v: Vector2D) {
 		return v.x * v.x + v.y * v.y;
 	}
@@ -42,14 +62,14 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 	checkCollision(entityA: IPhysics, entityB: IPhysics): boolean {
 		switch (true) {
-			case entityA.shape == "circle" && entityB.shape == "circle":
-				return this.checkCollisionCircles(entityA, entityB)
-			case entityA.shape == "rectangle" && entityB.shape == "circle":
-				return this.checkCollisionCircleRect(entityB, entityA)
-			case entityA.shape == "circle" && entityB.shape == "rectangle":
-				return this.checkCollisionCircleRect(entityA, entityB)
-			case entityA.shape == "rectangle" && entityB.shape == "rectangle":
-				return this.checkCollisionRects(entityA, entityB)
+			case entityA.getShape() == "circle" && entityB.getShape() == "circle":
+				return this.checkCollisionCircles(entityA as IPhysicsCircle, entityB as IPhysicsCircle)
+			case entityA.getShape() == "rectangle" && entityB.getShape() == "circle":
+				return this.checkCollisionCircleRect(entityB as IPhysicsCircle, entityA as IPhysicsRectangle);
+			case entityA.getShape() == "circle" && entityB.getShape() == "rectangle":
+				return this.checkCollisionCircleRect(entityA as IPhysicsCircle, entityB as IPhysicsRectangle)
+			case entityA.getShape() == "rectangle" && entityB.getShape() == "rectangle":
+				return this.checkCollisionRects(entityA as IPhysicsRectangle, entityB as IPhysicsRectangle)
 		}
 		return false
 	}
@@ -77,61 +97,88 @@ export class defaultPhysics implements PhysicsStrategy {
 		return d2 <= (entityA.getBounds().radius * entityA.getBounds().radius);
 	}
 	handleCollision(entityA: IPhysics, entityB: IPhysics): void {
-		const posA = entityA.getPos();
-		const posB = entityB.getPos();
+		const posA = { ...entityA.getPos() };
+		const posB = { ...entityB.getPos() };
 		const dist = this.dist(posA, posB);
 
+		if (entityA.getShape() === "circle") entityA as IPhysicsCircle
 		switch (true) {
-			case (entityA.shape === "circle" && entityB.shape === "circle"): {
+			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
+				//@ts-ignore
 				const radiusA = entityA.getBounds().radius;
-				const radiusB = entityB.getBounds().radius;
+				//@ts-ignore
+				const radiusB = entityB.getBounds().radius!;
+				const combinedRadius = radiusA + radiusB;
 
 
-				if (dist < radiusA + radiusB) {
-					// 1. Kollisions-Normale (Wohin zeigt der Aufprall?)
-					const nx = (posB.x - posA.x) / dist;
-					const ny = (posB.y - posA.y) / dist;
+				if (dist < combinedRadius) {
+					// Falls sie exakt aufeinander liegen, Distanz-Fehler abfangen
+					const safeDist = dist === 0 ? 0.1 : dist;
 
-					// 2. Relative Geschwindigkeit
-					const velA = entityA.getVelocity();
-					const velB = entityB.getVelocity();
-					const relVelX = velB.x - velA.x;
-					const relVelY = velB.y - velA.y;
+					// 1. Kollisions-Normale
+					const nx = (posB.x - posA.x) / safeDist;
+					const ny = (posB.y - posA.y) / safeDist;
 
-					// 3. Wie stark prallen sie ab? (Skalarprodukt)
-					const dotProduct = relVelX * nx + relVelY * ny;
-
-					// Verhindern, dass sie zusammenkleben, wenn sie sich bereits voneinander entfernen
-					if (dotProduct > 0) return;
-
-					// 4. Impuls berechnen (vereinfacht ohne Masse für den Anfang)
-					const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
-					const impulseMag = -(1 + restitution) * dotProduct;
-
-					// Hier kommt deine Inertia (Masse) ins Spiel!
+					// 2. Position Korrektur (Static Recovery)
+					// Verhindert das "Zusammenkleben" und Zittern
 					const invMassA = 1 / entityA.getMass();
 					const invMassB = 1 / entityB.getMass();
+					const totalInvMass = invMassA + invMassB;
 
-					// 5. Neue Geschwindigkeiten setzen
-					entityA.setVel({
-						x: velA.x - (impulseMag * nx * invMassA),
-						y: velA.y - (impulseMag * ny * invMassA)
-					});
-					entityB.setVel({
-						x: velB.x + (impulseMag * nx * invMassB),
-						y: velB.y + (impulseMag * ny * invMassB)
-					});
+					const overlap = combinedRadius - dist;
+					if (totalInvMass > 0) {
+						// Sicherheit gegen zwei Infinity-Objekte
+						const moveMagnitude = overlap / totalInvMass;
+						entityA.setPos({
+							x: posA.x - nx * moveMagnitude * invMassA,
+							y: posA.y - ny * moveMagnitude * invMassA
+						});
+						entityB.setPos({
+							x: posB.x + nx * moveMagnitude * invMassB,
+							y: posB.y + ny * moveMagnitude * invMassB
+						});
+					}
+
+					// 3. Relative Geschwindigkeit & Dot Product
+					const velA = entityA.getVel();
+					const velB = entityB.getVel();
+					const relVelX = velB.x - velA.x;
+					const relVelY = velB.y - velA.y;
+					const dotProduct = relVelX * nx + relVelY * ny;
+
+					// Nur berechnen, wenn sie sich aufeinander zu bewegen
+					if (dotProduct < 0) {
+						const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
+
+						// DIE WICHTIGE FORMEL: Impuls geteilt durch Summe der inversen Massen
+						const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
+
+						// 4. Neue Geschwindigkeiten setzen
+						entityA.setVel({
+							x: velA.x - (impulseMag * nx * invMassA),
+							y: velA.y - (impulseMag * ny * invMassA)
+						});
+						entityB.setVel({
+							x: velB.x + (impulseMag * nx * invMassB),
+							y: velB.y + (impulseMag * ny * invMassB)
+						});
+
+						// 5. Events feuern
+						entityA.onCollision({ entity: entityB });
+						entityB.onCollision({ entity: entityA });
+					}
 				}
-				break
+				break;
 			}
-			case (entityA.shape === "rectangle" && entityB.shape === "rectangle"): {
+			case (entityA.getShape() === "rectangle" && entityB.getShape() === "rectangle"): {
+				console.log("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				// 2 Rectangles
 				break
 			}
-			case (entityA.shape === "circle" && entityB.shape === "rectangle"):
-			case (entityA.shape === "rectangle" && entityB.shape === "circle"): {
-				const circle = (entityA.shape === "circle" ? entityA : entityB) as IPhysicsCircle
-				const rectangle = (entityA.shape === "rectangle" ? entityA : entityB) as IPhysicsRectangle
+			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):
+			case (entityA.getShape() === "rectangle" && entityB.getShape() === "circle"): {
+				const circle = (entityA.getShape() === "circle" ? entityA : entityB) as IPhysicsCircle
+				const rectangle = (entityA.getShape() === "rectangle" ? entityA : entityB) as IPhysicsRectangle
 				const cPos = circle.getPos();
 				const rPos = rectangle.getPos();
 				const rBounds = rectangle.getBounds();
@@ -156,7 +203,7 @@ export class defaultPhysics implements PhysicsStrategy {
 						y: cPos.y + ny * (overlap + 0.01)
 					});
 
-					const vel = circle.getVelocity();
+					const vel = circle.getVel();
 
 					const dot = vel.x * nx + vel.y * ny;
 
@@ -171,14 +218,103 @@ export class defaultPhysics implements PhysicsStrategy {
 					}
 
 					circle.setPos(circle.getPos())
-					circle.setVel(circle.getVelocity())
+					circle.setVel(circle.getVel())
 					rectangle.setPos(rectangle.getPos())
-					rectangle.setVel(rectangle.getVelocity())
+					rectangle.setVel(rectangle.getVel())
 
 					circle.onCollision({ entity: rectangle })
 					rectangle.onCollision({ entity: circle })
 				}
 			}
 		}
+	}
+	public applyImpulse(entity: IPhysics, angle: number, power: number): void {
+		const mass = entity.getMass();
+		if (mass === Infinity) return;
+
+		const radians = (angle * Math.PI) / 180;
+
+		const force = {
+			x: Math.cos(radians) * power,
+			y: Math.sin(radians) * power
+		};
+
+		const currentVel = entity.getVel();
+
+		entity.setVel({
+			x: currentVel.x + (force.x / mass),
+			y: currentVel.y + (force.y / mass)
+		});
+	}
+
+	getFriction(): number {
+		return this.friction
+	}
+	applyFriction(entity: IPhysics, dt: number): void {
+		let { x: vx, y: vy } = entity.getVel();
+
+		const f = Math.pow(this.friction, dt);
+		vx *= f;
+		vy *= f;
+
+		const speed = Math.sqrt(vx * vx + vy * vy);
+		if (speed > 0) {
+			const newSpeed = Math.max(0, speed - (this.linearDrag * dt));
+			const factor = newSpeed / speed;
+			vx *= factor;
+			vy *= factor;
+		}
+
+		if (Math.sqrt(vx * vx + vy * vy) < this.stopThreshold) {
+			vx = 0;
+			vy = 0;
+		}
+
+		entity.setVel({ x: vx, y: vy });
+	}
+	printSettings(who?: string) {
+		GameLogger.debug(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold }, new Error().stack)
+	}
+	public calculateStopFromInput(
+		startPos: Vector2D,
+		angle: number,
+		power: number
+	): Vector2D {
+		// 1. Umrechnung von Grad in Bogenmaß (Radians)
+		const radians = (angle * Math.PI) / 180;
+
+		// 2. Initialen Vel-Vektor berechnen
+		// (Achte auf die Masse, falls du sie hier einbeziehen willst, 
+		// wie in deiner applyImpulse-Funktion: force / mass)
+		let vx = Math.cos(radians) * power;
+		let vy = Math.sin(radians) * power;
+
+		// 3. Jetzt die bestehende Logik mit vx/vy nutzen
+		return this.calculateStop(startPos, { x: vx, y: vy });
+	}
+	public calculateStop(startPos: Vector2D, initialVel: Vector2D): Vector2D {
+		let x = startPos.x;
+		let y = startPos.y;
+		let vx = initialVel.x;
+		let vy = initialVel.y;
+
+		for (let i = 0; i < 2000; i++) {
+			// Exponentiell
+			vx *= this.friction;
+			vy *= this.friction;
+
+			const speed = Math.sqrt(vx * vx + vy * vy);
+			if (speed < this.stopThreshold || speed === 0) break;
+
+			// Linear
+			const newSpeed = Math.max(0, speed - this.linearDrag);
+			const factor = newSpeed / speed;
+			vx *= factor;
+			vy *= factor;
+
+			x += vx;
+			y += vy;
+		}
+		return { x, y };
 	}
 }

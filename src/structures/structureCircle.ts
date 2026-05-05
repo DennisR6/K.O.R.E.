@@ -1,5 +1,6 @@
 import type { RenderContext } from "../engine/RenderContext"
 import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics"
+import { GameLogger } from "../utils/log"
 import type { IStructure } from "./structures"
 
 export class StructureCircle implements IStructure, IPhysicsCircle {
@@ -11,6 +12,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	bounce: number
 	vel: Vector2D
 	mass: number = 9000;
+	friction: number | undefined
 	constructor(x: number, y: number, r: number, color: string) {
 		this.shape = "circle"
 		this.x = x
@@ -23,7 +25,10 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	draw(ctx: RenderContext) {
 		ctx.setFillColor(this.color)
 		ctx.drawCircle(this.x, this.y, this.r * 2)
+		ctx.drawImage("/eis.png", this.x - this.r * 2, this.y - this.r * 2, this.r * 4, this.r * 4)
 	}
+	update(_dt: number): void { }
+
 	getBounceFactor(): number {
 		return this.bounce
 	}
@@ -33,7 +38,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	getPos(): Vector2D {
 		return { x: this.x, y: this.y }
 	}
-	getVelocity(): Vector2D {
+	getVel(): Vector2D {
 		return this.vel
 	}
 	setVel(vel: Vector2D): void {
@@ -50,11 +55,13 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 		this.y = pos.y
 	}
 	onCollision({ entity }: { entity: IPhysics }): void {
-		console.log("Collision with:" + entity.shape)
+		GameLogger.debug("Collision with:" + entity.getShape())
 	}
 	getFriction(): number {
 		return 0
 	}
 	setFriction(_friction: number): void { }
+	getShape(): "circle" { return this.shape }
+
 }
 

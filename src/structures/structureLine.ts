@@ -1,5 +1,6 @@
 import type { RenderContext } from "../engine/RenderContext"
 import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics"
+import { GameLogger } from "../utils/log"
 import type { IStructure } from "./structures"
 
 export class StructureLine implements IStructure, IPhysicsRectangle {
@@ -12,6 +13,7 @@ export class StructureLine implements IStructure, IPhysicsRectangle {
 	vel: Vector2D
 	bounce: number
 	mass: number = 9000
+	friction: number | undefined
 	constructor(x: number, y: number, x2: number, y2: number, color: string) {
 		this.x = x
 		this.x2 = x2
@@ -35,11 +37,11 @@ export class StructureLine implements IStructure, IPhysicsRectangle {
 	getPos(): Vector2D {
 		return { x: this.x, y: this.y }
 	}
-	getVelocity(): Vector2D {
+	getVel(): Vector2D {
 		return this.vel
 	}
 	onCollision({ entity }: { entity: IPhysics }): void {
-		console.log("Collision with:" + entity.shape)
+		GameLogger.debug("Collision with:" + entity.getShape())
 	}
 	setVel(vel: Vector2D): void {
 		this.vel = vel
@@ -58,4 +60,6 @@ export class StructureLine implements IStructure, IPhysicsRectangle {
 		return 0
 	}
 	setFriction(_friction: number): void { }
+	update(_deltatime: number, _globalfriction: number): void { }
+	getShape(): "rectangle" { return this.shape }
 }
