@@ -12,6 +12,7 @@ import { PhysicsSystem, PlaybackSystem } from "./systems/Systems.ts";
 import { NoRoundSystem } from "./systems/RoundSystem.ts";
 import { TrackerPlayer } from "./entity/trackingPlayer.ts";
 import { StructureRectangle } from "./structures/structureRectangle.ts";
+import { StructureCircle } from "./structures/structureCircle.ts";
 
 
 const physics = new defaultPhysics(FRICTION_TABLE.wood)
@@ -24,9 +25,8 @@ handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
 handler.addPreDrawer(new BackgroundImageSystem({ url: "/eis.png" }))
 GameSettings.mapBoundarys?.forEach(str => {
-	if (str.type === "rectangle") {
-		handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
-	}
+	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
+	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))
 })
 
 GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new TrackerPlayer().new({ ...player })));

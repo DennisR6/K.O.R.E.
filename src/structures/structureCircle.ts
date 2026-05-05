@@ -53,7 +53,6 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public draw(ctx: RenderContext) {
 		ctx.setFillColor(this.color)
 		ctx.drawCircle(this.x, this.y, this.r * 2)
-		ctx.drawImage("/eis.png", this.x - this.r * 2, this.y - this.r * 2, this.r * 4, this.r * 4)
 	}
 
 	public tick(_dt: number): void { }

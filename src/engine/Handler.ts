@@ -178,12 +178,12 @@ export class GameHandler implements ITicker, IMouse {
 
 
 
-		// const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
-		// playback.start(packet.durationFrames, packet.finalState, () => {
-		// 	GameLogger.debug("Playing done")
-		// 	this.entityManager.resetSpeeds()
-		this.setState(GameState.PLAYING_DONE)
-		// });
+		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
+		playback.start(packet.durationFrames, packet.finalState, () => {
+			GameLogger.debug("Playing done")
+			this.entityManager.resetSpeeds()
+			this.setState(GameState.PLAYING_DONE)
+		});
 	}
 
 	/**
