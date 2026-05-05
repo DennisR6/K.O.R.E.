@@ -1,7 +1,7 @@
 import { EntityManager } from "../entity/EntityManager";
 import type { EntitySnapshot } from "../entity/types";
 import type { PhysicsStrategy } from "../physics/physics";
-import type { Structure } from "../structures/structures";
+import type { IStructure } from "../structures/structures";
 import type { PhysicsSystem } from "../systems/PhysicsSystem";
 import type { IGameContext, ISystem } from "../systems/types";
 
@@ -26,7 +26,7 @@ export interface TurnPacket {
  * Er berechnet physikalische Zustände in der Zukunft, ohne sie grafisch anzuzeigen.
  */
 export interface ISimulator {
-	step(physics: PhysicsSystem, dt: number, entities: EntityManager, structures: Structure[]): void;
+	step(physics: PhysicsSystem, dt: number, entities: EntityManager, structures: IStructure[]): void;
 	isStatic(entities: EntityManager): boolean;
 }
 

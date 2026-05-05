@@ -1,5 +1,6 @@
 import type { IEntity } from "../entity/entity";
 import type { PhysicsStrategy } from "../physics/physics";
+import type { Structure } from "../structures/structures";
 import type { IGameContext, ISystem } from "./types";
 
 /**
@@ -84,7 +85,7 @@ export class PhysicsSystem implements ISystem {
 			}
 
 			for (let j = 0; j < structures.length; j++) {
-				const structureB = structures[j];
+				const structureB = structures[j] as Structure;
 				if (this.strategy.checkCollision(entityA, structureB)) {
 					this.strategy.handleCollision(entityA, structureB);
 				}

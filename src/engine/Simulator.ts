@@ -28,6 +28,7 @@ export class Simulator implements ISimulator {
 	 * @param structures - Die Hindernisse auf dem Feld.
 	 */
 	public step(physics: PhysicsSystem, dt: number, entities: EntityManager, structures: Structure[]): void {
+		//@ts-ignore
 		const mockContext: IGameContext = {
 			state: GameState.SIMULATING,
 			entities,
