@@ -1,3 +1,10 @@
+/**
+ * Zentrales Logging-System der Engine.
+ * 
+ * Der GameLogger bietet formatierte Konsolenausgaben und trackt automatisch,
+ * aus welcher Datei der Log-Aufruf stammt. Zusätzlich werden Logs in 
+ * `window.game.logs` für spätere Analysen (z.B. Remote-Debugging) gespeichert.
+ */
 export const LogLevel = {
 	INFO: 'INFO',
 	WARN: 'WARN',
@@ -6,8 +13,17 @@ export const LogLevel = {
 } as const
 
 export class GameLogger {
+	/** 
+	 * Schaltet die Konsolenausgabe global an/aus.
+	 * @default false (Deaktiviert für Production-Performance)
+	 */
 	private static isEnabled = !true;
 
+	/**
+		 * Extrahiert den Dateinamen und die Zeilennummer aus dem Stacktrace.
+		 * Erlaubt es, im Log sofort zu sehen, wer die Nachricht gesendet hat (z.B. "physics.ts:42").
+		 * @returns {string} Der Caller-String im Format "filename:line".
+		 */
 	private static getCallerInfo(): string {
 		const stack = new Error().stack;
 		if (!stack) return "unknown";
@@ -29,6 +45,13 @@ export class GameLogger {
 		return "internal";
 	}
 
+	/**
+		 * Hauptmethode zum Loggen von Nachrichten.
+		 * Formatiert die Ausgabe mit CSS-Farben in der Browser-Konsole.
+		 * 
+		 * @param level - Die Wichtigkeit des Logs (INFO, WARN, ERROR, DEBUG).
+		 * @param args - Beliebige Datenobjekte, Strings oder Fehlermeldungen.
+		 */
 	public static log(level: keyof typeof LogLevel, ...args: any[]) {
 		const caller = this.getCallerInfo();
 		const timestamp = new Date().toLocaleTimeString();
@@ -62,8 +85,17 @@ export class GameLogger {
 		}
 	}
 
-	// Shortcut-Methoden
+	/** Loggt eine informative Nachricht (Blau). */
 	public static info(...a: any[]) { this.log(LogLevel.INFO, ...a); }
+
+	/** Loggt einen Fehler (Rot) - Sollte für kritische Probleme genutzt werden. */
 	public static error(...a: any[]) { this.log(LogLevel.ERROR, ...a); }
+
+	/** 
+	 * Loggt Debug-Informationen (Grün). 
+	 * Ideal für Physik-Werte oder State-Changes während der Entwicklung.
+	 */
 	public static debug(...a: any[]) { this.log(LogLevel.DEBUG, ...a); }
+
+
 }

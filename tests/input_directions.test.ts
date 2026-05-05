@@ -1,11 +1,22 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { createTestHandler, GameHandler } from "../src/engine/Handler.ts";
+import { createTestHandler } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/entity.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
 import { GameState } from "../src/engine/types.ts";
 
+/**
+ * @test Input Direction Compass
+ * 
+ * Dieser Test validiert die mathematische Abbildung von Maus-Interaktionen 
+ * auf physikalische Impulse (Vektorberechnung). 
+ * 
+ * Er stellt sicher, dass:
+ * 1. Der Winkel zwischen Startpunkt (Maus-Down) und Endpunkt (Maus-Move) korrekt berechnet wird.
+ * 2. Das "Schleuder-Prinzip" (Drag-to-Shoot) die richtige Richtung einschlägt.
+ * 3. Die Eingabe-Sperre (Turn-Check) zuverlässig funktioniert.
+ */
 describe("Input Direction Compass", () => {
 	const strategy = new defaultPhysics();
 	const mockPlayer = new Player().new({ id: "p1", x: 100, y: 100, size: 10 });
@@ -20,6 +31,12 @@ describe("Input Direction Compass", () => {
 		{ name: "Unten-Rechts (45°)", mouse: { x: 150, y: 150 }, expected: 225 }
 	];
 
+	/**
+		 * Iteriert über alle Richtungen und simuliert Maus-Events.
+		 * 
+		 * Der Flow:
+		 * Pressed (Zentrum) -> Update (Ziel) -> getLocalInput (Berechnung) -> Released (Reset).
+		 */
 	testDirections.forEach(({ name, mouse, expected }) => {
 		it(`sollte die Richtung korrekt berechnen: ${name}`, () => {
 			handler.setState(GameState.YOUR_TURN)
@@ -41,6 +58,12 @@ describe("Input Direction Compass", () => {
 		});
 	});
 
+	/**
+		 * Sicherheitstest: Zug-Kontrolle.
+		 * 
+		 * Stellt sicher, dass keine Impulse generiert werden können, wenn der 
+		 * Gegner am Zug ist (Anti-Cheat / Logic-Gate Check).
+		 */
 	it("Spieler sollte außerhalb des Turns nicht draggbar sein", () => {
 		handler.setState(GameState.OPPONENTS_TURN)
 		handler.handleMousePressed(100, 100);

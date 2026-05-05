@@ -1,4 +1,4 @@
-import test, { describe, it } from "node:test";
+import test, { describe } from "node:test";
 import assert from "node:assert";
 import { createTestHandler } from "../src/engine/Handler";
 import { Player } from "../src/entity/entity";
@@ -6,6 +6,17 @@ import { defaultPhysics } from "../src/physics/defaultPhysics";
 import { EntityManager } from "../src/entity/EntityManager";
 import { GameState } from "../src/engine/types";
 
+/**
+ * @test Coordinate Transformation & Scaling
+ * 
+ * Dieser Test validiert die Umrechnung von Bildschirm-Koordinaten (Pixel) 
+ * in Welt-Koordinaten (Physik-Einheiten).
+ * 
+ * Warum ist das wichtig?
+ * Wenn die Engine mit einem Zoom-Faktor (z.B. 0.5x oder 2.0x) gerendert wird, 
+ * müssen die Maus-Eingaben des Spielers so skaliert werden, dass die 
+ * resultierende Kraft im Spiel immer identisch bleibt.
+ */
 describe("Coordinate Transformation & Scaling", () => {
 	const strategy = new defaultPhysics();
 	const mockPlayer = new Player().new({ id: "p1", x: 100, y: 100, size: 60 });
@@ -15,6 +26,15 @@ describe("Coordinate Transformation & Scaling", () => {
 		entityManager: new EntityManager([mockPlayer])
 	});
 
+	/**
+		 * Test: Weltkoordinaten-Berechnung bei 0.5x Skalierung.
+		 * 
+		 * Szenario:
+		 * Das Spiel wird verkleinert dargestellt (50% Zoom). Ein Klick bei 50px auf 
+		 * dem Bildschirm entspricht also 100 Einheiten in der physikalischen Welt.
+		 * 
+		 * Rechnung: ScreenX / Scale = WorldX
+		 */
 	test("should calculate correct world coordinates despite 0.5x screen scaling", () => {
 		handler.setState(GameState.YOUR_TURN)
 		const screenFactor = 0.5;
@@ -50,6 +70,12 @@ describe("Coordinate Transformation & Scaling", () => {
 		);
 	});
 
+	/**
+		 * Test: Input-Sperre (Gegner-Zug)
+		 * 
+		 * Stellt sicher, dass die gesamte Maus-Logik (inklusive Transformation) 
+		 * sofort ignoriert wird, wenn der State nicht auf YOUR_TURN steht.
+		 */
 	test("should ignore mouse interaction during opponent's turn", () => {
 		handler.setState(GameState.OPPONENTS_TURN)
 		const screenFactor = 0.5;

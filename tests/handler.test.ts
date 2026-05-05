@@ -8,10 +8,25 @@ import { createTestHandler, GameHandler } from "../src/engine/Handler.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
 
-const DEFAULT_FRAME_TIME = 1000 / 60;
+const DEFAULT_FRAME_TIME = 1;
 
+/**
+ * @test Handler & Physics System Integration
+ * 
+ * Diese Suite prüft die tiefere Integration: Wie reagieren Systeme auf Kollisionen
+ * und bleibt die Engine über eine lange Kette von Ereignissen (Multi-Turn) stabil?
+ */
 describe("Handler & Physics System Integration", () => {
 
+	/**
+		 * Test: Elastische Kollisionsauflösung.
+		 * 
+		 * Prüft, ob das PhysicsSystem Kollisionen erkennt und Impulse korrekt umkehrt.
+		 * 
+		 * Szenario:
+		 * P1 rast nach rechts (Vel: 10), P2 rast nach links (Vel: -10).
+		 * Nach dem Aufprall müssen sie voneinander abprallen.
+		 */
 	test("PhysicsSystem - Elastic Collision Resolution", () => {
 		const strategy = new defaultPhysics();
 		const physicsSystem = new PhysicsSystem(strategy);
@@ -30,7 +45,7 @@ describe("Handler & Physics System Integration", () => {
 		mockContext.entities = new EntityManager([p1, p2]);
 
 		for (let i = 0; i < 1; i++) {
-			physicsSystem.update(mockContext, DEFAULT_FRAME_TIME, physicsSystem.strategy.getFriction());
+			physicsSystem.tick(mockContext, DEFAULT_FRAME_TIME, physicsSystem.strategy.getFriction());
 		}
 
 		assert.ok(p1.getVel().x > 0, "Entity 1 should be moving left after collision");
@@ -38,6 +53,17 @@ describe("Handler & Physics System Integration", () => {
 		assert.strictEqual(mockContext.state, GameState.SIMULATING, "Engine state should remain in SIMULATING");
 	});
 
+	/**
+		 * Test: Determinismus über mehrere Spielzüge hinweg.
+		 * 
+		 * Dies ist der "Härtetest". Er führt eine komplexe Sequenz von 5 Schüssen zweimal 
+		 * komplett unabhängig aus und vergleicht das Endergebnis.
+		 * 
+		 * Warum das wichtig ist:
+		 * In einer Engine können sich winzige Rundungsfehler oder ein falsch zurückgesetzter 
+		 * State über die Zeit aufsummieren ("Drift"). Wenn das Ergebnis nach 5 Zügen 
+		 * noch Bit-für-Bit identisch ist, ist die Engine absolut deterministisch.
+		 */
 	test("Handler - Determinism across Multi-Turn Sequences", () => {
 		const runFullSequence = () => {
 			const entities = [
@@ -104,6 +130,12 @@ describe("Handler & Physics System Integration", () => {
 		}
 	});
 
+	/**
+		 * Test: State Lifecycle Initialisierung.
+		 * 
+		 * Ein simpler, aber kritischer Check: Startet die Engine wirklich im 
+		 * richtigen Modus, damit der Spieler sofort interagieren kann?
+		 */
 	test("Handler - Initial State Lifecycle", () => {
 		const strategy = new defaultPhysics();
 		const p1 = new Player().new({ id: "p1", x: 100, y: 100, size: 60 });

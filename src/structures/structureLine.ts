@@ -1,19 +1,48 @@
 import type { RenderContext } from "../engine/RenderContext"
 import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics"
 import { GameLogger } from "../utils/log"
-import type { IStructure } from "./structures"
 
-export class StructureLine implements IStructure, IPhysicsRectangle {
-	x: number
-	y: number
-	x2: number
-	y2: number
-	color: string
-	shape: "rectangle"
-	vel: Vector2D
-	bounce: number
-	mass: number = 9000
-	friction: number | undefined
+/**
+ * Repräsentiert ein statisches, rechteckiges Hindernis (z.B. eine Bande oder Mauer).
+ * 
+ * Auch wenn der Name "Line" vermutet lässt, definiert dieses Objekt physikalisch
+ * ein Rechteck über Startpunkt (x, y) sowie Breite und Höhe (x2, y2).
+ * 
+ * @implements {IStructure} Basis-Interface für Hindernisse.
+ * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
+ */
+export class StructureLine implements IPhysicsRectangle {
+	/** X-Koordinate der oberen linken Ecke. */
+	private x: number;
+	/** Y-Koordinate der oberen linken Ecke. */
+	private y: number;
+	/** Breite des Rechtecks (Pixel/Welt-Einheiten). */
+	private x2: number;
+	/** Höhe des Rechtecks (Pixel/Welt-Einheiten). */
+	private y2: number;
+
+	/** Kennung der Form für das Physik-System. */
+	private shape: "rectangle";
+	/** Extrem hohe Masse (9000), damit Wände niemals weggeschoben werden können. */
+	private mass: number = 9000;
+	/** Rückprall-Koeffizient (0 = kein Abprallen, die Kugel "klebt" fast an der Wand). */
+
+	private bounce: number;
+	private color: string
+	private vel: Vector2D
+
+	// @ts-ignore
+	// aktuell brauchen wir diese noch nicht.
+	// Aber für die Items später dann schon
+	private friction: number | undefined
+
+	/**
+		 * @param x - Start X (Top-Left).
+		 * @param y - Start Y (Top-Left).
+		 * @param x2 - Breite des Hindernisses.
+		 * @param y2 - Höhe des Hindernisses.
+		 * @param color - Farbe der Wand.
+		 */
 	constructor(x: number, y: number, x2: number, y2: number, color: string) {
 		this.x = x
 		this.x2 = x2
@@ -24,42 +53,54 @@ export class StructureLine implements IStructure, IPhysicsRectangle {
 		this.vel = { x: 0, y: 0 }
 		this.bounce = 0
 	}
-	draw(ctx: RenderContext) {
+
+	public draw(ctx: RenderContext) {
 		ctx.setFillColor(this.color)
 		ctx.drawRect(this.x, this.y, this.x2, this.y2)
 	}
-	getBounceFactor(): number {
-		return this.bounce
-	}
-	getBounds(): { width: number; height: number } {
-		return { width: this.x2, height: this.y2 }
-	}
-	getPos(): Vector2D {
-		return { x: this.x, y: this.y }
-	}
-	getVel(): Vector2D {
-		return this.vel
-	}
-	onCollision({ entity }: { entity: IPhysics }): void {
+
+	public getBounceFactor(): number { return this.bounce }
+
+	/**
+		 * Gibt die Dimensionen für die Kollisionsabfrage zurück.
+		 * @returns {width, height} Breite und Höhe des Objekts.
+		 */
+	public getBounds(): { width: number; height: number } { return { width: this.x2, height: this.y2 } }
+
+	/**
+		 * Gibt den Ankerpunkt zurück. 
+		 * Bei Rechtecken ist dies im Gegensatz zu Kreisen meist die obere linke Ecke.
+		 */
+	public getPos(): Vector2D { return { x: this.x, y: this.y } }
+
+	public getVel(): Vector2D { return this.vel }
+
+	public onCollision({ entity }: { entity: IPhysics }): void {
 		GameLogger.debug("Collision with:" + entity.getShape())
 	}
-	setVel(vel: Vector2D): void {
-		this.vel = vel
-	}
-	setMass(mass: number): void {
-		this.mass = mass
-	}
-	getMass(): number {
-		return this.mass
-	}
-	setPos(pos: Vector2D): void {
+
+	public setVel(vel: Vector2D): void { this.vel = vel }
+
+	public setMass(mass: number): void { this.mass = mass }
+
+	public getMass(): number { return this.mass }
+
+	public setPos(pos: Vector2D): void {
 		this.x = pos.x
 		this.y = pos.y
 	}
-	getFriction(): number {
-		return 0
-	}
-	setFriction(_friction: number): void { }
-	update(_deltatime: number, _globalfriction: number): void { }
-	getShape(): "rectangle" { return this.shape }
+
+	public setFriction(friction: number): void { this.friction = friction }
+	public getFriction(): number { return this.friction ?? 1 }
+
+	/**
+		 * Logik-Update für Animationen oder Zeit-Effekte.
+		 * @param _deltatime - Vergangene Zeit.
+		 * @param _globalfriction - Globale Reibung (wird von statischen Wänden ignoriert).
+		 */
+	public tick(_deltatime: number, _globalfriction: number): void { }
+
+	/** @returns Immer "rectangle" für den Collision-Dispatcher. */
+	public getShape(): "rectangle" { return this.shape }
+
 }

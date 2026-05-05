@@ -39,7 +39,7 @@ const sketch = (p: p5) => {
 
 	p.draw = () => {
 		if (!ctx) return
-		// handler.update(1)
+		// handler.tick(1)
 		p.push()
 		handler.drawWorld(ctx)
 		p.pop()
@@ -84,6 +84,6 @@ window.addEventListener('keydown', (e) => {
 		console.log("Tick")
 		console.log(`Pos.x: ${p1.getVel().x} Pos.y: ${p1.getVel().y} Vel.x${p1.getVel().x} Vel.y: ${p1.getVel().y}`);
 		console.log(`Pos.x: ${p2.getVel().x} Pos.y: ${p2.getVel().y} Vel.x${p2.getVel().x} Vel.y: ${p2.getVel().y}`);
-		handler.update((1_000 / DEFAULTFPS) / 10);
+		handler.tick((1_000 / DEFAULTFPS) / 10);
 	}
 });

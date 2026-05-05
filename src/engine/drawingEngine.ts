@@ -2,14 +2,32 @@ import p5 from "p5";
 import type { RenderContext } from "./RenderContext";
 import { GameLogger } from "../utils/log";
 
+/**
+ * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
+ * 
+ * Er kümmert sich um:
+ * 1. Die Skalierung von Welt-Einheiten in Pixel (toPixel / toWorld).
+ * 2. Das Asset-Management (Bilder laden und zwischenspeichern).
+ * 3. Das Mapping von Engine-Befehlen auf p5.js-Befehle.
+ */
 export class P5Renderer implements RenderContext {
+	/** Die originale p5-Instanz (das Zeichen-API). */
 	p5ctx: p5
+
+	/** Cache für Bilder, damit sie nicht bei jedem Frame neu geladen werden. */
 	assets: Map<string, p5.Image>
+
 	WORLD_SCALE_X: number = 1
 	WORLD_SCALE_Y: number = 1
 	public WORLD_SIZE_X: number = 16
 	public WORLD_SIZE_Y: number = 9
 	private renderScale = 1;
+
+	/** 
+	 * @param p - Die p5-Instanz.
+	 * @param scale - Der Skalierungsfaktor (Pixel pro Welt-Einheit).
+	 * @param worldWidth - Die gewünschte Breite der logischen Welt.
+	 */
 	constructor(p: p5, scale: number, worldWidth: number) {
 		this.p5ctx = p
 		this.assets = new Map<string, p5.Image>()
@@ -144,8 +162,18 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.resizeCanvas(x * .9, y * .9)
 		this.setScaleFactor(x / this.WORLD_SIZE_X)
 	}
-	toWorld(val: number) { return val / this.renderScale; }
+	// --- KOORDINATEN-LOGIK ---
+
+	/** 
+	 * Verwandelt einen Welt-Wert in echte Bildschirm-Pixel.
+	 * Ohne diese Funktion wäre das Spiel auf einem 4K-Monitor winzig.
+	 */
 	toPixel(val: number): number { return val * this.renderScale; }
+
+	/** 
+	 * Verwandelt einen Pixel-Wert (z.B. Mausposition) zurück in Welt-Koordinaten.
+	 */
+	toWorld(val: number) { return val / this.renderScale; }
 
 	windowScale = () => (window.window.innerWidth * 0.9) / 16
 }

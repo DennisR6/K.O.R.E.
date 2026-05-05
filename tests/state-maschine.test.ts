@@ -7,6 +7,7 @@ import { EntityManager } from "../src/entity/EntityManager.ts";
 import { Player } from '../src/entity/entity.ts';
 import { IGameContext } from '../src/systems/types.ts';
 
+//@ts-ignore
 const createMockContext = (state: GameStateType) => ({
 	state,
 	entities: new EntityManager([
@@ -15,50 +16,65 @@ const createMockContext = (state: GameStateType) => ({
 	structures: []
 } as IGameContext);
 
+/**
+ * @test Game State Machine & System Integration
+ * 
+ * Diese Suite validiert das "Gehirn" des Spielablaufs. Sie prüft, ob die 
+ * verschiedenen Systeme (Physik, Playback) harmonisch zusammenarbeiten und 
+ * ob die Engine die Spielphasen korrekt wechselt.
+ */
 describe('Game State Machine & System Integration', () => {
-
+	/**
+		 * Test: Phasenübergang (Lifecycle).
+		 * 
+		 * Prüft, ob das System nach dem Abspielen einer Animation (Playback) 
+		 * automatisch wieder bereit für Benutzereingaben (YOUR_TURN) ist.
+		 * 
+		 * Flow: SIMULATING -> [Tick 1] -> SIMULATING -> [Tick 2] -> YOUR_TURN
+		 */
 	test('Sollte von SIMULATING zu YOUR_TURN wechseln, wenn Playback abgelaufen ist', () => {
-		// 1. Setup
 		const ctx = createMockContext(GameState.SIMULATING);
 		const physics = new PhysicsSystem(new defaultPhysics());
 		const playback = new PlaybackSystem();
 
-		// Wir setzen das Playback auf genau 2 Frames
 		playback.start(2, []);
 
-		// 2. Erster Tick
-		// Physik sollte rechnen, Playback dekrementiert
-		physics.update(ctx, 16.66);
-		playback.update(ctx, 16.66);
+		physics.tick(ctx, 1, 1);
+		playback.tick(ctx);
 
-		// Orchestrator Logik (würde normalerweise im Handler stehen)
 		if (playback.getRemainingFrames() <= 0) ctx.state = GameState.SIMULATING_DONE;
 
 		assert.strictEqual(ctx.state, GameState.SIMULATING, "Sollte nach 1 Frame noch simulieren");
 		assert.strictEqual(playback.getRemainingFrames(), 1);
 
-		// 3. Zweiter Tick
-		physics.update(ctx, 16.66);
-		playback.update(ctx, 16.66);
+		physics.tick(ctx, 1, 1);
+		playback.tick(ctx);
 
-		// Orchestrator Logik prüft erneut
 		if (playback.getRemainingFrames() <= 0) ctx.state = GameState.YOUR_TURN;
 
-		// 4. Prüfung
 		assert.strictEqual(ctx.state, GameState.YOUR_TURN, "Sollte nach 2 Frames zu YOUR_TURN gewechselt haben");
 		assert.strictEqual(playback.getRemainingFrames(), 0);
 	});
 
+	/**
+		 * Test: State-Guards (Sicherheitsregeln).
+		 * 
+		 * Einer der wichtigsten Performance- und Logik-Tests. 
+		 * Er stellt sicher, dass die Physik-Engine "schläft", wenn der Spieler 
+		 * gerade am Zug ist (YOUR_TURN). 
+		 * 
+		 * Ziel: CPU-Ressourcen sparen und verhindern, dass sich Objekte bewegen, 
+		 * während der Spieler noch zielt.
+		 */
 	test('Physik darf nicht mehr rechnen, wenn State nicht SIMULATING ist', () => {
 		const ctx = createMockContext(GameState.YOUR_TURN);
 		let moveCalled = false;
 
-		// Wir mocken eine Entity, um zu sehen ob update gerufen wird
 		const mockEntity = new Player().new(({ x: 0, y: 0, id: "p1", size: 30 }))
 		ctx.entities = new EntityManager([mockEntity]);
 
 		const physics = new PhysicsSystem(new defaultPhysics());
-		physics.update(ctx, 16.66);
+		physics.tick(ctx, 1, 1);
 
 
 		assert.strictEqual(moveCalled, false, "Physik-Update sollte im IDLE ignoriert werden");

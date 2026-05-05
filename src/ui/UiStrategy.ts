@@ -1,9 +1,28 @@
-import type { IDrawer, IRenderer, RenderContext } from "../engine/RenderContext";
+import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
 
-
-export interface UIStrategy extends IDrawer, IRenderer {
+/**
+ * @deprecated
+ * Diese UI-Implementierung stammt aus einer älteren Version der Engine und ist 
+ * aktuell NICHT kompatibel mit dem neuen Render-System.
+ * 
+ * @reason
+ * Die Klasse dient nur noch als Referenz-Archiv für:
+ * 1. **Item-Slot-Logik**: Die mathematische Berechnung der zentrierten Slots am unteren Rand.
+ * 2. **Drag & Drop**: Fragmente der alten Maus-Interaktion (auskommentiert).
+ * 
+ * @planned
+ * Teile dieser Logik (insbesondere die Item-Visualisierung) werden in eine neue
+ * `UIOverlaySystem` Komponente überführt. Nutze diese Klasse nicht für aktive Features!
+ */
+export interface UIStrategy extends IDrawer, ITicker {
 	activeItem: number;
 }
+
+/**
+ * @deprecated
+ * Standard-UI der alten Version.
+ * ⚠️ Achtung: Viele Methoden greifen auf veraltete Kontext-Strukturen zu.
+ */
 export class DefaultUI implements UIStrategy {
 	private width: number;
 	private height: number;
@@ -21,7 +40,9 @@ export class DefaultUI implements UIStrategy {
 		this.gap = gap || 10;
 		this.amnt = amnt || 5;
 	}
-	update(_deltatime: number): void { }
+	tick(_deltatime: number, _globalfriction: number): void {
+
+	}
 
 	draw(ctx: RenderContext): void {
 		const screenW = ctx.getScreenSize().width;
@@ -81,6 +102,3 @@ export class DefaultUI implements UIStrategy {
 	// this.dragCurrent = { x: x / scale, y: y / scale };
 	// }
 }
-
-
-
