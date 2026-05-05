@@ -150,12 +150,21 @@ export class Player implements IEntity {
 		 */
 	public draw(ctx: RenderContext): void {
 		ctx.setFillColor(this.color);
-		ctx.drawCircle(this.position.x + this.size, this.position.y + + this.size, this.size * 2);
 		const nextX = this.position.x + this.velocity.x * 3;
 		const nextY = this.position.y + this.velocity.y * 3;
 		if (this.velocity.x !== 0 || this.velocity.y !== 0) {
 			ctx.line(this.getPos().x, this.getPos().y, nextX, nextY)
 		}
+		ctx.beginClip()
+		ctx.drawCircle(this.position.x + this.size, this.position.y + + this.size, this.size * 2);
+		ctx.endClip()
+		ctx.drawImage(
+			this.playericon, this.getPos().x - this.size,
+			this.getPos().y - this.size,
+			this.size * 2,
+			this.size * 2,
+			100, 100, 100 + 400, 100 + 512
+		)
 	}
 
 	/**
@@ -172,26 +181,19 @@ export class Player implements IEntity {
 		 * Setzt eine neue Position und validiert diese gegen massive Abweichungen.
 		 * Hilft dabei, "Teleportations-Bugs" im Netzwerk-Code zu finden.
 		 */
-	public getBounds(): { radius: number; } {
-		return { radius: this.size }
-	}
+	public getBounds(): { radius: number; } { return { radius: this.size } }
 
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
 
-	public getBounceFactor(): number {
-		return this.bouncyness
-	}
+	public getBounceFactor(): number { return this.bouncyness }
 
 	public setVel(v: { x: number, y: number }) {
 		this.velocity.x = v.x;
 		this.velocity.y = v.y;
 	}
-	public getMass(): number {
-		return this.mass
-	}
-	public setMass(inertia: number): void {
-		this.mass = Math.min(inertia, 1)
-	}
+	public getMass(): number { return this.mass }
+
+	public setMass(inertia: number): void { this.mass = Math.min(inertia, 1) }
 	public setPos(pos: Vector2D): void {
 		if (
 			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
@@ -206,21 +208,11 @@ export class Player implements IEntity {
 
 	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
 
-	public getFriction(): number | undefined {
-		return this.friction
-	}
-	public setFriction(friction: number): void {
-		this.friction = friction
-	}
-	public getId(): number | string {
-		return this.id
-	}
-	public setId(id: string | number): void {
-		this.id = id
-	}
-	public getShape(): "circle" {
-		return this.shape
-	}
+	public getFriction(): number | undefined { return this.friction }
+	public setFriction(friction: number): void { this.friction = friction }
+	public getId(): number | string { return this.id }
+	public setId(id: string | number): void { this.id = id }
+	public getShape(): "circle" { return this.shape }
 
 	/**
 		 * Aktiviert die Überwachung für Position und Geschwindigkeit.

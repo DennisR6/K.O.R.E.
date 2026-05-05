@@ -130,10 +130,10 @@ export const GameSettings = {
 	screenResolution: { x: 800, y: 450 },
 	mapBoundarys: [
 		// Rectangles
-		{ type: "rectangle", x: 100, y: 100, w: 1400, h: thickness, color: "blue" },
-		{ type: "rectangle", x: 100, y: 100, w: thickness, h: 700, color: "blue" },
-		{ type: "rectangle", x: 100, y: 800, w: 1400, h: thickness, color: "transparent" },
-		{ type: "rectangle", x: 1500, y: 100, w: thickness, h: 700, color: "transparent" },
+		{ type: "rectangle", x: 10, y: 10, w: 780, h: thickness, color: "blue" },
+		{ type: "rectangle", x: 10, y: 10, w: thickness, h: 430, color: "blue" },
+		{ type: "rectangle", x: 10, y: 440, w: 780, h: thickness, color: "cyan" },
+		{ type: "rectangle", x: 790, y: 10, w: thickness, h: 430, color: "red" },
 
 
 		// Circles
@@ -141,7 +141,7 @@ export const GameSettings = {
 		// OBEN MITTE
 		{ type: "circle", x: 800, y: 100, r: 30, color: "red" },
 		// OBEN RECHTS
-		{ type: "circle", x: 1500, y: 100, r: 30, color: "red" },
+		{ type: "circle", x: 750, y: 100, r: 30, color: "red" },
 		// UNTEN LINKS
 		{ type: "circle", x: 100, y: 800, r: 30, color: "red" },
 		// UNTEN MITTE
@@ -150,8 +150,8 @@ export const GameSettings = {
 		{ type: "circle", x: 1500, y: 800, r: 30, color: "cyan" },
 	],
 	players: [
-		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 12 },
-		{ id: "0", x: 320, y: 200, color: "red", playericon: "", team: ["1"], size: 12 },
+		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 24 * 2 },
+		{ id: "0", x: 320, y: 200, color: "red", playericon: "/Copilot_20260505_233044.png", team: ["1"], size: 24 * 2 },
 	],
 	friction: FRICTION_TABLE.wood,
 	items: [{ type: "", id: 0 }],

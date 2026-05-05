@@ -1,7 +1,7 @@
 import type { GameStateType, TurnPacket } from "../engine/types";
 import type { EntityManager } from "../entity/EntityManager";
 import type { Settings } from "../settings/settings";
-import type { Structure } from "../structures/structures";
+import type { IStructure } from "../structures/structures";
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.
@@ -13,7 +13,7 @@ export interface IGameContext {
 	/** Zugriff auf alle dynamischen Objekte (Spieler, Pucks). */
 	entities: EntityManager;
 	/** Liste aller statischen Hindernisse auf der Map. */
-	structures: Structure[];
+	structures: IStructure[];
 	/** Der aktuelle globale Spielzustand (z.B. "WAITING", "RUNNING", "GOAL"). */
 	state: GameStateType;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */

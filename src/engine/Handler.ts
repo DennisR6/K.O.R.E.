@@ -8,6 +8,7 @@ import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, ISimula
 import type { IGameContext, ISystem } from "../systems/types.ts";
 import { defaultPhysics } from "../physics/defaultPhysics.ts";
 import { GameLogger } from "../utils/log.ts";
+import type { IStructure } from "../structures/structures.ts";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -177,12 +178,12 @@ export class GameHandler implements ITicker, IMouse {
 
 
 
-		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
-		playback.start(packet.durationFrames, packet.finalState, () => {
-			GameLogger.debug("Playing done")
-			this.entityManager.resetSpeeds()
-			this.setState(GameState.PLAYING_DONE)
-		});
+		// const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
+		// playback.start(packet.durationFrames, packet.finalState, () => {
+		// 	GameLogger.debug("Playing done")
+		// 	this.entityManager.resetSpeeds()
+		this.setState(GameState.PLAYING_DONE)
+		// });
 	}
 
 	/**
@@ -230,6 +231,7 @@ export class GameHandler implements ITicker, IMouse {
 	public tick(dt: number) {
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		this.systems.forEach(s => s.tick(this.context, dt, this.physicsStrategy.getFriction()))
+		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
 		// this.entityManager.tick(dt, this.physicsStrategy.getFriction())
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 	}
@@ -247,6 +249,7 @@ export class GameHandler implements ITicker, IMouse {
 	public drawWorld(renderer: RenderContext): void {
 		renderer.clear()
 		this.preDrawers.forEach(d => d.draw(renderer))
+		this.context.structures.forEach(str => str.draw(renderer))
 		// 2. Entities (Player/Pucks) zeichnen
 		this.getEntityManager().getEntities().forEach(entity => {
 			renderer.push()
@@ -445,6 +448,10 @@ export class GameHandler implements ITicker, IMouse {
 
 	public start(state?: GameStateType) {
 		this.context.state = state ?? GameState.YOUR_TURN
+	}
+
+	public addStructure(structure: IStructure) {
+		this.context.structures.push(structure)
 	}
 
 }

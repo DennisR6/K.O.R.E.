@@ -37,7 +37,5 @@ export type { StructureCircle } from "./structureCircle.ts"
 export type { StructureLine } from "./structureLine.ts"
 export type { StructureRectangle } from "./structureRectangle.ts"
 
-export interface IStructure extends IDrawer, ITicker {
-	getShape(): string
-}
+export interface IStructure extends IDrawer, ITicker { getShape(): string }
 

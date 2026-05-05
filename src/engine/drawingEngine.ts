@@ -103,14 +103,15 @@ export class P5Renderer implements RenderContext {
 			)
 		}
 	}
-	drawImage(url: string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0): void {
+	drawImage(url: string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx: number, sy: number, sw: number, sh: number): void {
 		const img = this.assets.get(url);
 		if (!img) { this.loadImage(url); return; }
 
 		this.p5ctx.imageMode(this.p5ctx.CORNER);
 		if (dw == 0) dw = this.WORLD_SIZE_X
 		if (dh == 0) dh = this.WORLD_SIZE_Y
-		this.p5ctx.image(img, this.toPixel(dx), this.toPixel(dy), this.toPixel(dw), this.toPixel(dh));
+		this.p5ctx.image(img, this.toPixel(dx), this.toPixel(dy), this.toPixel(dw), this.toPixel(dh),
+			this.toPixel(sx), this.toPixel(sy), this.toPixel(sw), this.toPixel(sh));
 	}
 	beginClip() {
 		this.p5ctx.beginClip()
