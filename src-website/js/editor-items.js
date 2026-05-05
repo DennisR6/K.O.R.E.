@@ -20,6 +20,7 @@ export function initItemsEditor() {
     setupSpawnButtons();
     setupAutoSave();
     setupSaveButton();
+    setupEffectParams();
 
     renderItemsOverview();   // Übersicht zuerst anzeigen
 
@@ -157,6 +158,18 @@ function loadItemIntoEditor(item) {
         document.getElementById("field-player-kills").style.display = "none";
         document.getElementById("field-player-last").style.display = "block";
     }
+
+        document.getElementById("item-effect-type").value = item.effectType;
+        renderEffectParams();
+
+        // gespeicherte Werte einsetzen
+            if (item.effectParams) {
+                Object.entries(item.effectParams).forEach(([key, val]) => {
+                    const el = document.getElementById("effect-param-" + key);
+                    if (el) el.value = val;
+    });
+}
+
 
     // Spawn
     renderSpawnPoints(item.spawn.points);
@@ -469,12 +482,19 @@ function saveCurrentItem() {
 
     item.probability = Number(document.getElementById("item-probability").value);
 
-    renderItemSidebar();
-}
+    item.effectType = document.getElementById("item-effect-type").value;
 
-document.addEventListener("items-updated", () => {
-    renderItemSidebar();
+                        // Parameter speichern
+                        item.effectParams = {};
+                        const params = EFFECT_PARAMS[item.effectType] || [];
+
+                        params.forEach(p => {
+                            const el = document.getElementById("effect-param-" + p.id);
+                            if (el) item.effectParams[p.id] = Number(el.value);
 });
+
+
+}
 
 document.addEventListener("items-overview-update", () => {
     renderItemsOverview();
@@ -484,3 +504,90 @@ document.addEventListener("open-item-editor", (e) => {
     const item = e.detail;
     openItemEditor(item);
 });
+
+const EFFECT_PARAMS = {
+    push: [
+        { id: "force", label: "Kraft", type: "number", default: 500 }
+    ],
+    pull: [
+        { id: "force", label: "Kraft", type: "number", default: 500 }
+    ],
+    knockback: [
+        { id: "strength", label: "Stärke", type: "number", default: 800 }
+    ],
+
+    boost_speed: [
+        { id: "amount", label: "Speed Boost", type: "number", default: 1.5 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 2000 }
+    ],
+    boost_jump: [
+        { id: "amount", label: "Jump Boost", type: "number", default: 2.0 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 2000 }
+    ],
+    modify_friction: [
+        { id: "value", label: "Reibung", type: "number", default: 0.5 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 2000 }
+    ],
+    modify_mass: [
+        { id: "value", label: "Masse", type: "number", default: 2.0 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 2000 }
+    ],
+
+    teleport: [
+        { id: "distance", label: "Distanz", type: "number", default: 150 }
+    ],
+    blink: [
+        { id: "distance", label: "Distanz", type: "number", default: 100 }
+    ],
+    move_offset: [
+        { id: "x", label: "Offset X", type: "number", default: 0 },
+        { id: "y", label: "Offset Y", type: "number", default: 0 }
+    ],
+
+    affect_nearby_players: [
+        { id: "radius", label: "Radius", type: "number", default: 200 }
+    ],
+    swap_positions: [],
+    stagger: [
+        { id: "strength", label: "Stagger Stärke", type: "number", default: 300 }
+    ],
+
+    spawn_wall: [
+        { id: "width", label: "Breite", type: "number", default: 100 },
+        { id: "height", label: "Höhe", type: "number", default: 20 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 3000 }
+    ],
+    spawn_zone: [
+        { id: "radius", label: "Radius", type: "number", default: 200 },
+        { id: "duration", label: "Dauer (ms)", type: "number", default: 3000 }
+    ],
+    spawn_projectile: [
+        { id: "speed", label: "Projektilgeschwindigkeit", type: "number", default: 500 }
+    ]
+};
+
+function setupEffectParams() {
+    const select = document.getElementById("item-effect-type");
+    select.addEventListener("change", renderEffectParams);
+}
+
+function renderEffectParams() {
+    const effect = document.getElementById("item-effect-type").value;
+    const container = document.getElementById("effect-params");
+    container.innerHTML = "";
+
+    const params = EFFECT_PARAMS[effect] || [];
+
+    params.forEach(p => {
+        const div = document.createElement("div");
+        div.classList.add("field");
+
+        div.innerHTML = `
+            <label>${p.label}</label>
+            <input type="${p.type}" id="effect-param-${p.id}" value="${p.default}">
+        `;
+
+        container.appendChild(div);
+    });
+}
+

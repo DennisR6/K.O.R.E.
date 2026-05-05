@@ -145,30 +145,66 @@ export function renderWalls() {
         field.innerHTML = `
             <h4>Wand ${index + 1}</h4>
 
-            <label>X: <span>${wall.x}</span></label>
-            <input type="range" min="0" max="2000" value="${wall.x}" data-field="x">
+            <div class="editor-row">
+                <label>X: <span class="val-x">${wall.x}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${wall.x}" class="wall-x-slider">
+                    <input type="number" value="${wall.x}" class="wall-x-num">
+                </div>
+            </div>
 
-            <label>Y: <span>${wall.y}</span></label>
-            <input type="range" min="0" max="2000" value="${wall.y}" data-field="y">
+            <div class="editor-row">
+                <label>Y: <span class="val-y">${wall.y}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${wall.y}" class="wall-y-slider">
+                    <input type="number" value="${wall.y}" class="wall-y-num">
+                </div>
+            </div>
 
-            <label>Breite: <span>${wall.w}</span></label>
-            <input type="range" min="1" max="2000" value="${wall.w}" data-field="w">
+            <div class="editor-row">
+                <label>Breite: <span class="val-w">${wall.w}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="1" max="2000" value="${wall.w}" class="wall-w-slider">
+                    <input type="number" value="${wall.w}" class="wall-w-num">
+                </div>
+            </div>
 
-            <label>Höhe: <span>${wall.h}</span></label>
-            <input type="range" min="1" max="2000" value="${wall.h}" data-field="h">
+            <div class="editor-row">
+                <label>Höhe: <span class="val-h">${wall.h}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="1" max="2000" value="${wall.h}" class="wall-h-slider">
+                    <input type="number" value="${wall.h}" class="wall-h-num">
+                </div>
+            </div>
 
-            <label>Farbe</label>
-            <input type="color" value="${wall.color}" data-field="color">
+            <div class="editor-row">
+                <label>Farbe</label>
+                <input type="color" value="${wall.color}" class="wall-color">
+            </div>
 
             <button class="delete-wall">Löschen</button>
         `;
 
-        field.querySelectorAll("input").forEach(input => {
-            input.addEventListener("input", e => {
-                const f = e.target.dataset.field;
-                wall[f] = f === "color" ? e.target.value : Number(e.target.value);
-                renderWalls();
+        const bind = (slider, num, label, key) => {
+            slider.addEventListener("input", () => {
+                wall[key] = Number(slider.value);
+                num.value = slider.value;
+                label.textContent = slider.value;
             });
+            num.addEventListener("input", () => {
+                wall[key] = Number(num.value);
+                slider.value = num.value;
+                label.textContent = num.value;
+            });
+        };
+
+        bind(field.querySelector(".wall-x-slider"), field.querySelector(".wall-x-num"), field.querySelector(".val-x"), "x");
+        bind(field.querySelector(".wall-y-slider"), field.querySelector(".wall-y-num"), field.querySelector(".val-y"), "y");
+        bind(field.querySelector(".wall-w-slider"), field.querySelector(".wall-w-num"), field.querySelector(".val-w"), "w");
+        bind(field.querySelector(".wall-h-slider"), field.querySelector(".wall-h-num"), field.querySelector(".val-h"), "h");
+
+        field.querySelector(".wall-color").addEventListener("input", e => {
+            wall.color = e.target.value;
         });
 
         field.querySelector(".delete-wall").addEventListener("click", () => {
@@ -181,7 +217,6 @@ export function renderWalls() {
 
     container.appendChild(grid);
 }
-
 
 // --------------------------------------------------
 // LÖCHER RENDERN
@@ -200,27 +235,57 @@ export function renderHoles() {
         field.innerHTML = `
             <h4>Loch ${index + 1}</h4>
 
-            <label>X: <span>${hole.x}</span></label>
-            <input type="range" min="0" max="2000" value="${hole.x}" data-field="x">
+            <div class="editor-row">
+                <label>X: <span class="val-x">${hole.x}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${hole.x}" class="hole-x-slider">
+                    <input type="number" value="${hole.x}" class="hole-x-num">
+                </div>
+            </div>
 
-            <label>Y: <span>${hole.y}</span></label>
-            <input type="range" min="0" max="2000" value="${hole.y}" data-field="y">
+            <div class="editor-row">
+                <label>Y: <span class="val-y">${hole.y}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${hole.y}" class="hole-y-slider">
+                    <input type="number" value="${hole.y}" class="hole-y-num">
+                </div>
+            </div>
 
-            <label>Radius: <span>${hole.r}</span></label>
-            <input type="range" min="1" max="500" value="${hole.r}" data-field="r">
+            <div class="editor-row">
+                <label>Radius: <span class="val-r">${hole.r}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="1" max="500" value="${hole.r}" class="hole-r-slider">
+                    <input type="number" value="${hole.r}" class="hole-r-num">
+                </div>
+            </div>
 
-            <label>Farbe</label>
-            <input type="color" value="${hole.color}" data-field="color">
+            <div class="editor-row">
+                <label>Farbe</label>
+                <input type="color" value="${hole.color}" class="hole-color">
+            </div>
 
             <button class="delete-hole">Löschen</button>
         `;
 
-        field.querySelectorAll("input").forEach(input => {
-            input.addEventListener("input", e => {
-                const f = e.target.dataset.field;
-                hole[f] = f === "color" ? e.target.value : Number(e.target.value);
-                renderHoles();
+        const bind = (slider, num, label, key) => {
+            slider.addEventListener("input", () => {
+                hole[key] = Number(slider.value);
+                num.value = slider.value;
+                label.textContent = slider.value;
             });
+            num.addEventListener("input", () => {
+                hole[key] = Number(num.value);
+                slider.value = num.value;
+                label.textContent = num.value;
+            });
+        };
+
+        bind(field.querySelector(".hole-x-slider"), field.querySelector(".hole-x-num"), field.querySelector(".val-x"), "x");
+        bind(field.querySelector(".hole-y-slider"), field.querySelector(".hole-y-num"), field.querySelector(".val-y"), "y");
+        bind(field.querySelector(".hole-r-slider"), field.querySelector(".hole-r-num"), field.querySelector(".val-r"), "r");
+
+        field.querySelector(".hole-color").addEventListener("input", e => {
+            hole.color = e.target.value;
         });
 
         field.querySelector(".delete-hole").addEventListener("click", () => {
@@ -243,35 +308,67 @@ export function renderPlayers() {
 
     mapData.players.forEach((player, index) => {
         const field = document.createElement("div");
-        field.className = "player-field";
+        field.className = "field";
 
         field.innerHTML = `
             <h4>Spieler ${index + 1}</h4>
 
-            <label>X: <span>${player.x}</span></label>
-            <input type="range" min="0" max="2000" value="${player.x}" data-field="x">
+            <div class="editor-row">
+                <label>X: <span class="val-x">${player.x}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${player.x}" class="player-x-slider">
+                    <input type="number" value="${player.x}" class="player-x-num">
+                </div>
+            </div>
 
-            <label>Y: <span>${player.y}</span></label>
-            <input type="range" min="0" max="2000" value="${player.y}" data-field="y">
+            <div class="editor-row">
+                <label>Y: <span class="val-y">${player.y}</span></label>
+                <div class="editor-inputs">
+                    <input type="range" min="0" max="2000" value="${player.y}" class="player-y-slider">
+                    <input type="number" value="${player.y}" class="player-y-num">
+                </div>
+            </div>
 
-            <label>Farbe</label>
-            <input type="color" value="${player.color}" data-field="color">
+            <div class="editor-row">
+                <label>Farbe</label>
+                <input type="color" value="${player.color}" class="player-color">
+            </div>
 
-            <label>Team</label>
-            <select data-field="team">
-                <option value="0" ${player.team == 0 ? "selected" : ""}>Team 0</option>
-                <option value="1" ${player.team == 1 ? "selected" : ""}>Team 1</option>
-            </select>
+            <div class="editor-row">
+                <label>Team</label>
+                <select class="player-team">
+                    <option value="1" ${player.team == 1 ? "selected" : ""}>Team 1</option>
+                    <option value="2" ${player.team == 2 ? "selected" : ""}>Team 2</option>
+                    <option value="3" ${player.team == 3 ? "selected" : ""}>Team 3</option>
+                    <option value="4" ${player.team == 4 ? "selected" : ""}>Team 4</option>
+                </select>
+            </div>
 
             <button class="delete-player">Löschen</button>
         `;
 
-        field.querySelectorAll("input, select").forEach(input => {
-            input.addEventListener("input", e => {
-                const f = e.target.dataset.field;
-                player[f] = f === "color" ? e.target.value : Number(e.target.value);
-                renderPlayers();
+        const bind = (slider, num, label, key) => {
+            slider.addEventListener("input", () => {
+                player[key] = Number(slider.value);
+                num.value = slider.value;
+                label.textContent = slider.value;
             });
+            num.addEventListener("input", () => {
+                player[key] = Number(num.value);
+                slider.value = num.value;
+                label.textContent = num.value;
+            });
+        };
+
+        bind(field.querySelector(".player-x-slider"), field.querySelector(".player-x-num"), field.querySelector(".val-x"), "x");
+        bind(field.querySelector(".player-y-slider"), field.querySelector(".player-y-num"), field.querySelector(".val-y"), "y");
+
+        field.querySelector(".player-color").addEventListener("input", e => {
+            player.color = e.target.value;
+        });
+
+        field.querySelector(".player-team").addEventListener("change", e => {
+            player.team = Number(e.target.value);
         });
 
         field.querySelector(".delete-player").addEventListener("click", () => {
@@ -284,6 +381,7 @@ export function renderPlayers() {
 
     container.appendChild(grid);
 }
+
 
 
 

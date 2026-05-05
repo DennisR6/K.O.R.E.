@@ -6,16 +6,7 @@
     "y": 900,
     "factor": 100
   },
-  "mapBoundarys": [
-    {
-      "type": "rectangle",
-      "x": 209,
-      "y": 379,
-      "w": 100,
-      "h": 20,
-      "color": "#4da3ff"
-    }
-  ],
+  "mapBoundarys": [],
   "holes": [],
   "players": [],
   "friction": 1,
@@ -23,7 +14,7 @@
   "items": [],
   "effects": [
     {
-      "id": "0f270ad9-1e80-410a-bb2b-e7feaf5368ce",
+      "id": "24e3f0ec-1da4-444f-b419-c03d9023d80c",
       "type": "push_zone",
       "position": {
         "x": 0,

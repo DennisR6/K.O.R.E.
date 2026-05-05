@@ -81,6 +81,7 @@
                     <div class="field-small">
                         <label for="map-image">Hintergrundbild</label>
                         <input type="file" id="map-image" accept="image/*">
+                        <input type="text" id="map-image-url" placeholder="https://....">
                     </div>
                 </div>
 
@@ -130,7 +131,7 @@
     <!-- ITEM OVERVIEW (Tabelle) -->
     <div id="items-overview" class="items-overview active">
         <h2>Alle Items</h2>
-        <button id="btn-save-item" class="small-btn">Speichern</button>
+
         <button id="btn-create-item" class="small-btn">+ Neues Item</button>
 
         <table class="item-table">
@@ -171,12 +172,30 @@
             <div class="field">
                 <label for="item-effect-type">Effect Type</label>
                 <select id="item-effect-type">
-                    <option value="impulse">Impulse</option>
-                    <option value="heal">Heal</option>
-                    <option value="buff">Buff</option>
-                    <option value="debuff">Debuff</option>
+                    <option value="push">push</option>
+                    <option value="pull">pull</option>
+                    <option value="knockback">knockback</option>
+
+                    <option value="boost_speed">boost_speed</option>
+                    <option value="boost_jump">boost_jump</option>
+                    <option value="modify_friction">modify_friction</option>
+                    <option value="modify_mass">modify_mass</option>
+
+                    <option value="teleport">teleport</option>
+                    <option value="blink">blink</option>
+                    <option value="move_offset">move_offset</option>
+
+                    <option value="affect_nearby_players">affect_nearby_players</option>
+                    <option value="swap_positions">swap_positions</option>
+                    <option value="stagger">stagger</option>
+
+                    <option value="spawn_wall">spawn_wall</option>
+                    <option value="spawn_zone">spawn_zone</option>
+                    <option value="spawn_projectile">spawn_projectile</option>
                 </select>
             </div>
+            <!-- Dynamische Parameter-->
+             <div id="effect-params"></div>
 
             <div class="field">
                 <label for="item-trigger">Trigger</label>
@@ -262,7 +281,11 @@
             <button id="btn-add-area" class="small-btn">+ Bereich</button>
             <div id="area-list" class="accordion"></div>
         </div>
+
     </div>
+    <div class="save-container">
+            <button id="btn-save-item" class="save-btn">💾 Item Speichern</button>
+        </div>
 </div>
 
 
@@ -489,7 +512,7 @@
 
             <!-- HIER kommt die Live‑Vorschau rein -->
                 <div id="preview-canvas">
-                <iframe src="http://localhost:5173/" width="100%" height="600" title="Beschreibung des Inhalts"></iframe>
+                <iframe src="http://localhost:5173/" style="zoom: 0.51;" title="Beschreibung des Inhalts"></iframe>
             </div>
             </aside>
 
