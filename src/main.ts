@@ -23,7 +23,7 @@ handler.setEmitter(em)
 handler.addSystem(new PhysicsSystem(physics, 60))
 handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
-handler.addPreDrawer(new BackgroundImageSystem({ url: "/eis.png" }))
+handler.addPreDrawer(new BackgroundImageSystem({ url: "/BilliardMap.png" }))
 GameSettings.mapBoundarys?.forEach(str => {
 	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
 	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))

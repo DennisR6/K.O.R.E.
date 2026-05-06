@@ -137,24 +137,26 @@ export const GameSettings = {
 	screenResolution: { x: 800, y: 450 },
 	mapBoundarys: [
 		// Rectangles
-		{ type: "rectangle", x: 10, y: 10, w: 780, h: thickness, color: "blue" },
-		{ type: "rectangle", x: 10, y: 10, w: thickness, h: 430, color: "blue" },
-		{ type: "rectangle", x: 10, y: 440, w: 780, h: thickness, color: "cyan" },
-		{ type: "rectangle", x: 790, y: 10, w: thickness, h: 430, color: "red" },
+		{ type: "rectangle", x: 425, y: 57, w: 285, h: thickness, color: "green" },
+		{ type: "rectangle", x: 85, y: 57, w: 274, h: thickness, color: "black" },
+		{ type: "rectangle", x: 56, y: 83, w: thickness, h: 261, color: "blue" },
+		{ type: "rectangle", x: 425, y: 365, w: 285, h: thickness, color: "cyan" },
+		{ type: "rectangle", x: 85, y: 365, w: 274, h: thickness, color: "purple" },
+		{ type: "rectangle", x: 740, y: 83, w: thickness, h: 261, color: "red" },
 
 
 		// Circles
-		{ type: "circle", x: 10, y: 10, r: 30, color: "red" },
+		{ type: "circle", x: 50, y: 48, r: 60, color: "blue" },
 		// OBEN MITTE
-		{ type: "circle", x: 400, y: 10, r: 30, color: "red" },
+		{ type: "circle", x: 391, y: 35, r: 60, color: "yellow" },
 		// OBEN RECHTS
-		{ type: "circle", x: 780, y: 10, r: 30, color: "red" },
+		{ type: "circle", x: 749, y: 46, r: 60, color: "purple" },
 		// UNTEN LINKS
-		{ type: "circle", x: 10, y: 440, r: 30, color: "red" },
+		{ type: "circle", x: 50, y: 380, r: 60, color: "black" },
 		// UNTEN MITTE
-		{ type: "circle", x: 400, y: 440, r: 30, color: "red" },
+		{ type: "circle", x: 391, y: 390, r: 60, color: "red" },
 		// UNTEN RECHTS
-		{ type: "circle", x: 780, y: 440, r: 30, color: "cyan" },
+		{ type: "circle", x: 745, y: 380, r: 60, color: "cyan" },
 	],
 	players: [
 		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 24 * 2 },
