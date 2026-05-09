@@ -132,6 +132,7 @@ export const FRICTION_TABLE = {
 	}
 } as const
 const thickness = 2
+const CircleRadius = 27
 export const GameSettings = {
 	id: "",
 	screenResolution: { x: 800, y: 450 },
@@ -146,21 +147,21 @@ export const GameSettings = {
 
 
 		// Circles
-		{ type: "circle", x: 50, y: 48, r: 60, color: "blue" },
+		{ type: "circle", x: 50, y: 48, r: CircleRadius, color: "blue" },
 		// OBEN MITTE
-		{ type: "circle", x: 391, y: 35, r: 60, color: "yellow" },
+		{ type: "circle", x: 391, y: 35, r: CircleRadius, color: "yellow" },
 		// OBEN RECHTS
-		{ type: "circle", x: 749, y: 46, r: 60, color: "purple" },
+		{ type: "circle", x: 749, y: 46, r: CircleRadius, color: "purple" },
 		// UNTEN LINKS
-		{ type: "circle", x: 50, y: 380, r: 60, color: "black" },
+		{ type: "circle", x: 50, y: 380, r: CircleRadius, color: "magenta" },
 		// UNTEN MITTE
-		{ type: "circle", x: 391, y: 390, r: 60, color: "red" },
+		{ type: "circle", x: 391, y: 390, r: CircleRadius, color: "red" },
 		// UNTEN RECHTS
-		{ type: "circle", x: 745, y: 380, r: 60, color: "cyan" },
+		{ type: "circle", x: 745, y: 380, r: CircleRadius, color: "cyan" },
 	],
 	players: [
-		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 24 * 2 },
-		{ id: "0", x: 320, y: 200, color: "red", playericon: "", team: ["1"], size: 24 * 2 },
+		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 20 },
+		{ id: "0", x: 320, y: 200, color: "red", playericon: "", team: ["1"], size: 20 },
 	],
 	friction: FRICTION_TABLE.wood,
 	items: [{ type: "", id: 0 }],

@@ -37,7 +37,7 @@ export class PlaybackSystem implements PlaybackSystem {
 		 * Sobald 0 erreicht ist, wird der Hard-Sync ausgelöst.
 		 */
 	tick(ctx: IGameContext) {
-		if (ctx.state !== GameState.SIMULATING && ctx.state !== GameState.PLAYING) return
+		if (ctx.state !== GameState.PLAYING) return
 		if (this.remainingFrames > 0)
 			this.remainingFrames--;
 		else if (this.finalState) {

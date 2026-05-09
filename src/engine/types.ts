@@ -49,6 +49,7 @@ export const createDefaultContext = (overrides: Partial<IGameContext> = {}): IGa
 		entities: new EntityManager([]),
 		structures: [],
 		settings: { id: "", screenResolution: { x: 16, y: 9 } },
+		dt: overrides.dt ?? 1,
 		...overrides
 	};
 }
@@ -113,6 +114,7 @@ export type HandlerDependencies = {
 	physicsStrategy: PhysicsStrategy;// Die Regeln (Eis, Rasen, Sand?)
 	inputEmitter: IInputEmitter;     // Wo geht der Schuss hin?
 	systems: ISystem[];              // Zusätzliche Logik-Module
+	dt: number; 					 // Das ist die Tickzeit der Engine
 };
 
 /**

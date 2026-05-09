@@ -36,6 +36,7 @@ export const createTestHandler = (overrides: Override = {}) => {
 		physicsStrategy,
 		inputEmitter: { sendShot: () => { } },
 		systems: [new PhysicsSystem(physicsStrategy), new PlaybackSystem()],
+		dt: 1,
 	};
 
 	const handler = new GameHandler(
@@ -44,6 +45,7 @@ export const createTestHandler = (overrides: Override = {}) => {
 		overrides.physicsStrategy ?? defaultDependencies.physicsStrategy,
 		overrides.inputEmitter ?? defaultDependencies.inputEmitter,
 		overrides.systems ?? defaultDependencies.systems,
+		overrides.dt ?? defaultDependencies.dt,
 	);
 	return handler
 };
@@ -71,6 +73,7 @@ export class GameHandler implements ITicker, IMouse {
 	private postTickers: ITicker[] = []
 	private preDrawers: IDrawer[] = []
 	private postDrawers: IDrawer[] = []
+	private dt: number;
 
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -86,7 +89,8 @@ export class GameHandler implements ITicker, IMouse {
 		entityManager: EntityManager,
 		physics: PhysicsStrategy,
 		emitter: IInputEmitter,
-		systems: ISystem[] = []
+		systems: ISystem[] = [],
+		dt: number,
 	) {
 		//@ts-ignore
 		this.context = { state: GameState.STARTING }
@@ -95,6 +99,7 @@ export class GameHandler implements ITicker, IMouse {
 		this.physicsStrategy = physics;
 		this.inputEmitter = emitter;
 		this.systems = systems;
+		this.dt = dt
 	}
 
 	/**
@@ -144,7 +149,7 @@ export class GameHandler implements ITicker, IMouse {
 
 		let frames = 0;
 		while (!this.simulator!.isStatic(tempManager) && frames < 1200) {
-			this.simulator!.step(physSystem, 1, tempManager, this.context.structures);
+			this.simulator!.step(physSystem, this.dt, tempManager, this.context.structures);
 			frames++;
 		}
 
@@ -209,9 +214,8 @@ export class GameHandler implements ITicker, IMouse {
 		this.setState(GameState.PLAYING_DONE)
 
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
-		if (playback) {
-			playback.start(0, []);
-		}
+		if (!playback) return
+		playback.start(0, []);
 
 		this.lastTurnFinalState = null;
 	}

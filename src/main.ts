@@ -15,12 +15,13 @@ import { StructureRectangle } from "./structures/structureRectangle.ts";
 import { StructureCircle } from "./structures/structureCircle.ts";
 
 
+const TickRate = 1
 const physics = new defaultPhysics(FRICTION_TABLE.wood)
-let handler = createTestHandler({ systems: [], physicsStrategy: physics });
+let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
 handler.setSimulator(new Simulator())
 const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
 handler.setEmitter(em)
-handler.addSystem(new PhysicsSystem(physics, 60))
+handler.addSystem(new PhysicsSystem(physics, TickRate))
 handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
 handler.addPreDrawer(new BackgroundImageSystem({ url: "/BilliardMap.png" }))
@@ -32,9 +33,12 @@ GameSettings.mapBoundarys?.forEach(str => {
 GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new TrackerPlayer().new({ ...player })));
 handler.start()
 
-const turn = [{ actorId: '0', angle: 210.6326165894326, power: 22.94228880033126 }]
-const { actorId, angle, power } = turn[0]
-const sim = handler.simulateTurn(actorId, angle, power); handler.tickTurn(sim);
+setTimeout(() => {
+	const turn = [{ actorId: '0', angle: 0, power: 20 }]
+	const { actorId, angle, power } = turn[0]
+	const sim = handler.simulateTurn(actorId, angle, power);
+	handler.tickTurn(sim);
+}, 2_000)
 
 const DEFAULTFPS = 60
 const sketch = (p: p5) => {
@@ -45,10 +49,11 @@ const sketch = (p: p5) => {
 		ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 	};
 
+	let r = 0;
 	p.draw = () => {
 		if (!ctx) return
-		for (let i = 0; i <= 100; i++)
-			handler.tick(0.01)
+		handler.tick(TickRate)
+		r = 0
 		p.push()
 		handler.drawWorld(ctx)
 		p.pop()
