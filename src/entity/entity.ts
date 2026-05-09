@@ -155,16 +155,16 @@ export class Player implements IEntity {
 		if (this.velocity.x !== 0 || this.velocity.y !== 0) {
 			ctx.line(this.getPos().x, this.getPos().y, nextX, nextY)
 		}
-		ctx.beginClip()
+		// ctx.beginClip()
 		ctx.drawCircle(this.position.x + this.size, this.position.y + + this.size, this.size * 2);
-		ctx.endClip()
-		ctx.drawImage(
-			this.playericon, this.getPos().x - this.size,
-			this.getPos().y - this.size,
-			this.size * 2,
-			this.size * 2,
-			100, 100, 100 + 400, 100 + 512
-		)
+		// ctx.endClip()
+		// ctx.drawImage(
+		// 	this.playericon, this.getPos().x - this.size,
+		// 	this.getPos().y - this.size,
+		// 	this.size * 2,
+		// 	this.size * 2,
+		// 	100, 100, 100 + 400, 100 + 512
+		// )
 	}
 
 	/**

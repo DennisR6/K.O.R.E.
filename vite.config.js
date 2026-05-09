@@ -8,7 +8,7 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				game: resolve(__dirname, "index.html"),
-				editor: resolve(__dirname, "src-website.html"),
+				// editor: resolve(__dirname, "src-website.html"),
 			},
 		},
 	},

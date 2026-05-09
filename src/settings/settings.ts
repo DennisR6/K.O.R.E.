@@ -160,7 +160,7 @@ export const GameSettings = {
 	],
 	players: [
 		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 24 * 2 },
-		{ id: "0", x: 320, y: 200, color: "red", playericon: "/Copilot_20260505_233044.png", team: ["1"], size: 24 * 2 },
+		{ id: "0", x: 320, y: 200, color: "red", playericon: "", team: ["1"], size: 24 * 2 },
 	],
 	friction: FRICTION_TABLE.wood,
 	items: [{ type: "", id: 0 }],

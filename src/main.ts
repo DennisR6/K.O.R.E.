@@ -1,5 +1,5 @@
 import p5 from "p5";
-import { createTestHandler, GameHandler } from "./engine/Handler";
+import { createTestHandler, GameHandler } from "./engine/Handler.ts";
 import { P5Renderer } from "./engine/drawingEngine.ts";
 import type { RenderContext } from "./engine/RenderContext";
 import { FRICTION_TABLE, GameSettings } from "./settings/settings";
@@ -47,7 +47,8 @@ const sketch = (p: p5) => {
 
 	p.draw = () => {
 		if (!ctx) return
-		handler.tick(1)
+		for (let i = 0; i <= 100; i++)
+			handler.tick(0.01)
 		p.push()
 		handler.drawWorld(ctx)
 		p.pop()

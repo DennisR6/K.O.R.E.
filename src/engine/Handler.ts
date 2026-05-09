@@ -176,8 +176,6 @@ export class GameHandler implements ITicker, IMouse {
 		const physSystem = this.systems.find(x => x instanceof PhysicsSystem)
 		if (!physSystem) throw new Error("Kein Physik System installiert")
 
-
-
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		playback.start(packet.durationFrames, packet.finalState, () => {
 			GameLogger.debug("Playing done")
