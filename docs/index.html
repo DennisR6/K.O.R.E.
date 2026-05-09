@@ -1,0 +1,329 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>game</title><meta name="description" content="Documentation for game"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">game</a><div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>game</h1></div><div class="tsd-panel tsd-typography"><h1 id="🎮-slipstrike-game-design-document-gdd" class="tsd-anchor-link">🎮 Slipstrike – Game Design Document (GDD)<a href="#🎮-slipstrike-game-design-document-gdd" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p><strong>Version:</strong> 1.1.1
+<strong>Status:</strong> Engine-agnostisch · Modding-first · Deterministisch</p>
+<hr>
+<h2 id="1-high-concept" class="tsd-anchor-link">1. High Concept<a href="#1-high-concept" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Slipstrike</strong> ist ein rundenbasiertes 2D‑Arena‑Taktikspiel mit stark physikbasierter Bewegung.
+Spieler stoßen Figuren über rutschige Arenen, manipulieren den Zug mit taktischen Items und versuchen, Gegner durch geschickte Richtungswahl und Kraftdosierung aus der Arena zu drängen.</p>
+<p>Das Spiel ist <strong>nicht reaktionsbasiert</strong>, sondern <strong>entscheidungsbasiert</strong>:
+Jeder Zug besteht aus Planung, Ausführung und Beobachtung eines deterministischen Physik‑Ergebnisses.</p>
+<p>Kernversprechen:</p>
+<ul>
+<li>Jeder Stoß ist eine bewusste Entscheidung</li>
+<li>Physik ist vorhersagbar, nicht chaotisch</li>
+<li>Taktik entsteht aus Geometrie, Timing und Regeln</li>
+</ul>
+<hr>
+<h2 id="2-designziele" class="tsd-anchor-link">2. Design‑Ziele<a href="#2-designziele" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><strong>Deterministische Physik</strong> (replay‑ &amp; KI‑freundlich)</li>
+<li><strong>Minimale Engine</strong>, maximale Auslagerung in Daten</li>
+<li><strong>100 % datengetriebene Items &amp; Maps</strong></li>
+<li><strong>Modding als First‑Class‑Feature</strong> (intern &amp; extern identisch)</li>
+<li>Plattformübergreifend ohne Gameplay‑Unterschiede</li>
+</ul>
+<hr>
+<h2 id="3-plattformen" class="tsd-anchor-link">3. Plattformen<a href="#3-plattformen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Slipstrike wird aus einer gemeinsamen Codebasis betrieben:</p>
+<ul>
+<li><strong>PC (Steam)</strong> – Maus &amp; Controller</li>
+<li><strong>Steam Deck</strong> – Controller, 1280×800</li>
+<li><strong>Android / iOS</strong> – Touch‑Steuerung</li>
+<li><strong>Discord</strong> – Maus &amp; Tastatur, Rich Presence</li>
+</ul>
+<p>Alle Plattformen nutzen <strong>dieselben Regeln, Items und Physikdaten</strong>.</p>
+<hr>
+<h2 id="4-kerngameplayloop" class="tsd-anchor-link">4. Kern‑Gameplay‑Loop<a href="#4-kerngameplayloop" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Jede Runde folgt strikt diesem Ablauf:</p>
+<ol>
+<li>
+<p><strong>Item‑Phase (optional)</strong>
+Der aktive Spieler kann <strong>genau ein Item</strong> einsetzen.</p>
+</li>
+<li>
+<p><strong>Stoß‑Phase (Pflicht)</strong>
+Der Spieler wählt eine eigene Figur, richtet sie aus und stößt sie.</p>
+</li>
+<li>
+<p><strong>Physik‑Phase</strong>
+Es gibt <strong>keine Eingaben</strong>. Die Physik läuft, bis alle Figuren nahezu stillstehen.</p>
+</li>
+<li>
+<p><strong>Rundenwechsel</strong>
+Der nächste Spieler ist am Zug.</p>
+</li>
+</ol>
+<hr>
+<h2 id="5-physik-bewegung-rotation--force" class="tsd-anchor-link">5. Physik &amp; Bewegung (Rotation + Force)<a href="#5-physik-bewegung-rotation--force" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Slipstrike verwendet ein <strong>gerichtetes Impulsmodell</strong>.</p>
+<h3 id="figurenzustand" class="tsd-anchor-link">Figuren‑Zustand<a href="#figurenzustand" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Jede Figur besitzt:</p>
+<ul>
+<li>Position (2D)</li>
+<li>Rotation (Richtung)</li>
+<li>Velocity (Bewegungsvektor)</li>
+<li>optionale Angular Velocity</li>
+</ul>
+<h3 id="stoßmechanik" class="tsd-anchor-link">Stoß‑Mechanik<a href="#stoßmechanik" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><strong>Rotation bestimmt die Richtung</strong></li>
+<li><strong>Force bestimmt die Stärke</strong></li>
+<li>Ein Stoß ist ein einmaliger Impuls</li>
+</ul>
+<p>Konzeptuell:</p>
+<ul>
+<li>Rotation → Vorwärtsvektor</li>
+<li>Force → Skalierung dieses Vektors</li>
+<li>Velocity += Forward × Force</li>
+</ul>
+<h3 id="bewegung" class="tsd-anchor-link">Bewegung<a href="#bewegung" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Position wird aus Velocity integriert</li>
+<li>Reibung reduziert Velocity pro Tick</li>
+<li>Figuren kommen deterministisch zum Stillstand</li>
+</ul>
+<h3 id="drift" class="tsd-anchor-link">Drift<a href="#drift" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Drift ist <strong>mapabhängig</strong></li>
+<li>Velocity tendiert zur Rotationsrichtung</li>
+<li>Eis‑Maps erlauben extreme Drift‑Abweichungen</li>
+</ul>
+<h3 id="kollisionen" class="tsd-anchor-link">Kollisionen<a href="#kollisionen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Figur ↔ Figur</li>
+<li>Figur ↔ Arena</li>
+<li>Kollisionen ändern Richtung &amp; Geschwindigkeit</li>
+</ul>
+<h3 id="tod" class="tsd-anchor-link">Tod<a href="#tod" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Verlässt eine Figur die Arena → sofort eliminiert</li>
+</ul>
+<hr>
+<h2 id="6-items-moddingfirst" class="tsd-anchor-link">6. Items (Modding‑first)<a href="#6-items-moddingfirst" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Items sind <strong>rein deklarativ</strong> und werden <strong>nicht im Code definiert</strong>.</p>
+<h3 id="grundregeln" class="tsd-anchor-link">Grundregeln<a href="#grundregeln" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>
+<p>Maximal <strong>ein Item pro Runde</strong></p>
+</li>
+<li>
+<p>Items werden <strong>vor dem Stoß</strong> eingesetzt</p>
+</li>
+<li>
+<p>Items können auf:</p>
+<ul>
+<li>Figuren</li>
+<li>Positionen</li>
+<li>Zonen
+angewendet werden</li>
+</ul>
+</li>
+</ul>
+<h3 id="itemarchitektur" class="tsd-anchor-link">Item‑Architektur<a href="#itemarchitektur" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Items sind JSON‑Daten</li>
+<li>Die Engine kennt nur <strong>Effekt‑Typen</strong>, keine Items</li>
+<li>Interne Items und Mods nutzen <strong>dieselbe Pipeline</strong></li>
+</ul>
+<h3 id="effektbeispiele" class="tsd-anchor-link">Effekt‑Beispiele<a href="#effektbeispiele" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Force‑Multiplikation</li>
+<li>Richtungsänderung</li>
+<li>Positions‑Tausch</li>
+<li>Temporäre Barrieren</li>
+<li>Verzögerte Effekte</li>
+</ul>
+<h3 id="offizielle-itemliste" class="tsd-anchor-link">Offizielle Item‑Liste<a href="#offizielle-itemliste" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Anker</li>
+<li>Magnet</li>
+<li>Köder</li>
+<li>Falltür</li>
+<li>Power‑Dash</li>
+<li>Verzögerte Mine</li>
+<li>Mini‑Wall</li>
+<li>Freeze‑Shot</li>
+<li>Switch</li>
+<li>Jägermeister‑Elixier</li>
+</ul>
+<hr>
+<h2 id="7-maps-arenen" class="tsd-anchor-link">7. Maps &amp; Arenen<a href="#7-maps-arenen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Maps definieren <strong>physikalisches Verhalten</strong>, nicht nur Layout.</p>
+<h3 id="mapeigenschaften" class="tsd-anchor-link">Map‑Eigenschaften<a href="#mapeigenschaften" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Reibung</li>
+<li>Drift‑Faktor</li>
+<li>Arena‑Form</li>
+<li>Gefahrenzonen</li>
+</ul>
+<h3 id="gefahrenzonen-hazards" class="tsd-anchor-link">Gefahrenzonen (Hazards)<a href="#gefahrenzonen-hazards" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Hazards sind datengetriebene Trigger:</p>
+<ul>
+<li>Lava (Kill Zone)</li>
+<li>Geysire (Impuls)</li>
+<li>Slow‑Zones</li>
+<li>Falltüren</li>
+</ul>
+<h3 id="offizielle-maps" class="tsd-anchor-link">Offizielle Maps<a href="#offizielle-maps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><strong>Cue Clash</strong> – klassische Reibung, Hindernisse</li>
+<li><strong>Frostbite Arena</strong> – extrem niedrige Reibung</li>
+<li><strong>Magma Cradle</strong> – aktive Gefahren &amp; Zonen</li>
+</ul>
+<hr>
+<h2 id="8-spielmodi-siegbedingungen" class="tsd-anchor-link">8. Spielmodi &amp; Siegbedingungen<a href="#8-spielmodi-siegbedingungen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="spielmodi" class="tsd-anchor-link">Spielmodi<a href="#spielmodi" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>1v1 PvP</li>
+<li>1v1 vs KI</li>
+</ul>
+<h3 id="siegbedingungen" class="tsd-anchor-link">Siegbedingungen<a href="#siegbedingungen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Last Man Standing (Standard)</li>
+<li>Erweiterbar über Daten (z. B. Punkte‑Modi)</li>
+</ul>
+<hr>
+<h2 id="9-kigegner" class="tsd-anchor-link">9. KI‑Gegner<a href="#9-kigegner" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Die KI nutzt <strong>dieselben Regeln wie Spieler</strong>.</p>
+<h3 id="entscheidungsbasis" class="tsd-anchor-link">Entscheidungsbasis<a href="#entscheidungsbasis" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Figurenpositionen</li>
+<li>Arena‑Geometrie</li>
+<li>Gefahrenzonen</li>
+<li>Item‑Effekte</li>
+<li>Out‑of‑Bounds‑Risiko</li>
+</ul>
+<h3 id="kimodell" class="tsd-anchor-link">KI‑Modell<a href="#kimodell" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Entscheidung = Winkel + Force</li>
+<li>Simulation möglicher Züge</li>
+<li>Bewertung über Heuristiken</li>
+</ul>
+<h3 id="schwierigkeitsgrade" class="tsd-anchor-link">Schwierigkeitsgrade<a href="#schwierigkeitsgrade" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><strong>Leicht</strong> – Zufallsbasierte Entscheidungen</li>
+<li><strong>Mittel</strong> – Heuristiken &amp; Risikoabschätzung</li>
+<li><strong>Schwer</strong> – Simulation &amp; Optimierung</li>
+</ul>
+<p>Alle KI‑Parameter sind datengetrieben.</p>
+<hr>
+<h2 id="10-input-steuerung" class="tsd-anchor-link">10. Input &amp; Steuerung<a href="#10-input-steuerung" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="abstrakte-aktionen" class="tsd-anchor-link">Abstrakte Aktionen<a href="#abstrakte-aktionen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Aim (Rotation setzen)</li>
+<li>Charge (Force aufladen)</li>
+<li>Push (Stoß ausführen)</li>
+<li>Use Item</li>
+</ul>
+<h3 id="plattformen" class="tsd-anchor-link">Plattformen<a href="#plattformen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><strong>PC:</strong> Maus / Tastatur</li>
+<li><strong>Controller:</strong> Stick + Trigger</li>
+<li><strong>Mobile:</strong> Drag &amp; Hold</li>
+</ul>
+<p>Input‑Mapping ist vollständig konfigurierbar.</p>
+<hr>
+<h2 id="11-ui-ux" class="tsd-anchor-link">11. UI &amp; UX<a href="#11-ui-ux" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="designprinzipien" class="tsd-anchor-link">Design‑Prinzipien<a href="#designprinzipien" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Klar</li>
+<li>Minimalistisch</li>
+<li>Taktik im Vordergrund</li>
+</ul>
+<h3 id="plattformanpassung" class="tsd-anchor-link">Plattformanpassung<a href="#plattformanpassung" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>PC: kompakt</li>
+<li>Mobile: große Touch‑Elemente</li>
+<li>Steam Deck: größere Schrift</li>
+<li>Discord: reduzierte UI</li>
+</ul>
+<hr>
+<h2 id="12-moddingsystem" class="tsd-anchor-link">12. Modding‑System<a href="#12-moddingsystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Modding ist ein <strong>Kernfeature</strong>, kein Zusatz.</p>
+<h3 id="modumfang" class="tsd-anchor-link">Mod‑Umfang<a href="#modumfang" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Items</li>
+<li>Maps</li>
+<li>Hazards</li>
+<li>Spielmodi</li>
+<li>KI‑Parameter</li>
+</ul>
+<h3 id="sicherheit" class="tsd-anchor-link">Sicherheit<a href="#sicherheit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Keine Skripte</li>
+<li>Kein eval</li>
+<li>Strikte Schema‑Validierung</li>
+<li>Effekt‑Whitelist</li>
+</ul>
+<hr>
+<h2 id="13-technikphilosophie" class="tsd-anchor-link">13. Technik‑Philosophie<a href="#13-technikphilosophie" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>Custom Engine</li>
+<li>Deterministisch</li>
+<li>Daten‑ und regelgetrieben</li>
+<li>Engine ≠ Gameplay</li>
+</ul>
+<p>Die Engine ist ein <strong>stabiler Simulator</strong>, kein Regelträger.</p>
+<hr>
+<h2 id="14-discordintegration" class="tsd-anchor-link">14. Discord‑Integration<a href="#14-discordintegration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>
+<p>Rich Presence</p>
+<ul>
+<li>Menü / Match</li>
+<li>Map</li>
+<li>Aktiver Zug</li>
+</ul>
+</li>
+<li>
+<p>Einladungen</p>
+</li>
+<li>
+<p>Join‑Flows</p>
+</li>
+</ul>
+<hr>
+<h2 id="15-releaseplan" class="tsd-anchor-link">15. Release‑Plan<a href="#15-releaseplan" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="phase-1-prototyp" class="tsd-anchor-link">Phase 1 – Prototyp<a href="#phase-1-prototyp" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Core‑Physik</li>
+<li>Eine Map</li>
+<li>Drei Items</li>
+</ul>
+<h3 id="phase-2-content" class="tsd-anchor-link">Phase 2 – Content<a href="#phase-2-content" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Alle Maps</li>
+<li>Alle Items</li>
+<li>UI</li>
+</ul>
+<h3 id="phase-3-ki--mobile" class="tsd-anchor-link">Phase 3 – KI &amp; Mobile<a href="#phase-3-ki--mobile" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>KI‑Gegner</li>
+<li>Touch‑Steuerung</li>
+</ul>
+<h3 id="phase-4-steam-release" class="tsd-anchor-link">Phase 4 – Steam Release<a href="#phase-4-steam-release" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Store Page</li>
+<li>Playtests</li>
+<li>Marketing</li>
+</ul>
+<h3 id="phase-5-mobile-release" class="tsd-anchor-link">Phase 5 – Mobile Release<a href="#phase-5-mobile-release" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Android / iOS Builds</li>
+</ul>
+<h3 id="phase-6-discord" class="tsd-anchor-link">Phase 6 – Discord<a href="#phase-6-discord" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>Rich Presence</li>
+<li>Einladungen</li>
+</ul>
+<hr>
+<h2 id="16-zusammenfassung" class="tsd-anchor-link">16. Zusammenfassung<a href="#16-zusammenfassung" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Slipstrike ist ein <strong>taktisches Physikspiel</strong>, dessen Tiefe nicht aus Reaktionsgeschwindigkeit, sondern aus <strong>klaren Regeln, deterministischer Bewegung und datengetriebenem Design</strong> entsteht.</p>
+<p>Die Architektur ermöglicht:</p>
+<ul>
+<li>präzises Balancing</li>
+<li>starke KI</li>
+<li>Modding‑Community</li>
+<li>langfristige Erweiterbarkeit</li>
+</ul>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#🎮-slipstrike-game-design-document-gdd"><span>🎮 <wbr/>Slipstrike – <wbr/>Game <wbr/>Design <wbr/>Document (<wbr/>GDD)</span></a><ul><li><a href="#1-high-concept"><span>1. <wbr/>High <wbr/>Concept</span></a></li><li><a href="#2-designziele"><span>2. <wbr/>Design‑<wbr/>Ziele</span></a></li><li><a href="#3-plattformen"><span>3. <wbr/>Plattformen</span></a></li><li><a href="#4-kerngameplayloop"><span>4. <wbr/>Kern‑<wbr/>Gameplay‑<wbr/>Loop</span></a></li><li><a href="#5-physik-bewegung-rotation--force"><span>5. <wbr/>Physik &amp; <wbr/>Bewegung (<wbr/>Rotation + <wbr/>Force)</span></a></li><li><ul><li><a href="#figurenzustand"><span>Figuren‑<wbr/>Zustand</span></a></li><li><a href="#stoßmechanik"><span>Stoß‑<wbr/>Mechanik</span></a></li><li><a href="#bewegung"><span>Bewegung</span></a></li><li><a href="#drift"><span>Drift</span></a></li><li><a href="#kollisionen"><span>Kollisionen</span></a></li><li><a href="#tod"><span>Tod</span></a></li></ul></li><li><a href="#6-items-moddingfirst"><span>6. <wbr/>Items (<wbr/>Modding‑first)</span></a></li><li><ul><li><a href="#grundregeln"><span>Grundregeln</span></a></li><li><a href="#itemarchitektur"><span>Item‑<wbr/>Architektur</span></a></li><li><a href="#effektbeispiele"><span>Effekt‑<wbr/>Beispiele</span></a></li><li><a href="#offizielle-itemliste"><span>Offizielle <wbr/>Item‑<wbr/>Liste</span></a></li></ul></li><li><a href="#7-maps-arenen"><span>7. <wbr/>Maps &amp; <wbr/>Arenen</span></a></li><li><ul><li><a href="#mapeigenschaften"><span>Map‑<wbr/>Eigenschaften</span></a></li><li><a href="#gefahrenzonen-hazards"><span>Gefahrenzonen (<wbr/>Hazards)</span></a></li><li><a href="#offizielle-maps"><span>Offizielle <wbr/>Maps</span></a></li></ul></li><li><a href="#8-spielmodi-siegbedingungen"><span>8. <wbr/>Spielmodi &amp; <wbr/>Siegbedingungen</span></a></li><li><ul><li><a href="#spielmodi"><span>Spielmodi</span></a></li><li><a href="#siegbedingungen"><span>Siegbedingungen</span></a></li></ul></li><li><a href="#9-kigegner"><span>9. <wbr/>KI‑<wbr/>Gegner</span></a></li><li><ul><li><a href="#entscheidungsbasis"><span>Entscheidungsbasis</span></a></li><li><a href="#kimodell"><span>KI‑<wbr/>Modell</span></a></li><li><a href="#schwierigkeitsgrade"><span>Schwierigkeitsgrade</span></a></li></ul></li><li><a href="#10-input-steuerung"><span>10. <wbr/>Input &amp; <wbr/>Steuerung</span></a></li><li><ul><li><a href="#abstrakte-aktionen"><span>Abstrakte <wbr/>Aktionen</span></a></li><li><a href="#plattformen"><span>Plattformen</span></a></li></ul></li><li><a href="#11-ui-ux"><span>11. <wbr/>UI &amp; <wbr/>UX</span></a></li><li><ul><li><a href="#designprinzipien"><span>Design‑<wbr/>Prinzipien</span></a></li><li><a href="#plattformanpassung"><span>Plattformanpassung</span></a></li></ul></li><li><a href="#12-moddingsystem"><span>12. <wbr/>Modding‑<wbr/>System</span></a></li><li><ul><li><a href="#modumfang"><span>Mod‑<wbr/>Umfang</span></a></li><li><a href="#sicherheit"><span>Sicherheit</span></a></li></ul></li><li><a href="#13-technikphilosophie"><span>13. <wbr/>Technik‑<wbr/>Philosophie</span></a></li><li><a href="#14-discordintegration"><span>14. <wbr/>Discord‑<wbr/>Integration</span></a></li><li><a href="#15-releaseplan"><span>15. <wbr/>Release‑<wbr/>Plan</span></a></li><li><ul><li><a href="#phase-1-prototyp"><span>Phase 1 – <wbr/>Prototyp</span></a></li><li><a href="#phase-2-content"><span>Phase 2 – <wbr/>Content</span></a></li><li><a href="#phase-3-ki--mobile"><span>Phase 3 – <wbr/>KI &amp; <wbr/>Mobile</span></a></li><li><a href="#phase-4-steam-release"><span>Phase 4 – <wbr/>Steam <wbr/>Release</span></a></li><li><a href="#phase-5-mobile-release"><span>Phase 5 – <wbr/>Mobile <wbr/>Release</span></a></li><li><a href="#phase-6-discord"><span>Phase 6 – <wbr/>Discord</span></a></li></ul></li><li><a href="#16-zusammenfassung"><span>16. <wbr/>Zusammenfassung</span></a></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">game</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>
