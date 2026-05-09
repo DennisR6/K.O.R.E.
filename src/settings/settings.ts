@@ -1,5 +1,6 @@
 export interface Settings {
 	mapBoundarys?: MapBoundary[];
+	hazzards?: MapBoundary[];
 	players?: SettingsEntity[];
 	friction?: FrictionSettings;
 	effects?: SettingsEffect[];
@@ -132,40 +133,58 @@ export const FRICTION_TABLE = {
 	}
 } as const
 const thickness = 2
-const CircleRadius = 27
+const CircleRadius = 80
 export const GameSettings = {
 	id: "",
 	screenResolution: { x: 800, y: 450 },
 	mapBoundarys: [
 		// Rectangles
 		{ type: "rectangle", x: 425, y: 57, w: 285, h: thickness, color: "green" },
-		{ type: "rectangle", x: 85, y: 57, w: 274, h: thickness, color: "black" },
-		{ type: "rectangle", x: 56, y: 83, w: thickness, h: 261, color: "blue" },
+		{ type: "rectangle", x: 125, y: 70, w: 200, h: thickness, color: "black" },
+		{ type: "rectangle", x: 56, y: 83, w: thickness, h: 250, color: "blue" },
 		{ type: "rectangle", x: 425, y: 365, w: 285, h: thickness, color: "cyan" },
-		{ type: "rectangle", x: 85, y: 365, w: 274, h: thickness, color: "purple" },
-		{ type: "rectangle", x: 740, y: 83, w: thickness, h: 261, color: "red" },
-
-
+		{ type: "rectangle", x: 100, y: 365, w: 250, h: thickness, color: "purple" },
+		{ type: "rectangle", x: 740, y: 83, w: thickness, h: 220, color: "red" },
+	],
+	hazzards: [
 		// Circles
-		{ type: "circle", x: 50, y: 48, r: CircleRadius, color: "blue" },
+		{ type: "circle", x: 0, y: 0, r: CircleRadius, color: "blue" },
 		// OBEN MITTE
-		{ type: "circle", x: 391, y: 35, r: CircleRadius, color: "yellow" },
+		{ type: "circle", x: (800 - CircleRadius) / 2, y: 10 + CircleRadius / 2, r: CircleRadius, color: "yellow" },
 		// OBEN RECHTS
-		{ type: "circle", x: 749, y: 46, r: CircleRadius, color: "purple" },
+		{ type: "circle", x: (800 - 10 - CircleRadius), y: 46, r: CircleRadius, color: "purple" },
+		// TEST
+		{ type: "circle", x: (800 - CircleRadius) / 2, y: 450 / 2, r: CircleRadius, color: "magenta" },
 		// UNTEN LINKS
-		{ type: "circle", x: 50, y: 380, r: CircleRadius, color: "magenta" },
+		{ type: "circle", x: (10 + CircleRadius), y: 450 - CircleRadius / 2, r: CircleRadius, color: "magenta" },
 		// UNTEN MITTE
-		{ type: "circle", x: 391, y: 390, r: CircleRadius, color: "red" },
+		{ type: "circle", x: (800 - 10 - CircleRadius) / 2, y: 450 - CircleRadius / 2, r: CircleRadius, color: "red" },
 		// UNTEN RECHTS
-		{ type: "circle", x: 745, y: 380, r: CircleRadius, color: "cyan" },
+		{ type: "circle", x: (800 - 10 - CircleRadius), y: 450 - CircleRadius / 2, r: CircleRadius, color: "cyan" },
 	],
 	players: [
-		{ id: "debug", x: 200, y: 145, color: "green", playericon: "/arena.png", team: ["0"], size: 20 },
-		{ id: "0", x: 320, y: 200, color: "red", playericon: "", team: ["1"], size: 20 },
+		// { "x": 57.99526427344503, "y": 324.76779335442063 }
+		/* Formation LINKS (3x2) */
+		// { "id": 1, "x": 100, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 1, "x": 100, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 2, "x": 200, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 3, "x": 100, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 4, "x": 200, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 5, "x": 90, "y": 300, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ "id": 6, "x": 200, "y": 320, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+
+		/* Formation RECHTS (3x2) */
+		{ "id": 7, "x": 600, "y": 100, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
+		{ "id": 8, "x": 700, "y": 100, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
+		{ "id": 9, "x": 700, "y": 200, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
+		{ "id": 10, "x": 600, "y": 200, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
+		{ "id": 11, "x": 600, "y": 300, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
+		{ "id": 12, "x": 700, "y": 300, "color": "red", "playericon": "", "team": ["2"], "size": 20 }
 	],
-	friction: FRICTION_TABLE.wood,
+	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],
 	effects: [],
-	background: { type: "image", url: "/eis.png" },
+	// background: { type: "image", url: "/BilliardMap.png" },
+	background: { color: "red", type: "color" },
 	music: ["/..."]
 } as Settings

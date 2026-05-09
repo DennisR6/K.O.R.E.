@@ -51,8 +51,10 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild (eis.png) darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
+		// ctx.setFillColor(this.color)
+		ctx.drawRect(this.x - this.r / 2, this.y - this.r / 2, this.r, this.r)
 		ctx.setFillColor(this.color)
-		ctx.drawCircle(this.x, this.y, this.r * 2)
+		ctx.drawCircle(this.x, this.y, this.r * 2);
 	}
 
 	public tick(_dt: number): void { }
@@ -62,11 +64,11 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	}
 
 	public getBounds(): { radius: number } {
-		return { radius: this.r }
+		return { radius: this.r / 2 }
 	}
 
 	public getPos(): Vector2D {
-		return { x: this.x, y: this.y }
+		return { x: this.x + this.r, y: this.y + this.r }
 	}
 
 	public getVel(): Vector2D {
@@ -86,8 +88,8 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	}
 
 	public setPos(pos: Vector2D): void {
-		this.x = pos.x
-		this.y = pos.y
+		this.x = pos.x - this.r
+		this.y = pos.y - this.r
 	}
 
 	public onCollision({ entity }: { entity: IPhysics }): void {

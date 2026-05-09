@@ -9,7 +9,7 @@
 export interface EntitySnapshot {
 	/** Die eindeutige ID der Entity, um sie im EntityManager wiederzufinden. */
 	id: string | number;
-	
+
 	/** Die X-Position in Welt-Einheiten zum Zeitpunkt des Snapshots. */
 	x: number;
 	/** Die Y-Position in Welt-Einheiten zum Zeitpunkt des Snapshots. */
@@ -31,4 +31,8 @@ export interface EntitySnapshot {
 	 * Hilft dem Renderer, Berechnungen für ruhende Objekte zu überspringen.
 	 */
 	isStatic?: boolean;
+}
+export interface IKillable {
+	getHP(): number;
+	getDeadTimer(): number; // -1 -> lebt noch, 0-> animation vorbei, hp!==0 spielt gerade animationstimer ab
 }

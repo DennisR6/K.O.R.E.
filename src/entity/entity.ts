@@ -1,6 +1,7 @@
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
 import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics";
 import { GameLogger } from "../utils/log";
+import type { IKillable } from "./types";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -12,7 +13,7 @@ import { GameLogger } from "../utils/log";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysicsCircle {
+export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable {
 
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
@@ -26,6 +27,11 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle {
 	 * @returns {number | string} Die ID der Entity.
 	 */
 	getId(): number | string;
+
+	/**
+	 * @returns {Vector2D} Gibt die größe (Radius) des Players.
+	 */
+	getSize(): Vector2D;
 }
 
 /**
@@ -36,7 +42,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle {
  * Alle Eigenschaften außer den Koordinaten sind optional, um maximale Flexibilität
  * beim Erstellen von Gast-Accounts oder Standard-Entities zu bieten.
  */
-export interface IPlayer {
+export interface IPlayer extends IEntity {
 	/** 
 	 * Eindeutige ID des Spielers. 
 	 * Wenn nicht angegeben, generiert die Engine meist eine temporäre ID. 
@@ -84,6 +90,8 @@ export interface IPlayer {
  * 3. **Debugging**: Kann Mutationen tracken, um unerwartete Wertänderungen zu finden.
  */
 export class Player implements IEntity {
+	private hp: number = -1;
+	private dead: number = -1;
 	/** Eindeutige ID (wird via crypto.randomUUID() generiert, falls nicht vorhanden). */
 	private id: number | string;
 	/** Die aktuelle Position auf dem Spielfeld (Top-Left des Begrenzungsrahmens). */
@@ -95,7 +103,7 @@ export class Player implements IEntity {
 	/** Trägheit des Objekts bei Kollisionen. */
 	private mass: number = 1;
 	/** Der Radius des Spielers. */
-	private size: number;
+	private size: number = 1;
 	/** Individuelle Reibung (überschreibt bei Bedarf die globale Reibung). */
 	private friction: number | undefined;
 
@@ -149,14 +157,18 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
+		// ctx.setFillColor("blue");
+		// ctx.drawRect(this.position.x, this.position.y, this.size * 2, this.size * 2);
 		ctx.setFillColor(this.color);
-		const nextX = this.position.x + this.velocity.x * 3;
-		const nextY = this.position.y + this.velocity.y * 3;
+		const nextX = this.position.x - this.size + this.velocity.x * 3;
+		const nextY = this.position.y - this.size + this.velocity.y * 3;
 		if (this.velocity.x !== 0 || this.velocity.y !== 0) {
 			ctx.line(this.getPos().x, this.getPos().y, nextX, nextY)
 		}
 		// ctx.beginClip()
-		ctx.drawCircle(this.position.x + this.size, this.position.y + + this.size, this.size * 2);
+		ctx.drawCircle(this.position.x + this.size, this.position.y + this.size, this.size * 4);
+
+
 		// ctx.endClip()
 		// ctx.drawImage(
 		// 	this.playericon, this.getPos().x - this.size,
@@ -222,6 +234,16 @@ export class Player implements IEntity {
 	public enableMutationTracking() {
 		this.position = createTrackingProxy(this.position, "POSITION", this.id.toString());
 		this.velocity = createTrackingProxy(this.velocity, "VELOCITY", this.id.toString());
+	}
+
+	public getSize(): Vector2D {
+		return { x: this.size, y: this.size }
+	}
+	public getDeadTimer(): number {
+		return this.dead
+	}
+	public getHP(): number {
+		return this.hp
 	}
 }
 

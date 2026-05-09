@@ -1,3 +1,4 @@
+import type { Socket } from "socket.io-client";
 import type { IInputEmitter } from "../engine/types";
 
 /**
@@ -8,9 +9,9 @@ import type { IInputEmitter } from "../engine/types";
  * im Zuge der Auslagerung in ein eigenes Package stabilisiert werden.
  */
 export class SocketEmitter implements IInputEmitter {
-	socket: any
+	socket: Socket
 
-	constructor(socket: any) {
+	constructor(socket: Socket) {
 		this.socket = socket
 	}
 
@@ -21,6 +22,7 @@ export class SocketEmitter implements IInputEmitter {
 	 * könnten sich ändern, sobald das Netzwerk-Protokoll finalisiert ist.
 	 */
 	sendShot(actorId: string | number, angle: number, power: number): void {
+		console.log(actorId, angle, power)
 		this.socket.emit('shoot', { actorId, angle, power });
 	}
 }

@@ -7,6 +7,7 @@ import type { IDrawer, ITicker } from "../engine/RenderContext";
 import type { StructureCircle } from "./structureCircle.ts";
 import type { StructureLine } from "./structureLine.ts";
 import type { StructureRectangle } from "./structureRectangle.ts";
+import type { } from "./DeadlyObstacleCircle.ts";
 
 /**
  * Ein Sammel-Typ (Union Type) für alle verfügbaren Struktur-Formen.

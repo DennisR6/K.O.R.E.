@@ -278,7 +278,8 @@ export class GameHandler implements ITicker, IMouse {
 			const actor = this.entityManager.getEntityById(input.actorId)
 			if (!actor) throw new Error("Kein Spieler gefunden!")
 			const res = this.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
-			renderer.line(this.dragStart.x, this.dragStart.y, res.x, res.y);
+			const { x, y } = actor.getPos()
+			renderer.line(x, y, res.x, res.y);
 			renderer.drawText(`${Math.round(input.angle)}°`, res.x, res.y);
 		}
 		renderer.pop()

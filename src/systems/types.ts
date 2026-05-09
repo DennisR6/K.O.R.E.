@@ -18,6 +18,7 @@ export interface IGameContext {
 	state: GameStateType;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
 	settings: Settings;
+	dt: number;
 }
 
 /**

@@ -3,19 +3,31 @@ import { createTestHandler, GameHandler } from "./engine/Handler.ts";
 import { P5Renderer } from "./engine/drawingEngine.ts";
 import type { RenderContext } from "./engine/RenderContext";
 import { FRICTION_TABLE, GameSettings } from "./settings/settings";
-import { GameEmitter } from "./emitter/EngineEmitter.ts";
 import { Simulator } from "./engine/Simulator.ts";
 import { defaultPhysics } from "./physics/defaultPhysics.ts";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.ts";
 import { BackgroundImageSystem } from "./ui/Background.ts";
 import { PhysicsSystem, PlaybackSystem } from "./systems/Systems.ts";
 import { NoRoundSystem } from "./systems/RoundSystem.ts";
-import { TrackerPlayer } from "./entity/trackingPlayer.ts";
 import { StructureRectangle } from "./structures/structureRectangle.ts";
 import { StructureCircle } from "./structures/structureCircle.ts";
+import { GameEmitter } from "./emitter/EngineEmitter.ts";
+import { Player } from "./entity/entity.ts";
+import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.ts";
+import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.ts";
 
 
 const TickRate = 1
+
+// const socket = io("http://localhost:3000", { autoConnect: true, reconnection: true, auth: { token: getIdOrUUUID() } })
+// const sock = new SocketEmitter(socket)
+
+
+// setTimeout(() => {
+// 	sock.sendShot("0", 0, 20)
+// }, 5_000)
+
+
 const physics = new defaultPhysics(FRICTION_TABLE.wood)
 let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
 handler.setSimulator(new Simulator())
@@ -24,21 +36,32 @@ handler.setEmitter(em)
 handler.addSystem(new PhysicsSystem(physics, TickRate))
 handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
-handler.addPreDrawer(new BackgroundImageSystem({ url: "/BilliardMap.png" }))
+if (GameSettings.background?.type === "image")
+	handler.addPreDrawer(new BackgroundImageSystem(GameSettings.background.url))
+if (GameSettings.background?.type === "color")
+	handler.addPreDrawer(new CustomDrawableBackground())
+// handler.addPreDrawer(new BackgroundColorSystem(GameSettings.background.color))
 GameSettings.mapBoundarys?.forEach(str => {
 	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
 	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))
 })
 
-GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new TrackerPlayer().new({ ...player })));
+GameSettings.hazzards?.forEach(str => {
+	if (str.type === "rectangle") handler.addStructure(new DeadlyObstacleCirle(str.x, str.y, str.w, str.color))
+	if (str.type === "circle") handler.addStructure(new DeadlyObstacleCirle(str.x, str.y, str.r, str.color))
+})
+
+
+//@ts-ignore
+GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
 handler.start()
 
-setTimeout(() => {
-	const turn = [{ actorId: '0', angle: 0, power: 20 }]
-	const { actorId, angle, power } = turn[0]
-	const sim = handler.simulateTurn(actorId, angle, power);
-	handler.tickTurn(sim);
-}, 2_000)
+// setTimeout(() => {
+// const turn = [{ actorId: 0, angle: 0, power: 20 }]
+// const { actorId, angle, power } = turn[0]
+// const sim = handler.simulateTurn(actorId, angle, power);
+// handler.tickTurn(sim);
+// }, 2_000)
 
 const DEFAULTFPS = 60
 const sketch = (p: p5) => {

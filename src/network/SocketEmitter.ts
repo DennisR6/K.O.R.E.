@@ -12,17 +12,18 @@ export class SocketEmitter implements IInputEmitter {
 	 * @param angle Der berechnete Winkel in Grad (0-360)
 	 * @param power Die Kraft in Prozent (0-100)
 	 */
-	public sendShot(angle: number, power: number): void {
+	public sendShot(actorId: number | string, angle: number, power: number): void {
 		if (!this.socket || !this.socket.connected) {
 			console.error("SocketEmitter: Schuss konnte nicht gesendet werden. Keine Verbindung.");
 			return;
 		}
 
 		this.socket.emit('shoot', {
+			actorId: actorId,
 			angle: angle,
 			power: power
 		});
 
-		console.log(`📡 Shot emitted: ${angle.toFixed(2)}° with ${power.toFixed(2)}% power`);
+		console.log(`📡 Shot emitted: ${angle}° with ${power}% power`);
 	}
 }

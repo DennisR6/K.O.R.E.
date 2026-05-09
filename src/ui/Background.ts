@@ -29,8 +29,8 @@ export class BackgroundImageSystem implements ITicker, IDrawer {
 	/** URL zum Bild-Asset. */
 	private url: string
 
-	constructor(settings: { url: string }) {
-		this.url = settings.url
+	constructor(url: string) {
+		this.url = url
 
 	}
 
@@ -55,8 +55,7 @@ export class BackgroundImageSystem implements ITicker, IDrawer {
 export class BackgroundColorSystem implements IDrawer, ITicker {
 	/** CSS-kompatibler Farbstring (z.B. "cyan", "#ff0000"). */
 	private color: string
-
-	constructor(settings: { color: string }) { this.color = settings.color }
+	constructor(color: string) { this.color = color }
 
 	/** Keine Logik-Updates nötig. */
 	public tick(_deltatime: number, _globalfriction: number): void { }
@@ -65,4 +64,7 @@ export class BackgroundColorSystem implements IDrawer, ITicker {
 		 * Nutzt die ctx.clear Methode, um die gesamte Canvas-Fläche zu übermalen.
 		 */
 	public draw(ctx: RenderContext) { ctx.clear(this.color) }
+	getColor(): string {
+		return this.color
+	}
 }
