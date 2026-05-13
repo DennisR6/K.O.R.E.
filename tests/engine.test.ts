@@ -6,7 +6,7 @@ import { Simulator } from "../src/engine/Simulator.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { LogEmitter, CombiEmitter } from "../src/emitter/InputEmitter.ts";
 import { PhysicsSystem, Round2PlayerSystem, PlaybackSystem } from "../src/systems/Systems.ts";
-import { Player } from "../src/entity/entity.ts";
+import { Player } from "../src/entity/player.ts";
 import { GameState, IInput } from "../src/engine/types.ts";
 import { NoRoundSystem } from "../src/systems/RoundSystem.ts";
 import assert from 'node:assert/strict';

@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import { defaultPhysics } from "../src/physics/defaultPhysics"
 import assert from "node:assert";
-import { Player } from "../src/entity/entity";
+import { Player } from "../src/entity/player.ts";
 
 /**
  * @test Physics Calculations & Vector Math

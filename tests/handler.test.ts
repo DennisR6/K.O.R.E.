@@ -1,5 +1,5 @@
 import test, { describe } from "node:test";
-import { Player } from "../src/entity/entity.ts";
+import { Player } from "../src/entity/player.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { Simulator } from "../src/engine/Simulator.ts";
 import { createDefaultContext, GameState, type IInputEmitter } from "../src/engine/types";

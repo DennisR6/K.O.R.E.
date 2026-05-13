@@ -5,7 +5,7 @@ import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
-import { Player } from "../src/entity/entity.ts";
+import { Player } from "../src/entity/player.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 
 describe("teste, ob ein tick von 1 identisch ist, wie 100 ticks mit 0.1", { timeout: Infinity }, () => {
@@ -21,10 +21,6 @@ describe("teste, ob ein tick von 1 identisch ist, wie 100 ticks mit 0.1", { time
 		let res;
 		for (let i = 0; i < 10_000; i++) {
 			res = h.simulateTurn("p1", 180, 100)
-			// const res2 = h.simulateTurn("p1", 180, 100)
 		}
-		console.log(res)
-		console.log("done")
-
 	})
 })

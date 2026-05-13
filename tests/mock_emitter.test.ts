@@ -1,9 +1,9 @@
 import test from "node:test";
 import { createTestHandler } from "../src/engine/Handler.ts"
-import { Player } from "../src/entity/entity.ts";
 import assert from "node:assert";
 import { GameState, IInput, IInputEmitter } from "../src/engine/types.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
+import { Player } from "../src/entity/player.ts";
 
 /**
  * @test Emitter-Integration

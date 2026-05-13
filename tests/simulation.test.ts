@@ -5,7 +5,7 @@ import { Simulator } from "../src/engine/Simulator.ts"
 import { GameEmitter } from "../src/emitter/Emitter.ts"
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
-import { Player } from "../src/entity/entity.ts";
+import { Player } from "../src/entity/player.ts";
 import assert from "node:assert";
 import { ObjectEmitter } from "../src/emitter/Emitter.ts"
 

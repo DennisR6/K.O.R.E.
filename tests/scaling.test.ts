@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert";
 import { createTestHandler } from "../src/engine/Handler";
-import { Player } from "../src/entity/entity";
+import { Player } from "../src/entity/player.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics";
 import { EntityManager } from "../src/entity/EntityManager";
 import { GameState } from "../src/engine/types";
