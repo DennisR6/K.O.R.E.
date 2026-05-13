@@ -135,6 +135,8 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 
 	public handleCollision(entityA: IPhysics, entityB: IPhysics): void {
+		console.log("Hello")
+
 		const posA = { ...entityA.getPos() };
 		const posB = { ...entityB.getPos() };
 		const dist = this.dist(posA, posB);
