@@ -109,28 +109,29 @@ export class defaultPhysics implements PhysicsStrategy {
 
 	public checkCollisionCircles(entityA: IPhysicsCircle, entityB: IPhysicsCircle): boolean {
 		const d2 = this.distSq(entityA.getPos(), entityB.getPos());
-		const rSum = entityA.getBounds().radius + entityB.getBounds().radius;
+		const rSum = entityA.getBounds().x + entityB.getBounds().x;
+
 		return d2 <= (rSum * rSum);
 	}
 
 	public checkCollisionRects(entityA: IPhysicsRectangle, entityB: IPhysicsRectangle): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
-		return Ax <= Bx + entityB.getBounds().width &&
-			Ax + entityA.getBounds().width >= Bx &&
-			Ay <= By + entityB.getBounds().height &&
-			Ay + entityA.getBounds().height >= By;
+		return Ax <= Bx + entityB.getBounds().x &&
+			Ax + entityA.getBounds().x >= Bx &&
+			Ay <= By + entityB.getBounds().y &&
+			Ay + entityA.getBounds().y >= By;
 	}
 
 	public checkCollisionCircleRect(entityA: IPhysicsCircle, entityB: IPhysicsRectangle): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
 		const closest = {
-			x: this.clamp(Ax, Bx, Bx + entityB.getBounds().width),
-			y: this.clamp(Ay, By, By + entityB.getBounds().height)
+			x: this.clamp(Ax, Bx, Bx + entityB.getBounds().x),
+			y: this.clamp(Ay, By, By + entityB.getBounds().y)
 		};
 		const d2 = this.distSq(entityA.getPos(), closest);
-		return d2 <= (entityA.getBounds().radius * entityA.getBounds().radius);
+		return d2 <= (entityA.getBounds().x * entityA.getBounds().x);
 	}
 
 	public handleCollision(entityA: IPhysics, entityB: IPhysics): void {
@@ -142,9 +143,9 @@ export class defaultPhysics implements PhysicsStrategy {
 		switch (true) {
 			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
 				//@ts-ignore
-				const radiusA = entityA.getBounds().radius;
+				const radiusA = entityA.getBounds().x;
 				//@ts-ignore
-				const radiusB = entityB.getBounds().radius!;
+				const radiusB = entityB.getBounds().x!;
 				const combinedRadius = radiusA + radiusB;
 
 
@@ -208,10 +209,10 @@ export class defaultPhysics implements PhysicsStrategy {
 				const cPos = circle.getPos();
 				const rPos = rectangle.getPos();
 				const rBounds = rectangle.getBounds();
-				const radius = circle.getBounds().radius;
+				const radius = circle.getBounds().x;
 
-				const closestX = Math.max(rPos.x, Math.min(cPos.x, rPos.x + rBounds.width));
-				const closestY = Math.max(rPos.y, Math.min(cPos.y, rPos.y + rBounds.height));
+				const closestX = Math.max(rPos.x, Math.min(cPos.x, rPos.x + rBounds.x));
+				const closestY = Math.max(rPos.y, Math.min(cPos.y, rPos.y + rBounds.y));
 
 				const dx = cPos.x - closestX;
 				const dy = cPos.y - closestY;

@@ -13,10 +13,7 @@ import type { IStructure } from "./structures"
  * @implements {IPhysicsCircle} Notwendig für die Kreis-Kreis-Kollisionslogik.
  */
 export class StructureCircle implements IStructure, IPhysicsCircle {
-	/** X-Koordinate des Mittelpunkts. */
-	private x: number;
-	/** Y-Koordinate des Mittelpunkts. */
-	private y: number;
+	private position: Vector2D
 	/** Radius des Kreises. */
 	private r: number;
 	/** Kennung der Form für das Physik-System. */
@@ -38,70 +35,56 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 
 
 	constructor(x: number, y: number, r: number, color: string) {
-		this.shape = "circle"
-		this.x = x
-		this.y = y
+		this.position = { x, y }
 		this.r = r
+		this.shape = "circle"
 		this.color = color || "green"
 		this.bounce = 1
 		this.vel = { x: 0, y: 0 }
 	}
 	/**
 	 * Zeichnet die Struktur. 
-	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild (eis.png) darübergelegt.
+	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
-		// ctx.setFillColor(this.color)
-		ctx.drawRect(this.x - this.r / 2, this.y - this.r / 2, this.r, this.r)
+		ctx.push()
+		// ctx.drawRect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2)
 		ctx.setFillColor(this.color)
-		ctx.drawCircle(this.x, this.y, this.r * 2);
+		const { x, y } = this.getPos()
+		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
+		ctx.pop()
 	}
 
 	public tick(_dt: number): void { }
 
-	public getBounceFactor(): number {
-		return this.bounce
-	}
-
-	public getBounds(): { radius: number } {
-		return { radius: this.r / 2 }
-	}
-
-	public getPos(): Vector2D {
-		return { x: this.x + this.r, y: this.y + this.r }
-	}
-
-	public getVel(): Vector2D {
-		return this.vel
-	}
-
-	public setVel(vel: Vector2D): void {
-		this.vel = vel
-	}
-
-	public setMass(mass: number): void {
-		this.mass = mass
-	}
-
-	public getMass(): number {
-		return this.mass
-	}
 
 	public setPos(pos: Vector2D): void {
-		this.x = pos.x - this.r
-		this.y = pos.y - this.r
+		if (
+			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
+			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
+		)
+			GameLogger.error("STRUCTURE: Position weicht massiv ab!");
+
+		this.position.x = pos.x
+		this.position.y = pos.y
 	}
+	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
+
+	public setVel(vel: Vector2D): void { this.vel = vel }
+	public getVel(): Vector2D { return this.vel }
+
+	public setMass(mass: number): void { this.mass = mass }
+	public getMass(): number { return this.mass }
+
+	public setFriction(_friction: number): void { }
+	public getFriction(): number { return 0 }
+
+	public getShape(): "circle" { return this.shape }
+	public getBounds(): Vector2D { return { x: this.r, y: this.r } }
+	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics }): void {
 		GameLogger.debug("Collision with:" + entity.getShape())
 	}
-
-	public getFriction(): number {
-		return 0
-	}
-
-	public setFriction(_friction: number): void { }
-
-	public getShape(): "circle" { return this.shape }
 }
 

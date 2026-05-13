@@ -116,21 +116,18 @@ export interface IdefaultPhysics {
 
 	/** Wie stark das Objekt abprallt (0 = gar nicht, 1 = wie ein Gummiball). */
 	getBounceFactor(): number;
+	getBounds(): Vector2D
 }
 /** Ein rundes Objekt (z.B. ein Ball oder ein Spieler-Pin). */
 export interface IPhysicsCircle extends IdefaultPhysics {
 	/** Gibt "circle" zurück, damit die Engine weiß, wie man Kollisionen rechnet. */
 	getShape(): "circle";
-	/** Der Radius des Kreises. */
-	getBounds(): { radius: number };
 }
 
 /** Ein eckiges Objekt (z.B. eine Wand, ein Tor oder ein Hindernis). */
 export interface IPhysicsRectangle extends IdefaultPhysics {
 	/** Gibt "rectangle" zurück. */
 	getShape(): "rectangle";
-	/** Breite und Höhe des Rechtecks. */
-	getBounds(): { width: number, height: number };
 }
 
 /** 

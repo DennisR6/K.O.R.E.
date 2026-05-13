@@ -1,6 +1,7 @@
-import { Player, type IEntity } from "./entity";
+import { type IEntity } from "./entity";
 import type { SettingsEntity } from "../settings/settings";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
+import { Player } from "./player";
 
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
@@ -54,7 +55,7 @@ export class EntityManager implements IDrawer, ITicker {
 	public getEntityAt(x: number, y: number, padding: number = 0): IEntity | undefined {
 		return this.entities.find(e => {
 			const dist = Math.hypot(e.getPos().x - x, e.getPos().y - y);
-			return dist < (e.getBounds().radius + padding);
+			return dist < (e.getBounds().x + padding);
 		});
 	}
 
