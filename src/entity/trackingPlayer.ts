@@ -1,4 +1,4 @@
-import { Player } from "./entity";
+import { Player } from "./player.ts";
 
 /**
  * Eine spezialisierte Player-Klasse für Debugging-Zwecke.

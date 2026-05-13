@@ -61,7 +61,7 @@ export class P5Renderer implements RenderContext {
 			GameLogger.error("Variable not Specified")
 			return
 		}
-		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), radius)
+		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), radius * 2)
 	}
 	drawRect(x: number, y: number, width: number, height: number) {
 		this.p5ctx.rect(this.toPixel(x), this.toPixel(y), this.toPixel(width), this.toPixel(height))

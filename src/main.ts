@@ -2,7 +2,7 @@ import p5 from "p5";
 import { createTestHandler, GameHandler } from "./engine/Handler.ts";
 import { P5Renderer } from "./engine/drawingEngine.ts";
 import type { RenderContext } from "./engine/RenderContext";
-import { FRICTION_TABLE, GameSettings } from "./settings/settings";
+import { GameSettings } from "./settings/settings";
 import { Simulator } from "./engine/Simulator.ts";
 import { defaultPhysics } from "./physics/defaultPhysics.ts";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.ts";
@@ -12,7 +12,7 @@ import { NoRoundSystem } from "./systems/RoundSystem.ts";
 import { StructureRectangle } from "./structures/structureRectangle.ts";
 import { StructureCircle } from "./structures/structureCircle.ts";
 import { GameEmitter } from "./emitter/EngineEmitter.ts";
-import { Player } from "./entity/entity.ts";
+import { Player } from "./entity/player.ts";
 import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.ts";
 import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.ts";
 
@@ -28,7 +28,7 @@ const TickRate = 1
 // }, 5_000)
 
 
-const physics = new defaultPhysics(FRICTION_TABLE.wood)
+const physics = new defaultPhysics(GameSettings.friction)
 let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
 handler.setSimulator(new Simulator())
 const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
@@ -40,7 +40,6 @@ if (GameSettings.background?.type === "image")
 	handler.addPreDrawer(new BackgroundImageSystem(GameSettings.background.url))
 if (GameSettings.background?.type === "color")
 	handler.addPreDrawer(new CustomDrawableBackground())
-// handler.addPreDrawer(new BackgroundColorSystem(GameSettings.background.color))
 GameSettings.mapBoundarys?.forEach(str => {
 	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
 	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))
@@ -54,6 +53,9 @@ GameSettings.hazzards?.forEach(str => {
 
 //@ts-ignore
 GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
+//@ts-ignore
+handler.getEntityManager().addEntity(new Player().new({ x: 76, y: 157, size: 1, color: "green" }))
+
 handler.start()
 
 // setTimeout(() => {
@@ -72,11 +74,9 @@ const sketch = (p: p5) => {
 		ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 	};
 
-	let r = 0;
 	p.draw = () => {
 		if (!ctx) return
 		handler.tick(TickRate)
-		r = 0
 		p.push()
 		handler.drawWorld(ctx)
 		p.pop()
@@ -86,7 +86,7 @@ const sketch = (p: p5) => {
 		p.push()
 		p.stroke(12)
 		p.textSize(24)
-		p.text("drücke Leerzeichen um die Engine 1x zu ticken", 100, p.height - 20, undefined, undefined)
+		p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
 		p.pop()
 	};
 
@@ -118,9 +118,10 @@ window.addEventListener('keydown', (e) => {
 	if (e.code === 'Space') {
 		const p1 = handler.getEntityManager().getEntities()[0]
 		const p2 = handler.getEntityManager().getEntities()[1]
-		console.log("Tick")
-		console.log(`Pos.x: ${p1.getVel().x} Pos.y: ${p1.getVel().y} Vel.x${p1.getVel().x} Vel.y: ${p1.getVel().y}`);
-		console.log(`Pos.x: ${p2.getVel().x} Pos.y: ${p2.getVel().y} Vel.x${p2.getVel().x} Vel.y: ${p2.getVel().y}`);
+
+		console.table({ PosX: p1.getPos().x, PosY: p1.getPos().y, VelX: p1.getVel().x, VelY: p1.getVel().y });
+		console.table({ PosX: p2.getPos().x, PosY: p2.getPos().y, VelX: p2.getVel().x, VelY: p2.getVel().y });
+
 		handler.tick((1_000 / DEFAULTFPS) / 10);
 	}
 });

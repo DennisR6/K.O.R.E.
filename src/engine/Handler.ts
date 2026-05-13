@@ -156,6 +156,7 @@ export class GameHandler implements ITicker, IMouse {
 		const finalState = tempManager.serialize();
 		this.setState(GameState.SIMULATING_DONE);
 
+		console.log({ durationFrames: frames })
 		return {
 			actorId,
 			input: { angle, power },

@@ -15,6 +15,5 @@ export class NetworkRoundSystem implements NoRoundSystem {
 		})
 	}
 
-	tick(ctx: IGameContext, _dt: number): void {
-	}
+	tick(_ctx: IGameContext, _dt: number): void { }
 }

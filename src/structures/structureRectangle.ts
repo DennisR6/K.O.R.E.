@@ -71,8 +71,8 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 		return this.bounce
 	}
 
-	getBounds(): { width: number; height: number } {
-		return { width: this.w, height: this.h }
+	getBounds(): Vector2D {
+		return { x: this.w, y: this.h }
 	}
 
 	/**

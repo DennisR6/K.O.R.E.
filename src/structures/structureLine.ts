@@ -65,7 +65,7 @@ export class StructureLine implements IPhysicsRectangle {
 		 * Gibt die Dimensionen für die Kollisionsabfrage zurück.
 		 * @returns {width, height} Breite und Höhe des Objekts.
 		 */
-	public getBounds(): { width: number; height: number } { return { width: this.x2, height: this.y2 } }
+	public getBounds(): Vector2D { return { x: this.x2, y: this.y2 } }
 
 	/**
 		 * Gibt den Ankerpunkt zurück. 

@@ -11,8 +11,7 @@ import { PlaybackSystem } from '../systems/PlayBackSystem';
 import { NoRoundSystem } from '../systems/RoundSystem';
 import { StructureRectangle } from '../structures/structureRectangle';
 import { StructureCircle } from '../structures/structureCircle';
-import { Player } from '../entity/entity';
-import type { IInput, TurnPacket } from '../engine/types';
+import type { IInput } from '../engine/types';
 
 
 const TickRate = 1
@@ -28,7 +27,7 @@ GameSettings.mapBoundarys?.forEach(str => {
 	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
 	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))
 })
-GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
+// GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
 handler.start()
 
 

@@ -13,11 +13,11 @@ import type { SettingsBackground } from "../settings/settings";
 export function getBackgoundSystem(settings?: SettingsBackground): BackgroundColorSystem | BackgroundImageSystem {
 	switch (settings?.type) {
 		case "color":
-			return new BackgroundColorSystem(settings)
+			return new BackgroundColorSystem(settings.color)
 		case "image":
-			return new BackgroundImageSystem(settings)
+			return new BackgroundImageSystem(settings.url)
 		default:
-			return new BackgroundColorSystem({ color: "cyan" })
+			return new BackgroundColorSystem("cyan")
 	}
 }
 
