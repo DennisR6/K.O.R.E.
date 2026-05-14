@@ -1,7 +1,7 @@
-import { type IEntity } from "./entity";
+import { type IEntity } from "./Entity";
 import type { SettingsEntity } from "../settings/settings";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
-import { Player } from "./player";
+import { Player } from "./Player";
 
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
@@ -81,14 +81,15 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Wichtig für Netzwerk-Übertragung oder Snapshots für den Simulator.
 		 * @returns Ein Array mit IDs, Positionen und Geschwindigkeiten.
 		 */
-	public applySerializedState(state: any[]) {
+	public applySerializedState(state: Player[]) {
 		state.forEach(data => {
-			let existing = this.getEntityById(data.id);
+			let existing = this.getEntityById(data.getId());
 			if (!existing) {
-				existing = new Player().new({ id: data.id, x: data.x, y: data.y });
+				existing = new Player().new({ id: data.getId(), x: data.getPos().x, y: data.getPos().y, color: data.getColor(), size: data.getBounds().x });
 				this.addEntity(existing);
 			}
-			existing.setPos({ x: data.x, y: data.y });
+			// DEBUG: Vergleiche das Original (falls vorhanden) mit dem Klon
+			console.log(`Entity ${data.getId()} - Mass: ${existing.getMass()}, Size: ${existing.getBounds().x}`);
 		});
 	}
 

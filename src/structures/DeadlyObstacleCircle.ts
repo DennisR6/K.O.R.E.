@@ -1,5 +1,5 @@
 import type { RenderContext } from "../engine/RenderContext";
-import { Player } from "../entity/player.ts";
+import { Player } from "../entity/Player.ts";
 import type { IPhysics } from "../physics/physics";
 import { StructureCircle } from "./structureCircle";
 
@@ -21,11 +21,6 @@ export class DeadlyObstacleCirle extends StructureCircle {
 
 		const { x, y } = this.getPos()
 		const { x: r } = this.getBounds()
-
-		ctx.line(x - r, y - r, x + r, y - r)
-		ctx.line(x + r, y + r, x + r, y - r)
-		ctx.line(x - r, y + r, x - r, y - r)
-		ctx.line(x - r, y + r, x + r, y + r)
 
 		ctx.drawCircle(x, y, r)
 	}

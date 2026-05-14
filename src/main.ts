@@ -12,7 +12,7 @@ import { NoRoundSystem } from "./systems/RoundSystem.ts";
 import { StructureRectangle } from "./structures/structureRectangle.ts";
 import { StructureCircle } from "./structures/structureCircle.ts";
 import { GameEmitter } from "./emitter/EngineEmitter.ts";
-import { Player } from "./entity/player.ts";
+import { DebugPlayer } from "./entity/DebugPlayer.ts";
 import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.ts";
 import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.ts";
 
@@ -51,10 +51,8 @@ GameSettings.hazzards?.forEach(str => {
 })
 
 
-//@ts-ignore
-GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
-//@ts-ignore
-handler.getEntityManager().addEntity(new Player().new({ x: 76, y: 157, size: 1, color: "green" }))
+GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new DebugPlayer().new({ ...player })));
+handler.getEntityManager().addEntity(new DebugPlayer().new({ x: 76, y: 157, size: 1, color: "green" }))
 
 handler.start()
 
@@ -76,7 +74,7 @@ const sketch = (p: p5) => {
 
 	p.draw = () => {
 		if (!ctx) return
-		handler.tick(TickRate)
+		handler.tick()
 		p.push()
 		handler.drawWorld(ctx)
 		p.pop()

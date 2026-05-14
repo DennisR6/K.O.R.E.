@@ -32,8 +32,6 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-
-
 	constructor(x: number, y: number, r: number, color: string) {
 		this.position = { x, y }
 		this.r = r
@@ -86,5 +84,6 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public onCollision({ entity }: { entity: IPhysics }): void {
 		GameLogger.debug("Collision with:" + entity.getShape())
 	}
+	getColor(): string { return this.color }
 }
 

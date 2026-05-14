@@ -156,7 +156,6 @@ export class GameHandler implements ITicker, IMouse {
 		const finalState = tempManager.serialize();
 		this.setState(GameState.SIMULATING_DONE);
 
-		console.log({ durationFrames: frames })
 		return {
 			actorId,
 			input: { angle, power },
@@ -231,7 +230,7 @@ export class GameHandler implements ITicker, IMouse {
 		 * 
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 */
-	public tick(dt: number) {
+	public tick(dt: number = this.dt) {
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		this.systems.forEach(s => s.tick(this.context, dt, this.physicsStrategy.getFriction()))
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))

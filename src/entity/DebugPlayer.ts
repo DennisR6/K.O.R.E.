@@ -1,4 +1,5 @@
-import { Player } from "./player.ts";
+import { GameLogger } from "../utils/log.ts";
+import { Player } from "./Player.ts";
 
 /**
  * Eine spezialisierte Player-Klasse für Debugging-Zwecke.
@@ -11,7 +12,7 @@ import { Player } from "./player.ts";
  * Tausche in der Initialisierung `new Player()` gegen `new TrackerPlayer()` aus,
  * um "Geisterbewegungen" oder fehlerhafte Physik-Sprünge zu finden.
  */
-export class TrackerPlayer extends Player {
+export class DebugPlayer extends Player {
 	/** Status, ob das Logging aktuell aktiv ist. */
 	private trackingActive: boolean = false;
 
@@ -33,10 +34,14 @@ export class TrackerPlayer extends Player {
 		 * @override
 		 */
 	override setPos(pos: { x: number, y: number }): void {
-		if (this.trackingActive) {
-			console.log(`[TRACKER] setPos auf Entity ${this.getId().toString()}:`, pos);
-			console.trace();
+		const { x, y } = super.getPos()
+		if (
+			(x > pos.x * 1.1 || x < pos.x * 0.9) ||
+			(y > pos.y * 1.1 || y < pos.y * 0.9)
+		) {
+			GameLogger.error("Position weicht massiv ab!");
 		}
+		console.trace(this)
 		super.setPos(pos);
 	}
 

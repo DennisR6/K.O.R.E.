@@ -1,7 +1,7 @@
 import type { RenderContext } from "../engine/RenderContext";
 import type { IPhysics, Vector2D } from "../physics/physics";
 import { GameLogger } from "../utils/log";
-import type { IEntity } from "./entity";
+import type { IEntity } from "./Entity";
 
 
 /**
@@ -157,15 +157,7 @@ export class Player implements IEntity {
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
-	public setPos(pos: Vector2D): void {
-		if (
-			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
-			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
-		) {
-			GameLogger.error("Position weicht massiv ab!");
-		}
-		this.position = { x: pos.x, y: pos.y }
-	}
+	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y } }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
 	public setFriction(friction: number): void { this.friction = friction }
@@ -175,6 +167,7 @@ export class Player implements IEntity {
 	public addHP(hp: number): void { this.hp += hp }
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
+	public getColor(): string { return this.color }
 	public setPlayerIcon(icon: string): void { this.playericon = icon; }
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): "circle" { return this.shape }
@@ -182,17 +175,3 @@ export class Player implements IEntity {
 	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
 }
 
-export function createTrackingProxy(target: any, label: string, entityId: string) {
-	return new Proxy(target, {
-		set(obj, prop, value) {
-			// Wir ignorieren Änderungen von 0 auf 0, um Rauschen zu vermeiden
-			if (obj[prop] === value) return true;
-
-			console.warn(`[MUTATION] Entity ${entityId} | ${label}.${String(prop)}: ${obj[prop]} -> ${value}`);
-			console.trace(); // Das zeigt uns die exakte Datei und Zeile des Übeltäters
-
-			obj[prop] = value;
-			return true;
-		}
-	});
-}
