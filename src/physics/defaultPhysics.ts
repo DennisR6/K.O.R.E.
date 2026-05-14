@@ -204,13 +204,15 @@ export class defaultPhysics implements PhysicsStrategy {
 			}
 			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):
 			case (entityA.getShape() === "rectangle" && entityB.getShape() === "circle"): {
-				const circle = (entityA.getShape() === "circle" ? entityA : entityB) as IPhysicsCircle
-				const rectangle = (entityA.getShape() === "rectangle" ? entityA : entityB) as IPhysicsRectangle
+				const circle = (entityA.getShape() === "circle" ? entityA : entityB) as IPhysicsCircle;
+				const rectangle = (entityA.getShape() === "rectangle" ? entityA : entityB) as IPhysicsRectangle;
+
 				const cPos = circle.getPos();
 				const rPos = rectangle.getPos();
 				const rBounds = rectangle.getBounds();
 				const radius = circle.getBounds().x;
 
+				// Finde den nächsten Punkt auf dem Rechteck zum Kreiszentrum
 				const closestX = Math.max(rPos.x, Math.min(cPos.x, rPos.x + rBounds.x));
 				const closestY = Math.max(rPos.y, Math.min(cPos.y, rPos.y + rBounds.y));
 
@@ -221,36 +223,77 @@ export class defaultPhysics implements PhysicsStrategy {
 				if (distanceSq < radius * radius) {
 					const distance = Math.sqrt(distanceSq);
 
+					// Normale berechnen (Richtung der Kollision)
 					const nx = distance > 0 ? dx / distance : 0;
 					const ny = distance > 0 ? dy / distance : -1;
 
 					const overlap = radius - distance;
+
+					// Massen abrufen
+					const m1 = circle.getMass();    // z.B. 1
+					const m2 = rectangle.getMass(); // z.B. Infinity oder 9000
+
+					// Inverse Massen für die Berechnung (1/Infinity = 0)
+					const invM1 = 1 / m1;
+					const invM2 = 1 / m2;
+					const invMassSum = invM1 + invM2;
+
+					// 1. Positionskorrektur (Depenetration)
+					// Verhindert das Ineinandersteckenbleiben proportional zur Masse
+					const totalMove = overlap + 0.01;
 					circle.setPos({
-						x: cPos.x + nx * (overlap + 0.01),
-						y: cPos.y + ny * (overlap + 0.01)
+						x: cPos.x + nx * totalMove * (invM1 / invMassSum),
+						y: cPos.y + ny * totalMove * (invM1 / invMassSum)
 					});
 
-					const vel = circle.getVel();
-
-					const dot = vel.x * nx + vel.y * ny;
-
-					if (dot < 0) {
-						const bounce = circle.getBounceFactor();
-
-						circle.setVel({
-							x: vel.x - (1 + bounce) * dot * nx,
-							y: vel.y - (1 + bounce) * dot * ny
+					if (m2 !== Infinity) {
+						rectangle.setPos({
+							x: rPos.x - nx * totalMove * (invM2 / invMassSum),
+							y: rPos.y - ny * totalMove * (invM2 / invMassSum)
 						});
 					}
 
-					circle.setPos(circle.getPos())
-					circle.setVel(circle.getVel())
-					rectangle.setPos(rectangle.getPos())
-					rectangle.setVel(rectangle.getVel())
+					// 2. Impuls-Antwort (Geschwindigkeit)
+					const v1 = circle.getVel();
+					const v2 = rectangle.getVel();
 
-					circle.onCollision({ entity: rectangle })
-					rectangle.onCollision({ entity: circle })
+					// Relative Geschwindigkeit in Richtung der Normalen
+					const relativeVelX = v1.x - v2.x;
+					const relativeVelY = v1.y - v2.y;
+					const dot = relativeVelX * nx + relativeVelY * ny;
+
+					// Nur berechnen, wenn die Objekte sich aufeinander zubewegen
+					if (dot < 0) {
+						// Kombinierter Bounce-Faktor (Durchschnitt oder Minimum beider Partner)
+						const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
+
+						// Der Impuls-Skalar (J)
+						const j = -(1 + bounce) * dot / invMassSum;
+
+						// Neue Geschwindigkeiten anwenden
+						circle.setVel({
+							x: v1.x + (j * nx) * invM1,
+							y: v1.y + (j * ny) * invM1
+						});
+
+						if (m2 !== Infinity) {
+							rectangle.setVel({
+								x: v2.x - (j * nx) * invM2,
+								y: v2.y - (j * ny) * invM2
+							});
+						}
+					}
+
+					// Event-Trigger und Sync
+					circle.setPos(circle.getPos());
+					circle.setVel(circle.getVel());
+					rectangle.setPos(rectangle.getPos());
+					rectangle.setVel(rectangle.getVel());
+
+					circle.onCollision({ entity: rectangle });
+					rectangle.onCollision({ entity: circle });
 				}
+				break;
 			}
 		}
 	}

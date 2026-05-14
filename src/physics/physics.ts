@@ -114,6 +114,7 @@ export interface IdefaultPhysics {
 	 */
 	onCollision({ entity }: { entity: IPhysics }): void;
 
+	setBounceFactor(bounce: number): void;
 	/** Wie stark das Objekt abprallt (0 = gar nicht, 1 = wie ein Gummiball). */
 	getBounceFactor(): number;
 	getBounds(): Vector2D

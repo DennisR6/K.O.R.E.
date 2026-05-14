@@ -1,12 +1,12 @@
 import test, { describe } from "node:test";
-import { Player } from "../src/entity/player.ts";
+import { Player } from "../src/entity/Player.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { Simulator } from "../src/engine/Simulator.ts";
 import { createDefaultContext, GameState, type IInputEmitter } from "../src/engine/types";
 import assert from "node:assert";
 import { createTestHandler, GameHandler } from "../src/engine/Handler.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
+import { Simulator } from "../src/systems/Simulator.ts";
 
 const DEFAULT_FRAME_TIME = 1;
 
@@ -74,14 +74,15 @@ describe("Handler & Physics System Integration", () => {
 			const manager = new EntityManager(entities);
 			const mockContext = createDefaultContext({ state: GameState.YOUR_TURN });
 			const mockEmitter: IInputEmitter = { sendShot: () => { } };
+			const physSystem = new PhysicsSystem(new defaultPhysics())
 
 			const handler = createTestHandler({
 				context: mockContext,
 				entityManager: manager,
 				inputEmitter: mockEmitter
 			});
-			const simulator = new Simulator();
-			handler.setSimulator(simulator);
+			const simulator = new Simulator(physSystem);
+			handler.addSystem(simulator);
 
 			const shots = [
 				{ angle: 0, power: 50 },
@@ -137,13 +138,12 @@ describe("Handler & Physics System Integration", () => {
 		 * richtigen Modus, damit der Spieler sofort interagieren kann?
 		 */
 	test("Handler - Initial State Lifecycle", () => {
-		const strategy = new defaultPhysics();
 		const p1 = new Player().new({ id: "p1", x: 100, y: 100, size: 60 });
 		const manager = new EntityManager([p1]);
 		const mockContext = createDefaultContext({ state: GameState.YOUR_TURN });
 		const mockEmitter: IInputEmitter = { sendShot: () => { } };
 
-		const handler = new GameHandler(mockContext, manager, strategy, mockEmitter);
+		const handler = createTestHandler({ context: mockContext, dt: 1, inputEmitter: mockEmitter, entityManager: manager });
 
 		assert.strictEqual(
 			handler.getContext().state,

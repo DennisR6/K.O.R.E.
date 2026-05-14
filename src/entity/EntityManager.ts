@@ -3,6 +3,16 @@ import type { SettingsEntity } from "../settings/settings";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
 import { Player } from "./Player";
 
+type SerializedPlayerStats = {
+	id: number | string
+	x: number
+	y: number
+	vx: number
+	vy: number
+	size: number
+	color: string
+}
+
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
  * Er fungiert als Brücke zwischen der Logik (ITicker) und der Anzeige (IDrawer).
@@ -64,15 +74,15 @@ export class EntityManager implements IDrawer, ITicker {
 		this.entities.forEach(entity => entity.setVel({ x: 0, y: 0 }))
 	}
 
-	public serialize(): any[] {
+	public serialize(): SerializedPlayerStats[] {
 		return this.entities.map(e => ({
 			id: e.getId(),
 			x: e.getPos().x,
 			y: e.getPos().y,
 			vx: e.getVel()?.x ?? 0,
 			vy: e.getVel()?.y ?? 0,
-			//@ts-ignore
-			color: e.color ?? "green"
+			size: e.getBounds().x,
+			color: e.getColor()
 		}));
 	}
 
@@ -81,15 +91,15 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Wichtig für Netzwerk-Übertragung oder Snapshots für den Simulator.
 		 * @returns Ein Array mit IDs, Positionen und Geschwindigkeiten.
 		 */
-	public applySerializedState(state: Player[]) {
+	public applySerializedState(state: SerializedPlayerStats[]) {
 		state.forEach(data => {
-			let existing = this.getEntityById(data.getId());
+			let existing = this.getEntityById(data.id);
 			if (!existing) {
-				existing = new Player().new({ id: data.getId(), x: data.getPos().x, y: data.getPos().y, color: data.getColor(), size: data.getBounds().x });
+				existing = new Player().new({ id: data.id, x: data.x, y: data.y, color: data.color, size: data.size });
 				this.addEntity(existing);
 			}
 			// DEBUG: Vergleiche das Original (falls vorhanden) mit dem Klon
-			console.log(`Entity ${data.getId()} - Mass: ${existing.getMass()}, Size: ${existing.getBounds().x}`);
+			// console.log(`Entity ${data.id} - Mass: ${existing.getMass()}, Size: ${existing.getBounds().x}`);
 		});
 	}
 

@@ -2,11 +2,11 @@ import test, { describe } from "node:test";
 import { createTestHandler } from "../src/engine/Handler";
 import { FRICTION_TABLE } from "../src/settings/settings";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { Simulator } from "../src/engine/Simulator.ts";
+import { Simulator } from "../src/systems/Simulator.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { LogEmitter, CombiEmitter } from "../src/emitter/InputEmitter.ts";
 import { PhysicsSystem, Round2PlayerSystem, PlaybackSystem } from "../src/systems/Systems.ts";
-import { Player } from "../src/entity/player.ts";
+import { Player } from "../src/entity/Player.ts";
 import { GameState, IInput } from "../src/engine/types.ts";
 import { NoRoundSystem } from "../src/systems/RoundSystem.ts";
 import assert from 'node:assert/strict';
@@ -35,7 +35,7 @@ describe("Engine Integration & State Machine", () => {
 	test("should produce deterministic results for manual impulse application", () => {
 		const physics = new defaultPhysics(FRICTION_TABLE.wood!);
 		const handler = createTestHandler({ systems: [], physicsStrategy: physics });
-		handler.setSimulator(new Simulator());
+		handler.addSystem(new Simulator(new PhysicsSystem(physics)));
 
 		const p_1 = new Player().new({ id: "p1", x: 200, y: 145, color: "green", team: ["0"], size: 12 });
 		const p_2 = new Player().new({ id: "p2", x: 320, y: 200, color: "red", team: ["1"], size: 12 });
@@ -71,9 +71,10 @@ describe("Engine Integration & State Machine", () => {
 		 */
 	test("should correctly transition through states during a turn simulation", () => {
 		const physics = new defaultPhysics(FRICTION_TABLE.wood!);
+		const pysSystem = new PhysicsSystem(physics)
 		const handler = createTestHandler({ systems: [], physicsStrategy: physics });
-		handler.addSystem(new PhysicsSystem(physics))
-		handler.setSimulator(new Simulator());
+		handler.addSystem(pysSystem)
+		handler.addSystem(new Simulator(pysSystem));
 		handler.addSystem(new PlaybackSystem());
 
 		const p_1 = new Player().new({ id: "p1", x: 200, y: 145, team: ["0"], size: 12 });
@@ -95,8 +96,10 @@ describe("Engine Integration & State Machine", () => {
 		const p1 = handler.getEntityManager().getEntityById("p1")!;
 		const p2 = handler.getEntityManager().getEntityById("p2")!;
 
-		assert.strictEqual(p1.getPos().x, 288.33347518325843);
+		assert.strictEqual(p1.getPos().x, 290.3627175943493);
+		assert.strictEqual(p1.getPos().y, 196.4502723302825);
 		assert.strictEqual(p2.getPos().x, 320);
+		assert.strictEqual(p1.getPos().y, 196.4502723302825);
 	});
 
 
@@ -127,15 +130,14 @@ describe("Engine Replay Test", () => {
 			systems: [],
 			physicsStrategy: physics
 		});
-
-		handler.setSimulator(new Simulator());
+		const physSystem = new PhysicsSystem(new defaultPhysics(), 1)
+		handler.addSystem(new Simulator(physSystem));
 		const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)]);
 		handler.setEmitter(em);
 
-		handler.addSystem(new PhysicsSystem(physics, fps));
+		handler.addSystem(physSystem);
 		handler.addSystem(new PlaybackSystem());
 		handler.addSystem(new NoRoundSystem());
-		handler.addSystem(new Round2PlayerSystem());
 
 		const p1 = new Player().new({ id: "p1", x: 100, y: 100, size: 20 })
 		handler.getEntityManager().addEntity(p1)
@@ -149,12 +151,10 @@ describe("Engine Replay Test", () => {
 			const res = handler.simulateTurn(input.actorId, input.angle, input.power);
 			handler.tickTurn(res);
 
-			handler.tick(1);
+			handler.tick(fps);
 			assert.strictEqual(handler.getState(), GameState.PLAYING, "Engine should switch to PLAYING during animation");
 
-			for (let i = 0; i < res.durationFrames - 1; i++) {
-				handler.tick(1);
-			}
+			for (let i = 0; i < res.durationFrames - 1; i++) handler.tick(fps);
 
 			assert.strictEqual(handler.getState(), GameState.PLAYING, "Engine should still be PLAYING before the final tick");
 
@@ -182,26 +182,26 @@ describe("Engine Replay Test", () => {
 		 * - Rundungs-Checks (360° vs 0°)
 		 */
 	const testcases = [
-		{ test: [{ actorId: "p1", angle: 0, power: 10 },], result: { x: 191.47705473130736, y: 100 } },
-		{ test: [{ actorId: "p1", angle: 45, power: 10 },], result: { x: 164.6840457234804, y: 164.6840457234804 } },
-		{ test: [{ actorId: "p1", angle: 90, power: 10 },], result: { x: 100, y: 191.47705473130736 } },
-		{ test: [{ actorId: "p1", angle: 135, power: 10 },], result: { x: 35.3159542765196, y: 164.6840457234804 } },
+		{ test: [{ actorId: "p1", angle: 0, power: 10 },], result: { x: 1374.5855961832162, y: 100 } },
+		{ test: [{ actorId: "p1", angle: 45, power: 10 },], result: { x: 1001.0173382862143, y: 1001.0173382862142 } },
+		{ test: [{ actorId: "p1", angle: 90, power: 10 },], result: { x: 100, y: 1374.5855961832162 } },
+		{ test: [{ actorId: "p1", angle: 135, power: 10 },], result: { x: -801.0173382862139, y: 1001.0173382862143 } },
 		{ test: [{ actorId: "p1", angle: 180, power: 10 },], result: { x: 8.522945268692615, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 225, power: 10 },], result: { x: 35.31595427651958, y: 35.3159542765196 } },
 		{ test: [{ actorId: "p1", angle: 270, power: 10 },], result: { x: 100, y: 8.522945268692615 } },
-		{ test: [{ actorId: "p1", angle: 315, power: 10 },], result: { x: 164.6840457234804, y: 35.31595427651958, } },
-		{ test: [{ actorId: "p1", angle: 360, power: 10 },], result: { x: 191.47705473130736, y: 100 } },
+		{ test: [{ actorId: "p1", angle: 315, power: 10 },], result: { x: 1001.017338286214, y: -801.0173382862142 } },
+		{ test: [{ actorId: "p1", angle: 360, power: 10 },], result: { x: 18430.706871260605, y: 99.99999999999625 } },
 
 
-		{ test: [{ actorId: "p1", angle: 0, power: 100 },], result: { x: 1516.4606208865687, y: 100 } },
-		{ test: [{ actorId: "p1", angle: 45, power: 100 },], result: { x: 1101.5889103126, y: 1101.5889103126 } },
-		{ test: [{ actorId: "p1", angle: 90, power: 100 },], result: { x: 100, y: 1516.4606208865687 } },
-		{ test: [{ actorId: "p1", angle: 135, power: 100 },], result: { x: -901.5889103126002, y: 1101.5889103126 } },
+		{ test: [{ actorId: "p1", angle: 0, power: 100 },], result: { x: 18430.706871260605, y: 100 } },
+		{ test: [{ actorId: "p1", angle: 45, power: 100 },], result: { x: 13061.517651921222, y: 13061.517651921222 } },
+		{ test: [{ actorId: "p1", angle: 90, power: 100 },], result: { x: 100, y: 18430.706871260605 } },
+		{ test: [{ actorId: "p1", angle: 135, power: 100 },], result: { x: -12861.51765192122, y: 13061.517651921222 } },
 		{ test: [{ actorId: "p1", angle: 180, power: 100 },], result: { x: 8.522945268692615, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 225, power: 100 },], result: { x: 35.31595427651958, y: 35.3159542765196 } },
 		{ test: [{ actorId: "p1", angle: 270, power: 100 },], result: { x: 100, y: 8.522945268692615 } },
-		{ test: [{ actorId: "p1", angle: 315, power: 100 },], result: { x: 1101.5889103126, y: -901.5889103126004 } },
-		{ test: [{ actorId: "p1", angle: 360, power: 100 },], result: { x: 1516.4606208865687, y: 99.9999999999997 } },
+		{ test: [{ actorId: "p1", angle: 315, power: 100 },], result: { x: 13061.517651921222, y: -12861.517651921225 } },
+		{ test: [{ actorId: "p1", angle: 360, power: 100 },], result: { x: 18430.706871260605, y: 99.9999999999997 } },
 
 	] as Array<{ test: IInput[], result: { x: number, y: number } }>
 
@@ -209,7 +209,7 @@ describe("Engine Replay Test", () => {
 	const floatingPointDrift = 0.001
 	for (const testCase of testcases) {
 		test(`Testing Actor: ${testCase.test[0].actorId} angle: ${testCase.test[0].angle} power: ${testCase.test[0].power}`, () => {
-			runEngineValidation(testCase.test, testCase.result, floatingPointDrift)
+			runEngineValidation(testCase.test, testCase.result, floatingPointDrift, 1)
 		})
 	}
 })

@@ -4,11 +4,12 @@ import { PhysicsSystem } from "../systems/PhysicsSystem";
 import { PlaybackSystem } from "../systems/PlayBackSystem";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext";
 import { createDefaultContext, GameState } from "./types";
-import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, ISimulator, TurnPacket } from "./types.ts"
+import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, TurnPacket } from "./types.ts"
 import type { IGameContext, ISystem } from "../systems/types.ts";
 import { defaultPhysics } from "../physics/defaultPhysics.ts";
 import { GameLogger } from "../utils/log.ts";
 import type { IStructure } from "../structures/structures.ts";
+import { Simulator } from "../systems/Simulator.ts";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -31,7 +32,7 @@ export const createTestHandler = (overrides: Override = {}) => {
 	const physicsStrategy = new defaultPhysics()
 	const em = new EntityManager([])
 	const defaultDependencies: HandlerDependencies = {
-		context: createDefaultContext({ entities: em, state: GameState.STARTING }),
+		context: createDefaultContext(),
 		entityManager: em,
 		physicsStrategy,
 		inputEmitter: { sendShot: () => { } },
@@ -40,7 +41,7 @@ export const createTestHandler = (overrides: Override = {}) => {
 	};
 
 	const handler = new GameHandler(
-		overrides.context ?? defaultDependencies.context,
+		createDefaultContext({ entities: em, state: GameState.STARTING, ...overrides.context }),
 		overrides.entityManager ?? defaultDependencies.entityManager,
 		overrides.physicsStrategy ?? defaultDependencies.physicsStrategy,
 		overrides.inputEmitter ?? defaultDependencies.inputEmitter,
@@ -64,7 +65,6 @@ export class GameHandler implements ITicker, IMouse {
 	private context: IGameContext;
 	private systems: ISystem[] = []; private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
-	private simulator: ISimulator | undefined
 	private lastTurnFinalState: any[] | null = null;
 	private dragStart: { x: number, y: number, actorId: string | number } | null = null;
 	private currentMouse: { x: number, y: number } = { x: 0, y: 0 };
@@ -110,19 +110,6 @@ export class GameHandler implements ITicker, IMouse {
 		this.physicsStrategy = strategy;
 	}
 
-	/**
-	 * Aktiviert den Simulator für die Vorausberechnung von Zügen.
-	 * 
-	 * @important Benötigt eine bereits gesetzte PhysicsStrategy, um Berechnungen 
-	 * durchführen zu können. Ohne Physik gibt es eine Fehlermeldung.
-	 * 
-	 * @param strategy - Der Simulator (z.B. für Flugbahn-Vorschau oder KI-Berechnungen).
-	 */
-	setSimulator(strategy: ISimulator) {
-		if (!this.physicsStrategy)
-			return new Error("Physics Strategy not defined")
-		this.simulator = strategy;
-	}
 
 	/**
 		 * Die "Glaskugel" der Engine: Berechnet einen kompletten Zug im Voraus.
@@ -136,6 +123,8 @@ export class GameHandler implements ITicker, IMouse {
 		 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
 		 */
 	public simulateTurn(actorId: string | number, angle: number, power: number): TurnPacket {
+		const simulator = this.systems.find(x => x instanceof Simulator)
+		if (simulator === undefined) throw new Error("No Simulation Engine added")
 		this.setState(GameState.SIMULATING);
 		const tempManager = this.entityManager.clone();
 
@@ -147,15 +136,20 @@ export class GameHandler implements ITicker, IMouse {
 		const physSystem = this.systems.find(x => x instanceof PhysicsSystem)
 		if (!physSystem) throw new Error("Kein Physik System installiert")
 
+		const frameSteps = []
 		let frames = 0;
-		while (!this.simulator!.isStatic(tempManager) && frames < 1200) {
-			this.simulator!.step(physSystem, this.dt, tempManager, this.context.structures);
+		const mockContext = this.getContext()
+		mockContext.entities = tempManager
+		while (!simulator.isStatic(tempManager) && frames < 1200) {
+			simulator.tick(mockContext, this.dt, this.physicsStrategy.getFriction());
 			frames++;
+			const finalState = tempManager.serialize();
+			frameSteps.push(finalState)
 		}
 
 		const finalState = tempManager.serialize();
 		this.setState(GameState.SIMULATING_DONE);
-
+		// console.log(frameSteps)
 		return {
 			actorId,
 			input: { angle, power },
@@ -421,7 +415,7 @@ export class GameHandler implements ITicker, IMouse {
 	// ENGINE KONTROLLE
 
 	public getContext(): IGameContext {
-		return this.context;
+		return { ...this.context };
 	}
 
 	public addSystem(system: ISystem) {

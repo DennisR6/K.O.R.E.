@@ -3,7 +3,7 @@ import { createTestHandler, GameHandler } from "./engine/Handler.ts";
 import { P5Renderer } from "./engine/drawingEngine.ts";
 import type { RenderContext } from "./engine/RenderContext";
 import { GameSettings } from "./settings/settings";
-import { Simulator } from "./engine/Simulator.ts";
+import { Simulator } from "./systems/Simulator.ts";
 import { defaultPhysics } from "./physics/defaultPhysics.ts";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.ts";
 import { BackgroundImageSystem } from "./ui/Background.ts";
@@ -30,10 +30,11 @@ const TickRate = 1
 
 const physics = new defaultPhysics(GameSettings.friction)
 let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
-handler.setSimulator(new Simulator())
+const physSystem = new PhysicsSystem(physics, TickRate)
+handler.addSystem(new Simulator(physSystem))
 const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
 handler.setEmitter(em)
-handler.addSystem(new PhysicsSystem(physics, TickRate))
+handler.addSystem(physSystem)
 handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
 if (GameSettings.background?.type === "image")

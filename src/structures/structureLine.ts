@@ -51,7 +51,7 @@ export class StructureLine implements IPhysicsRectangle {
 		this.color = color || "green"
 		this.shape = "rectangle"
 		this.vel = { x: 0, y: 0 }
-		this.bounce = 0
+		this.bounce = Infinity
 	}
 
 	public draw(ctx: RenderContext) {
@@ -59,6 +59,7 @@ export class StructureLine implements IPhysicsRectangle {
 		ctx.drawRect(this.x, this.y, this.x2, this.y2)
 	}
 
+	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
 	/**

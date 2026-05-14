@@ -1,13 +1,13 @@
 import test, { beforeEach, describe, it } from "node:test"
 import { defaultPhysics } from "../src/physics/defaultPhysics";
 import { createTestHandler, GameHandler } from "../src/engine/Handler"
-import { Simulator } from "../src/engine/Simulator.ts"
 import { GameEmitter } from "../src/emitter/Emitter.ts"
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
-import { Player } from "../src/entity/player.ts";
+import { Player } from "../src/entity/Player.ts";
 import assert from "node:assert";
 import { ObjectEmitter } from "../src/emitter/Emitter.ts"
+import { Simulator } from "../src/systems/Simulator.ts";
 
 /**
  * @test Simulation & Determinismus
@@ -19,12 +19,13 @@ import { ObjectEmitter } from "../src/emitter/Emitter.ts"
 describe("Simulation & Determinism Tests", () => {
 	let handler: GameHandler;
 	const physics = new defaultPhysics({ "friction": 0.98, "linearDrag": 0.05, "stopThreshold": 0.15 });
+	const physSystem = new PhysicsSystem(physics, 1000 / 60)
 	beforeEach(() => {
 		handler = createTestHandler({ systems: [], physicsStrategy: physics });
 
 		handler.setEmitter(new GameEmitter(handler));
-		handler.setSimulator(new Simulator());
-		handler.addSystem(new PhysicsSystem(physics, 1000 / 60));
+		handler.addSystem(physSystem);
+		handler.addSystem(new Simulator(physSystem));
 		handler.addSystem(new PlaybackSystem());
 
 		handler.getEntityManager().addEntity(new Player().new({ x: 100, y: 100, id: "p1", size: 20 }));

@@ -53,7 +53,7 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 		this.color = color || "green"
 		this.shape = "rectangle"
 		this.vel = { x: 0, y: 0 }
-		this.bounce = 0
+		this.bounce = Infinity
 	}
 
 	/**
@@ -64,51 +64,26 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 		ctx.drawRect(this.x, this.y, this.w, this.h)
 	}
 
-	/**
-		 * Gibt die Dimensionen für das Physik-System zurück.
-		 */
-	getBounceFactor(): number {
-		return this.bounce
-	}
+	setBounceFactor(bounce: number): void { this.bounce = bounce }
+	getBounceFactor(): number { return this.bounce }
 
-	getBounds(): Vector2D {
-		return { x: this.w, y: this.h }
-	}
+	getBounds(): Vector2D { return { x: this.w, y: this.h } }
 
-	/**
-		 * Gibt die aktuelle Position (Top-Left) zurück.
-		 */
-	getPos(): Vector2D {
-		return { x: this.x, y: this.y }
-	}
+	getPos(): Vector2D { return { x: this.x, y: this.y } }
 
-	getVel(): Vector2D {
-		return this.vel
-	}
+	getVel(): Vector2D { return this.vel }
 
 	onCollision({ entity }: { entity: IPhysics }): void {
 		GameLogger.debug("Collision with:" + entity.getShape())
 	}
 
-	setVel(vel: Vector2D): void {
-		this.vel = vel
-	}
+	setVel(vel: Vector2D): void { this.vel = vel }
 
-	setMass(mass: number): void {
-		this.mass = mass
-	}
+	setMass(mass: number): void { this.mass = mass }
 
-	getMass(): number {
-		return this.mass
-	}
+	getMass(): number { return this.mass }
 
-	setPos(pos: Vector2D): void {
-		this.x = pos.x
-		this.y = pos.y
-	}
-	/**
-		 * Gibt die aktuelle Position (Top-Left) zurück.
-		 */
+	setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y }
 	getFriction(): number { return this.friction ?? 1 }
 
 	setFriction(friction: number): void { this.friction = friction }

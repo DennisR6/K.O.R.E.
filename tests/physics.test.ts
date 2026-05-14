@@ -1,7 +1,13 @@
 import { test, describe } from "node:test";
 import { defaultPhysics } from "../src/physics/defaultPhysics"
 import assert from "node:assert";
-import { Player } from "../src/entity/player.ts";
+import { Player } from "../src/entity/Player.ts";
+import { createTestHandler } from "../src/engine/Handler.ts";
+import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
+import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
+import { StructureRectangle } from "../src/structures/structureRectangle.ts";
+import { GameSettings } from "../src/settings/settings.ts";
+import { Simulator } from "../src/systems/Simulator.ts";
 
 /**
  * @test Physics Calculations & Vector Math
@@ -146,4 +152,37 @@ describe("Physics Calculations", () => {
 	// });
 
 	// 	checkCollisionCircleRect(circlePos: Vector2D, r: number, rectPos: Vector2D, w: number, h: number): boolean;
+	//
+
+})
+
+describe("Collisions", () => {
+	test("perfect 45 degree collision check", () => {
+		const dt = 1
+		const h = createTestHandler({ context: { dt } })
+		const physSys = new PhysicsSystem(new defaultPhysics(GameSettings.friction))
+		h.addSystem(physSys)
+		h.addSystem(new Simulator(physSys))
+		h.addSystem(new PlaybackSystem())
+
+		const p1 = new Player().new({ x: 30, y: 50, size: 10, id: "p1" });
+		const s1 = new StructureRectangle(0, 0, 10, 100, "");
+		s1.setBounceFactor(12)
+
+		h.getEntityManager().addEntity(p1)
+		h.addStructure(s1)
+
+		h.start()
+		const sim = h.simulateTurn("p1", 225, 1);
+		h.tickTurn(sim)
+		for (let i = 0; i < sim.durationFrames; i++) h.tick(dt)
+		const { x, y } = sim.finalState[0]
+		const { x: pX, y: pY } = h.getEntityManager().getEntities()[0].getPos()
+
+
+		assert.strictEqual(x, 35.328794935141175)
+		assert.strictEqual(y, 24.237270466048578)
+		assert.strictEqual(Math.abs(x - pX) < 0.3, true, `${x}/${pX}`)
+		assert.strictEqual(Math.abs(y - pY) < 0.3, true, `${y}/${pY}`)
+	})
 })

@@ -37,7 +37,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 		this.r = r
 		this.shape = "circle"
 		this.color = color || "green"
-		this.bounce = 1
+		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
 	}
 	/**
@@ -79,6 +79,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 
 	public getShape(): "circle" { return this.shape }
 	public getBounds(): Vector2D { return { x: this.r, y: this.r } }
+	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics }): void {

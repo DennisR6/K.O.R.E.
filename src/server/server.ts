@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import { createTestHandler } from '../engine/Handler';
 import { defaultPhysics } from '../physics/defaultPhysics';
 import { FRICTION_TABLE, GameSettings } from '../settings/settings';
-import { Simulator } from '../engine/Simulator';
+import { Simulator } from '../systems/Simulator';
 import { CombiEmitter, LogEmitter } from '../emitter/InputEmitter';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { PlaybackSystem } from '../systems/PlayBackSystem';
@@ -17,10 +17,11 @@ import type { IInput } from '../engine/types';
 const TickRate = 1
 const physics = new defaultPhysics(FRICTION_TABLE.wood)
 let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
-handler.setSimulator(new Simulator())
+const physSys = new PhysicsSystem(physics, TickRate)
 const em = new CombiEmitter([new LogEmitter()])
 handler.setEmitter(em)
-handler.addSystem(new PhysicsSystem(physics, TickRate))
+handler.addSystem(physSys)
+handler.addSystem(new Simulator(physSys))
 handler.addSystem(new PlaybackSystem())
 handler.addSystem(new NoRoundSystem())
 GameSettings.mapBoundarys?.forEach(str => {

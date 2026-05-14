@@ -4,7 +4,7 @@ import { GameState, GameStateType } from "../src/engine/types.ts"
 import { PhysicsSystem, PlaybackSystem } from "../src/systems/Systems.ts"
 import { defaultPhysics } from '../src/physics/defaultPhysics.ts';
 import { EntityManager } from "../src/entity/EntityManager.ts";
-import { Player } from '../src/entity/player.ts';
+import { Player } from '../src/entity/Player.ts';
 import { IGameContext } from '../src/systems/types.ts';
 
 //@ts-ignore

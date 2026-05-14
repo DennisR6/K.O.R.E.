@@ -50,3 +50,11 @@ export interface IPlayback extends ISystem {
 	/** Gibt an, ob die Wiedergabe nach dem Ende automatisch neu startet. */
 	isLooping(): boolean;
 }
+
+/**
+ * Der ISimulator ist die "Rechen-Instanz" der Engine.
+ * Er berechnet physikalische Zustände in der Zukunft, ohne sie grafisch anzuzeigen.
+ */
+export interface ISimulator extends ISystem {
+	isStatic(entities: EntityManager): boolean;
+}

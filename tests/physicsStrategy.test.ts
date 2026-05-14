@@ -1,6 +1,6 @@
 import test, { beforeEach, describe } from "node:test"
 import { GameState } from "../src/engine/types.ts"
-import { Player } from "../src/entity/player.ts"
+import { Player } from "../src/entity/Player.ts"
 import { EntityManager } from "../src/entity/EntityManager.ts"
 import { defaultPhysics } from "../src/physics/defaultPhysics"
 import { PhysicsSystem, IGameContext } from "../src/systems/Systems.ts"

@@ -1,6 +1,5 @@
 import type { RenderContext } from "../engine/RenderContext";
 import type { IPhysics, Vector2D } from "../physics/physics";
-import { GameLogger } from "../utils/log";
 import type { IEntity } from "./Entity";
 
 
@@ -91,7 +90,7 @@ export class Player implements IEntity {
 		this.playericon = ""
 		this.shape = "circle"
 		this.velocity = { x: 0, y: 0 } as Vector2D
-		this.bouncyness = 0.1
+		this.bouncyness = 1
 		this.friction = undefined;
 		this.size = 20;
 		this.mass = 1
@@ -139,22 +138,13 @@ export class Player implements IEntity {
 		this.position.y += this.velocity.y * deltaTime;
 	}
 
-	/**
-		 * Aktiviert die Überwachung für Position und Geschwindigkeit.
-		 * Jede Änderung an diesen Werten wird in der Konsole mit Stacktrace geloggt.
-		 * Ein mächtiges Tool für das Debugging der Physik-Engine.
-		 */
-	public enableMutationTracking() {
-		this.position = createTrackingProxy(this.position, "POSITION", this.id.toString());
-		this.velocity = createTrackingProxy(this.velocity, "VELOCITY", this.id.toString());
-	}
-
 	public setId(id: string | number): void { this.id = id }
 	public getId(): number | string { return this.id }
 	public setMass(inertia: number): void { this.mass = Math.min(inertia, 1) }
 	public getMass(): number { return this.mass }
 	public setVel(v: { x: number, y: number }) { this.velocity.x = v.x; this.velocity.y = v.y; }
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
+	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
 	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y } }
