@@ -80,6 +80,7 @@ const sketch = (p: p5) => {
 		handler.tick()
 		p.push()
 		handler.drawWorld(ctx)
+		handler.drawUI(ctx)
 		p.pop()
 		p.push()
 		p.stroke(12)
