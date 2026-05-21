@@ -155,7 +155,7 @@ export class P5Renderer implements RenderContext {
 	pop(): void {
 		this.p5ctx.pop()
 	}
-	mouseWheel(func: (e: MouseEvent) => void) {
+	mouseWheel(func: (e: WheelEvent) => void) {
 		//@ts-ignore
 		this.p5ctx.mouseWheel = func
 	}

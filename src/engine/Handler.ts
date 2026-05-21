@@ -4,7 +4,7 @@ import { PhysicsSystem } from "../systems/PhysicsSystem";
 import { PlaybackSystem } from "../systems/PlayBackSystem";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext";
 import { createDefaultContext, GameState } from "./types";
-import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, TurnPacket } from "./types.ts"
+import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.ts"
 import type { IGameContext, ISystem } from "../systems/types.ts";
 import { defaultPhysics } from "../physics/defaultPhysics.ts";
 import { GameLogger } from "../utils/log.ts";
@@ -66,14 +66,14 @@ export class GameHandler implements ITicker, IMouse {
 	private systems: ISystem[] = []; private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
 	private lastTurnFinalState: any[] | null = null;
-	private dragStart: { x: number, y: number, actorId: string | number } | null = null;
-	private currentMouse: { x: number, y: number } = { x: 0, y: 0 };
+	//@ts-ignore
 	private inputEmitter: IInputEmitter | undefined = undefined;
 	private preTickers: ITicker[] = []
 	private postTickers: ITicker[] = []
 	private preDrawers: IDrawer[] = []
 	private postDrawers: IDrawer[] = []
 	private dt: number;
+	private mouseHandler: IMouseHandler | undefined;
 
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -244,6 +244,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public drawWorld(renderer: RenderContext): void {
 		renderer.clear()
+		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
 		this.preDrawers.forEach(d => d.draw(renderer))
 		this.context.structures.forEach(str => str.draw(renderer))
 		// 2. Entities (Player/Pucks) zeichnen
@@ -263,21 +264,6 @@ export class GameHandler implements ITicker, IMouse {
 		 * - Den aktuellen Spielstatus (GameState)
 		 * - Die Schuss-Vorschau (Trajektorie), wenn der Spieler zielt.
 		 */
-	public drawUI(renderer: RenderContext) {
-		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
-		if (this.context.state != GameState.YOUR_TURN) return
-		renderer.push()
-		const input = this.getLocalInput();
-		if (this.dragStart && input) {
-			const actor = this.entityManager.getEntityById(input.actorId)
-			if (!actor) throw new Error("Kein Spieler gefunden!")
-			const res = this.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
-			const { x, y } = actor.getPos()
-			renderer.line(x, y, res.x, res.y);
-			renderer.drawText(`${Math.round(input.angle)}°`, res.x, res.y);
-		}
-		renderer.pop()
-	}
 
 	/**
 	 * Registriert den Klick auf ein Objekt.
@@ -285,105 +271,43 @@ export class GameHandler implements ITicker, IMouse {
 	 * die man "ziehen" kann.
 	 */
 	public handleMousePressed(mouseX: number, mouseY: number) {
+		// this.systems.filter(x => x instanceof )
 		if (this.context.state !== GameState.YOUR_TURN) return;
 		const e = this.entityManager.getEntityAt(mouseX, mouseY, 12)
+		//@ts-ignore
 		if (e) this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
 	}
 
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
 	public updateMouse(mouseX: number, mouseY: number) {
-		this.currentMouse = { x: mouseX, y: mouseY };
+		this.mouseHandler?.updateMouse(mouseX, mouseY)
 	}
 
 	/**
 		 * Schließt die Eingabe ab und feuert den Schuss ab.
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
-	public handleMouseReleased() {
-		const input = this.getLocalInput();
-
-		if (input && this.inputEmitter && this.dragStart) {
-			this.inputEmitter.sendShot(input.actorId, input.angle, input.power);
-		}
-		this.dragStart = null;
-
-		return input;
-	}
-
-	/**
-		 * Die "Mathe-Küche": Berechnet Winkel und Kraft aus der Mausbewegung.
-		 * 
-		 * Logik:
-		 * - Power: Distanz zwischen Startpunkt und aktueller Maus (max. 100).
-		 * - Angle: Wir addieren 180 Grad, da man "nach hinten" zieht, um "nach vorne" zu schießen (Billard-Prinzip).
-		 * 
-		 * @returns Ein Objekt mit ID, Winkel und Kraft oder null, wenn die Bewegung zu kurz war.
-		 */
-	public getLocalInput(): { actorId: string | number, angle: number, power: number } | null {
-		if (!this.dragStart || !this.currentMouse) return null;
-
-		const dx = this.currentMouse.x - this.dragStart.x;
-		const dy = this.currentMouse.y - this.dragStart.y;
-
-		const rawPower = Math.sqrt(dx * dx + dy * dy);
-		if (rawPower < 5) return null;
-
-		const maxDrag = 200;
-		let power = (rawPower / maxDrag) * 10;
-		power = Math.min(power, 100);
-
-		let angleRad = Math.atan2(dy, dx);
-		let angleDeg = angleRad * (180 / Math.PI);
-
-		let finalAngle = angleDeg + 180;
-
-		finalAngle = ((finalAngle % 360) + 360) % 360;
-
-		return {
-			actorId: this.dragStart.actorId,
-			angle: finalAngle,
-			power: power
-		};
-	}
+	public handleMouseReleased() { this.mouseHandler?.handleMouseReleased() }
+	public handleMouseWheel(event: WheelEvent): void { this.mouseHandler?.handleMouseWheel(event) }
 
 	// --- LOGIK & UPDATES (Ticker) ---
 	// Diese Module laufen in jedem Frame ab, um Daten zu berechnen.
 
 	/** Registriert ein Modul, das VOR der Haupt-Physik berechnet wird. */
-	public addPreTicker(ticker: ITicker) {
-		this.preTickers.push(ticker);
-	}
+	public addPreTicker(ticker: ITicker) { this.preTickers.push(ticker); }
 
 	/** Registriert ein Modul, das NACH der Haupt-Physik berechnet wird. */
-	public addPostTicker(ticker: ITicker) {
-		this.postTickers.push(ticker);
-	}
-
-	public rmPreTicker(ticker: ITicker) {
-		this.preTickers = this.preTickers.filter(t => t !== ticker);
-	}
-	public rmPostTicker(ticker: ITicker) {
-		this.postTickers = this.postTickers.filter(t => t !== ticker);
-	}
+	public addPostTicker(ticker: ITicker) { this.postTickers.push(ticker); }
+	public rmPreTicker(ticker: ITicker) { this.preTickers = this.preTickers.filter(t => t !== ticker); }
+	public rmPostTicker(ticker: ITicker) { this.postTickers = this.postTickers.filter(t => t !== ticker); }
 
 	// --- GRAFIK (Drawer) ---
 	// Diese Module zeichnen Dinge auf den Bildschirm.
 
-	public addPreDrawer(drawer: IDrawer) {
-		this.preDrawers.push(drawer);
-	}
-
-	public addPostDrawer(drawer: IDrawer) {
-		this.postDrawers.push(drawer);
-	}
-
-	public rmPreDrawer(drawer: IDrawer) {
-		this.preDrawers = this.preDrawers.filter(d => d !== drawer);
-	}
-
-	public rmPostDrawer(drawer: IDrawer) {
-		this.postDrawers = this.postDrawers.filter(d => d !== drawer);
-	}
+	public addPreDrawer(drawer: IDrawer) { this.preDrawers.push(drawer); }
+	public addPostDrawer(drawer: IDrawer) { this.postDrawers.push(drawer); }
+	public rmPreDrawer(drawer: IDrawer) { this.preDrawers = this.preDrawers.filter(d => d !== drawer); }
+	public rmPostDrawer(drawer: IDrawer) { this.postDrawers = this.postDrawers.filter(d => d !== drawer); }
 
 	// --- KOMBI-METHODEN ---
 
@@ -414,41 +338,19 @@ export class GameHandler implements ITicker, IMouse {
 
 	// ENGINE KONTROLLE
 
-	public getContext(): IGameContext {
-		return { ...this.context };
-	}
-
-	public addSystem(system: ISystem) {
-		this.systems.push(system)
-	}
-
-	public getEntityManager(): EntityManager {
-		return this.entityManager
-	}
+	public getContext(): IGameContext { return { ...this.context }; }
+	public addSystem(system: ISystem) { this.systems.push(system) }
+	public getEntityManager(): EntityManager { return this.entityManager }
 
 	public setState(state: GameStateType): void {
 		GameLogger.debug(this.getState(), state)
 		this.context.state = state
 	}
 
-	public getState(): GameStateType {
-		return this.context.state
-	}
-
-	public setEmitter(emitter: IInputEmitter) {
-		this.inputEmitter = emitter;
-	}
-
-	public getPhysics(): PhysicsStrategy {
-		return this.physicsStrategy
-	}
-
-	public start(state?: GameStateType) {
-		this.context.state = state ?? GameState.YOUR_TURN
-	}
-
-	public addStructure(structure: IStructure) {
-		this.context.structures.push(structure)
-	}
-
+	public getState(): GameStateType { return this.context.state }
+	public setEmitter(emitter: IInputEmitter) { this.inputEmitter = emitter; }
+	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
+	public start(state?: GameStateType) { this.context.state = state ?? GameState.YOUR_TURN }
+	public addStructure(structure: IStructure) { this.context.structures.push(structure) }
+	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
 }

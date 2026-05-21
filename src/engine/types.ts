@@ -91,6 +91,7 @@ export interface IMouse {
 	handleMousePressed(mouseX: number, mouseY: number): void;
 	updateMouse(mouseX: number, mouseY: number): void;
 	handleMouseReleased(): void;
+	handleMouseWheel(event: WheelEvent): void;
 }
 
 /**
@@ -111,3 +112,4 @@ export type HandlerDependencies = {
  * Das universelle Format für einen Spiel-Input.
  */
 export type IInput = { actorId: string | number, angle: number, power: number }
+export interface IMouseHandler extends IMouse, ISystem { }

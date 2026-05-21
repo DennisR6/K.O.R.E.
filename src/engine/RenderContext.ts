@@ -35,7 +35,7 @@ export interface RenderContext {
 	windowScale(): number;
 	beginClip(): void;
 	endClip(): void;
-
+	mouseWheel(func: (e: WheelEvent) => void): void;
 }
 
 /** 

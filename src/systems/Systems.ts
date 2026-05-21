@@ -33,4 +33,5 @@ export { BoundarySystem } from "./BoundarySystem";
  * Wer ist dran? Wann beginnt eine neue Runde? Wer hat gewonnen?
  */
 export { Round2PlayerSystem } from "./RoundSystem.ts";
-export { } from "./Simulator.ts"
+export { Simulator } from "./Simulator.ts"
+export { } from "./UiSystem.ts"
