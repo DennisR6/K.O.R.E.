@@ -8,13 +8,56 @@
   },
   "mapBoundarys": [],
   "holes": [],
-  "players": [],
+  "players": [
+    {
+      "x": 340,
+      "y": 275,
+      "color": "#00ff00",
+      "team": 0
+    }
+  ],
   "friction": 1,
   "drift": 0,
-  "items": [],
+  "items": [
+    {
+      "id": "item_1p81lz",
+      "name": "",
+      "effectType": "",
+      "trigger": "onUse",
+      "frequency": {
+        "mode": "rundenbasiert",
+        "intervalRounds": 3,
+        "killsInterval": 0,
+        "lastPlayersThreshold": 4,
+        "healthThreshold": 20,
+        "boostFactor": 5
+      },
+      "probability": 25,
+      "spawn": {
+        "type": "points",
+        "points": [
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "areas": [
+          {
+            "shape": "circle",
+            "x": 0,
+            "y": 0,
+            "radius": 100,
+            "width": 200,
+            "height": 200
+          }
+        ]
+      },
+      "effectParams": {}
+    }
+  ],
   "effects": [
     {
-      "id": "24e3f0ec-1da4-444f-b419-c03d9023d80c",
+      "id": "d425fab5-7a7c-4c9c-b1d2-016d1b7d53eb",
       "type": "push_zone",
       "position": {
         "x": 0,

@@ -159,42 +159,50 @@ export function initImport() {
         // mapData korrekt überschreiben (Referenz behalten!)
         Object.assign(mapData, json);
 
-        // Basisfelder wiederherstellen (Name, friction, drift, etc.)
+        // Basisfelder wiederherstellen
         restoreMapFields();
 
-        // Map-Name ins HTML schreiben
+        // Map-Name setzen
         const nameField = document.getElementById("map-name");
         if (nameField && mapData.name) {
             nameField.value = mapData.name;
         }
 
-        // Bild-Inputs referenzieren
-        const fileImageInput = document.getElementById("map-image");      // <input type="file">
-        const urlImageInput  = document.getElementById("map-image-url");  // <input type="text">
+        // Hintergrund setzen
+        const fileImageInput = document.getElementById("map-image");
+        const urlImageInput  = document.getElementById("map-image-url");
 
-        // Reset
         fileImageInput.value = "";
         urlImageInput.value = "";
         fileImageInput.disabled = false;
         urlImageInput.disabled = false;
 
-        // Hintergrund aus JSON setzen
         if (mapData.background?.url) {
             const bg = mapData.background.url;
-
-            // Immer in das URL-Feld schreiben
             urlImageInput.value = bg;
 
-            // Wenn es eine externe URL ist → Datei-Input deaktivieren
             if (bg.startsWith("http://") || bg.startsWith("https://")) {
                 fileImageInput.disabled = true;
             }
         }
 
-        // ALLE Editor-Sektionen neu rendern
+        // 🔥 ALLE Editor-Sektionen rendern
         renderWalls();
         renderHoles();
         renderPlayers();
+
+        refreshItemsUI(true);
+
+        // 🔥 Events dispatchen
+        document.dispatchEvent(new CustomEvent("items-updated"));
+        document.dispatchEvent(new CustomEvent("items-overview-update"));
+
+        // 🔥 Erstes Item automatisch öffnen
+        if (mapData.items && mapData.items.length > 0) {
+            document.dispatchEvent(new CustomEvent("open-item-editor", {
+                detail: mapData.items[0]
+            }));
+        }
 
         console.log("Map erfolgreich geladen:", mapData);
     });
