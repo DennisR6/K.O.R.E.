@@ -59,7 +59,7 @@ export interface IPlayerType {
  * 3. **Debugging**: Kann Mutationen tracken, um unerwartete Wertänderungen zu finden.
  */
 export class Player implements IEntity {
-	private hp: number = -1;
+	private hp: number = 30;
 	private dead: number = -1;
 	/** Eindeutige ID (wird via crypto.randomUUID() generiert, falls nicht vorhanden). */
 	private id: number | string;
@@ -118,6 +118,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
+		ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
 		ctx.setFillColor("blue");
 
 		ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
