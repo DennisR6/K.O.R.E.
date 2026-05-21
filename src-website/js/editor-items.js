@@ -36,11 +36,15 @@ export function initItemsEditor() {
 function showOverview() {
     document.getElementById("items-overview").classList.add("active");
     document.getElementById("item-editor-form").classList.remove("active");
+
+    refreshItemsUI();
 }
 
 function showEditor() {
     document.getElementById("items-overview").classList.remove("active");
     document.getElementById("item-editor-form").classList.add("active");
+
+    refreshItemsUI();
 }
 
 
@@ -208,8 +212,7 @@ function setupAddItemButton() {
 
         mapData.items.push(newItem);
 
-        renderItemSidebar();
-        renderItemsOverview();
+        refreshItemsUI();
 
         openItemEditor(newItem);
     });
@@ -491,6 +494,8 @@ function saveCurrentItem() {
                         params.forEach(p => {
                             const el = document.getElementById("effect-param-" + p.id);
                             if (el) item.effectParams[p.id] = Number(el.value);
+
+    refreshItemsUI();
 });
 
 
@@ -590,4 +595,19 @@ function renderEffectParams() {
         container.appendChild(div);
     });
 }
+
+function refreshItemsUI(openFirst = false) {
+
+    // Sidebar aktualisieren
+    renderItemSidebar();
+
+    // Tabelle aktualisieren
+    renderItemsOverview();
+
+    // Erstes Item automatisch öffnen
+    if (openFirst && mapData.items.length > 0) {
+        openItemEditor(mapData.items[0]);
+    }
+}
+
 
