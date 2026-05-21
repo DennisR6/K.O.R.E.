@@ -1,4 +1,4 @@
-import { type PhysicsStrategy } from "../physics/physics";
+import { type PhysicsStrategy, type Vector2D } from "../physics/physics";
 import { EntityManager } from "../entity/EntityManager";
 import { PhysicsSystem } from "../systems/PhysicsSystem";
 import { PlaybackSystem } from "../systems/PlayBackSystem";
@@ -62,6 +62,8 @@ export const createTestHandler = (overrides: Override = {}) => {
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
 export class GameHandler implements ITicker, IMouse {
+	private currentMouse: Vector2D | null = null
+	private dragStart: Vector2D & { actorId: string | number } | undefined;
 	private context: IGameContext;
 	private systems: ISystem[] = []; private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
@@ -264,30 +266,50 @@ export class GameHandler implements ITicker, IMouse {
 		 * - Den aktuellen Spielstatus (GameState)
 		 * - Die Schuss-Vorschau (Trajektorie), wenn der Spieler zielt.
 		 */
-
+	public drawUI(renderer: RenderContext) {
+		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
+		if (this.context.state != GameState.YOUR_TURN) return
+		renderer.push()
+		const input = this.getLocalInput();
+		if (this.dragStart && input) {
+			const actor = this.entityManager.getEntityById(input.actorId)
+			if (!actor) throw new Error("Kein Spieler gefunden!")
+			const res = this.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
+			renderer.line(this.dragStart.x, this.dragStart.y, res.x, res.y);
+			renderer.drawText(`${Math.round(input.angle)}°`, res.x, res.y);
+		}
+		renderer.pop()
+	}
 	/**
 	 * Registriert den Klick auf ein Objekt.
 	 * Prüft, ob an der Mausposition eine Entity (z.B. ein Puck) liegt, 
 	 * die man "ziehen" kann.
 	 */
 	public handleMousePressed(mouseX: number, mouseY: number) {
-		// this.systems.filter(x => x instanceof )
 		if (this.context.state !== GameState.YOUR_TURN) return;
 		const e = this.entityManager.getEntityAt(mouseX, mouseY, 12)
-		//@ts-ignore
 		if (e) this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
 	}
 
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
 	public updateMouse(mouseX: number, mouseY: number) {
-		this.mouseHandler?.updateMouse(mouseX, mouseY)
+		this.currentMouse = { x: mouseX, y: mouseY }
 	}
 
 	/**
 		 * Schließt die Eingabe ab und feuert den Schuss ab.
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
-	public handleMouseReleased() { this.mouseHandler?.handleMouseReleased() }
+	public handleMouseReleased() {
+		const input = this.getLocalInput();
+
+		if (input && this.inputEmitter && this.dragStart) {
+			this.inputEmitter.sendShot(input.actorId, input.angle, input.power);
+		}
+		this.dragStart = undefined;
+
+		return input;
+	}
 	public handleMouseWheel(event: WheelEvent): void { this.mouseHandler?.handleMouseWheel(event) }
 
 	// --- LOGIK & UPDATES (Ticker) ---
@@ -353,4 +375,31 @@ export class GameHandler implements ITicker, IMouse {
 	public start(state?: GameStateType) { this.context.state = state ?? GameState.YOUR_TURN }
 	public addStructure(structure: IStructure) { this.context.structures.push(structure) }
 	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
+
+	public getLocalInput(): { actorId: string | number, angle: number, power: number } | null {
+		if (!this.dragStart || !this.currentMouse) return null;
+
+		const dx = this.currentMouse.x - this.dragStart.x;
+		const dy = this.currentMouse.y - this.dragStart.y;
+
+		const rawPower = Math.sqrt(dx * dx + dy * dy);
+		if (rawPower < 5) return null;
+
+		const maxDrag = 200;
+		let power = (rawPower / maxDrag) * 10;
+		power = Math.min(power, 100);
+
+		let angleRad = Math.atan2(dy, dx);
+		let angleDeg = angleRad * (180 / Math.PI);
+
+		let finalAngle = angleDeg + 180;
+
+		finalAngle = ((finalAngle % 360) + 360) % 360;
+
+		return {
+			actorId: this.dragStart.actorId,
+			angle: finalAngle,
+			power: power
+		};
+	}
 }
