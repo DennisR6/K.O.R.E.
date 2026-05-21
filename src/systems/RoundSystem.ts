@@ -10,7 +10,7 @@ import type { IGameContext, ISystem } from "./types";
  * sofort wieder auf `YOUR_TURN` gesetzt.
  */
 export class NoRoundSystem implements ISystem {
-	tick(ctx: IGameContext, _dt: number): void {
+	ticker(ctx: IGameContext, _dt: number): void {
 		if (ctx.state !== GameState.PLAYING_DONE) return;
 		ctx.state = GameState.YOUR_TURN;
 	}
@@ -26,10 +26,11 @@ export class Round2PlayerSystem implements ISystem {
 	/** Interner Flag, um den aktuellen Besitzer des Zuges zu tracken. */
 	private yourTurn: boolean = false;
 
+	constructor(yourTurn: boolean) { this.yourTurn = yourTurn }
 	/**
 	 * Prüft den Spielzustand und wechselt die Runde, sobald die Action vorbei ist.
 	 */
-	tick(ctx: IGameContext, _dt: number): void {
+	ticker(ctx: IGameContext, _dt: number): void {
 		if (ctx.state !== GameState.PLAYING_DONE) return;
 
 		if (this.yourTurn) {

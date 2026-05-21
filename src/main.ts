@@ -12,10 +12,9 @@ import { NoRoundSystem } from "./systems/RoundSystem.ts";
 import { StructureRectangle } from "./structures/structureRectangle.ts";
 import { StructureCircle } from "./structures/structureCircle.ts";
 import { GameEmitter } from "./emitter/EngineEmitter.ts";
-// import { DebugPlayer } from "./entity/DebugPlayer.ts";
+import { DebugPlayer } from "./entity/DebugPlayer.ts";
 import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.ts";
 import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.ts";
-import { Player } from "./entity/Player.ts";
 
 
 const TickRate = 1
@@ -53,8 +52,8 @@ GameSettings.hazzards?.forEach(str => {
 })
 
 
-GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
-handler.getEntityManager().addEntity(new Player().new({ x: 76, y: 157, size: 1, color: "green" }))
+GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new DebugPlayer().new({ ...player })));
+// handler.getEntityManager().addEntity(new DebugPlayer().new({ x: 76, y: 157, size: 1, color: "green" }))
 
 handler.start()
 

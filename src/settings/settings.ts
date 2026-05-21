@@ -154,8 +154,8 @@ export const GameSettings = {
 		{ type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
 	],
 	hazzards: [
-		// Circles
 		{ type: "circle", x: offset + CircleRadius, y: offset + CircleRadius, r: CircleRadius, color: "blue" },
+		// Circles
 		// OBEN MITTE
 		// { type: "circle", x: (x - CircleRadius) / 2, y: offset + CircleRadius, r: CircleRadius, color: "yellow" },
 		// OBEN RECHTS
@@ -172,8 +172,8 @@ export const GameSettings = {
 	players: [
 		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
-		{ "id": 1, "x": 100, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 10 },
-		{ "id": 1, "x": 200, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 10 },
+		{ id: 1, x: 100, y: 100, color: "cyan", playericon: "", team: ["1"], size: 18 },
+		{ id: 1, x: 200, y: 200, color: "cyan", playericon: "", team: ["1"], size: 10 },
 		// { "id": 2, "x": 200, "y": 250, "color": "cyan", "playericon": "", "team": ["1"], "size": 15 },
 		// { "id": 3, "x": 100, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
 		// { "id": 4, "x": 200, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },

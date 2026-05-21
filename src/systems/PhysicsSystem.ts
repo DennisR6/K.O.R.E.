@@ -47,7 +47,7 @@ export class PhysicsSystem implements ISystem {
 	 * 
 	 * @see PhysicsStrategy für die mathematischen Details der Berechnung.
 	 */
-	tick(ctx: IGameContext, dt: number = this.DEFAULTFPS, friction: number): void {
+	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, friction: number): void {
 		let totalMovement = 0;
 
 		this.resolveAllCollisions(ctx);

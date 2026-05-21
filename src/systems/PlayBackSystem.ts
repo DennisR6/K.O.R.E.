@@ -36,7 +36,7 @@ export class PlaybackSystem implements PlaybackSystem {
 		 * Reduziert den Frame-Counter in jedem Tick.
 		 * Sobald 0 erreicht ist, wird der Hard-Sync ausgelöst.
 		 */
-	tick(ctx: IGameContext) {
+	ticker(ctx: IGameContext) {
 		if (ctx.state !== GameState.PLAYING) return
 		if (this.remainingFrames > 0)
 			this.remainingFrames--;

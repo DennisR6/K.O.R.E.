@@ -34,7 +34,7 @@ export interface ISystem {
 	 * @param dt - DeltaTime (Zeit seit dem letzten Frame).
 	 * @param friction - Die aktuell wirkende globale Reibung.
 	 */
-	tick(ctx: IGameContext, dt: number, friction: number): void;
+	ticker(ctx: IGameContext, dt: number, friction: number): void;
 }
 
 /**

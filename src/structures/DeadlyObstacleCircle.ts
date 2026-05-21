@@ -14,6 +14,7 @@ export class DeadlyObstacleCirle extends StructureCircle {
 			return
 		}
 		console.log("Collision", entity, entity instanceof Player)
+		//TODO: PLAYER NEEDS TO BE KILLED
 	}
 
 	public override draw(ctx: RenderContext): void {

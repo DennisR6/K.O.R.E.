@@ -35,7 +35,7 @@ export class Simulator implements ISimulator {
 		});
 	}
 
-	tick(ctx: IGameContext, dt: number, friction: number): void {
+	ticker(ctx: IGameContext, dt: number, friction: number): void {
 		if (ctx.state !== GameState.SIMULATING) return
 		// Wir rufen direkt den Taktgeber der Physik auf
 		this.physics.tick(ctx, dt, friction ?? this.physics.strategy.getFriction());

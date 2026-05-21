@@ -1,0 +1,37 @@
+{
+	"tags":
+	{
+		"allowUnknownTags" : true
+	},
+	"plugins":[
+		 "plugins/markdown"
+		,"/home/eugen/.bun/install/global/node_modules/tsdoc/template/plugins/TSDoc.js"
+	],
+	"opts":
+	{
+		"template"	:"/home/eugen/.bun/install/global/node_modules/tsdoc/template",
+		"recurse"	:"true"
+	},
+	"templates" : {
+		"cleverLinks"     : false,
+		"monospaceLinks"  : false
+	},
+	"source":
+	{
+		"includePattern": "(\\.d)?\\.ts$"
+	},
+	"markdown"  : {
+		"parser"   : "gfm",
+		"hardwrap" : true
+	},
+	"tsdoc":{
+		"source"		:"/home/eugen/projekte/SlipStrike/src/",
+		"destination"	:"/home/eugen/projekte/SlipStrike/docs",
+		"tutorials"		:"",
+		"systemName"	: "SlipStrike",
+		"footer"		: "",
+		"copyright"		: "SlipStrike Copyright © 2026 eugen.",
+		"outputSourceFiles" : true,
+		"commentsOnly": true
+	}
+}
