@@ -8,39 +8,69 @@
   },
   "mapBoundarys": [],
   "holes": [],
-  "players": [
-    {
-      "x": 340,
-      "y": 275,
-      "color": "#00ff00",
-      "team": 0
-    }
-  ],
+  "players": [],
   "friction": 1,
   "drift": 0,
   "items": [
     {
-      "id": "item_1p81lz",
+      "id": "item_wxrhgp",
       "name": "",
-      "effectType": "",
+      "effectType": "push",
       "trigger": "onUse",
       "frequency": {
         "mode": "rundenbasiert",
         "intervalRounds": 3,
-        "killsInterval": 0,
-        "lastPlayersThreshold": 4,
+        "killsInterval": 3,
+        "lastPlayersThreshold": 0,
         "healthThreshold": 20,
         "boostFactor": 5
       },
       "probability": 25,
       "spawn": {
         "type": "points",
-        "points": [
-          {
-            "x": 0,
-            "y": 0
-          }
-        ],
+        "points": [],
+        "areas": []
+      },
+      "effectParams": {}
+    },
+    {
+      "id": "item_dhlbeh",
+      "name": "",
+      "effectType": "modify_mass",
+      "trigger": "onUse",
+      "frequency": {
+        "mode": "rundenbasiert",
+        "intervalRounds": 3,
+        "killsInterval": 3,
+        "lastPlayersThreshold": 0,
+        "healthThreshold": 20,
+        "boostFactor": 5
+      },
+      "probability": 25,
+      "spawn": {
+        "type": "points",
+        "points": [],
+        "areas": []
+      },
+      "effectParams": {}
+    },
+    {
+      "id": "item_gjf8x1",
+      "name": "",
+      "effectType": "swap_positions",
+      "trigger": "onUse",
+      "frequency": {
+        "mode": "rundenbasiert",
+        "intervalRounds": 3,
+        "killsInterval": 3,
+        "lastPlayersThreshold": 0,
+        "healthThreshold": 20,
+        "boostFactor": 5
+      },
+      "probability": 25,
+      "spawn": {
+        "type": "points",
+        "points": [],
         "areas": [
           {
             "shape": "circle",
@@ -53,11 +83,32 @@
         ]
       },
       "effectParams": {}
+    },
+    {
+      "id": "item_35mb2j",
+      "name": "",
+      "effectType": "boost_speed",
+      "trigger": "onHit",
+      "frequency": {
+        "mode": "rundenbasiert",
+        "intervalRounds": 3,
+        "killsInterval": 3,
+        "lastPlayersThreshold": 0,
+        "healthThreshold": 20,
+        "boostFactor": 5
+      },
+      "probability": 25,
+      "spawn": {
+        "type": "points",
+        "points": [],
+        "areas": []
+      },
+      "effectParams": {}
     }
   ],
   "effects": [
     {
-      "id": "d425fab5-7a7c-4c9c-b1d2-016d1b7d53eb",
+      "id": "55040cde-9908-4334-9d58-ac0dedc7d32f",
       "type": "push_zone",
       "position": {
         "x": 0,

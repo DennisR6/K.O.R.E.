@@ -22,6 +22,6 @@ export class DeadlyObstacleCirle extends StructureCircle {
 		const { x, y } = this.getPos()
 		const { x: r } = this.getBounds()
 
-		ctx.drawCircle(x, y, r)
+		ctx.drawCircle(x, y, r * 2)
 	}
 }

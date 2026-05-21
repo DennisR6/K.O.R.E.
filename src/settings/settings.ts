@@ -133,7 +133,7 @@ export const FRICTION_TABLE = {
 	}
 } as const
 const thickness = 2
-const CircleRadius = 40
+const CircleRadius = 10
 const [x, y] = [800, 450]
 const offset = 50
 export const GameSettings = {
@@ -172,7 +172,7 @@ export const GameSettings = {
 	players: [
 		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
-		{ "id": 1, "x": 100, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 18 },
+		{ "id": 1, "x": 100, "y": 100, "color": "cyan", "playericon": "", "team": ["1"], "size": 10 },
 		{ "id": 1, "x": 200, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 10 },
 		// { "id": 2, "x": 200, "y": 250, "color": "cyan", "playericon": "", "team": ["1"], "size": 15 },
 		// { "id": 3, "x": 100, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
@@ -191,7 +191,7 @@ export const GameSettings = {
 	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],
 	effects: [],
-	background: { type: "image", url: "/billiard.png" },
+	background: { type: "image", url: "/BilliardGroßerLochJunge.png" },
 	// background: { color: "red", type: "color" },
 	music: ["/..."]
 } as Settings
