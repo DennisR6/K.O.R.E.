@@ -127,7 +127,7 @@ export class Player implements IEntity {
 		// ctx.setFillColor(this.color);
 		// ctx.drawCircle(this.position.x, this.position.y, this.size);
 
-		ctx.drawImage("/public/picture/Reifen.png", this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
+		ctx.drawImage("/picture/Reifen.png", this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
 

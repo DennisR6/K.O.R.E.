@@ -181,12 +181,12 @@ export const GameSettings = {
 		{ id: 6, x: 200, y: 300, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 7, x: 600, y: 100, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
-		{ id: 8, x: 700, y: 100, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
-		{ id: 9, x: 700, y: 200, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
-		{ id: 10, x: 600, y: 200, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
-		{ id: 11, x: 600, y: 300, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
-		{ id: 12, x: 700, y: 300, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 }
+		{ id: 7, x: 600, y: 100, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 8, x: 700, y: 100, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 9, x: 700, y: 200, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 10, x: 600, y: 200, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 11, x: 600, y: 300, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 12, x: 700, y: 300, color: "red", playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 }
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],
