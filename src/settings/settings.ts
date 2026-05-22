@@ -135,58 +135,58 @@ export const FRICTION_TABLE = {
 const thickness = 2
 const CircleRadius = 10
 const [x, y] = [800, 450]
-const offset = 50
+const offset = 30
 export const GameSettings = {
 	id: "",
 	screenResolution: { x, y },
 	mapBoundarys: [
 		// Rectangles
-		// { type: "rectangle", x: 425, y: 57, w: 285, h: thickness, color: "green" },
-		// { type: "rectangle", x: 125, y: 70, w: 200, h: thickness, color: "black" },
-		// { type: "rectangle", x: 56, y: 83, w: thickness, h: 250, color: "blue" },
-		// { type: "rectangle", x: 425, y: 365, w: 285, h: thickness, color: "cyan" },
-		// { type: "rectangle", x: 100, y: 365, w: 250, h: thickness, color: "purple" },
-		// { type: "rectangle", x: 740, y: 83, w: thickness, h: 220, color: "red" },
+		{ type: "rectangle", x: 45, y: 75, w: thickness, h: 300, color: "blue" },
+		{ type: "rectangle", x: 75, y: 45, w: 300, h: thickness, color: "black" },
+		{ type: "rectangle", x: 425, y: 45, w: 300, h: thickness, color: "green" },
+		{ type: "rectangle", x: 75, y: 405, w: 300, h: thickness, color: "purple" },
+		{ type: "rectangle", x: 425, y: 405, w: 300, h: thickness, color: "cyan" },
+		{ type: "rectangle", x: 800 - 45, y: 75, w: thickness, h: 300, color: "red" },
 
 		//RASTER
-		{ type: "rectangle", x: offset, y: 100, w: thickness, h: y / 2, color: "black" },
-		{ type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
-		{ type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
+		// { type: "rectangle", x: offset, y: 100, w: thickness, h: y / 2, color: "black" },
+		// { type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
+		// { type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
 	],
 	hazzards: [
 		{ type: "circle", x: offset + CircleRadius, y: offset + CircleRadius, r: CircleRadius, color: "blue" },
 		// Circles
 		// OBEN MITTE
-		// { type: "circle", x: (x - CircleRadius) / 2, y: offset + CircleRadius, r: CircleRadius, color: "yellow" },
+		{ type: "circle", x: x / 2, y: offset + 5, r: CircleRadius, color: "yellow" },
 		// OBEN RECHTS
-		// { type: "circle", x: (x - offset - CircleRadius), y: offset + CircleRadius, r: CircleRadius, color: "purple" },
+		{ type: "circle", x: (x - offset - CircleRadius), y: offset + CircleRadius, r: CircleRadius, color: "purple" },
 		// TEST
 		// { type: "circle", x: (800 - CircleRadius) / 2, y: y / 2, r: CircleRadius, color: "magenta" },
 		// UNTEN LINKS
-		// { type: "circle", x: offset, y: y - offset, r: CircleRadius, color: "magenta" },
+		{ type: "circle", x: offset + 10, y: 408, r: CircleRadius, color: "magenta" },
 		// UNTEN MITTE
-		// { type: "circle", x: (x - CircleRadius) / 2, y: y - offset - CircleRadius, r: CircleRadius, color: "red" },
+		{ type: "circle", x: x / 2, y: 413, r: CircleRadius, color: "red" },
 		// UNTEN RECHTS
-		// { type: "circle", x: (x - offset - CircleRadius), y: y - offset - CircleRadius, r: CircleRadius, color: "cyan" },
+		{ type: "circle", x: 760, y: 408, r: CircleRadius, color: "cyan" },
 	],
 	players: [
 		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
-		{ id: 1, x: 100, y: 100, color: "cyan", playericon: "", team: ["1"], size: 18 },
-		{ id: 1, x: 200, y: 200, color: "cyan", playericon: "", team: ["1"], size: 10 },
+		{ id: 1, x: 100, y: 100, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
+		{ id: 2, x: 200, y: 100, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
 		// { "id": 2, "x": 200, "y": 250, "color": "cyan", "playericon": "", "team": ["1"], "size": 15 },
-		// { "id": 3, "x": 100, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
-		// { "id": 4, "x": 200, "y": 200, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
-		// { "id": 5, "x": 90, "y": 300, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
-		// { "id": 6, "x": 200, "y": 320, "color": "cyan", "playericon": "", "team": ["1"], "size": 20 },
+		{ id: 3, x: 100, y: 200, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
+		{ id: 4, x: 200, y: 200, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
+		{ id: 5, x: 90, y: 300, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
+		{ id: 6, x: 200, y: 300, color: "cyan", playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: 20 },
 		//
 		// /* Formation RECHTS (3x2) */
-		// { "id": 7, "x": 600, "y": 100, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
-		// { "id": 8, "x": 700, "y": 100, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
-		// { "id": 9, "x": 700, "y": 200, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
-		// { "id": 10, "x": 600, "y": 200, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
-		// { "id": 11, "x": 600, "y": 300, "color": "red", "playericon": "", "team": ["2"], "size": 20 },
-		// { "id": 12, "x": 700, "y": 300, "color": "red", "playericon": "", "team": ["2"], "size": 20 }
+		{ id: 7, x: 600, y: 100, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 8, x: 700, y: 100, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 9, x: 700, y: 200, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 10, x: 600, y: 200, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 11, x: 600, y: 300, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 },
+		{ id: 12, x: 700, y: 300, color: "red", playericon: "/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: 20 }
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],

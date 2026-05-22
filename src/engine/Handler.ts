@@ -143,7 +143,7 @@ export class GameHandler implements ITicker, IMouse {
 		const mockContext = this.getContext()
 		mockContext.entities = tempManager
 		while (!simulator.isStatic(tempManager) && frames < 1200) {
-			simulator.tick(mockContext, this.dt, this.physicsStrategy.getFriction());
+			simulator.ticker(mockContext, this.dt, this.physicsStrategy.getFriction());
 			frames++;
 			const finalState = tempManager.serialize();
 			frameSteps.push(finalState)
@@ -228,7 +228,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public tick(dt: number = this.dt) {
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
-		this.systems.forEach(s => s.tick(this.context, dt, this.physicsStrategy.getFriction()))
+		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
 		// this.entityManager.tick(dt, this.physicsStrategy.getFriction())
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
@@ -276,6 +276,7 @@ export class GameHandler implements ITicker, IMouse {
 			if (!actor) throw new Error("Kein Spieler gefunden!")
 			const res = this.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
 			renderer.line(this.dragStart.x, this.dragStart.y, res.x, res.y);
+			renderer.setFillColor("magenta")
 			renderer.drawText(`${Math.round(input.angle)}°`, res.x, res.y);
 		}
 		renderer.pop()
@@ -287,7 +288,7 @@ export class GameHandler implements ITicker, IMouse {
 	 */
 	public handleMousePressed(mouseX: number, mouseY: number) {
 		if (this.context.state !== GameState.YOUR_TURN) return;
-		const e = this.entityManager.getEntityAt(mouseX, mouseY, 12)
+		const e = this.entityManager.getEntityAt(mouseX, mouseY, 24)
 		if (e) this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
 	}
 

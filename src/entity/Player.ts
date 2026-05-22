@@ -118,16 +118,17 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
-		ctx.setFillColor("blue");
+		// ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
+		// ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
+		// ctx.line(this.position.x + this.size, this.position.y + this.size, this.position.x + this.size, this.position.y - this.size)
+		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x - this.size, this.position.y - this.size)
+		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x + this.size, this.position.y + this.size)
 
-		ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
-		ctx.line(this.position.x + this.size, this.position.y + this.size, this.position.x + this.size, this.position.y - this.size)
-		ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x - this.size, this.position.y - this.size)
-		ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x + this.size, this.position.y + this.size)
+		// ctx.setFillColor(this.color);
+		// ctx.drawCircle(this.position.x, this.position.y, this.size);
 
-		ctx.setFillColor(this.color);
-		ctx.drawCircle(this.position.x, this.position.y, this.size);
+		ctx.drawImage("/public/picture/Reifen.png", this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
+		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
 
 	/**
