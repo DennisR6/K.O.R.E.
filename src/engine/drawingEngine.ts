@@ -160,8 +160,8 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.mouseWheel = func
 	}
 	resizeCanvas(x: number, y: number): void {
+		this.setScaleFactor(x * .9 / this.WORLD_SIZE_X)
 		this.p5ctx.resizeCanvas(x * .9, y * .9)
-		this.setScaleFactor(x / this.WORLD_SIZE_X)
 	}
 	// --- KOORDINATEN-LOGIK ---
 

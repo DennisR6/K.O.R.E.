@@ -84,7 +84,7 @@ const sketch = (p: p5) => {
 		p.push()
 		p.stroke(12)
 		p.textSize(24)
-		p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
+		// p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
 		p.pop()
 	};
 
