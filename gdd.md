@@ -351,3 +351,8 @@ Die Architektur ermöglicht:
 * starke KI
 * Modding‑Community
 * langfristige Erweiterbarkeit
+
+
+## 17. Ideen
+
+- Vulkane die mit Item ausbrechen. Gegnerische Kugeln die drin lagen fliegen wieder raus
