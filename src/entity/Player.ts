@@ -118,6 +118,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
+		if (this.hp <= 0) return
 		// ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
 		// ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
 		// ctx.line(this.position.x + this.size, this.position.y + this.size, this.position.x + this.size, this.position.y - this.size)
@@ -136,6 +137,13 @@ export class Player implements IEntity {
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
 	public tick(deltaTime: number, _globalFriction: number) {
+		if (this.hp <= 0) {
+			this.position.x = 1_000_000;
+			this.position.y += 1_000_000;
+			this.velocity.x = 0
+			this.velocity.y = 0
+			return
+		}
 		this.position.x += this.velocity.x * deltaTime;
 		this.position.y += this.velocity.y * deltaTime;
 	}

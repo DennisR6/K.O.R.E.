@@ -65,11 +65,13 @@ handler.start()
 // }, 2_000)
 
 const DEFAULTFPS = 60
+const ACTUALFPS = 240
 const sketch = (p: p5) => {
 	let ctx: RenderContext;
 	const scale = (window.window.innerWidth * 0.9) / GameSettings.screenResolution.x
 	p.setup = () => {
 		p.createCanvas(scale * GameSettings.screenResolution.x, scale * GameSettings.screenResolution.y);
+		p.frameRate(ACTUALFPS)
 		ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 		ctx.mouseWheel(handler.handleMouseWheel)
 	};
