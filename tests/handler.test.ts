@@ -45,7 +45,7 @@ describe("Handler & Physics System Integration", () => {
 		mockContext.entities = new EntityManager([p1, p2]);
 
 		for (let i = 0; i < 1; i++) {
-			physicsSystem.tick(mockContext, DEFAULT_FRAME_TIME, physicsSystem.strategy.getFriction());
+			physicsSystem.ticker(mockContext, DEFAULT_FRAME_TIME, physicsSystem.strategy.getFriction());
 		}
 
 		assert.ok(p1.getVel().x > 0, "Entity 1 should be moving left after collision");

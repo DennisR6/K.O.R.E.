@@ -38,14 +38,14 @@ describe('Game State Machine & System Integration', () => {
 
 		playback.start(2, []);
 
-		playback.tick(ctx);
+		playback.ticker(ctx);
 
 		if (playback.getRemainingFrames() <= 0) ctx.state = GameState.PLAYING_DONE;
 
 		assert.strictEqual(ctx.state, GameState.PLAYING, "Sollte nach 1 Frame noch simulieren");
 		assert.strictEqual(playback.getRemainingFrames(), 1);
 
-		playback.tick(ctx);
+		playback.ticker(ctx);
 		if (playback.getRemainingFrames() <= 0) ctx.state = GameState.YOUR_TURN;
 
 		assert.strictEqual(ctx.state, GameState.YOUR_TURN, "Sollte nach 2 Frames zu YOUR_TURN gewechselt haben");
@@ -70,7 +70,7 @@ describe('Game State Machine & System Integration', () => {
 		ctx.entities = new EntityManager([mockEntity]);
 
 		const physics = new PhysicsSystem(new defaultPhysics());
-		physics.tick(ctx, 1, 1);
+		physics.ticker(ctx, 1, 1);
 
 
 		assert.strictEqual(moveCalled, false, "Physik-Update sollte im IDLE ignoriert werden");
