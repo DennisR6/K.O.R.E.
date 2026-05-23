@@ -9,21 +9,19 @@ export class DeadlyObstacleCirle extends StructureCircle {
 	}
 
 	public onCollision({ entity }: { entity: IPhysics; }): void {
-		if (entity instanceof Player) {
-			entity.addHP(-100)
-			console.log("Player", entity)
-			return
-		}
+		if (entity instanceof Player) { entity.addHP(-100); return }
 		console.log("Collision", entity, entity instanceof Player)
-		//TODO: PLAYER NEEDS TO BE KILLED
 	}
 
 	public override draw(ctx: RenderContext): void {
-		ctx.setFillColor("green")
+		ctx.push()
+		ctx.setFillColor(this.getColor())
+		ctx.setStrokeColor(this.getColor())
 
 		const { x, y } = this.getPos()
 		const { x: r } = this.getBounds()
 
 		ctx.drawCircle(x, y, r * 2)
+		ctx.pop()
 	}
 }
