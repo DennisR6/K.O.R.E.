@@ -350,4 +350,4 @@ Die Architektur ermöglicht:
 * präzises Balancing
 * starke KI
 * Modding‑Community
-* langfristige Erweiterbarkeit
+* langfristige Erweiterbarkeit 
