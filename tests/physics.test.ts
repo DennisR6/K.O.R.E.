@@ -1,13 +1,13 @@
 import { test, describe } from "node:test";
 import { defaultPhysics } from "../src/physics/defaultPhysics"
 import assert from "node:assert";
-import { Player } from "../src/entity/Player.ts";
-import { createTestHandler } from "../src/engine/Handler.ts";
-import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
-import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
-import { StructureRectangle } from "../src/structures/structureRectangle.ts";
-import { GameSettings } from "../src/settings/settings.ts";
-import { Simulator } from "../src/systems/Simulator.ts";
+import { Player } from "../src/entity/Player.js";
+import { createTestHandler } from "../src/engine/Handler.js";
+import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
+import { PlaybackSystem } from "../src/systems/PlayBackSystem.js";
+import { StructureRectangle } from "../src/structures/structureRectangle.js";
+import { GameSettings } from "../src/settings/settings.js";
+import { Simulator } from "../src/systems/Simulator.js";
 
 /**
  * @test Physics Calculations & Vector Math

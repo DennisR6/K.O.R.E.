@@ -55,6 +55,7 @@ export class StructureLine implements IPhysicsRectangle {
 	}
 
 	public draw(ctx: RenderContext) {
+		if (!this.color) return
 		ctx.setFillColor(this.color)
 		ctx.setStrokeColor(this.color)
 		ctx.drawRect(this.x, this.y, this.x2, this.y2)

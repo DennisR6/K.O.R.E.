@@ -1,12 +1,12 @@
 import test, { describe } from "node:test";
-import { Player } from "../src/entity/Player.ts";
-import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { createDefaultContext, GameState, type IInputEmitter } from "../src/engine/types";
+import { Player } from "../src/entity/Player.js";
+import { defaultPhysics } from "../src/physics/defaultPhysics.js";
+import { createDefaultContext, GameState, type IInputEmitter } from "../src/engine/types.js";
 import assert from "node:assert";
-import { createTestHandler, GameHandler } from "../src/engine/Handler.ts";
-import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
-import { EntityManager } from "../src/entity/EntityManager.ts";
-import { Simulator } from "../src/systems/Simulator.ts";
+import { createTestHandler } from "../src/engine/Handler.js";
+import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
+import { EntityManager } from "../src/entity/EntityManager.js";
+import { Simulator } from "../src/systems/Simulator.js";
 
 const DEFAULT_FRAME_TIME = 1;
 

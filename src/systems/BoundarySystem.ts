@@ -40,8 +40,8 @@ export class BoundarySystem implements ISystem {
 	 */
 	draw(_ctx: IGameContext, renderer: RenderContext) {
 		for (const struct of this.structures) {
+			if (!struct.color) continue
 			// Performance & Design: Unsichtbare Wände nicht rendern
-			if (struct.color === "transparent") continue;
 
 			renderer.setFillColor(struct.color);
 			renderer.setStrokeColor(struct.color);

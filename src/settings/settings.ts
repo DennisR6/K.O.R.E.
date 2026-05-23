@@ -1,6 +1,5 @@
 import type { AssetKey } from "node:sea";
 import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
-import { assetManager } from "../assetManager/loader.js";
 
 export interface Settings {
 	mapBoundarys?: MapBoundary[];
@@ -44,21 +43,21 @@ export interface IMapBoundary {
 export interface MapBoundaryCircle extends IMapBoundary {
 	type: "circle"
 	r: number;
-	color: string;
+	color?: string;
 }
 
 export interface MapBoundaryLine extends IMapBoundary {
 	type: "line"
 	x2: number;
 	y2: number;
-	color: string;
+	color?: string;
 }
 
 export interface MapBoundaryRect extends IMapBoundary {
 	type: "rectangle"
 	w: number;
 	h: number;
-	color: string;
+	color?: string;
 }
 
 export interface SettingsEntity {
@@ -143,7 +142,7 @@ const thickness = 2
 const [x, y] = [800, 450]
 const offset = 30
 const CircleRadius = 15
-const debugColorStruct = "black"
+const debugColorStruct = "white"
 export const GameSettings = {
 	id: "",
 	screenResolution: { x, y },
@@ -157,7 +156,7 @@ export const GameSettings = {
 		{ type: "rectangle", x: 800 - 45, y: 75, w: thickness, h: 300, color: debugColorStruct },
 
 		//RASTER
-		// { type: "rectangle", x: offset, y: 100, w: thickness, h: y / 2, color: "black" },
+		// { type: "rectangle", x: 0, y: 0, w: 800, h: 450, color: "cyan" },
 		// { type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
 		// { type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
 	],

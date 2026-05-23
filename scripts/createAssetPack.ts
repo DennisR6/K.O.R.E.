@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 

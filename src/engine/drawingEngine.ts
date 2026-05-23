@@ -28,7 +28,6 @@ export class P5Renderer implements RenderContext {
 	 */
 	constructor(p: p5Types, scale: number, worldWidth: number) {
 		this.p5ctx = p
-		this.p5ctx.rectMode(p.CENTER)
 
 		this.renderScale = scale
 		this.WORLD_SCALE_X = scale * 16

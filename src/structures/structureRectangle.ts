@@ -30,7 +30,7 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
 	private bounce: number;
 
-	private color: string
+	private color?: string
 	private vel: Vector2D
 
 	// @ts-ignore
@@ -45,12 +45,12 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	 * @param h - Höhe des Blocks.
 	 * @param color - Füllfarbe des Rechtecks.
 	 */
-	constructor(x: number, y: number, w: number, h: number, color: string) {
+	constructor(x: number, y: number, w: number, h: number, color?: string) {
 		this.x = x
 		this.y = y
 		this.w = w
 		this.h = h
-		this.color = color || "green"
+		this.color = color
 		this.shape = "rectangle"
 		this.vel = { x: 0, y: 0 }
 		this.bounce = Infinity
@@ -59,12 +59,13 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/**
 		 * Zeichnet das Rechteck basierend auf den Dimensionen w und h.
 		 */
-	draw(_ctx: RenderContext) {
-		// ctx.push()
-		// ctx.setFillColor(this.color)
-		// ctx.setStrokeColor(this.color)
-		// ctx.drawRect(this.x, this.y, this.w, this.h)
-		// ctx.pop()
+	draw(ctx: RenderContext) {
+		if (!this.color) return
+		ctx.push()
+		ctx.setFillColor(this.color)
+		ctx.setStrokeColor(this.color)
+		ctx.drawRect(this.x, this.y, this.w, this.h)
+		ctx.pop()
 	}
 
 	setBounceFactor(bounce: number): void { this.bounce = bounce }

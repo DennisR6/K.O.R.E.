@@ -3,16 +3,18 @@
 		"target": "ES2022",
 		"useDefineForClassFields": true,
 		"module": "ESNext",
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"lib": [
+			"ES2022",
+			"DOM",
+			"DOM.Iterable"
+		],
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
 		"verbatimModuleSyntax": true,
 		"moduleDetection": "force",
-		
 		/* Hier liegt das Geheimnis für deinen dist-Ordner */
-		"noEmit": false, 
+		"noEmit": false,
 		"outDir": "./dist",
-		
 		/* Linting */
 		"strict": true,
 		"noUnusedLocals": true,
@@ -20,5 +22,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true
 	},
-	"include": ["src/**/*"]
+	"include": [
+		"src/**/*"
+	]
 }

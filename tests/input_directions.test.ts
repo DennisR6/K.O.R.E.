@@ -1,10 +1,10 @@
 import { describe, it } from "node:test";
+import { createTestHandler } from "../src/engine/Handler.js";
+import { Player } from "../src/entity/Player.js";
+import { defaultPhysics } from "../src/physics/defaultPhysics.js";
+import { EntityManager } from "../src/entity/EntityManager.js";
+import { GameState } from "../src/engine/types.js";
 import assert from "node:assert";
-import { createTestHandler } from "../src/engine/Handler.ts";
-import { Player } from "../src/entity/Player.ts";
-import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { EntityManager } from "../src/entity/EntityManager.ts";
-import { GameState } from "../src/engine/types.ts";
 
 /**
  * @test Input Direction Compass
@@ -37,7 +37,7 @@ describe("Input Direction Compass", () => {
 		 * Der Flow:
 		 * Pressed (Zentrum) -> Update (Ziel) -> getLocalInput (Berechnung) -> Released (Reset).
 		 */
-	testDirections.forEach(({ name, mouse, expected }) => {
+	testDirections.forEach(({ name, mouse }) => {
 		it(`sollte die Richtung korrekt berechnen: ${name}`, () => {
 			handler.setState(GameState.YOUR_TURN)
 			handler.handleMousePressed(100, 100);
@@ -50,11 +50,11 @@ describe("Input Direction Compass", () => {
 			// const diff = Math.abs(input.angle - expected);
 			// const normalizedDiff = diff > 180 ? 360 - diff : diff;
 
-		// 	assert.strictEqual(
-		// 		normalizedDiff < 0.1,
-		// 		true,
-		// 		`${name} fehlgeschlagen: Erwartet ca. ${expected}°, aber bekam ${input.angle.toFixed(2)}°`
-		// 	);
+			// assert.strictEqual(
+			// 	normalizedDiff < 0.1,
+			// 	true,
+			// 	`${name} fehlgeschlagen: Erwartet ca. ${expected}°, aber bekam ${input.angle.toFixed(2)}°`
+			// );
 		});
 	});
 
@@ -68,8 +68,8 @@ describe("Input Direction Compass", () => {
 		handler.setState(GameState.OPPONENTS_TURN)
 		handler.handleMousePressed(100, 100);
 		handler.updateMouse(150, 150);
-		// const input = handler.getLocalInput();
-		// handler.handleMouseReleased()
-		// assert(input === null, "Spieler ist draggbar")
+		const input = handler.getLocalInput();
+		handler.handleMouseReleased()
+		assert(input === null, "Spieler ist draggbar")
 	})
 });

@@ -1,14 +1,14 @@
 import test, { describe } from "node:test";
-import { createTestHandler } from "../src/engine/Handler";
-import { FRICTION_TABLE } from "../src/settings/settings";
-import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { Simulator } from "../src/systems/Simulator.ts";
-import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { LogEmitter, CombiEmitter } from "../src/emitter/InputEmitter.ts";
-import { PhysicsSystem, Round2PlayerSystem, PlaybackSystem } from "../src/systems/Systems.ts";
-import { Player } from "../src/entity/Player.ts";
-import { GameState, IInput } from "../src/engine/types.ts";
-import { NoRoundSystem } from "../src/systems/RoundSystem.ts";
+import { createTestHandler } from "../src/engine/Handler.js";
+import { FRICTION_TABLE } from "../src/settings/settings.js";
+import { GameEmitter } from "../src/emitter/EngineEmitter.js";
+import { Simulator } from "../src/systems/Simulator.js";
+import { defaultPhysics } from "../src/physics/defaultPhysics.js";
+import { LogEmitter, CombiEmitter } from "../src/emitter/InputEmitter.js";
+import { PhysicsSystem, PlaybackSystem } from "../src/systems/Systems.js";
+import { Player } from "../src/entity/Player.js";
+import { GameState, type IInput } from "../src/engine/types.js";
+import { NoRoundSystem } from "../src/systems/RoundSystem.js";
 import assert from 'node:assert/strict';
 
 /**

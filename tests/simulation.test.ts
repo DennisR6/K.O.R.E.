@@ -1,13 +1,13 @@
-import test, { beforeEach, describe, it } from "node:test"
-import { defaultPhysics } from "../src/physics/defaultPhysics";
-import { createTestHandler, GameHandler } from "../src/engine/Handler"
-import { GameEmitter } from "../src/emitter/Emitter.ts"
-import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
-import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
-import { Player } from "../src/entity/Player.ts";
+import test, { beforeEach, describe } from "node:test"
+import { defaultPhysics } from "../src/physics/defaultPhysics.js";
+import { createTestHandler, GameHandler } from "../src/engine/Handler.js"
+import { GameEmitter } from "../src/emitter/Emitter.js"
+import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
+import { PlaybackSystem } from "../src/systems/PlayBackSystem.js";
+import { Player } from "../src/entity/Player.js";
 import assert from "node:assert";
-import { ObjectEmitter } from "../src/emitter/Emitter.ts"
-import { Simulator } from "../src/systems/Simulator.ts";
+import { ObjectEmitter } from "../src/emitter/Emitter.js"
+import { Simulator } from "../src/systems/Simulator.js";
 
 /**
  * @test Simulation & Determinismus

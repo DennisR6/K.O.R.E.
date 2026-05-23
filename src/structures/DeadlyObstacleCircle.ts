@@ -4,7 +4,7 @@ import type { IPhysics } from "../physics/physics.js";
 import { StructureCircle } from "./structureCircle.js";
 
 export class DeadlyObstacleCirle extends StructureCircle {
-	constructor(x: number, y: number, r: number, color: string) {
+	constructor(x: number, y: number, r: number, color?: string) {
 		super(x, y, r, color)
 	}
 

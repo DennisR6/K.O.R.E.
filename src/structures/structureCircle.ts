@@ -24,7 +24,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 */
 	private mass: number = 9000;
 
-	private color: string
+	private color?: string
 	private bounce: number
 	private vel: Vector2D
 
@@ -32,11 +32,11 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	constructor(x: number, y: number, r: number, color: string) {
+	constructor(x: number, y: number, r: number, color?: string) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = "circle"
-		this.color = color || "green"
+		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
 	}
@@ -44,13 +44,13 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Zeichnet die Struktur. 
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
-	public draw(_ctx: RenderContext) {
-		// ctx.push()
-		// // ctx.drawRect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2)
-		// ctx.setFillColor(this.color)
-		// const { x, y } = this.getPos()
-		// ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
-		// ctx.pop()
+	public draw(ctx: RenderContext) {
+		if (!this.color) return
+		ctx.push()
+		ctx.setFillColor(this.color)
+		const { x, y } = this.getPos()
+		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
+		ctx.pop()
 	}
 
 	public tick(_dt: number): void { }
@@ -85,6 +85,6 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public onCollision({ entity }: { entity: IPhysics }): void {
 		GameLogger.debug("Collision with:" + entity.getShape())
 	}
-	getColor(): string { return this.color }
+	getColor(): string | undefined { return this.color }
 }
 
