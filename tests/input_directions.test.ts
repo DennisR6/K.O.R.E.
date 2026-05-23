@@ -1,10 +1,9 @@
 import { describe, it } from "node:test";
-import { createTestHandler } from "../src/engine/Handler.js";
 import { Player } from "../src/entity/Player.js";
-import { defaultPhysics } from "../src/physics/defaultPhysics.js";
-import { EntityManager } from "../src/entity/EntityManager.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState, IMouseHandler } from "../src/engine/types.js";
 import assert from "node:assert";
+import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { Mouse } from "../src/ui/Mouse.js";
 
 /**
  * @test Input Direction Compass
@@ -18,11 +17,19 @@ import assert from "node:assert";
  * 3. Die Eingabe-Sperre (Turn-Check) zuverlässig funktioniert.
  */
 describe("Input Direction Compass", () => {
-	const strategy = new defaultPhysics();
-	const mockPlayer = new Player().new({ id: "p1", x: 100, y: 100, size: 10 });
-	const manager = new EntityManager([mockPlayer]);
-	const handler = createTestHandler({ entityManager: manager, physicsStrategy: strategy })
+	const handler =
+		new GameHandlerBuilder()
+			.defaultSystems()
+			.addPlayer(new Player().new({ id: "p1", x: 100, y: 100, size: 10, team: ["1"] }))
+			.build()
 
+	const mouseHandler = new Mouse()
+	mouseHandler.addTeam(["1"])
+	mouseHandler.setEntityManager(handler.getEntityManager())
+	mouseHandler.setPhysics(handler.getPhysics())
+
+	handler.setMouseHandler(mouseHandler)
+	handler.start()
 	const testDirections = [
 		{ name: "Rechts (0°)", mouse: { x: 150, y: 100 }, expected: 180 },
 		{ name: "Unten (90°)", mouse: { x: 100, y: 150 }, expected: 270 },
@@ -37,24 +44,22 @@ describe("Input Direction Compass", () => {
 		 * Der Flow:
 		 * Pressed (Zentrum) -> Update (Ziel) -> getLocalInput (Berechnung) -> Released (Reset).
 		 */
-	testDirections.forEach(({ name, mouse }) => {
+	testDirections.forEach(({ name, mouse, expected }) => {
 		it(`sollte die Richtung korrekt berechnen: ${name}`, () => {
+			let callcount = 0
+			let output: { angle: number, power: number } = { angle: 0, power: 0 }
 			handler.setState(GameState.YOUR_TURN)
+			handler.setEmitter({
+				sendShot: (_, angle, power) => {
+					output = { angle, power };
+					callcount++
+				},
+			})
 			handler.handleMousePressed(100, 100);
 			handler.updateMouse(mouse.x, mouse.y);
-			// const input = handler.getLocalInput();
-			// handler.handleMouseReleased()
+			handler.handleMouseReleased()
 
-			// assert.ok(input, "Input sollte nicht null sein");
-
-			// const diff = Math.abs(input.angle - expected);
-			// const normalizedDiff = diff > 180 ? 360 - diff : diff;
-
-			// assert.strictEqual(
-			// 	normalizedDiff < 0.1,
-			// 	true,
-			// 	`${name} fehlgeschlagen: Erwartet ca. ${expected}°, aber bekam ${input.angle.toFixed(2)}°`
-			// );
+			assert.equal(output.angle, expected)
 		});
 	});
 
@@ -68,8 +73,11 @@ describe("Input Direction Compass", () => {
 		handler.setState(GameState.OPPONENTS_TURN)
 		handler.handleMousePressed(100, 100);
 		handler.updateMouse(150, 150);
-		const input = handler.getLocalInput();
 		handler.handleMouseReleased()
-		assert(input === null, "Spieler ist draggbar")
+
+		const pos = handler.getEntityManager().getEntities()[0].getPos()
+
+		assert(pos.x === 100, "Spieler ist draggbar")
+		assert(pos.y === 100, "Spieler ist draggbar")
 	})
 });

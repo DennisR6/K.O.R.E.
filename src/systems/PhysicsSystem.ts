@@ -1,6 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
 import type { PhysicsStrategy } from "../physics/physics.js";
-import type { Structure } from "../structures/structures.js";
+import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
 /**
@@ -56,6 +56,7 @@ export class PhysicsSystem implements ISystem {
 			this.strategy.applyFriction(entity, dt)
 
 			entity.tick(dt, friction);
+			this.constrainToMap(entity, ctx);
 
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
@@ -74,6 +75,7 @@ export class PhysicsSystem implements ISystem {
 	private resolveAllCollisions(ctx: IGameContext) {
 		const { entities, structures } = ctx;
 		const enitityArr = entities.getEntities()
+
 		for (let i = 0; i < enitityArr.length; i++) {
 			const entityA = enitityArr[i];
 
@@ -81,15 +83,52 @@ export class PhysicsSystem implements ISystem {
 				const entityB = enitityArr[j];
 				if (this.strategy.checkCollision(entityA, entityB)) {
 					this.strategy.handleCollision(entityA, entityB);
+
+					// JETZT prüfen: Sind sie nach der Korrektur immer noch überlappend?
+					if (this.strategy.checkCollision(entityA, entityB)) {
+						// throw new Error("PHYSIK-PANIC: Depenetration fehlgeschlagen (Entity-Entity)");
+					}
 				}
 			}
 
+			// Entity-Structure Kollisionen
 			for (let j = 0; j < structures.length; j++) {
 				const structureB = structures[j] as Structure;
 				if (this.strategy.checkCollision(entityA, structureB)) {
 					this.strategy.handleCollision(entityA, structureB);
+
+					// JETZT prüfen
+					if (this.strategy.checkCollision(entityA, structureB)) {
+						// console.log(`PANIC-DEBUG: Entity Pos: ${JSON.stringify(entityA.getPos())}`);
+						// console.log(`PANIC-DEBUG: Structure Bounds: ${JSON.stringify(structureB.getBounds())}`);
+						// throw new Error("PHYSIK-PANIC: Depenetration fehlgeschlagen (Entity-Structure)");
+					}
 				}
 			}
 		}
+	}
+
+	private constrainToMap(entity: IEntity, _ctx: IGameContext) {
+		const pos = entity.getPos();
+		const radius = entity.getBounds().x; // Angenommen Kreis-Radius
+		const bounds = { minX: 0, maxX: 800, minY: 0, maxY: 450 };
+
+		if (pos.x - radius < bounds.minX) {
+			entity.setPos({ x: bounds.minX + radius, y: pos.y });
+			entity.setVel({ x: 0, y: entity.getVel().y });
+		} else if (pos.x + radius > bounds.maxX) {
+			entity.setPos({ x: bounds.maxX - radius, y: pos.y });
+			entity.setVel({ x: 0, y: entity.getVel().y });
+		}
+
+		if (pos.y - radius < bounds.minY) {
+			entity.setPos({ x: bounds.minY + radius, y: pos.y });
+			entity.setVel({ x: 0, y: entity.getVel().y });
+		} else if (pos.y + radius > bounds.maxY) {
+			entity.setPos({ x: bounds.maxY - radius, y: pos.y });
+			entity.setVel({ x: 0, y: entity.getVel().y });
+		}
+
+
 	}
 }

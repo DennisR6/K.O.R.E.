@@ -1,9 +1,7 @@
 import test, { describe } from "node:test";
-import { createTestHandler } from "../src/engine/Handler.js";
 import { Player } from "../src/entity/Player.js";
-import { defaultPhysics } from "../src/physics/defaultPhysics.js";
-import { EntityManager } from "../src/entity/EntityManager.js";
 import { GameState } from "../src/engine/types.js";
+import { GameHandlerBuilder } from "../src/engine/Handler.ts"
 
 /**
  * @test Coordinate Transformation & Scaling
@@ -17,13 +15,11 @@ import { GameState } from "../src/engine/types.js";
  * resultierende Kraft im Spiel immer identisch bleibt.
  */
 describe("Coordinate Transformation & Scaling", () => {
-	const strategy = new defaultPhysics();
-	const mockPlayer = new Player().new({ id: "p1", x: 100, y: 100, size: 60 });
-
-	const handler = createTestHandler({
-		physicsStrategy: strategy,
-		entityManager: new EntityManager([mockPlayer])
-	});
+	const handler = new GameHandlerBuilder()
+		.defaultSystems()
+		.addPlayer(new Player().new({ id: "p1", x: 100, y: 100, size: 60 }))
+		.build()
+		.start()
 
 	/**
 		 * Test: Weltkoordinaten-Berechnung bei 0.5x Skalierung.

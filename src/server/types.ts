@@ -1,8 +1,11 @@
-import type { GameHandler } from "../engine/Handler.js";
+import type { GameSettings } from "../settings/settings.js";
 
 export interface GameRoom {
-	handler: GameHandler;
-	playerMap: Map<string, string>;
-	currentTurnIndex: number;
-	playerOrder: string[]; // Liste der socket.ids für die Reihenfolge
+	settings: GameSettings
+}
+
+export interface ISerailize<T> {
+	serialize(): ArrayBuffer
+	deserialize(data: ArrayBuffer): T
+	importState(data: ArrayBuffer): void
 }

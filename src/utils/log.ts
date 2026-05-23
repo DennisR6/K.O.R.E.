@@ -10,6 +10,7 @@ export const LogLevel = {
 	WARN: 'WARN',
 	ERROR: 'ERROR',
 	DEBUG: 'DEBUG',
+	TRACE: 'TRACE',
 } as const
 
 export class GameLogger {
@@ -57,7 +58,6 @@ export class GameLogger {
 		const timestamp = new Date().toLocaleTimeString();
 
 		if (typeof window !== 'undefined' && window.game?.logs) {
-			//@ts-ignore
 			window.game.logs.push({
 				timestamp,
 				level,
@@ -81,6 +81,7 @@ export class GameLogger {
 			case LogLevel.ERROR: return '#ff4d4d';
 			case LogLevel.WARN: return '#ffcc00';
 			case LogLevel.DEBUG: return '#22ff00';
+			case LogLevel.TRACE: return '#2000ff';
 			default: return '#00aaff';
 		}
 	}
@@ -96,6 +97,5 @@ export class GameLogger {
 	 * Ideal für Physik-Werte oder State-Changes während der Entwicklung.
 	 */
 	public static debug(...a: any[]) { this.log(LogLevel.DEBUG, ...a); }
-
-
+	public static trace(...a: any[]) { this.log(LogLevel.TRACE, ...a); }
 }

@@ -18,4 +18,5 @@ export class DebugStructure extends StructureCircle {
 		ctx.line(x - r, y + r, x - r, y - r)
 		ctx.line(x - r, y + r, x + r, y + r)
 	}
+
 }

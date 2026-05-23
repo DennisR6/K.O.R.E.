@@ -16,4 +16,6 @@ export class UiSystem implements IUiSystem {
 	handleMouseReleased(): void { }
 	handleMouseRotation(_isUp: boolean): void { }
 	updateMouse(_mouseX: number, _mouseY: number): void { }
+	getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
+	setCurrentMousePosition(_pos: Vector2D): void { }
 }

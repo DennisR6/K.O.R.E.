@@ -118,6 +118,7 @@ export interface IdefaultPhysics {
 	/** Wie stark das Objekt abprallt (0 = gar nicht, 1 = wie ein Gummiball). */
 	getBounceFactor(): number;
 	getBounds(): Vector2D
+	physicsEnabled(): boolean;
 }
 /** Ein rundes Objekt (z.B. ein Ball oder ein Spieler-Pin). */
 export interface IPhysicsCircle extends IdefaultPhysics {

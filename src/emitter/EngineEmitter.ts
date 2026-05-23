@@ -11,24 +11,11 @@ import { GameLogger, LogLevel } from "../utils/log.js";
  */
 export class GameEmitter implements IInputEmitter {
 	handler: GameHandler
-	/**
-		 * @param handler - Die Engine-Instanz, die den Zug ausführen soll.
-		 */
-	constructor(handler: GameHandler) {
-		this.handler = handler
-	}
+	constructor(handler: GameHandler) { this.handler = handler }
 
-	/**
-		 * Nimmt den Schuss-Befehl entgegen und triggert sofort 
-		 * die Simulation sowie die anschließende Animation.
-		 */
 	sendShot(actorId: string | number, angle: number, power: number): void {
-		// 1. In die Glaskugel schauen (Simulation berechnen)
-		const turn = this.handler.simulateTurn(actorId, angle, power)
-
-		GameLogger.info(LogLevel.INFO, "Recieved Turn: ", JSON.stringify(turn))
-
-		// 2. Den berechneten Zug auf der Leinwand abspielen
-		this.handler.tickTurn(turn)
+		GameLogger.info(LogLevel.INFO, "Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
+		const sim = this.handler.simulateTurn(actorId, angle, power)
+		this.handler.tickTurn(sim)
 	}
 }

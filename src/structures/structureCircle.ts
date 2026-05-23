@@ -1,7 +1,7 @@
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
 import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./structures.js"
+import type { IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -22,11 +22,12 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Die Masse ist extrem hoch gesetzt (9000), damit das Hindernis 
 	 * bei Kollisionen als unbeweglich ("immovable") fungiert. 
 	 */
-	private mass: number = 9000;
+	private mass: number = Infinity;
 
 	private color?: string
 	private bounce: number
 	private vel: Vector2D
+	private isPhysicsEnabled: boolean = true
 
 	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
@@ -82,9 +83,8 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
-	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.debug("Collision with:" + entity.getShape())
-	}
-	getColor(): string | undefined { return this.color }
+	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
+	public getColor(): string | undefined { return this.color }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 }
 

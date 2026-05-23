@@ -7,7 +7,6 @@ import { GameLogger } from "../utils/log.js"
  * 
  * Auch wenn der Name "Line" vermutet lässt, definiert dieses Objekt physikalisch
  * ein Rechteck über Startpunkt (x, y) sowie Breite und Höhe (x2, y2).
- * 
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
  */
@@ -23,13 +22,14 @@ export class StructureLine implements IPhysicsRectangle {
 
 	/** Kennung der Form für das Physik-System. */
 	private shape: "rectangle";
-	/** Extrem hohe Masse (9000), damit Wände niemals weggeschoben werden können. */
-	private mass: number = 9000;
+	/** Extrem hohe Masse (Infinity), damit Wände niemals weggeschoben werden können. */
+	private mass: number = Infinity;
 	/** Rückprall-Koeffizient (0 = kein Abprallen, die Kugel "klebt" fast an der Wand). */
 
 	private bounce: number;
 	private color: string
 	private vel: Vector2D
+	private isPhysicsEnabled: boolean = true;
 
 	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
@@ -79,7 +79,7 @@ export class StructureLine implements IPhysicsRectangle {
 	public getVel(): Vector2D { return this.vel }
 
 	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.debug("Collision with:" + entity.getShape())
+		GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`)
 	}
 
 	public setVel(vel: Vector2D): void { this.vel = vel }
@@ -105,5 +105,5 @@ export class StructureLine implements IPhysicsRectangle {
 
 	/** @returns Immer "rectangle" für den Collision-Dispatcher. */
 	public getShape(): "rectangle" { return this.shape }
-
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 }

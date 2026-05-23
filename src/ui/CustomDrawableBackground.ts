@@ -16,6 +16,5 @@ export class CustomDrawableBackground extends BackgroundColorSystem {
 	public draw(ctx: RenderContext): void {
 		ctx.clear(this.getColor())
 		ctx.setFillColor("brown")
-		ctx.drawImage("/dark-wood.png")
 	}
 }
