@@ -352,3 +352,4 @@ Die Architektur ermöglicht:
 * Modding‑Community
 * langfristige Erweiterbarkeit
  
+ 
