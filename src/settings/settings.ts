@@ -1,3 +1,5 @@
+import { wrapURL } from "../utils/api";
+
 export interface Settings {
 	mapBoundarys?: MapBoundary[];
 	hazzards?: MapBoundary[];
@@ -174,24 +176,24 @@ export const GameSettings = {
 	players: [
 		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
-		{ id: 1, x: 100, y: 100, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
-		{ id: 2, x: 200, y: 100, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
-		{ id: 3, x: 100, y: 200, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
-		{ id: 4, x: 200, y: 200, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
-		{ id: 5, x: 90, y: 300, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
-		{ id: 6, x: 200, y: 300, playericon: "/picture/penguin/Penguin_Idle_Frame_1.png", team: ["1"], size: playerSize },
+		{ id: 1, x: 100, y: 100, playericon: wrapURL("/api/public//picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
+		{ id: 2, x: 200, y: 100, playericon: wrapURL("/api/public//picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
+		{ id: 3, x: 100, y: 200, playericon: wrapURL("/api/public//picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
+		{ id: 4, x: 200, y: 200, playericon: wrapURL("/api/public/picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
+		{ id: 5, x: 90, y: 300, playericon: wrapURL("/api/public/picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
+		{ id: 6, x: 200, y: 300, playericon: wrapURL("/api/public/picture/penguin/Penguin_Idle_Frame_1.png"), team: ["1"], size: playerSize },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 7, x: 600, y: 100, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize },
-		{ id: 8, x: 700, y: 100, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize },
-		{ id: 9, x: 700, y: 200, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize },
-		{ id: 10, x: 600, y: 200, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize },
-		{ id: 11, x: 600, y: 300, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize },
-		{ id: 12, x: 700, y: 300, playericon: "/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png", team: ["2"], size: playerSize }
+		{ id: 7, x: 600, y: 100, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize },
+		{ id: 8, x: 700, y: 100, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize },
+		{ id: 9, x: 700, y: 200, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize },
+		{ id: 10, x: 600, y: 200, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize },
+		{ id: 11, x: 600, y: 300, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize },
+		{ id: 12, x: 700, y: 300, playericon: wrapURL("/api/public/picture/Polar_Bear/Polar_Bear_Idle_Frame_1.png"), team: ["2"], size: playerSize }
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],
 	effects: [],
-	background: { type: "image", url: "/BilliardGroßerLochJunge.png" },
+	background: { type: "image", url: wrapURL("public/BilliardGroßerLochJunge.png") },
 	music: ["/..."]
 } as Settings
