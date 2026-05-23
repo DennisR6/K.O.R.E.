@@ -351,5 +351,3 @@ Die Architektur ermöglicht:
 * starke KI
 * Modding‑Community
 * langfristige Erweiterbarkeit
- 
- 
