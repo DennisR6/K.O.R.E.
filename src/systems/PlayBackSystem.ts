@@ -1,7 +1,7 @@
-import { GameState } from "../engine/types";
-import type { EntityManager } from "../entity/EntityManager";
-import type { EntitySnapshot } from "../entity/types";
-import type { IGameContext } from "./types";
+import { GameState } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
+import type { EntitySnapshot } from "../entity/types.js";
+import type { IGameContext } from "./types.js";
 
 /**
  * Das PlaybackSystem kontrolliert die zeitliche Wiedergabe von Spielzügen 

@@ -1,6 +1,6 @@
-import type { RenderContext } from "../engine/RenderContext"
-import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics"
-import { GameLogger } from "../utils/log"
+import type { RenderContext } from "../engine/RenderContext.js"
+import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics.js"
+import { GameLogger } from "../utils/log.js"
 
 /**
  * Repräsentiert ein statisches, rechteckiges Hindernis (z.B. eine Bande oder Mauer).

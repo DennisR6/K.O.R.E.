@@ -1,6 +1,6 @@
 import { Socket } from "socket.io-client"
-import type { NoRoundSystem } from "./RoundSystem";
-import type { IGameContext } from "./types";
+import type { NoRoundSystem } from "./RoundSystem.js";
+import type { IGameContext } from "./types.js";
 
 export class NetworkRoundSystem implements NoRoundSystem {
 	socket: Socket
@@ -15,5 +15,5 @@ export class NetworkRoundSystem implements NoRoundSystem {
 		})
 	}
 
-	tick(_ctx: IGameContext, _dt: number): void { }
+	ticker(_ctx: IGameContext, _dt: number): void { }
 }

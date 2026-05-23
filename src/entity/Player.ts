@@ -1,6 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext";
-import type { IPhysics, Vector2D } from "../physics/physics";
-import type { IEntity } from "./Entity";
+import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
+import type { RenderContext } from "../engine/RenderContext.js";
+import type { IPhysics, Vector2D } from "../physics/physics.js";
+import type { IEntity } from "./Entity.js";
 
 
 /**
@@ -48,6 +49,7 @@ export interface IPlayerType {
 	 * Standardwert ist meist 12, falls hier nichts definiert wird.
 	 */
 	size?: number;
+	hoop?: string;
 }
 
 /**
@@ -80,6 +82,7 @@ export class Player implements IEntity {
 	private color: string;
 	private playericon: string;
 	private shape: "circle"
+	private hoop: string
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
@@ -94,6 +97,7 @@ export class Player implements IEntity {
 		this.friction = undefined;
 		this.size = 20;
 		this.mass = 1
+		this.hoop = ASSET_KEYS.pictureReifenWEBP
 	}
 
 	/**
@@ -128,7 +132,7 @@ export class Player implements IEntity {
 		// ctx.setFillColor(this.color);
 		// ctx.drawCircle(this.position.x, this.position.y, this.size);
 
-		ctx.drawImage("/api/public/picture/Reifen.png", this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
+		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
 
@@ -173,5 +177,8 @@ export class Player implements IEntity {
 	public getShape(): "circle" { return this.shape }
 
 	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
+	public getTeam(): string[] {
+		return this.team
+	}
 }
 

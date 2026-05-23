@@ -1,15 +1,15 @@
-import { type PhysicsStrategy, type Vector2D } from "../physics/physics";
-import { EntityManager } from "../entity/EntityManager";
-import { PhysicsSystem } from "../systems/PhysicsSystem";
-import { PlaybackSystem } from "../systems/PlayBackSystem";
-import type { IDrawer, ITicker, RenderContext } from "./RenderContext";
-import { createDefaultContext, GameState } from "./types";
-import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.ts"
-import type { IGameContext, ISystem } from "../systems/types.ts";
-import { defaultPhysics } from "../physics/defaultPhysics.ts";
-import { GameLogger } from "../utils/log.ts";
-import type { IStructure } from "../structures/structures.ts";
-import { Simulator } from "../systems/Simulator.ts";
+import { type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
+import { EntityManager } from "../entity/EntityManager.js";
+import { PhysicsSystem } from "../systems/PhysicsSystem.js";
+import { PlaybackSystem } from "../systems/PlayBackSystem.js";
+import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
+import { createDefaultContext, GameState } from "./types.js";
+import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
+import type { IGameContext, ISystem } from "../systems/types.js";
+import { defaultPhysics } from "../physics/defaultPhysics.js";
+import { GameLogger } from "../utils/log.js";
+import type { IStructure } from "../structures/structures.js";
+import { Simulator } from "../systems/Simulator.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -76,7 +76,8 @@ export class GameHandler implements ITicker, IMouse {
 	private postDrawers: IDrawer[] = []
 	private dt: number;
 	private mouseHandler: IMouseHandler | undefined;
-
+	private myTeam: string[];
+	private opponentTeam: string[];
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -102,6 +103,8 @@ export class GameHandler implements ITicker, IMouse {
 		this.inputEmitter = emitter;
 		this.systems = systems;
 		this.dt = dt
+		this.myTeam = [];
+		this.opponentTeam = [];
 	}
 
 	/**
@@ -268,7 +271,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public drawUI(renderer: RenderContext) {
 		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
-		if (this.context.state != GameState.YOUR_TURN) return
+		if (this.context.state != GameState.YOUR_TURN && this.context.state != GameState.OPPONENTS_TURN) return
 		renderer.push()
 		const input = this.getLocalInput();
 		if (this.dragStart && input) {
@@ -287,9 +290,19 @@ export class GameHandler implements ITicker, IMouse {
 	 * die man "ziehen" kann.
 	 */
 	public handleMousePressed(mouseX: number, mouseY: number) {
-		if (this.context.state !== GameState.YOUR_TURN) return;
+		if (this.context.state !== GameState.YOUR_TURN && this.context.state !== GameState.OPPONENTS_TURN) return;
+
 		const e = this.entityManager.getEntityAt(mouseX, mouseY, 24)
-		if (e) this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
+		if (!e) return
+
+		let valid
+		if (this.context.state == GameState.YOUR_TURN)
+			valid = this.myTeam.some(team => e.getTeam().includes(team))
+		if (this.context.state == GameState.OPPONENTS_TURN)
+			valid = this.opponentTeam.some(team => e.getTeam().includes(team))
+
+		if (!valid) return
+		this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
 	}
 
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
@@ -386,21 +399,35 @@ export class GameHandler implements ITicker, IMouse {
 		const rawPower = Math.sqrt(dx * dx + dy * dy);
 		if (rawPower < 5) return null;
 
-		const maxDrag = 200;
-		let power = (rawPower / maxDrag) * 10;
+		const maxDrag = 10;
+		let power = (rawPower / maxDrag) / 10;
 		power = Math.min(power, 100);
 
 		let angleRad = Math.atan2(dy, dx);
 		let angleDeg = angleRad * (180 / Math.PI);
 
-		let finalAngle = angleDeg + 180;
+		// let finalAngle = angleDeg + 180;
 
-		finalAngle = ((finalAngle % 360) + 360) % 360;
+		// finalAngle = ((finalAngle % 360) + 360) % 360;
 
 		return {
 			actorId: this.dragStart.actorId,
-			angle: finalAngle,
+			angle: angleDeg,
 			power: power
 		};
+	}
+	public addMyTeam(team: string | string[]) {
+		if (Array.isArray(team)) {
+			team.forEach((x) => this.myTeam.push(x))
+		} else {
+			this.myTeam.push(team)
+		}
+	}
+	public addOpponentTeam(team: string | string[]) {
+		if (Array.isArray(team)) {
+			team.forEach((x) => this.myTeam.push(x))
+		} else {
+			this.opponentTeam.push(team)
+		}
 	}
 }

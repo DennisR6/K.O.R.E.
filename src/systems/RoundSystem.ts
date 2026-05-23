@@ -1,6 +1,6 @@
-import { GameState } from "../engine/types";
-import { GameLogger } from "../utils/log";
-import type { IGameContext, ISystem } from "./types";
+import { GameState } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
+import type { IGameContext, ISystem } from "./types.js";
 
 /**
  * Ein minimalistisches Rundensystem ohne Spielerwechsel.

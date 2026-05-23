@@ -1,7 +1,7 @@
-import { EntityManager } from "../entity/EntityManager";
-import type { EntitySnapshot } from "../entity/types";
-import type { PhysicsStrategy } from "../physics/physics";
-import type { IGameContext, ISystem } from "../systems/types";
+import { EntityManager } from "../entity/EntityManager.js";
+import type { EntitySnapshot } from "../entity/types.js";
+import type { PhysicsStrategy } from "../physics/physics.js";
+import type { IGameContext, ISystem } from "../systems/types.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.

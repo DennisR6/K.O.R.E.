@@ -1,7 +1,7 @@
-import type { EntityManager } from "../entity/EntityManager";
-import { PhysicsSystem } from "./PhysicsSystem";
-import type { IGameContext, ISimulator } from "./types";
-import { GameState } from "../engine/types";
+import type { EntityManager } from "../entity/EntityManager.js";
+import { PhysicsSystem } from "./PhysicsSystem.js";
+import type { IGameContext, ISimulator } from "./types.js";
+import { GameState } from "../engine/types.js";
 
 /**
  * Der Simulator berechnet Spielzustände unabhängig von der Anzeige.

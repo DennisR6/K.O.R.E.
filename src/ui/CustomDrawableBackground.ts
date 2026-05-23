@@ -1,5 +1,5 @@
-import type { RenderContext } from "../engine/RenderContext";
-import { BackgroundColorSystem } from "./Background";
+import type { RenderContext } from "../engine/RenderContext.js";
+import { BackgroundColorSystem } from "./Background.js";
 
 export class CustomDrawableBackground extends BackgroundColorSystem {
 	constructor() {

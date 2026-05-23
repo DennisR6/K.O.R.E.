@@ -1,6 +1,6 @@
-import type { FrictionSettings } from "../settings/settings";
-import { GameLogger } from "../utils/log";
-import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics";
+import type { FrictionSettings } from "../settings/settings.js";
+import { GameLogger } from "../utils/log.js";
+import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.

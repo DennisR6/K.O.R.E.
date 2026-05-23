@@ -1,20 +1,20 @@
-import p5 from "p5";
-import { createTestHandler, GameHandler } from "./engine/Handler.ts";
-import { P5Renderer } from "./engine/drawingEngine.ts";
-import type { RenderContext } from "./engine/RenderContext";
-import { GameSettings } from "./settings/settings";
-import { Simulator } from "./systems/Simulator.ts";
-import { defaultPhysics } from "./physics/defaultPhysics.ts";
-import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.ts";
-import { BackgroundImageSystem } from "./ui/Background.ts";
-import { PhysicsSystem, PlaybackSystem } from "./systems/Systems.ts";
-import { NoRoundSystem } from "./systems/RoundSystem.ts";
-import { StructureRectangle } from "./structures/structureRectangle.ts";
-import { StructureCircle } from "./structures/structureCircle.ts";
-import { GameEmitter } from "./emitter/EngineEmitter.ts";
-import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.ts";
-import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.ts";
-import { Player } from "./entity/Player.ts";
+import type p5Types from "p5";
+import { createTestHandler } from "./engine/Handler.js";
+import { P5Renderer } from "./engine/drawingEngine.js";
+import type { RenderContext } from "./engine/RenderContext.js";
+import { GameSettings } from "./settings/settings.js";
+import { Simulator } from "./systems/Simulator.js";
+import { defaultPhysics } from "./physics/defaultPhysics.js";
+import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.js";
+import { BackgroundImageSystem } from "./ui/Background.js";
+import { PhysicsSystem, PlaybackSystem } from "./systems/Systems.js";
+import { Round2PlayerSystem } from "./systems/RoundSystem.js";
+import { StructureRectangle } from "./structures/structureRectangle.js";
+import { StructureCircle } from "./structures/structureCircle.js";
+import { GameEmitter } from "./emitter/EngineEmitter.js";
+import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.js";
+import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.js";
+import { Player } from "./entity/Player.js";
 
 
 const TickRate = 1
@@ -36,7 +36,10 @@ const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
 handler.setEmitter(em)
 handler.addSystem(physSystem)
 handler.addSystem(new PlaybackSystem())
-handler.addSystem(new NoRoundSystem())
+handler.addSystem(new Round2PlayerSystem(false))
+handler.addMyTeam("1")
+handler.addOpponentTeam("2")
+
 if (GameSettings.background?.type === "image")
 	handler.addPreDrawer(new BackgroundImageSystem(GameSettings.background.url))
 if (GameSettings.background?.type === "color")
@@ -65,13 +68,12 @@ handler.start()
 // }, 2_000)
 
 const DEFAULTFPS = 60
-const ACTUALFPS = 240
-const sketch = (p: p5) => {
+const sketch = (p: p5Types) => {
 	let ctx: RenderContext;
 	const scale = (window.window.innerWidth * 0.9) / GameSettings.screenResolution.x
 	p.setup = () => {
 		p.createCanvas(scale * GameSettings.screenResolution.x, scale * GameSettings.screenResolution.y);
-		p.frameRate(ACTUALFPS)
+		// p.frameRate(ACTUALFPS)
 		ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 		ctx.mouseWheel(handler.handleMouseWheel)
 	};
@@ -99,18 +101,10 @@ const sketch = (p: p5) => {
 
 };
 
-new p5(sketch);
-
-declare global {
-	interface Window {
-		game: {
-			handler: GameHandler
-			logs: string[]
-		}
-	}
-}
+// new window.p5(sketch);
+//@ts-ignore
+new window.p5(sketch)
 window.game = { handler, logs: [] };
-
 
 // In deinem Input-Handler oder Window-Listener
 window.addEventListener('keydown', (e) => {

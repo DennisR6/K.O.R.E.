@@ -1,7 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext"
-import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics"
-import { GameLogger } from "../utils/log"
-import type { IStructure } from "./structures"
+import type { RenderContext } from "../engine/RenderContext.js"
+import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics.js"
+import { GameLogger } from "../utils/log.js"
+import type { IStructure } from "./structures.js"
 
 /**
  * Repräsentiert ein massives, rechteckiges Hindernis (Block).
@@ -59,12 +59,12 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/**
 		 * Zeichnet das Rechteck basierend auf den Dimensionen w und h.
 		 */
-	draw(ctx: RenderContext) {
-		ctx.push()
-		ctx.setFillColor(this.color)
-		ctx.setStrokeColor(this.color)
-		ctx.drawRect(this.x, this.y, this.w, this.h)
-		ctx.pop()
+	draw(_ctx: RenderContext) {
+		// ctx.push()
+		// ctx.setFillColor(this.color)
+		// ctx.setStrokeColor(this.color)
+		// ctx.drawRect(this.x, this.y, this.w, this.h)
+		// ctx.pop()
 	}
 
 	setBounceFactor(bounce: number): void { this.bounce = bounce }

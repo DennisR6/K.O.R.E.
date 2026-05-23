@@ -1,5 +1,5 @@
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
-import type { SettingsBackground } from "../settings/settings";
+import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
+import type { SettingsBackground } from "../settings/settings.js";
 
 /**
  * Factory-Funktion zur Erstellung des passenden Hintergrund-Systems.

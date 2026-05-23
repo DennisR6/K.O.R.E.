@@ -1,4 +1,4 @@
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
+import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 
 /**
  * @deprecated

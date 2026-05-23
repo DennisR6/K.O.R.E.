@@ -1,5 +1,5 @@
-import { type IInputEmitter } from "../engine/types";
-import { GameLogger } from "../utils/log";
+import { type IInputEmitter } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
 
 /**
  * Die "Steckerleiste" für Inputs.

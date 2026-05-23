@@ -1,6 +1,6 @@
 // TODO: NEEDS IMPLEMENTATION
 //
-// import type { IInputEmitter, TurnPacket } from "../engine/types"
+// import type { IInputEmitter, TurnPacket } from "../engine/types.js"
 //
 // export class ReplayEmitter implements IInputEmitter {
 // 	actions: TurnPacket[]

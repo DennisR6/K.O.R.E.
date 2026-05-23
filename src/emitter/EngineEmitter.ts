@@ -1,6 +1,6 @@
-import type { GameHandler } from "../engine/Handler";
-import type { IInputEmitter } from "../engine/types";
-import { GameLogger, LogLevel } from "../utils/log";
+import type { GameHandler } from "../engine/Handler.js";
+import type { IInputEmitter } from "../engine/types.js";
+import { GameLogger, LogLevel } from "../utils/log.js";
 
 /**
  * Der "Local Player" Emitter.

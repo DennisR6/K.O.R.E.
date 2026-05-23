@@ -1,3 +1,5 @@
+import type { AssetKey } from "node:sea";
+
 /**
  * Der RenderContext stellt alle Zeichenbefehle bereit.
  * Er abstrahiert die Grafik-Library (z.B. p5.js), damit die Spiellogik 
@@ -16,8 +18,7 @@ export interface RenderContext {
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
-	loadImage(url: string): void;
-	drawImage(img: string, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
+	drawImage(key: AssetKey, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
 	getScreenSize(): { width: number, height: number };
 	clear(color?: string): void;
 	// --- Zustandsspeicher (Wichtig für Junior!) ---
@@ -62,4 +63,5 @@ export interface IDrawer {
 	 */
 	draw(ctx: RenderContext): void;
 }
+
 

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io-client"; // Oder dein entsprechender Typ
-import type { IInputEmitter } from "../engine/types";
+import type { IInputEmitter } from "../engine/types.js";
 
 export class SocketEmitter implements IInputEmitter {
 	socket

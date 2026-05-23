@@ -1,7 +1,7 @@
-import type { IEntity } from "../entity/Entity";
-import type { PhysicsStrategy } from "../physics/physics";
-import type { Structure } from "../structures/structures";
-import type { IGameContext, ISystem } from "./types";
+import type { IEntity } from "../entity/Entity.js";
+import type { PhysicsStrategy } from "../physics/physics.js";
+import type { Structure } from "../structures/structures.js";
+import type { IGameContext, ISystem } from "./types.js";
 
 /**
  * Das Herzstück der Bewegungs-Logik.

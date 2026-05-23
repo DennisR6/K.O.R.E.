@@ -1,7 +1,7 @@
-import type { GameStateType, TurnPacket } from "../engine/types";
-import type { EntityManager } from "../entity/EntityManager";
-import type { Settings } from "../settings/settings";
-import type { IStructure } from "../structures/structures";
+import type { GameStateType, TurnPacket } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
+import type { Settings } from "../settings/settings.js";
+import type { IStructure } from "../structures/structures.js";
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.

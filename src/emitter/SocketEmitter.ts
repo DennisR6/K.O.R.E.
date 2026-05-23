@@ -1,5 +1,5 @@
 import type { Socket } from "socket.io-client";
-import type { IInputEmitter } from "../engine/types";
+import type { IInputEmitter } from "../engine/types.js";
 
 /**
  * Der Netzwerk-Emitter.

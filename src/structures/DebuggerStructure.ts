@@ -1,5 +1,5 @@
-import type { RenderContext } from "../engine/RenderContext";
-import { StructureCircle } from "./structureCircle.ts"
+import type { RenderContext } from "../engine/RenderContext.js";
+import { StructureCircle } from "./structureCircle.js"
 
 export class DebugStructure extends StructureCircle {
 	structure: StructureCircle

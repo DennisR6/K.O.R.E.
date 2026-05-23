@@ -1,7 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext"
-import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics"
-import { GameLogger } from "../utils/log"
-import type { IStructure } from "./structures"
+import type { RenderContext } from "../engine/RenderContext.js"
+import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
+import { GameLogger } from "../utils/log.js"
+import type { IStructure } from "./structures.js"
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -44,13 +44,13 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Zeichnet die Struktur. 
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
-	public draw(ctx: RenderContext) {
-		ctx.push()
-		// ctx.drawRect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2)
-		ctx.setFillColor(this.color)
-		const { x, y } = this.getPos()
-		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
-		ctx.pop()
+	public draw(_ctx: RenderContext) {
+		// ctx.push()
+		// // ctx.drawRect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2)
+		// ctx.setFillColor(this.color)
+		// const { x, y } = this.getPos()
+		// ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
+		// ctx.pop()
 	}
 
 	public tick(_dt: number): void { }

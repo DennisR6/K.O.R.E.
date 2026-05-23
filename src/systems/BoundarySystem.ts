@@ -1,6 +1,6 @@
-import type { RenderContext } from "../engine/RenderContext";
-import type { MapBoundary } from "../settings/settings";
-import type { IGameContext, ISystem } from "./types";
+import type { RenderContext } from "../engine/RenderContext.js";
+import type { MapBoundary } from "../settings/settings.js";
+import type { IGameContext, ISystem } from "./types.js";
 
 /**
  * Das BoundarySystem ist für die visuelle Darstellung der Weltgrenzen verantwortlich.
@@ -26,7 +26,7 @@ export class BoundarySystem implements ISystem {
 	 * Da sich die Weltgrenzen während eines Spielzugs nicht bewegen, 
 	 * bleibt die Logik-Methode leer.
 	 */
-	tick() { }
+	ticker() { }
 
 	/**
 	 * Zeichnet alle sichtbaren Begrenzungen auf den Bildschirm.

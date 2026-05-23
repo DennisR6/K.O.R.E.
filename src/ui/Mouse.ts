@@ -1,7 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext";
-import { type IMouseHandler } from "../engine/types";
-import type { Vector2D } from "../physics/physics";
-import type { IGameContext } from "../systems/types";
+import type { RenderContext } from "../engine/RenderContext.js";
+import { type IMouseHandler } from "../engine/types.js";
+import type { Vector2D } from "../physics/physics.js";
+import type { IGameContext } from "../systems/types.js";
 
 /**
  * Das Grundgerüst für die Maus-Interaktion innerhalb der Engine.
@@ -88,7 +88,6 @@ export class Mouse implements IMouseHandler {
 	 */
 	//@ts-ignore
 	public tick(_deltatime: number, _globalfriction: number): void { }
-
 	/**
 	 * Wird aufgerufen, wenn eine Maustaste gedrückt wird.
 	 */
@@ -110,16 +109,18 @@ export class Mouse implements IMouseHandler {
 	/**
 	 * Wird aufgerufen, wenn die Maustaste losgelassen wird.
 	 */
-	handleMouseReleased(): void {
+	public handleMouseReleased(): void {
 		// Logik für "MouseUp" Events
 	}
 
 	/**
 	 * Aktualisiert die interne Position der Maus innerhalb der Engine.
 	 */
-	updateMouse(_mouseX: number, _mouseY: number): void {
+	public updateMouse(_mouseX: number, _mouseY: number): void {
 		// Speichern der aktuellen Koordinaten für draw() und tick()
 		//@ts-ignore
 		this.currentMouse = { x: mouseX, y: mouseY };
 	}
+	public handleMouseWheel(_event: WheelEvent): void { }
+	public ticker(_ctx: IGameContext, _dt: number, _friction: number): void { }
 }
