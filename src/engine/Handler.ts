@@ -1,4 +1,4 @@
-import { type PhysicsStrategy } from "../physics/physics.js";
+import { type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
 import { EntityManager } from "../entity/EntityManager.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
@@ -354,6 +354,8 @@ export class GameHandler implements ITicker, IMouse {
 	public getMouseHandler() { return this.mouseHandler }
 
 	public setTickRate(tickRate: number) { this.dt = tickRate }
+	getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
+	setCurrentMousePosition(_pos: Vector2D): void { }
 }
 
 
@@ -425,5 +427,4 @@ export class GameHandlerBuilder {
 	}
 
 	public build(): GameHandler { return this.engine }
-
 }

@@ -23,7 +23,6 @@ const sketch = (p: p5Types) => {
 	const scale = (window.window.innerWidth * 0.9) / GameSettings.screenResolution.x
 	p.setup = () => {
 		p.createCanvas(scale * GameSettings.screenResolution.x, scale * GameSettings.screenResolution.y);
-		// p.frameRate(ACTUALFPS)
 		ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 		ctx.mouseWheel(handler.handleMouseWheel)
 	};
@@ -37,7 +36,7 @@ const sketch = (p: p5Types) => {
 		p.push()
 		p.stroke(12)
 		p.textSize(24)
-		// p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
+		p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
 		p.pop()
 	};
 
