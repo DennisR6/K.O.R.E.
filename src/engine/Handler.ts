@@ -3,13 +3,23 @@ import { EntityManager } from "../entity/EntityManager.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
-import { createDefaultContext, GameState } from "./types.js";
-import type { GameStateType, HandlerDependencies, IInput, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
+import { GameState } from "./types.js";
+import type { GameStateType, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { GameLogger } from "../utils/log.js";
-import type { IStructure } from "../structures/structures.js";
+import { GameSettings, type FrictionSettings } from "../settings/settings.js"
+import { Round2PlayerSystem } from "../systems/RoundSystem.js";
+import { BackgroundColorSystem, BackgroundImageSystem } from "../ui/Background.js";
+import { Mouse } from "../ui/Mouse.js";
+import type { IStructure } from "../structures/types.js";
+import type { IEntity } from "../entity/Entity.js";
+import type { IBackground } from "../ui/types.js";
 import { Simulator } from "../systems/Simulator.js";
+import { Player } from "../entity/Player.js";
+import { StructureCircle } from "../structures/structureCircle.js";
+import { StructureRectangle } from "../structures/structureRectangle.js";
+import { DeadlyObstacleCirle } from "../structures/DeadlyObstacleCircle.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -27,29 +37,29 @@ import { Simulator } from "../systems/Simulator.js";
  * // Jetzt kannst du den Loop starten
  * handler.tick(16.6); // Simuliert einen Frame mit ~60 FPS
  */
-export type Override = Partial<HandlerDependencies>;
-export const createTestHandler = (overrides: Override = {}) => {
-	const physicsStrategy = new defaultPhysics()
-	const em = new EntityManager([])
-	const defaultDependencies: HandlerDependencies = {
-		context: createDefaultContext(),
-		entityManager: em,
-		physicsStrategy,
-		inputEmitter: { sendShot: () => { } },
-		systems: [new PhysicsSystem(physicsStrategy), new PlaybackSystem()],
-		dt: 1,
-	};
-
-	const handler = new GameHandler(
-		createDefaultContext({ entities: em, state: GameState.STARTING, ...overrides.context }),
-		overrides.entityManager ?? defaultDependencies.entityManager,
-		overrides.physicsStrategy ?? defaultDependencies.physicsStrategy,
-		overrides.inputEmitter ?? defaultDependencies.inputEmitter,
-		overrides.systems ?? defaultDependencies.systems,
-		overrides.dt ?? defaultDependencies.dt,
-	);
-	return handler
-};
+// export type Override = Partial<HandlerDependencies>;
+// export const createTestHandler = (overrides: Override = {}) => {
+// 	const physicsStrategy = new defaultPhysics()
+// 	const em = new EntityManager([])
+// 	const defaultDependencies: HandlerDependencies = {
+// 		context: createDefaultContext(),
+// 		entityManager: em,
+// 		physicsStrategy,
+// 		inputEmitter: { sendShot: () => { } },
+// 		systems: [new PhysicsSystem(physicsStrategy), new PlaybackSystem()],
+// 		dt: 1,
+// 	};
+//
+// 	const handler = new GameHandler(
+// 		createDefaultContext({ entities: em, state: GameState.STARTING, ...overrides.context }),
+// 		overrides.entityManager ?? defaultDependencies.entityManager,
+// 		overrides.physicsStrategy ?? defaultDependencies.physicsStrategy,
+// 		overrides.inputEmitter ?? defaultDependencies.inputEmitter,
+// 		overrides.systems ?? defaultDependencies.systems,
+// 		overrides.dt ?? defaultDependencies.dt,
+// 	);
+// 	return handler
+// };
 
 /**
  * Der zentrale Hub der Game Engine.
@@ -63,16 +73,16 @@ export const createTestHandler = (overrides: Override = {}) => {
  */
 export class GameHandler implements ITicker, IMouse {
 	private context: IGameContext;
-	private systems: ISystem[] = []; private entityManager: EntityManager;
+	private systems: ISystem[] = [];
+	private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
 	private lastTurnFinalState: any[] | null = null;
-	//@ts-ignore
 	private inputEmitter: IInputEmitter | undefined = undefined;
 	private preTickers: ITicker[] = []
 	private postTickers: ITicker[] = []
 	private preDrawers: IDrawer[] = []
 	private postDrawers: IDrawer[] = []
-	private dt: number;
+	private dt: number = 1;
 	private mouseHandler: IMouseHandler | undefined;
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -83,22 +93,11 @@ export class GameHandler implements ITicker, IMouse {
 		 * @param emitter - Das Sprachrohr für Inputs (z.B. Schuss-Befehle an den Server).
 		 * @param systems - Eine Liste von Modulen, die pro Tick laufen (z.B. Physik, Animation).
 		 */
-	constructor(
-		context: IGameContext,
-		entityManager: EntityManager,
-		physics: PhysicsStrategy,
-		emitter: IInputEmitter,
-		systems: ISystem[] = [],
-		dt: number,
-	) {
-		//@ts-ignore
-		this.context = { state: GameState.STARTING }
-		this.context = context;
-		this.entityManager = entityManager;
-		this.physicsStrategy = physics;
-		this.inputEmitter = emitter;
-		this.systems = systems;
-		this.dt = dt
+	constructor() {
+		const em = new EntityManager([])
+		this.context = { state: GameState.STARTING, dt: 1, entities: em, structures: [] }
+		this.entityManager = em;
+		this.physicsStrategy = new defaultPhysics();
 	}
 
 	/**
@@ -148,7 +147,6 @@ export class GameHandler implements ITicker, IMouse {
 
 		const finalState = tempManager.serialize();
 		this.setState(GameState.SIMULATING_DONE);
-		// console.log(frameSteps)
 		return {
 			actorId,
 			input: { angle, power },
@@ -284,13 +282,9 @@ export class GameHandler implements ITicker, IMouse {
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
 	public handleMouseReleased() {
-		this.mouseHandler?.handleMouseReleased()
-		{
-			//@ts-ignore
-			const input = this.mouseHandler?.getData() as IInput
-			console.log("input:", input, this.mouseHandler)
-			if (input && this.inputEmitter) this.inputEmitter.sendShot(input.actorId, input.angle, input.power)
-		}
+		this.mouseHandler?.handleMouseReleased((actorId, angle, power) => {
+			if (this.inputEmitter) this.inputEmitter.sendShot(actorId, angle, power)
+		})
 	}
 	public handleMouseWheel(event: WheelEvent): void { this.mouseHandler?.handleMouseWheel(event); }
 
@@ -352,37 +346,84 @@ export class GameHandler implements ITicker, IMouse {
 	}
 
 	public getState(): GameStateType { return this.context.state }
-	public setEmitter(emitter: IInputEmitter) { this.inputEmitter = emitter; }
+	public setEmitter = (emitter: IInputEmitter) => { this.inputEmitter = emitter; }
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
-	public start(state?: GameStateType) { this.context.state = state ?? GameState.YOUR_TURN }
+	public start(state?: GameStateType): this { this.context.state = state ?? GameState.YOUR_TURN; return this }
 	public addStructure(structure: IStructure) { this.context.structures.push(structure) }
 	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
+	public getMouseHandler() { return this.mouseHandler }
 
-	// public getLocalInput(): IInput | null {
-	// 	if (!this.dragStart || !this.currentMouse) return null;
-	//
-	// 	const dx = this.currentMouse.x - this.dragStart.x;
-	// 	const dy = this.currentMouse.y - this.dragStart.y;
-	//
-	// 	const rawPower = Math.sqrt(dx * dx + dy * dy);
-	//
-	// 	// Deadzone: Erst ab 5px registrieren, um versehentliches Klicken zu verhindern
-	// 	if (rawPower < 5) return null;
-	//
-	// 	// Skalierung: 100px Drag = 100 Power (Faktor 1)
-	// 	// Damit entspricht jeder Pixel genau einem Power-Punkt.
-	// 	let power = Math.min(rawPower, 5);
-	//
-	// 	// Winkelberechnung
-	// 	let angleRad = Math.atan2(dy, dx);
-	// 	let angleDeg = angleRad * (180 / Math.PI);
-	// 	let finalAngle = ((angleDeg + 180 + 360) % 360);
-	//
-	// 	return {
-	// 		actorId: this.dragStart.actorId,
-	// 		angle: finalAngle,
-	// 		power: power
-	// 	};
-	// }
+	public setTickRate(tickRate: number) { this.dt = tickRate }
+}
+
+
+export class GameHandlerBuilder {
+	private engine: GameHandler
+	private myTeam: string[] = []
+	private enemyTeam: string[] = []
+	constructor(tickRate?: number) { this.engine = new GameHandler(); this.engine.setTickRate(tickRate ?? 1) }
+
+
+	public addSystem(system: ISystem) { this.engine.addSystem(system); return this }
+	public addUIMouse(mousehandler: Mouse) {
+		this.engine.setMouseHandler(mousehandler)
+		this.engine.addSystem(mousehandler)
+		this.engine.addPostDrawer(mousehandler)
+		return this
+	}
+	public addPlayer(player: IEntity): this { this.engine.getEntityManager().addEntity(player); return this }
+	public addStructure(structure: IStructure): this { this.engine.addStructure(structure); return this }
+	public addHazzard(structure: IStructure): this { this.engine.addStructure(structure); return this }
+	public addBackground(background: IBackground): this { this.engine.addPreTickAndDraw(background); return this }
+	public setPlayerTeam(teams: string[]): this { teams.forEach(team => this.myTeam.push(team)); return this }
+	public setOpponentTeam(teams: string[]): this { teams.forEach(team => this.enemyTeam.push(team)); return this }
+	public defaultSystems(friction?: FrictionSettings): this {
+		const physicsSystem = new PhysicsSystem(new defaultPhysics(friction ?? { friction: 0.99, linearDrag: 0.1, stopThreshold: 0.1 }))
+		const simulator = new Simulator(physicsSystem)
+
+		this
+			.addSystem(physicsSystem)
+			.addSystem(simulator)
+			.addSystem(new PlaybackSystem())
+			.addSystem(new Round2PlayerSystem(false))
+
+		return this
+	}
+	public addEmitter(emitter: IInputEmitter): this { this.engine.setEmitter(emitter); return this }
+
+	public fromSettings(gameSettings: GameSettings): this {
+		//Adding Background
+		let background: IBackground = new BackgroundColorSystem("green");
+		if (gameSettings.background?.type == "color") background = new BackgroundColorSystem(gameSettings.background.color)
+		if (gameSettings.background?.type == "image") background = new BackgroundImageSystem(gameSettings.background.url)
+
+		//Add Mouse
+		const mouseHandler = new Mouse()
+		mouseHandler.setEntityManager(this.engine.getEntityManager())
+		mouseHandler.setPhysics(this.engine.getPhysics())
+		mouseHandler.addTeam(gameSettings.team)
+		this.addSystem(mouseHandler)
+		this.engine.setMouseHandler(mouseHandler)
+		this.engine.addPostDrawer(mouseHandler)
+
+		//Player
+		gameSettings.players?.forEach(player => this.addPlayer(new Player().new({ ...player })))
+		// Structures
+		gameSettings.mapBoundarys?.forEach(boundary => {
+			if (boundary.type === "circle") this.engine.addStructure(new StructureCircle(boundary.x, boundary.y, boundary.r))
+			if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h))
+		})
+		//Hazzards
+		gameSettings.hazzards?.forEach(boundary => {
+			if (boundary.type === "circle") this.engine.addStructure(new DeadlyObstacleCirle(boundary.x, boundary.y, boundary.r))
+			// if (boundary.type === "rectangle") new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h)
+		})
+
+		return this
+			.addBackground(background)
+			.addUIMouse(mouseHandler)
+	}
+
+	public build(): GameHandler { return this.engine }
 
 }

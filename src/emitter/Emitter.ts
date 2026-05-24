@@ -11,7 +11,7 @@ export type IInput = {
 	/** Die Stärke des Stoßes (meist 0-100). */
 	power: number;
 }
-
+export type IInputCallbackFunction = (actorId: string | number, angle: number, power: number) => void
 // --- Emitter-Exporte ---
 // Wir exportieren hier alle verfügbaren Emitter, damit man nur 
 // einen einzigen Import-Pfad nutzen muss.

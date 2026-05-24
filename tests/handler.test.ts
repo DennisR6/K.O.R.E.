@@ -1,14 +1,13 @@
 import test, { describe } from "node:test";
 import { Player } from "../src/entity/Player.js";
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
-import { createDefaultContext, GameState, type IInputEmitter } from "../src/engine/types.js";
+import { GameState, type IInputEmitter } from "../src/engine/types.js";
 import assert from "node:assert";
-import { createTestHandler } from "../src/engine/Handler.js";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
 import { EntityManager } from "../src/entity/EntityManager.js";
 import { Simulator } from "../src/systems/Simulator.js";
+import { GameHandlerBuilder } from "../src/engine/Handler.js";
 
-const DEFAULT_FRAME_TIME = 1;
 
 /**
  * @test Handler & Physics System Integration
@@ -28,29 +27,31 @@ describe("Handler & Physics System Integration", () => {
 		 * Nach dem Aufprall müssen sie voneinander abprallen.
 		 */
 	test("PhysicsSystem - Elastic Collision Resolution", () => {
-		const strategy = new defaultPhysics();
-		const physicsSystem = new PhysicsSystem(strategy);
-
-		const mockContext = createDefaultContext({
-			state: GameState.SIMULATING,
-		});
-		mockContext.settings.id = "p1";
-
 		const p1 = new Player().new({ id: "1", x: 200, y: 0, size: 60 });
 		const p2 = new Player().new({ id: "2", x: 100, y: 0, size: 60 });
 
-		p1.setVel({ x: 10, y: 0 });
-		p2.setVel({ x: -10, y: 0 });
+		const handler = new GameHandlerBuilder().defaultSystems()
+			.addPlayer(p1)
+			.addPlayer(p2)
+			.build()
+			.start()
 
-		mockContext.entities = new EntityManager([p1, p2]);
+		const move1 =
+			handler.simulateTurn("1", 0, 10)
+		handler.tickTurn(move1)
+		handler.finalizeTurnManual()
+		const move2 = handler.simulateTurn("2", 180, 10)
+		handler.tickTurn(move2)
+		handler.finalizeTurnManual()
+
+
 
 		for (let i = 0; i < 1; i++) {
-			physicsSystem.ticker(mockContext, DEFAULT_FRAME_TIME, physicsSystem.strategy.getFriction());
+			handler.tick()
 		}
 
 		assert.ok(p1.getVel().x > 0, "Entity 1 should be moving left after collision");
 		assert.ok(p2.getVel().x < 0, "Entity 2 should be moving right after collision");
-		assert.strictEqual(mockContext.state, GameState.SIMULATING, "Engine state should remain in SIMULATING");
 	});
 
 	/**
@@ -66,23 +67,13 @@ describe("Handler & Physics System Integration", () => {
 		 */
 	test("Handler - Determinism across Multi-Turn Sequences", () => {
 		const runFullSequence = () => {
-			const entities = [
-				new Player().new({ id: "p1", x: 100, y: 100, size: 60 }),
-				new Player().new({ id: "p2", x: 400, y: 400, size: 60 })
-			];
-
-			const manager = new EntityManager(entities);
-			const mockContext = createDefaultContext({ state: GameState.YOUR_TURN });
-			const mockEmitter: IInputEmitter = { sendShot: () => { } };
-			const physSystem = new PhysicsSystem(new defaultPhysics())
-
-			const handler = createTestHandler({
-				context: mockContext,
-				entityManager: manager,
-				inputEmitter: mockEmitter
-			});
-			const simulator = new Simulator(physSystem);
-			handler.addSystem(simulator);
+			const handler =
+				new GameHandlerBuilder()
+					.defaultSystems()
+					.addPlayer(new Player().new({ id: "p1", x: 100, y: 100, size: 60 }))
+					.addPlayer(new Player().new({ id: "p2", x: 400, y: 400, size: 60 }))
+					.build()
+					.start()
 
 			const shots = [
 				{ angle: 0, power: 50 },
@@ -102,13 +93,13 @@ describe("Handler & Physics System Integration", () => {
 				handler.tickTurn(ticket);
 				handler.finalizeTurnManual();
 
-				manager.getEntities().forEach(e => {
+				handler.getEntityManager().getEntities().forEach(e => {
 					const pos = e.getPos();
 					assert.ok(!isNaN(pos.x) && !isNaN(pos.y), `NaN detected in Entity ${e.getId()} after Turn ${index}`);
 				});
 			});
 
-			return manager.getEntities().map(e => ({
+			return handler.getEntityManager().getEntities().map(e => ({
 				id: e.getId(),
 				pos: { x: e.getPos().x, y: e.getPos().y }
 			}));
@@ -139,11 +130,13 @@ describe("Handler & Physics System Integration", () => {
 		 */
 	test("Handler - Initial State Lifecycle", () => {
 		const p1 = new Player().new({ id: "p1", x: 100, y: 100, size: 60 });
-		const manager = new EntityManager([p1]);
-		const mockContext = createDefaultContext({ state: GameState.YOUR_TURN });
-		const mockEmitter: IInputEmitter = { sendShot: () => { } };
 
-		const handler = createTestHandler({ context: mockContext, dt: 1, inputEmitter: mockEmitter, entityManager: manager });
+		const handler = new GameHandlerBuilder()
+			.defaultSystems()
+			.addPlayer(p1)
+			.build()
+		handler.start()
+
 
 		assert.strictEqual(
 			handler.getContext().state,

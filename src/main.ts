@@ -1,77 +1,21 @@
 import type p5Types from "p5";
-import { createTestHandler } from "./engine/Handler.js";
 import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
-import { Simulator } from "./systems/Simulator.js";
-import { defaultPhysics } from "./physics/defaultPhysics.js";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.js";
-import { BackgroundImageSystem } from "./ui/Background.js";
-import { PhysicsSystem, PlaybackSystem } from "./systems/Systems.js";
-import { Round2PlayerSystem } from "./systems/RoundSystem.js";
-import { StructureRectangle } from "./structures/structureRectangle.js";
-import { StructureCircle } from "./structures/structureCircle.js";
+import { GameHandlerBuilder } from "./engine/Handler.js";
 import { GameEmitter } from "./emitter/EngineEmitter.js";
-import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.js";
-import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.js";
-import { Player } from "./entity/Player.js";
-import { Mouse } from "./ui/Mouse.js";
 
 
-const TickRate = 1
-
-// const socket = io("http://localhost:3000", { autoConnect: true, reconnection: true, auth: { token: getIdOrUUUID() } })
-// const sock = new SocketEmitter(socket)
-
-
-// setTimeout(() => {
-// 	sock.sendShot("0", 0, 20)
-// }, 5_000)
-
-
-const physics = new defaultPhysics(GameSettings.friction)
-let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: TickRate });
-const physSystem = new PhysicsSystem(physics, TickRate)
-handler.addSystem(new Simulator(physSystem))
+let handlercreator = new GameHandlerBuilder(1)
+const handler = handlercreator
+	.fromSettings(GameSettings)
+	.defaultSystems()
+	.build()
 const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
-
-if (GameSettings.background?.type === "image")
-	handler.addPreDrawer(new BackgroundImageSystem(GameSettings.background.url))
-if (GameSettings.background?.type === "color")
-	handler.addPreDrawer(new CustomDrawableBackground())
-GameSettings.mapBoundarys?.forEach(str => {
-	if (str.type === "rectangle") handler.addStructure(new StructureRectangle(str.x, str.y, str.w, str.h, str.color))
-	if (str.type === "circle") handler.addStructure(new StructureCircle(str.x, str.y, str.r, str.color))
-})
-
-GameSettings.hazzards?.forEach(str => {
-	if (str.type === "rectangle") handler.addStructure(new DeadlyObstacleCirle(str.x, str.y, str.w, str.color))
-	if (str.type === "circle") handler.addStructure(new DeadlyObstacleCirle(str.x, str.y, str.r, str.color))
-})
-
-
-GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
-// handler.getEntityManager().addEntity(new DebugPlayer().new({ x: 76, y: 157, size: 1, color: "green" }))
-
-//Erstelle MausHandler und verbinde ihn überall
-const mouseHandler = new Mouse(physics, handler.getEntityManager(), ["1"])
-handler.addSystem(mouseHandler)
-handler.setMouseHandler(mouseHandler)
-handler.addPostDrawer(mouseHandler)
-
-handler.setEmitter(em)
-handler.addSystem(physSystem)
-handler.addSystem(new PlaybackSystem())
-handler.addSystem(new Round2PlayerSystem(false))
-
+handlercreator.addEmitter(em)
 handler.start()
 
-// setTimeout(() => {
-// const turn = [{ actorId: 0, angle: 0, power: 20 }]
-// const { actorId, angle, power } = turn[0]
-// const sim = handler.simulateTurn(actorId, angle, power);
-// handler.tickTurn(sim);
-// }, 2_000)
 
 const DEFAULTFPS = 60
 const sketch = (p: p5Types) => {

@@ -2,12 +2,8 @@ import { test, describe } from "node:test";
 import { defaultPhysics } from "../src/physics/defaultPhysics"
 import assert from "node:assert";
 import { Player } from "../src/entity/Player.js";
-import { createTestHandler } from "../src/engine/Handler.js";
-import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
-import { PlaybackSystem } from "../src/systems/PlayBackSystem.js";
+import { GameHandlerBuilder } from "../src/engine/Handler.js";
 import { StructureRectangle } from "../src/structures/structureRectangle.js";
-import { GameSettings } from "../src/settings/settings.js";
-import { Simulator } from "../src/systems/Simulator.js";
 
 /**
  * @test Physics Calculations & Vector Math
@@ -130,40 +126,13 @@ describe("Physics Calculations", () => {
 		});
 	});
 
-	// WORK IN PROGRESS
-	// test("Collision-Rectangle Matrix", () => {
-	// 	const w = 50;
-	// 	const h = 50;
-	//
-	// 	const testCases = [
-	// 		{ name: "Full Overlap", r1: { x: 0, y: 0 } as StructureRectangle, r2: { x: 0, y: 0 }, expected: true },
-	// 		{ name: "Partial Overlap Right", r1: { x: 0, y: 0 }, r2: { x: 25, y: 0 }, expected: true },
-	// 		{ name: "Edge Touch Right", r1: { x: 0, y: 0 }, r2: { x: 50, y: 0 }, expected: true },
-	// 		{ name: "Just Outside Right", r1: { x: 0, y: 0 }, r2: { x: 50.1, y: 0 }, expected: false },
-	// 		{ name: "Diagonal Gap", r1: { x: 0, y: 0 }, r2: { x: 51, y: 51 }, expected: false },
-	// 		{ name: "Top Touch", r1: { x: 0, y: 0 }, r2: { x: 0, y: -50 }, expected: true },
-	// 		{ name: "Inside (Smaller)", r1: { x: 0, y: 0 }, r2: { x: 10, y: 10 }, expected: true }
-	// 	];
-	//
-	// 	testCases.forEach(({ name, r1, r2, expected }) => {
-	// 		const result = physics.checkCollisionRects(r1, r2);
-	// 		assert.strictEqual(result, expected, `Failed Rect: ${name}`);
-	// 	});
-	// });
-
-	// 	checkCollisionCircleRect(circlePos: Vector2D, r: number, rectPos: Vector2D, w: number, h: number): boolean;
-	//
 
 })
 
 describe("Collisions", () => {
 	test("perfect 45 degree collision check", () => {
 		const dt = 1
-		const h = createTestHandler({ context: { dt } })
-		const physSys = new PhysicsSystem(new defaultPhysics(GameSettings.friction))
-		h.addSystem(physSys)
-		h.addSystem(new Simulator(physSys))
-		h.addSystem(new PlaybackSystem())
+		const h = new GameHandlerBuilder().defaultSystems().build().start()
 
 		const p1 = new Player().new({ x: 30, y: 50, size: 10, id: "p1" });
 		const s1 = new StructureRectangle(0, 0, 10, 100, "");
@@ -180,8 +149,8 @@ describe("Collisions", () => {
 		const { x: pX, y: pY } = h.getEntityManager().getEntities()[0].getPos()
 
 
-		assert.strictEqual(x, 35.328794935141175)
-		assert.strictEqual(y, 24.237270466048578)
+		assert.strictEqual(x, 27.0789222519808)
+		assert.strictEqual(y, 47.07892225198079)
 		assert.strictEqual(Math.abs(x - pX) < 0.3, true, `${x}/${pX}`)
 		assert.strictEqual(Math.abs(y - pY) < 0.3, true, `${y}/${pY}`)
 	})

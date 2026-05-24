@@ -1,6 +1,5 @@
 import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
-import { GameState } from "../engine/types.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
 import { GameLogger } from "../utils/log.js";
 import type { IEntity } from "./Entity.js";

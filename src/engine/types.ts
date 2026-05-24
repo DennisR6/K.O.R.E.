@@ -1,8 +1,7 @@
 import { EntityManager } from "../entity/EntityManager.js";
 import type { EntitySnapshot } from "../entity/types.js";
-import type { PhysicsStrategy } from "../physics/physics.js";
+import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
-import type { IDrawer } from "./RenderContext.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -34,16 +33,16 @@ export interface IInputEmitter {
  * @param overrides - Erlaubt das gezielte Überschreiben von Standardwerten (z.B. für Tests).
  * @returns Ein vollständiges IGameContext Objekt.
  */
-export const createDefaultContext = (overrides: Partial<IGameContext> = {}): IGameContext => {
-	return {
-		state: GameState.YOUR_TURN,
-		entities: new EntityManager([]),
-		structures: [],
-		settings: { id: "", screenResolution: { x: 16, y: 9 } },
-		dt: overrides.dt ?? 1,
-		...overrides
-	};
-}
+// export const createDefaultContext = (overrides: Partial<IGameContext> = {}): IGameContext => {
+// 	return {
+// 		state: GameState.YOUR_TURN,
+// 		entities: new EntityManager([]),
+// 		structures: [],
+// 		settings: { id: "", screenResolution: { x: 16, y: 9 } },
+// 		dt: overrides.dt ?? 1,
+// 		...overrides
+// 	};
+// }
 
 /**
  * Definiert die Phasen des Game-Lifecycles.
@@ -91,8 +90,10 @@ export type GameStateType = keyof typeof GameState;
 export interface IMouse {
 	handleMousePressed(mouseX: number, mouseY: number): void;
 	updateMouse(mouseX: number, mouseY: number): void;
-	handleMouseReleased(): void;
+	handleMouseReleased(cb?: (actorId: number | string, angle: number, power: number) => void): void;
 	handleMouseWheel(event: WheelEvent): void;
+	setCurrentMousePosition(pos: Vector2D): void;
+	getCurrentMousePosition(): Vector2D;
 }
 
 /**

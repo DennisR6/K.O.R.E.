@@ -1,8 +1,8 @@
 import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
 import { GameState, type IInput, type IMouseHandler } from "../engine/types.js";
-import type { EntityManager } from "../entity/EntityManager.js";
-import type { defaultPhysics } from "../physics/defaultPhysics.js";
-import type { Vector2D } from "../physics/physics.js";
+import { EntityManager } from "../entity/EntityManager.js";
+import { defaultPhysics } from "../physics/defaultPhysics.js";
+import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { IGameContext } from "../systems/types.js";
 
 /**
@@ -20,20 +20,24 @@ import type { IGameContext } from "../systems/types.js";
  * 3. **Interaktion**: Umrechnung von Screen-Koordinaten in Welt-Koordinaten.
  */
 export class Mouse implements IMouseHandler, IDrawer {
-	private currentMouse: Vector2D | undefined = undefined
+	private currentMouse: Vector2D
 	private dragStart: Vector2D & { actorId: string | number } | undefined;
 	private entityManager: EntityManager
 	private yourTurn: boolean
 	private myTeam: string[]
 	private output: IInput | undefined
-	private physics: defaultPhysics
-	constructor(physics: defaultPhysics, entityManager: EntityManager, team: string[], yourTurn: boolean = true) {
-		this.physics = physics
-		this.entityManager = entityManager
+	private physics: PhysicsStrategy
+	constructor(team: string[] = [], yourTurn: boolean = true) {
+		this.currentMouse = { x: 0, y: 0 }
 		this.myTeam = team
 		this.yourTurn = yourTurn
+		this.physics = new defaultPhysics()
+		this.entityManager = new EntityManager([])
 	}
 
+
+	setPhysics(physics: PhysicsStrategy) { this.physics = physics }
+	setEntityManager(entityManager: EntityManager) { this.entityManager = entityManager }
 
 	/**
 		 * Die "Mathe-Küche": Berechnet Winkel und Kraft aus der Mausbewegung.
@@ -105,7 +109,7 @@ export class Mouse implements IMouseHandler, IDrawer {
 	 * Wird aufgerufen, wenn eine Maustaste gedrückt wird.
 	 */
 	public handleMousePressed(mouseX: number, mouseY: number): IInput | undefined {
-		const e = this.entityManager.getEntityAt(mouseX, mouseY, 15)
+		const e = this.entityManager.getEntityAt(mouseX, mouseY, 25)
 		if (!e) return
 
 		let valid
@@ -121,11 +125,10 @@ export class Mouse implements IMouseHandler, IDrawer {
 	/**
 	 * Wird aufgerufen, wenn die Maustaste losgelassen wird.
 	 */
-	public handleMouseReleased(): void {
-		// Logik für "MouseUp" Events
-		this.output = this.parseLocalInput();
+	public handleMouseReleased(cb?: (actorId: number | string, angle: number, power: number) => void): void {
+		const output = this.parseLocalInput();
 		this.dragStart = undefined
-		console.log("output", this.output, this.dragStart)
+		if (output && cb) cb(output.actorId, output.angle, output.power)
 	}
 
 	public getData(): IInput | undefined {
@@ -147,12 +150,16 @@ export class Mouse implements IMouseHandler, IDrawer {
 		if (ctx.state == GameState.OPPONENTS_TURN) this.yourTurn = false
 	}
 
-	public addTeam(team: string | string[]) {
+	public addTeam(team: string | string[]): this {
 		if (Array.isArray(team)) {
 			team.forEach((x) => this.myTeam.push(x))
 		} else {
 			this.myTeam.push(team)
 		}
+		return this
 	}
+	public setCurrentMousePosition(pos: Vector2D) { this.currentMouse = { ...pos } }
+	public getCurrentMousePosition(): Vector2D { return this.currentMouse }
+
 }
 

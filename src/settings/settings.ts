@@ -1,7 +1,6 @@
-import type { AssetKey } from "node:sea";
-import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
+import { ASSET_KEYS, type AssetKey } from "../assetManager/assets/assetRegistry.js";
 
-export interface Settings {
+export interface GameSettings {
 	mapBoundarys?: MapBoundary[];
 	hazzards?: MapBoundary[];
 	players?: SettingsEntity[];
@@ -11,6 +10,7 @@ export interface Settings {
 	background?: SettingsBackground;
 	screenResolution: SettingsScreenResolution;
 	id: string,
+	team: string[],
 }
 
 export interface SettingsScreenResolution {
@@ -198,5 +198,6 @@ export const GameSettings = {
 	items: [{ type: "", id: 0 }],
 	effects: [],
 	background: { type: "image", url: ASSET_KEYS.billiardGroerLochJungePNG },
-	music: ["/..."]
-} as Settings
+	music: ["/..."],
+	team: ["1"]
+} as GameSettings

@@ -1,5 +1,4 @@
 import test, { describe } from "node:test";
-import { createTestHandler } from "../src/engine/Handler.js";
 import { FRICTION_TABLE } from "../src/settings/settings.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import { Simulator } from "../src/systems/Simulator.js";
@@ -10,6 +9,7 @@ import { Player } from "../src/entity/Player.js";
 import { GameState, type IInput } from "../src/engine/types.js";
 import { NoRoundSystem } from "../src/systems/RoundSystem.js";
 import assert from 'node:assert/strict';
+import { GameHandlerBuilder } from "../src/engine/Handler.js";
 
 /**
  * @test Engine Integration & State Machine
@@ -33,9 +33,7 @@ describe("Engine Integration & State Machine", () => {
 	 * 4. Check: Sind die Endkoordinaten auf die Nachkommastelle identisch mit unseren Erwartungswerten?
 	 */
 	test("should produce deterministic results for manual impulse application", () => {
-		const physics = new defaultPhysics(FRICTION_TABLE.wood!);
-		const handler = createTestHandler({ systems: [], physicsStrategy: physics });
-		handler.addSystem(new Simulator(new PhysicsSystem(physics)));
+		const handler = new GameHandlerBuilder().defaultSystems().build()
 
 		const p_1 = new Player().new({ id: "p1", x: 200, y: 145, color: "green", team: ["0"], size: 12 });
 		const p_2 = new Player().new({ id: "p2", x: 320, y: 200, color: "red", team: ["1"], size: 12 });
@@ -70,18 +68,14 @@ describe("Engine Integration & State Machine", () => {
 		 * YOUR_TURN -> (simulateTurn) -> SIMULATING_DONE -> (tickTurn) -> PLAYING -> PLAYING_DONE
 		 */
 	test("should correctly transition through states during a turn simulation", () => {
-		const physics = new defaultPhysics(FRICTION_TABLE.wood!);
-		const pysSystem = new PhysicsSystem(physics)
-		const handler = createTestHandler({ systems: [], physicsStrategy: physics });
-		handler.addSystem(pysSystem)
-		handler.addSystem(new Simulator(pysSystem));
-		handler.addSystem(new PlaybackSystem());
+		const handler =
+			new GameHandlerBuilder()
+				.defaultSystems()
+				.addPlayer(new Player().new({ id: "p1", x: 200, y: 145, team: ["0"], size: 12 }))
+				.addPlayer(new Player().new({ id: "p2", x: 320, y: 200, team: ["1"], size: 12 }))
+				.build()
+				.start()
 
-		const p_1 = new Player().new({ id: "p1", x: 200, y: 145, team: ["0"], size: 12 });
-		const p_2 = new Player().new({ id: "p2", x: 320, y: 200, team: ["1"], size: 12 });
-		handler.getEntityManager().addEntity([p_1, p_2]);
-
-		handler.start();
 		console.time("engine")
 		const res = handler.simulateTurn("p1", 29.656104560603353, 8);
 		handler.tick(1);
@@ -96,10 +90,10 @@ describe("Engine Integration & State Machine", () => {
 		const p1 = handler.getEntityManager().getEntityById("p1")!;
 		const p2 = handler.getEntityManager().getEntityById("p2")!;
 
-		assert.strictEqual(p1.getPos().x, 290.3627175943493);
-		assert.strictEqual(p1.getPos().y, 196.4502723302825);
-		assert.strictEqual(p2.getPos().x, 320);
-		assert.strictEqual(p1.getPos().y, 196.4502723302825);
+		assert.strictEqual(p1.getPos().x, 301.0023437841337);
+		assert.strictEqual(p1.getPos().y, 235.01951001710412);
+		assert.strictEqual(p2.getPos().x, 386.12980517028564);
+		assert.strictEqual(p1.getPos().y, 235.01951001710412);
 	});
 
 
@@ -125,22 +119,12 @@ describe("Engine Replay Test", () => {
 		 * @param fps - Die Simulationsrate (Standard 1 für diskrete Ticks).
 		 */
 	function runEngineValidation(turns: IInput[], expectedFinalPos: { x: number, y: number }, floatingPointDrift: number, fps: number = 1) {
-		const physics = new defaultPhysics(FRICTION_TABLE.billiards);
-		const handler = createTestHandler({
-			systems: [],
-			physicsStrategy: physics
-		});
-		const physSystem = new PhysicsSystem(new defaultPhysics(), 1)
-		handler.addSystem(new Simulator(physSystem));
+		const handler = new GameHandlerBuilder()
+			.defaultSystems(FRICTION_TABLE.billiards)
+			.addPlayer(new Player().new({ id: "p1", x: 100, y: 100, size: 20 }))
+			.build()
 		const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)]);
 		handler.setEmitter(em);
-
-		handler.addSystem(physSystem);
-		handler.addSystem(new PlaybackSystem());
-		handler.addSystem(new NoRoundSystem());
-
-		const p1 = new Player().new({ id: "p1", x: 100, y: 100, size: 20 })
-		handler.getEntityManager().addEntity(p1)
 
 
 		assert.strictEqual(handler.getState(), GameState.STARTING, "Engine must boot in STARTING state");
@@ -159,7 +143,7 @@ describe("Engine Replay Test", () => {
 			assert.strictEqual(handler.getState(), GameState.PLAYING, "Engine should still be PLAYING before the final tick");
 
 			handler.tick(1);
-			assert.strictEqual(handler.getState(), GameState.YOUR_TURN, "Engine must return to YOUR_TURN after simulation ends");
+			assert.strictEqual(handler.getState(), GameState.OPPONENTS_TURN, "Engine must return to OPPONENTS_TURN after simulation ends");
 		}
 
 		const debugEntity = handler.getEntityManager().getEntityById("p1");
@@ -185,22 +169,22 @@ describe("Engine Replay Test", () => {
 		{ test: [{ actorId: "p1", angle: 0, power: 10 },], result: { x: 1374.5855961832162, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 45, power: 10 },], result: { x: 1001.0173382862143, y: 1001.0173382862142 } },
 		{ test: [{ actorId: "p1", angle: 90, power: 10 },], result: { x: 100, y: 1374.5855961832162 } },
-		{ test: [{ actorId: "p1", angle: 135, power: 10 },], result: { x: -801.0173382862139, y: 1001.0173382862143 } },
+		{ test: [{ actorId: "p1", angle: 135, power: 10 },], result: { x: 35.31595427651959, y: 164.6840457234804 } },
 		{ test: [{ actorId: "p1", angle: 180, power: 10 },], result: { x: 8.522945268692615, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 225, power: 10 },], result: { x: 35.31595427651958, y: 35.3159542765196 } },
 		{ test: [{ actorId: "p1", angle: 270, power: 10 },], result: { x: 100, y: 8.522945268692615 } },
-		{ test: [{ actorId: "p1", angle: 315, power: 10 },], result: { x: 1001.017338286214, y: -801.0173382862142 } },
+		{ test: [{ actorId: "p1", angle: 315, power: 10 },], result: { x: 164.68404572348038, y: 35.31595427651956 } },
 		{ test: [{ actorId: "p1", angle: 360, power: 10 },], result: { x: 18430.706871260605, y: 99.99999999999625 } },
 
 
 		{ test: [{ actorId: "p1", angle: 0, power: 100 },], result: { x: 18430.706871260605, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 45, power: 100 },], result: { x: 13061.517651921222, y: 13061.517651921222 } },
 		{ test: [{ actorId: "p1", angle: 90, power: 100 },], result: { x: 100, y: 18430.706871260605 } },
-		{ test: [{ actorId: "p1", angle: 135, power: 100 },], result: { x: -12861.51765192122, y: 13061.517651921222 } },
+		{ test: [{ actorId: "p1", angle: 135, power: 100 },], result: { x: -901.5889103126002, y: 1101.5889103125999 } },
 		{ test: [{ actorId: "p1", angle: 180, power: 100 },], result: { x: 8.522945268692615, y: 100 } },
 		{ test: [{ actorId: "p1", angle: 225, power: 100 },], result: { x: 35.31595427651958, y: 35.3159542765196 } },
 		{ test: [{ actorId: "p1", angle: 270, power: 100 },], result: { x: 100, y: 8.522945268692615 } },
-		{ test: [{ actorId: "p1", angle: 315, power: 100 },], result: { x: 13061.517651921222, y: -12861.517651921225 } },
+		{ test: [{ actorId: "p1", angle: 315, power: 100 },], result: { x: 1101.5889103125996, y: -901.5889103126004 } },
 		{ test: [{ actorId: "p1", angle: 360, power: 100 },], result: { x: 18430.706871260605, y: 99.9999999999997 } },
 
 	] as Array<{ test: IInput[], result: { x: number, y: number } }>

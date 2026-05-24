@@ -1,5 +1,7 @@
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../engine/RenderContext.js";
 import type { SettingsBackground } from "../settings/settings.js";
+import type { IBackground } from "./types.js";
+
 
 /**
  * Factory-Funktion zur Erstellung des passenden Hintergrund-Systems.
@@ -25,7 +27,7 @@ export function getBackgoundSystem(settings?: SettingsBackground): BackgroundCol
  * Zeichnet ein statisches Bild über die gesamte Weltgröße.
  * Ideal für detaillierte Spielfelder (z.B. eine Eishockey-Fläche).
  */
-export class BackgroundImageSystem implements ITicker, IDrawer {
+export class BackgroundImageSystem implements IBackground {
 	/** URL zum Bild-Asset. */
 	private url: string
 
@@ -52,7 +54,7 @@ export class BackgroundImageSystem implements ITicker, IDrawer {
  * Füllt den gesamten Hintergrund mit einer soliden Farbe.
  * Performance-optimiert und einfach für Debugging oder minimalistische Stile.
  */
-export class BackgroundColorSystem implements IDrawer, ITicker {
+export class BackgroundColorSystem implements IBackground {
 	/** CSS-kompatibler Farbstring (z.B. "cyan", "#ff0000"). */
 	private color: string
 	constructor(color: string) { this.color = color }

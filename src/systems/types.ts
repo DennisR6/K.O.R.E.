@@ -1,6 +1,5 @@
 import type { GameStateType, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { Settings } from "../settings/settings.js";
 import type { IStructure } from "../structures/structures.js";
 
 /**
@@ -17,7 +16,7 @@ export interface IGameContext {
 	/** Der aktuelle globale Spielzustand (z.B. "WAITING", "RUNNING", "GOAL"). */
 	state: GameStateType;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
-	settings: Settings;
+	// settings: GameSettings;
 	dt: number;
 }
 

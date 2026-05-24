@@ -1,6 +1,6 @@
 import test, { beforeEach, describe } from "node:test"
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
-import { createTestHandler, GameHandler } from "../src/engine/Handler.js"
+import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.js"
 import { GameEmitter } from "../src/emitter/Emitter.js"
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../src/systems/PlayBackSystem.js";
@@ -18,17 +18,18 @@ import { Simulator } from "../src/systems/Simulator.js";
  */
 describe("Simulation & Determinism Tests", () => {
 	let handler: GameHandler;
-	const physics = new defaultPhysics({ "friction": 0.98, "linearDrag": 0.05, "stopThreshold": 0.15 });
-	const physSystem = new PhysicsSystem(physics, 1000 / 60)
+	// new GameHandlerBuilder(1000 / 60)
+	// 	.defaultSystems({ friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 })
+	// 	.build()
+	// 	.start()
 	beforeEach(() => {
-		handler = createTestHandler({ systems: [], physicsStrategy: physics });
+		handler = new GameHandlerBuilder(1)
+			.defaultSystems({ friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 })
+			.addPlayer(new Player().new({ x: 100, y: 100, id: "p1", size: 20 }))
+			.build()
+			.start()
 
 		handler.setEmitter(new GameEmitter(handler));
-		handler.addSystem(physSystem);
-		handler.addSystem(new Simulator(physSystem));
-		handler.addSystem(new PlaybackSystem());
-
-		handler.getEntityManager().addEntity(new Player().new({ x: 100, y: 100, id: "p1", size: 20 }));
 	})
 
 	/**
@@ -66,11 +67,9 @@ describe("Simulation & Determinism Tests", () => {
 		const simFinalX = result.finalState.find(e => e.id === actorId)!.x;
 
 		const realActor = handler.getEntityManager().getEntityById(actorId)!;
-		physics.applyImpulse(realActor, angle, power);
+		handler.getPhysics().applyImpulse(realActor, angle, power);
 
-		for (let i = 0; i < result.durationFrames; i++) {
-			handler.tick(1);
-		}
+		for (let i = 0; i < result.durationFrames; i++) handler.tick(1);
 
 		const realFinalX = realActor.getPos().x;
 
