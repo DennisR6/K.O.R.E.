@@ -1,6 +1,8 @@
 import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
+import { GameState } from "../engine/types.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
+import { GameLogger } from "../utils/log.js";
 import type { IEntity } from "./Entity.js";
 
 
@@ -123,15 +125,6 @@ export class Player implements IEntity {
 		 */
 	public draw(ctx: RenderContext): void {
 		if (this.hp <= 0) return
-		// ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
-		// ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
-		// ctx.line(this.position.x + this.size, this.position.y + this.size, this.position.x + this.size, this.position.y - this.size)
-		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x - this.size, this.position.y - this.size)
-		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x + this.size, this.position.y + this.size)
-
-		// ctx.setFillColor(this.color);
-		// ctx.drawCircle(this.position.x, this.position.y, this.size);
-
 		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
@@ -161,7 +154,7 @@ export class Player implements IEntity {
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
-	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y } }
+	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; GameLogger.info(`PlayerPos was set from ${this.position.x} ${this.position.y} to ${pos.x} ${pos.y}`) }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
 	public setFriction(friction: number): void { this.friction = friction }

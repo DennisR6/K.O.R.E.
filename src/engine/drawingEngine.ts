@@ -157,8 +157,24 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.mouseWheel = func
 	}
 	resizeCanvas(x: number, y: number): void {
-		this.setScaleFactor(x * .9 / this.WORLD_SIZE_X)
-		this.p5ctx.resizeCanvas(x * .9, y * .9)
+		const maxWidth = x * 0.9;
+		const maxHeight = y * 0.9;
+
+		// Berechne die Skalierungsfaktoren für beide Dimensionen
+		const scaleX = maxWidth / this.WORLD_SIZE_X;
+		const scaleY = maxHeight / this.WORLD_SIZE_Y;
+
+		// Wähle den kleineren Faktor, damit alles in das Fenster passt (Contain-Prinzip)
+		const finalScale = Math.min(scaleX, scaleY);
+
+		// Setze die Skalierung
+		this.setScaleFactor(finalScale);
+
+		// Berechne die finalen Canvas-Dimensionen basierend auf der Weltgröße
+		const finalWidth = this.WORLD_SIZE_X * finalScale;
+		const finalHeight = this.WORLD_SIZE_Y * finalScale;
+
+		this.p5ctx.resizeCanvas(finalWidth, finalHeight);
 	}
 	// --- KOORDINATEN-LOGIK ---
 

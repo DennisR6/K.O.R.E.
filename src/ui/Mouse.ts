@@ -1,5 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext.js";
-import { type IMouseHandler } from "../engine/types.js";
+import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
+import { GameState, type IInput, type IMouseHandler } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
+import type { defaultPhysics } from "../physics/defaultPhysics.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { IGameContext } from "../systems/types.js";
 
@@ -17,11 +19,19 @@ import type { IGameContext } from "../systems/types.js";
  * 2. **Input-Handling**: Zentrale Verwaltung von Klicks und Bewegungen.
  * 3. **Interaktion**: Umrechnung von Screen-Koordinaten in Welt-Koordinaten.
  */
-export class Mouse implements IMouseHandler {
-	private currentMouse: Vector2D | null = null
+export class Mouse implements IMouseHandler, IDrawer {
+	private currentMouse: Vector2D | undefined = undefined
 	private dragStart: Vector2D & { actorId: string | number } | undefined;
-	constructor() {
-		// Initialisierung der Maus-States (z.B. buttonPressed = false)
+	private entityManager: EntityManager
+	private yourTurn: boolean
+	private myTeam: string[]
+	private output: IInput | undefined
+	private physics: defaultPhysics
+	constructor(physics: defaultPhysics, entityManager: EntityManager, team: string[], yourTurn: boolean = true) {
+		this.physics = physics
+		this.entityManager = entityManager
+		this.myTeam = team
+		this.yourTurn = yourTurn
 	}
 
 
@@ -34,18 +44,26 @@ export class Mouse implements IMouseHandler {
 		 * 
 		 * @returns Ein Objekt mit ID, Winkel und Kraft oder null, wenn die Bewegung zu kurz war.
 		 */
-	public getLocalInput(): { actorId: string | number, angle: number, power: number } | null {
-		if (!this.dragStart || !this.currentMouse) return null;
+	public parseLocalInput(): IInput | undefined {
+		if (!this.dragStart || !this.currentMouse) return undefined;
 
 		const dx = this.currentMouse.x - this.dragStart.x;
 		const dy = this.currentMouse.y - this.dragStart.y;
 
 		const rawPower = Math.sqrt(dx * dx + dy * dy);
-		if (rawPower < 5) return null;
 
-		const maxDrag = 200;
-		let power = (rawPower / maxDrag) * 10;
-		power = Math.min(power, 100);
+		// Deadzone: Ignoriere Mikrobewegungen
+		if (rawPower < 5) return undefined;
+
+		// 1. Definiere, ab wie viel Pixeln die maximale Power erreicht ist
+		const DISTANCE_FOR_MAX_POWER = 100; // Wenn du 100px ziehst, hast du volle Power
+
+		// 2. Berechne den Skalierungsfaktor (0.0 bis 1.0)
+		const factor = Math.min(rawPower / DISTANCE_FOR_MAX_POWER, 1.0);
+
+		// 3. Skaliere auf den Zielbereich (z.B. 0 bis 10)
+		const MAX_POWER_VALUE = 10;
+		const power = factor * MAX_POWER_VALUE;
 
 		let angleRad = Math.atan2(dy, dx);
 		let angleDeg = angleRad * (180 / Math.PI);
@@ -68,42 +86,36 @@ export class Mouse implements IMouseHandler {
 		 * - Den aktuellen Spielstatus (GameState)
 		 * - Die Schuss-Vorschau (Trajektorie), wenn der Spieler zielt.
 		 */
-	public draw(ctx: RenderContext, handlerCtx: IGameContext) {
+	public draw(ctx: RenderContext) {
 		ctx.push()
-		const input = this.getLocalInput();
-		if (this.dragStart && input) {
-			const actor = handlerCtx.entities.getEntityById(input.actorId)
-			if (!actor) throw new Error("Kein Spieler gefunden!")
-			// const res = handlerCtx.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
+		if (this.dragStart) {
+			const input = this.parseLocalInput()
+			if (!input) return
+			const actor = this.entityManager.getEntityById(this.dragStart.actorId)
+			if (!actor) return
+			const res = this.physics.calculateStopFromInput(actor.getPos(), input.angle, input?.power)
 			const { x, y } = actor.getPos()
-			ctx.line(x, y, x + 10, y + 10);
-			ctx.drawText(`${Math.round(input.angle)}°`, x, y);
+			ctx.line(x, y, res.x, res.y);
+			ctx.drawText(`${Math.round(this.output?.angle ?? 0)}°`, x, y);
 		}
 		ctx.pop()
 	}
 
 	/**
-	 * @notimplemented
-	 * Für Animationen des Cursors (z.B. Pulsieren beim Klicken).
-	 */
-	//@ts-ignore
-	public tick(_deltatime: number, _globalfriction: number): void { }
-	/**
 	 * Wird aufgerufen, wenn eine Maustaste gedrückt wird.
 	 */
-	public handleMousePressed(_mouseX: number, _mouseY: number): void {
-		// Logik für "MouseDown" Events
-		const input = this.getLocalInput();
-		//@ts-ignore
-		if (input && this.inputEmitter && this.dragStart)
-			//@ts-ignore
-			this.inputEmitter.sendShot(input.actorId, input.angle, input.power);
+	public handleMousePressed(mouseX: number, mouseY: number): IInput | undefined {
+		const e = this.entityManager.getEntityAt(mouseX, mouseY, 15)
+		if (!e) return
 
-		//@ts-ignore
-		this.dragStart = null;
+		let valid
+		if (this.yourTurn)
+			valid = this.myTeam.some(team => e.getTeam().includes(team))
+		else
+			valid = this.myTeam.some(team => !e.getTeam().includes(team))
 
-		//@ts-ignore
-		return input;
+		if (!valid) return
+		this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
 	}
 
 	/**
@@ -111,16 +123,36 @@ export class Mouse implements IMouseHandler {
 	 */
 	public handleMouseReleased(): void {
 		// Logik für "MouseUp" Events
+		this.output = this.parseLocalInput();
+		this.dragStart = undefined
+		console.log("output", this.output, this.dragStart)
+	}
+
+	public getData(): IInput | undefined {
+		const snap = this.output
+		this.output = undefined
+		return snap
 	}
 
 	/**
 	 * Aktualisiert die interne Position der Maus innerhalb der Engine.
 	 */
-	public updateMouse(_mouseX: number, _mouseY: number): void {
+	public updateMouse(mouseX: number, mouseY: number): void {
 		// Speichern der aktuellen Koordinaten für draw() und tick()
-		//@ts-ignore
 		this.currentMouse = { x: mouseX, y: mouseY };
 	}
 	public handleMouseWheel(_event: WheelEvent): void { }
-	public ticker(_ctx: IGameContext, _dt: number, _friction: number): void { }
+	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
+		if (ctx.state == GameState.YOUR_TURN) this.yourTurn = true
+		if (ctx.state == GameState.OPPONENTS_TURN) this.yourTurn = false
+	}
+
+	public addTeam(team: string | string[]) {
+		if (Array.isArray(team)) {
+			team.forEach((x) => this.myTeam.push(x))
+		} else {
+			this.myTeam.push(team)
+		}
+	}
 }
+

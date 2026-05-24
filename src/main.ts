@@ -15,6 +15,7 @@ import { GameEmitter } from "./emitter/EngineEmitter.js";
 import { DeadlyObstacleCirle } from "./structures/DeadlyObstacleCircle.js";
 import { CustomDrawableBackground } from "./ui/CustomDrawableBackground.js";
 import { Player } from "./entity/Player.js";
+import { Mouse } from "./ui/Mouse.js";
 
 
 const TickRate = 1
@@ -33,12 +34,6 @@ let handler = createTestHandler({ systems: [], physicsStrategy: physics, dt: Tic
 const physSystem = new PhysicsSystem(physics, TickRate)
 handler.addSystem(new Simulator(physSystem))
 const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
-handler.setEmitter(em)
-handler.addSystem(physSystem)
-handler.addSystem(new PlaybackSystem())
-handler.addSystem(new Round2PlayerSystem(false))
-handler.addMyTeam("1")
-handler.addOpponentTeam("2")
 
 if (GameSettings.background?.type === "image")
 	handler.addPreDrawer(new BackgroundImageSystem(GameSettings.background.url))
@@ -57,6 +52,17 @@ GameSettings.hazzards?.forEach(str => {
 
 GameSettings.players?.forEach((player) => handler.getEntityManager().addEntity(new Player().new({ ...player })));
 // handler.getEntityManager().addEntity(new DebugPlayer().new({ x: 76, y: 157, size: 1, color: "green" }))
+
+//Erstelle MausHandler und verbinde ihn überall
+const mouseHandler = new Mouse(physics, handler.getEntityManager(), ["1"])
+handler.addSystem(mouseHandler)
+handler.setMouseHandler(mouseHandler)
+handler.addPostDrawer(mouseHandler)
+
+handler.setEmitter(em)
+handler.addSystem(physSystem)
+handler.addSystem(new PlaybackSystem())
+handler.addSystem(new Round2PlayerSystem(false))
 
 handler.start()
 
@@ -83,7 +89,6 @@ const sketch = (p: p5Types) => {
 		handler.tick()
 		p.push()
 		handler.drawWorld(ctx)
-		handler.drawUI(ctx)
 		p.pop()
 		p.push()
 		p.stroke(12)
@@ -96,6 +101,7 @@ const sketch = (p: p5Types) => {
 	p.mousePressed = () => handler.handleMousePressed(ctx.toWorld(p.mouseX), ctx.toWorld(p.mouseY));
 	p.mouseDragged = () => handler.updateMouse(ctx.toWorld(p.mouseX), ctx.toWorld(p.mouseY));
 	p.mouseReleased = () => handler.handleMouseReleased();
+	p.mouseWheel = handler.handleMouseWheel
 
 	p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 

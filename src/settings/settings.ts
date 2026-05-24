@@ -142,7 +142,7 @@ const thickness = 2
 const [x, y] = [800, 450]
 const offset = 30
 const CircleRadius = 15
-const debugColorStruct = "white"
+const debugColorStruct = undefined
 export const GameSettings = {
 	id: "",
 	screenResolution: { x, y },

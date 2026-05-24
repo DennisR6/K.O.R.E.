@@ -1,10 +1,10 @@
-import { type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
+import { type PhysicsStrategy } from "../physics/physics.js";
 import { EntityManager } from "../entity/EntityManager.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { createDefaultContext, GameState } from "./types.js";
-import type { GameStateType, HandlerDependencies, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
+import type { GameStateType, HandlerDependencies, IInput, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { GameLogger } from "../utils/log.js";
@@ -62,8 +62,6 @@ export const createTestHandler = (overrides: Override = {}) => {
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
 export class GameHandler implements ITicker, IMouse {
-	private currentMouse: Vector2D | null = null
-	private dragStart: Vector2D & { actorId: string | number } | undefined;
 	private context: IGameContext;
 	private systems: ISystem[] = []; private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
@@ -76,8 +74,6 @@ export class GameHandler implements ITicker, IMouse {
 	private postDrawers: IDrawer[] = []
 	private dt: number;
 	private mouseHandler: IMouseHandler | undefined;
-	private myTeam: string[];
-	private opponentTeam: string[];
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -103,8 +99,6 @@ export class GameHandler implements ITicker, IMouse {
 		this.inputEmitter = emitter;
 		this.systems = systems;
 		this.dt = dt
-		this.myTeam = [];
-		this.opponentTeam = [];
 	}
 
 	/**
@@ -258,7 +252,9 @@ export class GameHandler implements ITicker, IMouse {
 			entity.draw(renderer);
 			renderer.pop()
 		});
+		this.drawUI(renderer)
 		this.postDrawers.forEach(d => d.draw(renderer))
+
 	}
 
 	/**
@@ -270,61 +266,33 @@ export class GameHandler implements ITicker, IMouse {
 		 * - Die Schuss-Vorschau (Trajektorie), wenn der Spieler zielt.
 		 */
 	public drawUI(renderer: RenderContext) {
-		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
+		renderer.setFillColor("black")
+		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2, renderer.WORLD_SIZE_Y / 2, 32)
 		if (this.context.state != GameState.YOUR_TURN && this.context.state != GameState.OPPONENTS_TURN) return
-		renderer.push()
-		const input = this.getLocalInput();
-		if (this.dragStart && input) {
-			const actor = this.entityManager.getEntityById(input.actorId)
-			if (!actor) throw new Error("Kein Spieler gefunden!")
-			const res = this.physicsStrategy.calculateStopFromInput(actor.getPos(), input.angle, input.power)
-			renderer.line(this.dragStart.x, this.dragStart.y, res.x, res.y);
-			renderer.setFillColor("magenta")
-			renderer.drawText(`${Math.round(input.angle)}°`, res.x, res.y);
-		}
-		renderer.pop()
 	}
+
 	/**
 	 * Registriert den Klick auf ein Objekt.
 	 * Prüft, ob an der Mausposition eine Entity (z.B. ein Puck) liegt, 
 	 * die man "ziehen" kann.
 	 */
-	public handleMousePressed(mouseX: number, mouseY: number) {
-		if (this.context.state !== GameState.YOUR_TURN && this.context.state !== GameState.OPPONENTS_TURN) return;
-
-		const e = this.entityManager.getEntityAt(mouseX, mouseY, 24)
-		if (!e) return
-
-		let valid
-		if (this.context.state == GameState.YOUR_TURN)
-			valid = this.myTeam.some(team => e.getTeam().includes(team))
-		if (this.context.state == GameState.OPPONENTS_TURN)
-			valid = this.opponentTeam.some(team => e.getTeam().includes(team))
-
-		if (!valid) return
-		this.dragStart = { actorId: e.getId(), x: e.getPos().x, y: e.getPos().y };
-	}
-
+	public handleMousePressed(mouseX: number, mouseY: number) { this.mouseHandler?.handleMousePressed(mouseX, mouseY); }
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
-	public updateMouse(mouseX: number, mouseY: number) {
-		this.currentMouse = { x: mouseX, y: mouseY }
-	}
-
+	public updateMouse(mouseX: number, mouseY: number) { this.mouseHandler?.updateMouse(mouseX, mouseY); }
 	/**
 		 * Schließt die Eingabe ab und feuert den Schuss ab.
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
 	public handleMouseReleased() {
-		const input = this.getLocalInput();
-
-		if (input && this.inputEmitter && this.dragStart) {
-			this.inputEmitter.sendShot(input.actorId, input.angle, input.power);
+		this.mouseHandler?.handleMouseReleased()
+		{
+			//@ts-ignore
+			const input = this.mouseHandler?.getData() as IInput
+			console.log("input:", input, this.mouseHandler)
+			if (input && this.inputEmitter) this.inputEmitter.sendShot(input.actorId, input.angle, input.power)
 		}
-		this.dragStart = undefined;
-
-		return input;
 	}
-	public handleMouseWheel(event: WheelEvent): void { this.mouseHandler?.handleMouseWheel(event) }
+	public handleMouseWheel(event: WheelEvent): void { this.mouseHandler?.handleMouseWheel(event); }
 
 	// --- LOGIK & UPDATES (Ticker) ---
 	// Diese Module laufen in jedem Frame ab, um Daten zu berechnen.
@@ -390,44 +358,31 @@ export class GameHandler implements ITicker, IMouse {
 	public addStructure(structure: IStructure) { this.context.structures.push(structure) }
 	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
 
-	public getLocalInput(): { actorId: string | number, angle: number, power: number } | null {
-		if (!this.dragStart || !this.currentMouse) return null;
+	// public getLocalInput(): IInput | null {
+	// 	if (!this.dragStart || !this.currentMouse) return null;
+	//
+	// 	const dx = this.currentMouse.x - this.dragStart.x;
+	// 	const dy = this.currentMouse.y - this.dragStart.y;
+	//
+	// 	const rawPower = Math.sqrt(dx * dx + dy * dy);
+	//
+	// 	// Deadzone: Erst ab 5px registrieren, um versehentliches Klicken zu verhindern
+	// 	if (rawPower < 5) return null;
+	//
+	// 	// Skalierung: 100px Drag = 100 Power (Faktor 1)
+	// 	// Damit entspricht jeder Pixel genau einem Power-Punkt.
+	// 	let power = Math.min(rawPower, 5);
+	//
+	// 	// Winkelberechnung
+	// 	let angleRad = Math.atan2(dy, dx);
+	// 	let angleDeg = angleRad * (180 / Math.PI);
+	// 	let finalAngle = ((angleDeg + 180 + 360) % 360);
+	//
+	// 	return {
+	// 		actorId: this.dragStart.actorId,
+	// 		angle: finalAngle,
+	// 		power: power
+	// 	};
+	// }
 
-		const dx = this.currentMouse.x - this.dragStart.x;
-		const dy = this.currentMouse.y - this.dragStart.y;
-
-		const rawPower = Math.sqrt(dx * dx + dy * dy);
-		if (rawPower < 5) return null;
-
-		const maxDrag = 10;
-		let power = (rawPower / maxDrag) / 10;
-		power = Math.min(power, 100);
-
-		let angleRad = Math.atan2(dy, dx);
-		let angleDeg = angleRad * (180 / Math.PI);
-
-		// let finalAngle = angleDeg + 180;
-
-		// finalAngle = ((finalAngle % 360) + 360) % 360;
-
-		return {
-			actorId: this.dragStart.actorId,
-			angle: angleDeg,
-			power: power
-		};
-	}
-	public addMyTeam(team: string | string[]) {
-		if (Array.isArray(team)) {
-			team.forEach((x) => this.myTeam.push(x))
-		} else {
-			this.myTeam.push(team)
-		}
-	}
-	public addOpponentTeam(team: string | string[]) {
-		if (Array.isArray(team)) {
-			team.forEach((x) => this.myTeam.push(x))
-		} else {
-			this.opponentTeam.push(team)
-		}
-	}
 }
