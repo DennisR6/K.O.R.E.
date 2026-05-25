@@ -17,7 +17,7 @@ const handler = new GameHandlerBuilder()
 
 const GAMES = {
 	games: 10,
-	rounds: 100,
+	rounds: 1_000,
 	maxAngle: 360,
 	maxPower: 10,
 }
