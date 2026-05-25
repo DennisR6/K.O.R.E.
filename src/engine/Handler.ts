@@ -4,11 +4,11 @@ import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { GameState } from "./types.js";
-import type { GameStateType, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
+import type { GameStateType, IInput, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { GameLogger } from "../utils/log.js";
-import { GameSettings, type FrictionSettings } from "../settings/settings.js"
+import { FRICTION_TABLE, GameSettings, type FrictionSettings } from "../settings/settings.js"
 import { Round2PlayerSystem } from "../systems/RoundSystem.js";
 import { BackgroundColorSystem, BackgroundImageSystem } from "../ui/Background.js";
 import { Mouse } from "../ui/Mouse.js";
@@ -72,6 +72,8 @@ import { DeadlyObstacleCirle } from "../structures/DeadlyObstacleCircle.js";
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
 export class GameHandler implements ITicker, IMouse {
+	private turns: IInput[] = []
+	private settings: any
 	private context: IGameContext;
 	private systems: ISystem[] = [];
 	private entityManager: EntityManager;
@@ -121,6 +123,7 @@ export class GameHandler implements ITicker, IMouse {
 		 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
 		 */
 	public simulateTurn(actorId: string | number, angle: number, power: number): TurnPacket {
+		this.turns.push({ actorId, angle, power })
 		const simulator = this.systems.find(x => x instanceof Simulator)
 		if (simulator === undefined) throw new Error("No Simulation Engine added")
 		this.setState(GameState.SIMULATING);
@@ -354,8 +357,14 @@ export class GameHandler implements ITicker, IMouse {
 	public getMouseHandler() { return this.mouseHandler }
 
 	public setTickRate(tickRate: number) { this.dt = tickRate }
-	getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
-	setCurrentMousePosition(_pos: Vector2D): void { }
+	public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
+	public setCurrentMousePosition(_pos: Vector2D): void { }
+	saveSettings(settings: any) {
+		this.settings = settings
+	}
+	exportGame(): { logs: IInput[], settings: Partial<GameSettings> | any } {
+		return { logs: this.turns, settings: JSON.stringify(this.settings) }
+	}
 }
 
 
@@ -380,7 +389,7 @@ export class GameHandlerBuilder {
 	public setPlayerTeam(teams: string[]): this { teams.forEach(team => this.myTeam.push(team)); return this }
 	public setOpponentTeam(teams: string[]): this { teams.forEach(team => this.enemyTeam.push(team)); return this }
 	public defaultSystems(friction?: FrictionSettings): this {
-		const physicsSystem = new PhysicsSystem(new defaultPhysics(friction ?? { friction: 0.99, linearDrag: 0.1, stopThreshold: 0.1 }))
+		const physicsSystem = new PhysicsSystem(new defaultPhysics(friction ?? FRICTION_TABLE.ice))
 		const simulator = new Simulator(physicsSystem)
 
 		this
@@ -394,6 +403,7 @@ export class GameHandlerBuilder {
 	public addEmitter(emitter: IInputEmitter): this { this.engine.setEmitter(emitter); return this }
 
 	public fromSettings(gameSettings: GameSettings): this {
+		this.engine.saveSettings(gameSettings)
 		//Adding Background
 		let background: IBackground = new BackgroundColorSystem("green");
 		if (gameSettings.background?.type == "color") background = new BackgroundColorSystem(gameSettings.background.color)

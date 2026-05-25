@@ -4,6 +4,7 @@ import assert from "node:assert";
 import { Player } from "../src/entity/Player.js";
 import { GameHandlerBuilder } from "../src/engine/Handler.js";
 import { StructureRectangle } from "../src/structures/structureRectangle.js";
+import { FRICTION_TABLE } from "../src/settings/settings.js";
 
 /**
  * @test Physics Calculations & Vector Math
@@ -130,28 +131,39 @@ describe("Physics Calculations", () => {
 })
 
 describe("Collisions", () => {
-	test("perfect 45 degree collision check", () => {
-		const dt = 1
-		const h = new GameHandlerBuilder().defaultSystems().build().start()
+	const results = [
+		{ x: 35.328794935141175, y: 24.237270466048578 },
+		{ x: 24.970589710682113, y: 44.97058971068212 },
+		{ x: 27.703072752261566, y: 47.70307275226156 },
+		{ x: 28.570042450585344, y: 48.57004245058535 },
+		{ x: 29.285397886932873, y: 49.28539788693288 },
+		{ x: 29.660588745030456, y: 49.6605887450304629 },
+		{ x: 30, y: 50 },
+		{ x: 30, y: 50 },
+		{ x: 30, y: 50 },
+		{ x: 30, y: 50 },
+	]
 
-		const p1 = new Player().new({ x: 30, y: 50, size: 10, id: "p1" });
-		const s1 = new StructureRectangle(0, 0, 10, 100, "");
-		s1.setBounceFactor(12)
+	Object.keys(FRICTION_TABLE).forEach((friction_setting, id) => {
+		test(`perfect 45 degree collision check for ${id}:${friction_setting}`, () => {
+			const h = new GameHandlerBuilder(1)
+				//@ts-ignore
+				.defaultSystems(FRICTION_TABLE[friction_setting])
+				.addPlayer(new Player().new({ x: 30, y: 50, size: 10, id: "p1" }))
+				.addStructure(new StructureRectangle(0, 0, 10, 100, ""))
+			const handler = h.build().start()
 
-		h.getEntityManager().addEntity(p1)
-		h.addStructure(s1)
-
-		h.start()
-		const sim = h.simulateTurn("p1", 225, 1);
-		h.tickTurn(sim)
-		for (let i = 0; i < sim.durationFrames; i++) h.tick(dt)
-		const { x, y } = sim.finalState[0]
-		const { x: pX, y: pY } = h.getEntityManager().getEntities()[0].getPos()
+			const sim = handler.simulateTurn("p1", 225, 1);
+			handler.tickTurn(sim)
+			for (let i = 0; i < sim.durationFrames; i++) handler.tick()
+			const { x, y } = sim.finalState[0]
+			const { x: pX, y: pY } = handler.getEntityManager().getEntities()[0].getPos()
 
 
-		assert.strictEqual(x, 27.0789222519808)
-		assert.strictEqual(y, 47.07892225198079)
-		assert.strictEqual(Math.abs(x - pX) < 0.3, true, `${x}/${pX}`)
-		assert.strictEqual(Math.abs(y - pY) < 0.3, true, `${y}/${pY}`)
-	})
+			assert.equal(Math.abs(x - results[id].x) < 0.1, true, `x does not Match ${x} ${Math.abs(x - results[id].x)}`)
+			assert.equal(Math.abs(y - results[id].y) < 0.1, true, `y does not Match ${y} ${Math.abs(y - results[id].y)}`)
+			assert.equal(Math.abs(x - pX) < 0.1, true, `${x}/${pX}`)
+			assert.equal(Math.abs(y - pY) < 0.1, true, `${y}/${pY}`)
+		})
+	});
 })

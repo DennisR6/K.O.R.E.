@@ -1,4 +1,4 @@
-import type { AssetKey } from "node:sea";
+import type { AssetList } from "../assetManager/assets/assetRegistry";
 
 /**
  * Der RenderContext stellt alle Zeichenbefehle bereit.
@@ -18,7 +18,7 @@ export interface RenderContext {
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
-	drawImage(key: AssetKey, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
+	drawImage(key: AssetList, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
 	getScreenSize(): { width: number, height: number };
 	clear(color?: string): void;
 	// --- Zustandsspeicher (Wichtig für Junior!) ---

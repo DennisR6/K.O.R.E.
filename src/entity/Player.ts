@@ -1,4 +1,4 @@
-import { ASSET_KEYS } from "../assetManager/assets/assetRegistry.js";
+import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
 import { GameLogger } from "../utils/log.js";
@@ -81,9 +81,9 @@ export class Player implements IEntity {
 
 	private team: string[];
 	private color: string;
-	private playericon: string;
+	private playericon: AssetList;
 	private shape: "circle"
-	private hoop: string
+	private hoop: AssetList
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
@@ -91,14 +91,14 @@ export class Player implements IEntity {
 		this.position = { x: 0, y: 0 }
 		this.team = []
 		this.color = "red"
-		this.playericon = ""
+		this.playericon = AssetList.picturePenguinPenguinIdleFrame1PNG
 		this.shape = "circle"
 		this.velocity = { x: 0, y: 0 } as Vector2D
 		this.bouncyness = 1
 		this.friction = undefined;
 		this.size = 20;
 		this.mass = 1
-		this.hoop = ASSET_KEYS.pictureReifenWEBP
+		this.hoop = AssetList.pictureReifenWEBP
 	}
 
 	/**

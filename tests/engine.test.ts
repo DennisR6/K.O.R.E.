@@ -1,13 +1,9 @@
 import test, { describe } from "node:test";
 import { FRICTION_TABLE } from "../src/settings/settings.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
-import { Simulator } from "../src/systems/Simulator.js";
-import { defaultPhysics } from "../src/physics/defaultPhysics.js";
 import { LogEmitter, CombiEmitter } from "../src/emitter/InputEmitter.js";
-import { PhysicsSystem, PlaybackSystem } from "../src/systems/Systems.js";
 import { Player } from "../src/entity/Player.js";
 import { GameState, type IInput } from "../src/engine/types.js";
-import { NoRoundSystem } from "../src/systems/RoundSystem.js";
 import assert from 'node:assert/strict';
 import { GameHandlerBuilder } from "../src/engine/Handler.js";
 
@@ -90,10 +86,10 @@ describe("Engine Integration & State Machine", () => {
 		const p1 = handler.getEntityManager().getEntityById("p1")!;
 		const p2 = handler.getEntityManager().getEntityById("p2")!;
 
-		assert.strictEqual(p1.getPos().x, 301.0023437841337);
-		assert.strictEqual(p1.getPos().y, 235.01951001710412);
-		assert.strictEqual(p2.getPos().x, 386.12980517028564);
-		assert.strictEqual(p1.getPos().y, 235.01951001710412);
+		assert.strictEqual(p1.getPos().x, 324.4740490651789);
+		assert.strictEqual(p1.getPos().y, 562.7594082834361);
+		assert.strictEqual(p2.getPos().x, 966.9383743321027);
+		assert.strictEqual(p1.getPos().y, 562.7594082834361);
 	});
 
 

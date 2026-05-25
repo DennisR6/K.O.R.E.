@@ -1,10 +1,10 @@
-import { type AssetKey } from './assets/assetRegistry.js';
+import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
 class EngineAssetManager {
 	private cache: Map<AssetKey, HTMLImageElement> = new Map();
 	private loadingSet: Set<AssetKey> = new Set();
 
-	get(key: AssetKey): HTMLImageElement | null {
+	get(key: AssetList): HTMLImageElement | null {
 		if (!key) return null
 		if (this.cache.has(key)) return this.cache.get(key)!;
 
@@ -17,13 +17,17 @@ class EngineAssetManager {
 
 	private async startAsyncLoad(key: AssetKey) {
 		this.loadingSet.add(key);
-
 		try {
-			const response = await fetch(`./src/assetManager/assets/${key}.json`);
-			const data = await response.json();
+			const path = AssetPaths[key]; // Pfad aus dem Manifest
+			const response = await fetch(`/public/${path}`);
+			const blob = await response.blob();
 
+			const url = URL.createObjectURL(blob)
 			const img = new Image();
-			img.src = data.payload;
+			img.src = url;
+			img.onload = () => {
+				URL.revokeObjectURL(url)
+			}
 
 			await img.decode();
 

@@ -16,6 +16,16 @@ const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
 handlercreator.addEmitter(em)
 handler.start()
 
+// const handler = new GameHandlerBuilder()
+// 	.defaultSystems()
+// 	.addPlayer(new Player().new({ x: 100, y: 120, id: 1, size: 20, color: "red" }))
+// 	.addPlayer(new Player().new({ x: 200, y: 200, id: 2, size: 20, color: "cyan" }))
+// 	.addStructure(new StructureRectangle(0, 0, 400, 20, "white"))
+// 	.addStructure(new StructureRectangle(0, 20, 20, 380, "white"))
+// 	.addStructure(new StructureRectangle(0, 380, 400, 20, "white"))
+// 	.addStructure(new StructureRectangle(380, 20, 20, 380, "white"))
+// 	.build()
+// 	.start()
 
 const DEFAULTFPS = 60
 const sketch = (p: p5Types) => {

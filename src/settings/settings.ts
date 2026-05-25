@@ -1,4 +1,4 @@
-import { ASSET_KEYS, type AssetKey } from "../assetManager/assets/assetRegistry.js";
+import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
 
 export interface GameSettings {
 	mapBoundarys?: MapBoundary[];
@@ -179,25 +179,25 @@ export const GameSettings = {
 	players: [
 		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
-		{ id: 1, x: 100, y: 100, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 2, x: 200, y: 100, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 3, x: 100, y: 200, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 4, x: 200, y: 200, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 5, x: 90, y: 300, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 6, x: 200, y: 300, playericon: ASSET_KEYS.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 1, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 2, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 3, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 4, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 5, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 6, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 7, x: 600, y: 100, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 8, x: 700, y: 100, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 9, x: 700, y: 200, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 10, x: 600, y: 200, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 11, x: 600, y: 300, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 12, x: 700, y: 300, playericon: ASSET_KEYS.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize }
+		{ id: 7, x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 8, x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 9, x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 10, x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 11, x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 12, x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize }
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [{ type: "", id: 0 }],
 	effects: [],
-	background: { type: "image", url: ASSET_KEYS.billiardGroerLochJungePNG },
+	background: { type: "image", url: AssetList.billiardGroerLochJungePNG },
 	music: ["/..."],
 	team: ["1"]
 } as GameSettings
