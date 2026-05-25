@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readdirSync, statSync, writeFileSync, mkdirSync } from "node:fs";
+import { readdirSync, statSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
@@ -26,17 +26,35 @@ function generateAssetPacks() {
 	const allFiles = getAllFiles(PUBLIC_DIR);
 	const assetRegistry: string[] = [];
 	const assetManifest: Record<string, string> = {};
+	const JSON_OUTPUT_DIR = path.join(OUTPUT_DIR, 'json');
+
+	mkdirSync(JSON_OUTPUT_DIR, { recursive: true });
 
 	allFiles.forEach(filePath => {
 		const relativePath = path.relative(PUBLIC_DIR, filePath);
 		const parts = relativePath.replace(/\\/g, '/').split('/');
 		const fileName = parts.pop()!;
+		const fileBuffer = readFileSync(filePath);
+		const base64Data = fileBuffer.toString('base64');
 		const [name, ext] = fileName.split('.');
 
 		let cleanKey = [...parts, name, ext.toUpperCase()]
 			.map(p => p.charAt(0).toUpperCase() + p.slice(1).replace(/[^a-zA-Z0-9]/g, ''))
 			.join('');
 		cleanKey = `${cleanKey[0].toLowerCase()}${cleanKey.slice(1)}`;
+
+		assetManifest[cleanKey] = relativePath;
+		assetRegistry.push(cleanKey);
+
+		const jsonPayload = {
+			name: name,
+			type: ext,
+			payload: `data:image/${ext};base64,${base64Data}`
+		};
+		writeFileSync(
+			path.join(JSON_OUTPUT_DIR, `${cleanKey}.json`),
+			JSON.stringify(jsonPayload, null, 2)
+		);
 
 		assetManifest[cleanKey] = relativePath;
 		assetRegistry.push(cleanKey);

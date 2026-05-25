@@ -1,4 +1,4 @@
-import { AssetList, type AssetKey } from './assets/assetRegistry.js';
+import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
 class EngineAssetManager {
 	private cache: Map<AssetKey, HTMLImageElement> = new Map();
@@ -22,19 +22,18 @@ class EngineAssetManager {
 		this.errorCount.set(key, currentRetries + 1);
 
 		try {
-			throw new Error("test")
-			// const path = AssetPaths[key];
-			// const response = await fetch(`./public/${path}?t=${Date.now()}`);
-			// if (!response.ok) throw new Error("Netzwerkfehler");
-			//
-			// const blob = await response.blob();
-			// const url = URL.createObjectURL(blob);
-			// const img = new Image();
-			// img.src = url;
-			// await img.decode();
-			//
-			// this.cache.set(key, img);
-			// this.errorCount.delete(key);
+			const path = AssetPaths[key];
+			const response = await fetch(`./public/${path}?t=${Date.now()}`);
+			if (!response.ok) throw new Error("Netzwerkfehler");
+
+			const blob = await response.blob();
+			const url = URL.createObjectURL(blob);
+			const img = new Image();
+			img.src = url;
+			await img.decode();
+
+			this.cache.set(key, img);
+			this.errorCount.delete(key);
 		} catch (e) {
 			console.warn(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
 
@@ -48,7 +47,7 @@ class EngineAssetManager {
 
 	private async loadJsonFallback(key: AssetKey) {
 		try {
-			const response = await fetch(`./src/assetManager/assets/${key}.json`);
+			const response = await fetch(`./src/assetManager/assets/${AssetList[key]}.json`);
 			if (!response.ok) throw new Error("JSON Fallback fehlgeschlagen");
 
 			const data = await response.json();
