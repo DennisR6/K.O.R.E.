@@ -43,7 +43,7 @@ export interface IPlayerType {
 	 * Pfad oder Schlüssel für das Icon/Avatar.
 	 * Der P5Renderer nutzt dies, um die entsprechende Textur aus dem Cache zu laden.
 	 */
-	playericon?: string;
+	playericon?: AssetList;
 
 	/** 
 	 * Der physikalische Radius (Größe) des Spielers.
@@ -164,7 +164,7 @@ export class Player implements IEntity {
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
-	public setPlayerIcon(icon: string): void { this.playericon = icon; }
+	public setPlayerIcon(icon: AssetList): void { this.playericon = icon; }
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): "circle" { return this.shape }
 

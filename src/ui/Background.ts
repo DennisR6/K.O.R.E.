@@ -1,6 +1,7 @@
 import type { RenderContext } from "../engine/RenderContext.js";
 import type { SettingsBackground } from "../settings/settings.js";
 import type { IBackground } from "./types.js";
+import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 
 
 /**
@@ -29,9 +30,9 @@ export function getBackgoundSystem(settings?: SettingsBackground): BackgroundCol
  */
 export class BackgroundImageSystem implements IBackground {
 	/** URL zum Bild-Asset. */
-	private url: string
+	private url: AssetList
 
-	constructor(url: string) {
+	constructor(url: AssetList) {
 		this.url = url
 
 	}
