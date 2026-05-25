@@ -63,7 +63,6 @@ export interface IPlayerType {
  */
 export class Player implements IEntity {
 	private hp: number = 30;
-	private dead: number = -1;
 	/** Eindeutige ID (wird via crypto.randomUUID() generiert, falls nicht vorhanden). */
 	private id: number | string;
 	/** Die aktuelle Position auf dem Spielfeld (Top-Left des Begrenzungsrahmens). */
@@ -84,6 +83,7 @@ export class Player implements IEntity {
 	private playericon: AssetList;
 	private shape: "circle"
 	private hoop: AssetList
+	private isPhysicsEnabled: boolean = true
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
@@ -135,7 +135,7 @@ export class Player implements IEntity {
 	public tick(deltaTime: number, _globalFriction: number) {
 		if (this.hp <= 0) {
 			this.position.x = 1_000_000;
-			this.position.y += 1_000_000;
+			this.position.y = 1_000_000;
 			this.velocity.x = 0
 			this.velocity.y = 0
 			return
@@ -153,14 +153,13 @@ export class Player implements IEntity {
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
-	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; GameLogger.info(`PlayerPos was set from ${this.position.x} ${this.position.y} to ${pos.x} ${pos.y}`) }
+	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; GameLogger.info(`PlayerPos ${this.position.x}:${this.position.y} -> ${pos.x}:${pos.y}`) }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
 	public setFriction(friction: number): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public getDeadTimer(): number { return this.dead }
-	public addHP(hp: number): void { this.hp += hp }
+	public addHP(hp: number): void { this.hp += hp; GameLogger.info(this.hp) }
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
@@ -169,8 +168,9 @@ export class Player implements IEntity {
 	public getShape(): "circle" { return this.shape }
 
 	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
-	public getTeam(): string[] {
-		return this.team
-	}
+	public getTeam(): string[] { return this.team }
+	public isActive(): boolean { return this.isActive() }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
+	public setHP(hp: number): void { this.hp = hp }
 }
 

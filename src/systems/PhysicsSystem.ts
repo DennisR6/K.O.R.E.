@@ -1,6 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
 import type { PhysicsStrategy } from "../physics/physics.js";
-import type { Structure } from "../structures/structures.js";
+import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
 /**

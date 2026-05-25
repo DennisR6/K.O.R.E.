@@ -142,7 +142,7 @@ const thickness = 2
 const [x, y] = [800, 450]
 const offset = 30
 const CircleRadius = 15
-const debugColorStruct = undefined
+const debugColorStruct = "white"
 export const GameSettings = {
 	id: "",
 	screenResolution: { x, y },
@@ -157,8 +157,8 @@ export const GameSettings = {
 
 		//RASTER
 		// { type: "rectangle", x: 0, y: 0, w: 800, h: 450, color: "cyan" },
-		// { type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
-		// { type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
+		{ type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
+		{ type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
 	],
 	hazzards: [
 		{ type: "circle", x: offset + CircleRadius, y: offset + CircleRadius, r: CircleRadius, color: debugColorStruct },

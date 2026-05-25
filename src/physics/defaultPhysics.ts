@@ -141,7 +141,7 @@ export class defaultPhysics implements PhysicsStrategy {
 
 		if (dist === 0) return;
 
-		if (entityA.getShape() === "circle") entityA as IPhysicsCircle
+		// if (entityA.getShape() === "circle") entityA as IPhysicsCircle
 		switch (true) {
 			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
 				const radiusA = entityA.getBounds().x;
@@ -195,10 +195,13 @@ export class defaultPhysics implements PhysicsStrategy {
 						});
 					}
 				}
+
+				entityA.onCollision({ entity: entityB });
+				entityB.onCollision({ entity: entityA });
 				break;
 			}
 			case (entityA.getShape() === "rectangle" && entityB.getShape() === "rectangle"): {
-				console.log("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
+				GameLogger.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				break
 			}
 			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):

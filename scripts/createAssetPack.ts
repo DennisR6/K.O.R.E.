@@ -55,9 +55,6 @@ function generateAssetPacks() {
 			path.join(JSON_OUTPUT_DIR, `${cleanKey}.json`),
 			JSON.stringify(jsonPayload, null, 2)
 		);
-
-		assetManifest[cleanKey] = relativePath;
-		assetRegistry.push(cleanKey);
 	});
 
 	const enumContent = assetRegistry.join(",\n\t");

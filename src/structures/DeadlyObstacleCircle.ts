@@ -1,6 +1,6 @@
 import type { RenderContext } from "../engine/RenderContext.js";
+import type { IEntity } from "../entity/Entity.js";
 import { Player } from "../entity/Player.js";
-import type { IPhysics } from "../physics/physics.js";
 import { StructureCircle } from "./structureCircle.js";
 
 export class DeadlyObstacleCirle extends StructureCircle {
@@ -8,9 +8,10 @@ export class DeadlyObstacleCirle extends StructureCircle {
 		super(x, y, r, color)
 	}
 
-	public onCollision({ entity }: { entity: IPhysics; }): void {
-		if (entity instanceof Player) { entity.addHP(-100); return }
-		console.log("Collision", entity, entity instanceof Player)
+	public onCollision(entity: { entity: IEntity }): void {
+		if (!(entity instanceof Player)) return
+		entity.addHP(-100);
+		return
 	}
 
 	public override draw(ctx: RenderContext): void {

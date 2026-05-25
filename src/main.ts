@@ -7,7 +7,7 @@ import { GameHandlerBuilder } from "./engine/Handler.js";
 import { GameEmitter } from "./emitter/EngineEmitter.js";
 
 
-const handler = new GameHandlerBuilder(1)
+const handler = new GameHandlerBuilder(2)
 	.defaultSystems()
 	.fromSettings(GameSettings)
 	.build()

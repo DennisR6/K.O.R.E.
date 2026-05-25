@@ -1,7 +1,7 @@
 import type { GameStateType, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { Vector2D } from "../physics/physics.js";
-import type { IStructure } from "../structures/structures.js";
+import type { IStructure } from "../structures/types.js";
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.
@@ -20,7 +20,7 @@ export interface IGameContext {
 	// settings: GameSettings;
 	dt: number;
 
-	worldSize:Vector2D;
+	worldSize: Vector2D;
 }
 
 /**

@@ -38,4 +38,5 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable {
 	setSize(size: number): void;
 	getColor(): string;
 	getTeam(): string[];
+	isActive(): boolean
 }

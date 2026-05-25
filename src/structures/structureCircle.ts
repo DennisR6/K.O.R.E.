@@ -1,7 +1,7 @@
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
 import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./structures.js"
+import type { IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -27,6 +27,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	private color?: string
 	private bounce: number
 	private vel: Vector2D
+	private isPhysicsEnabled: boolean = true
 
 	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
@@ -45,9 +46,9 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
-		// if (!this.color) return
+		if (!this.color) return
 		ctx.push()
-		ctx.setFillColor(this.color ?? "white")
+		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
 		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
 		ctx.pop()
@@ -82,9 +83,8 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
-	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.debug("Collision with:" + entity.getShape())
-	}
-	getColor(): string | undefined { return this.color }
+	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
+	public getColor(): string | undefined { return this.color }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 }
 

@@ -1,3 +1,4 @@
+import { GameLogger } from '../utils/log.js';
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
 class EngineAssetManager {
@@ -35,11 +36,11 @@ class EngineAssetManager {
 			this.cache.set(key, img);
 			this.errorCount.delete(key);
 		} catch (e) {
-			console.warn(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
+			GameLogger.debug(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
 
 			// Wenn Limit erreicht: JSON Fallback
 			if (currentRetries >= this.MAX_RETRIES) {
-				console.error(`Fallback auf JSON für: ${key}`);
+				GameLogger.error(`Fallback auf JSON für: ${key}`);
 				await this.loadJsonFallback(key);
 			}
 		}
@@ -57,9 +58,9 @@ class EngineAssetManager {
 
 			await img.decode();
 			this.cache.set(key, img);
-			console.log(`Erfolgreich aus JSON-Fallback geladen: ${key}`);
+			GameLogger.info(`Erfolgreich aus JSON-Fallback geladen: ${key}`);
 		} catch (e) {
-			console.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
+			GameLogger.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
 		}
 	}
 }

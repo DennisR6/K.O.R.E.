@@ -344,7 +344,7 @@ export class GameHandler implements ITicker, IMouse {
 	public getEntityManager(): EntityManager { return this.entityManager }
 
 	public setState(state: GameStateType): void {
-		GameLogger.debug(this.getState(), state)
+		GameLogger.info(`${this.getState()} -> ${state}`)
 		this.context.state = state
 	}
 
@@ -404,10 +404,10 @@ export class GameHandlerBuilder {
 
 	public fromSettings(gameSettings: GameSettings): this {
 		this.engine.saveSettings(gameSettings)
-		//Adding Background
+		// Adding Background
 		let background: IBackground = (getBackgoundSystem(gameSettings.background))
 
-		//Add Mouse
+		// Add Mouse
 		const mouseHandler = new Mouse()
 		mouseHandler.setEntityManager(this.engine.getEntityManager())
 		mouseHandler.setPhysics(this.engine.getPhysics())
@@ -416,17 +416,17 @@ export class GameHandlerBuilder {
 		this.engine.setMouseHandler(mouseHandler)
 		this.engine.addPostDrawer(mouseHandler)
 
-		//Player
+		// Player
 		gameSettings.players?.forEach(player => this.addPlayer(new Player().new({ ...player })))
 		// Structures
 		gameSettings.mapBoundarys?.forEach(boundary => {
-			if (boundary.type === "circle") this.engine.addStructure(new StructureCircle(boundary.x, boundary.y, boundary.r))
-			if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h))
+			if (boundary.type === "circle") this.engine.addStructure(new StructureCircle(boundary.x, boundary.y, boundary.r, boundary.color))
+			if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h, boundary.color))
 		})
-		//Hazzards
+		// Hazzards
 		gameSettings.hazzards?.forEach(boundary => {
-			if (boundary.type === "circle") this.engine.addStructure(new DeadlyObstacleCirle(boundary.x, boundary.y, boundary.r))
-			// if (boundary.type === "rectangle") new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h)
+			if (boundary.type === "circle") this.engine.addStructure(new DeadlyObstacleCirle(boundary.x, boundary.y, boundary.r, boundary.color))
+			// if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h, boundary.color))
 		})
 
 		return this
@@ -434,10 +434,7 @@ export class GameHandlerBuilder {
 			.setWorldSize(gameSettings.screenResolution.x, gameSettings.screenResolution.y)
 			.addUIMouse(mouseHandler)
 	}
-	public setWorldSize(x: number, y: number): this {
-		this.engine.getContext().worldSize = { x, y }
-		return this
-	}
 
+	public setWorldSize(x: number, y: number): this { this.engine.getContext().worldSize = { x, y }; return this }
 	public build(): GameHandler { return this.engine }
 }
