@@ -18,8 +18,9 @@ class EngineAssetManager {
 	private async startAsyncLoad(key: AssetKey) {
 		this.loadingSet.add(key);
 		try {
-			const path = AssetPaths[key]; // Pfad aus dem Manifest
+			const path = AssetPaths[key];
 			const response = await fetch(`./public/${path}`);
+			if (!response.ok) throw new Error("Netzwerkfehler");
 			const blob = await response.blob();
 
 			const url = URL.createObjectURL(blob)

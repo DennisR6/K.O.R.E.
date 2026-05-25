@@ -111,7 +111,7 @@ export class PhysicsSystem implements ISystem {
 	private constrainToMap(entity: IEntity, _ctx: IGameContext) {
 		const pos = entity.getPos();
 		const radius = entity.getBounds().x; // Angenommen Kreis-Radius
-		const bounds = { minX: 0, maxX: 400, minY: 0, maxY: 400 };
+		const bounds = { minX: 0, maxX: 800, minY: 0, maxY: 450 };
 
 		if (pos.x - radius < bounds.minX) {
 			entity.setPos({ x: bounds.minX + radius, y: pos.y });

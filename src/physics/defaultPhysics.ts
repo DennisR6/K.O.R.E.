@@ -226,7 +226,6 @@ export class defaultPhysics implements PhysicsStrategy {
 					const nx = distance > 0 ? dx / distance : 0;
 					const ny = distance > 0 ? dy / distance : -1;
 
-					// console.log(`DEBUG: Collision! NX:${nx.toFixed(2)} NY:${ny.toFixed(2)} Vel:${circle.getVel().y.toFixed(2)}`);
 					const overlap = radius - distance;
 
 					// Massen abrufen
@@ -311,10 +310,10 @@ export class defaultPhysics implements PhysicsStrategy {
 					}
 
 					// Event-Trigger und Sync
-					// circle.setPos(circle.getPos());
-					// circle.setVel(circle.getVel());
-					// rectangle.setPos(rectangle.getPos());
-					// rectangle.setVel(rectangle.getVel());
+					circle.setPos(circle.getPos());
+					circle.setVel(circle.getVel());
+					rectangle.setPos(rectangle.getPos());
+					rectangle.setVel(rectangle.getVel());
 
 					circle.onCollision({ entity: rectangle });
 					rectangle.onCollision({ entity: circle });

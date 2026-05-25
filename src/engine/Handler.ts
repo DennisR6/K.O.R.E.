@@ -10,7 +10,7 @@ import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { GameLogger } from "../utils/log.js";
 import { FRICTION_TABLE, GameSettings, type FrictionSettings } from "../settings/settings.js"
 import { Round2PlayerSystem } from "../systems/RoundSystem.js";
-import { BackgroundColorSystem, BackgroundImageSystem } from "../ui/Background.js";
+import { getBackgoundSystem } from "../ui/Background.js";
 import { Mouse } from "../ui/Mouse.js";
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
@@ -97,7 +97,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	constructor() {
 		const em = new EntityManager([])
-		this.context = { state: GameState.STARTING, dt: 1, entities: em, structures: [] }
+		this.context = { state: GameState.STARTING, dt: 1, entities: em, structures: [], worldSize: { x: 400, y: 400 } }
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
 	}
@@ -405,9 +405,7 @@ export class GameHandlerBuilder {
 	public fromSettings(gameSettings: GameSettings): this {
 		this.engine.saveSettings(gameSettings)
 		//Adding Background
-		let background: IBackground = new BackgroundColorSystem("green");
-		if (gameSettings.background?.type == "color") background = new BackgroundColorSystem(gameSettings.background.color)
-		if (gameSettings.background?.type == "image") background = new BackgroundImageSystem(gameSettings.background.url)
+		let background: IBackground = (getBackgoundSystem(gameSettings.background))
 
 		//Add Mouse
 		const mouseHandler = new Mouse()
@@ -433,7 +431,12 @@ export class GameHandlerBuilder {
 
 		return this
 			.addBackground(background)
+			.setWorldSize(gameSettings.screenResolution.x, gameSettings.screenResolution.y)
 			.addUIMouse(mouseHandler)
+	}
+	public setWorldSize(x: number, y: number): this {
+		this.engine.getContext().worldSize = { x, y }
+		return this
 	}
 
 	public build(): GameHandler { return this.engine }

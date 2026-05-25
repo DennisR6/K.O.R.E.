@@ -177,7 +177,6 @@ export const GameSettings = {
 		{ type: "circle", x: 760, y: 408, r: CircleRadius, color: debugColorStruct },
 	],
 	players: [
-		// { "x": 57.99526427344503, "y": 324.76779335442063 }
 		/* Formation LINKS (3x2) */
 		{ id: 1, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
 		{ id: 2, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
@@ -195,7 +194,9 @@ export const GameSettings = {
 		{ id: 12, x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize }
 	],
 	friction: FRICTION_TABLE.ice,
-	items: [{ type: "", id: 0 }],
+	items: [
+		{ type: "", id: 0 }
+	],
 	effects: [],
 	background: { type: "image", url: AssetList.billiardGroerLochJungePNG },
 	music: ["/..."],

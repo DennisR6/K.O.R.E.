@@ -25,8 +25,8 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 
 	/** Kennung der Form für das Physik-System. */
 	private shape: "rectangle";
-	/** Extrem hohe Masse (9000), damit das Objekt bei Kollisionen unbeweglich bleibt. */
-	private mass: number = 9000;
+	/** Extrem hohe Masse (Infinity), damit das Objekt bei Kollisionen unbeweglich bleibt. */
+	private mass: number = Infinity;
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
 	private bounce: number;
 
@@ -60,10 +60,10 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 		 * Zeichnet das Rechteck basierend auf den Dimensionen w und h.
 		 */
 	draw(ctx: RenderContext) {
-		if (!this.color) return
+		// if (!this.color) return
 		ctx.push()
-		ctx.setFillColor(this.color)
-		ctx.setStrokeColor(this.color)
+		ctx.setFillColor(this.color ?? "white")
+		ctx.setStrokeColor(this.color ?? "white")
 		ctx.drawRect(this.x, this.y, this.w, this.h)
 		ctx.pop()
 	}

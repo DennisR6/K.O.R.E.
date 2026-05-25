@@ -22,7 +22,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Die Masse ist extrem hoch gesetzt (9000), damit das Hindernis 
 	 * bei Kollisionen als unbeweglich ("immovable") fungiert. 
 	 */
-	private mass: number = 9000;
+	private mass: number = Infinity;
 
 	private color?: string
 	private bounce: number
@@ -45,9 +45,9 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
-		if (!this.color) return
+		// if (!this.color) return
 		ctx.push()
-		ctx.setFillColor(this.color)
+		ctx.setFillColor(this.color ?? "white")
 		const { x, y } = this.getPos()
 		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
 		ctx.pop()

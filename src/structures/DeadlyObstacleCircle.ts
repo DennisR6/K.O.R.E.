@@ -13,14 +13,16 @@ export class DeadlyObstacleCirle extends StructureCircle {
 		console.log("Collision", entity, entity instanceof Player)
 	}
 
-	public override draw(_ctx: RenderContext): void {
-		// ctx.push()
-		// ctx.setFillColor(this.getColor())
-		// ctx.setStrokeColor(this.getColor())
+	public override draw(ctx: RenderContext): void {
+		if (!this.getColor()) return
 
-		// const { x, y } = this.getPos()
-		// const { x: r } = this.getBounds()
-		// ctx.drawCircle(x, y, r * 2)
-		// ctx.pop()
+		ctx.push()
+		ctx.setFillColor(this.getColor()!)
+		ctx.setStrokeColor(this.getColor()!)
+
+		const { x, y } = this.getPos()
+		const { x: r } = this.getBounds()
+		ctx.drawCircle(x, y, r * 2)
+		ctx.pop()
 	}
 }
