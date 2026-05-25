@@ -19,7 +19,7 @@ class EngineAssetManager {
 		this.loadingSet.add(key);
 		try {
 			const path = AssetPaths[key]; // Pfad aus dem Manifest
-			const response = await fetch(`/public/${path}`);
+			const response = await fetch(`./public/${path}`);
 			const blob = await response.blob();
 
 			const url = URL.createObjectURL(blob)
