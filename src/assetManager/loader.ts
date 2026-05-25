@@ -47,7 +47,7 @@ class EngineAssetManager {
 
 	private async loadJsonFallback(key: AssetKey) {
 		try {
-			const response = await fetch(`./src/assetManager/assets/${AssetList[key]}.json`);
+			const response = await fetch(`./src/assetManager/assets/json/${AssetList[key]}.json`);
 			if (!response.ok) throw new Error("JSON Fallback fehlgeschlagen");
 
 			const data = await response.json();
