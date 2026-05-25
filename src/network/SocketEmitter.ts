@@ -1,5 +1,6 @@
 import { Socket } from "socket.io-client"; // Oder dein entsprechender Typ
-import type { IInputEmitter } from "../engine/types";
+import type { IInputEmitter } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
 
 export class SocketEmitter implements IInputEmitter {
 	socket
@@ -14,7 +15,7 @@ export class SocketEmitter implements IInputEmitter {
 	 */
 	public sendShot(actorId: number | string, angle: number, power: number): void {
 		if (!this.socket || !this.socket.connected) {
-			console.error("SocketEmitter: Schuss konnte nicht gesendet werden. Keine Verbindung.");
+			GameLogger.error("SocketEmitter: Schuss konnte nicht gesendet werden. Keine Verbindung.");
 			return;
 		}
 
@@ -24,6 +25,6 @@ export class SocketEmitter implements IInputEmitter {
 			power: power
 		});
 
-		console.log(`📡 Shot emitted: ${angle}° with ${power}% power`);
+		GameLogger.info(`📡 Shot emitted: ${angle}° with ${power}% power`);
 	}
 }

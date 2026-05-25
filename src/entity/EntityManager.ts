@@ -1,7 +1,7 @@
-import { type IEntity } from "./Entity";
-import type { SettingsEntity } from "../settings/settings";
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
-import { Player } from "./Player";
+import { type IEntity } from "./Entity.js";
+import type { SettingsEntity } from "../settings/settings.js";
+import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
+import { Player } from "./Player.js";
 
 type SerializedPlayerStats = {
 	id: number | string

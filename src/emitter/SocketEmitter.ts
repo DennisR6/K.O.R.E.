@@ -1,5 +1,6 @@
 import type { Socket } from "socket.io-client";
-import type { IInputEmitter } from "../engine/types";
+import type { IInputEmitter } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
 
 /**
  * Der Netzwerk-Emitter.
@@ -22,7 +23,7 @@ export class SocketEmitter implements IInputEmitter {
 	 * könnten sich ändern, sobald das Netzwerk-Protokoll finalisiert ist.
 	 */
 	sendShot(actorId: string | number, angle: number, power: number): void {
-		console.log(actorId, angle, power)
+		GameLogger.info(actorId, angle, power)
 		this.socket.emit('shoot', { actorId, angle, power });
 	}
 }

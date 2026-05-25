@@ -1,4 +1,4 @@
-import type { IInput, IInputEmitter } from "../engine/types";
+import type { IInput, IInputEmitter } from "../engine/types.js";
 
 /**
  * Ein passiver Emitter, der den letzten Schuss-Befehl zwischenspeichert.

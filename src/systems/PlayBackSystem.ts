@@ -1,7 +1,8 @@
-import { GameState } from "../engine/types";
-import type { EntityManager } from "../entity/EntityManager";
-import type { EntitySnapshot } from "../entity/types";
-import type { IGameContext } from "./types";
+import { GameState } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
+import type { EntitySnapshot } from "../entity/types.js";
+import { GameLogger } from "../utils/log.js";
+import type { IGameContext } from "./types.js";
 
 /**
  * Das PlaybackSystem kontrolliert die zeitliche Wiedergabe von Spielzügen 
@@ -67,7 +68,7 @@ export class PlaybackSystem implements PlaybackSystem {
 			const dy = Math.abs(currentPos.y - saved.y);
 
 			if (dx > EPSILON || dy > EPSILON) {
-				console.log(`Sync Pos ${saved.id}: Δ${dx.toFixed(4)}`);
+				GameLogger.info(`Sync Pos ${saved.id}: Δ${dx.toFixed(4)}`);
 				entity.setPos({ x: saved.x, y: saved.y });
 			}
 

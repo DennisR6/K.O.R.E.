@@ -1,33 +1,31 @@
 {
-  "name": "game",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "npx tsx tests/test.test.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.1",
-    "@types/p5": "^1.7.7",
-    "@types/web": "^0.0.327",
-    "@vitejs/plugin-react": "^5.2.0",
-    "tsx": "^4.22.3",
-    "typedoc": "^0.28.19",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.3"
-  },
-  "dependencies": {
-    "express": "^5.2.1",
-    "p5": "^2.2.3",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
-  },
-  "module": "index.ts"
+	"name": "game",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "concurrently \"npm run watch:ts\" \"npm run serve\"",
+		"watch:ts": "tsc --watch",
+		"serve": "live-server",
+		"build": "tsc",
+		"test": "bun test",
+		"createAssets": "bun run scripts/createAssetPack.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.9.1",
+		"@types/p5": "^1.7.7",
+		"@types/web": "^0.0.327",
+		"typedoc": "^0.28.19",
+		"typescript": "~5.9.3",
+		"live-server": "^1.2.2"
+	},
+	"dependencies": {
+		"concurrently": "^9.2.1",
+		"p5": "^2.2.3",
+		"socket.io": "^4.8.3",
+		"socket.io-client": "^4.8.3"
+	},
+	"module": "index.ts"
 }

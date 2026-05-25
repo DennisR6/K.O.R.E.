@@ -1,5 +1,5 @@
-import { GameLogger } from "../utils/log.ts";
-import { Player } from "./Player.ts";
+import { GameLogger } from "../utils/log.js";
+import { Player } from "./Player.js";
 
 /**
  * Eine spezialisierte Player-Klasse für Debugging-Zwecke.
@@ -41,18 +41,18 @@ export class DebugPlayer extends Player {
 		) {
 			GameLogger.error("Position weicht massiv ab!");
 		}
-		console.trace(this)
+		GameLogger.trace(this)
 		super.setPos(pos);
 	}
 
 	/**
-		 * Überschreibt die Geschwindigkeitsänderung, um Beschleunigungen zu überwachen.
+		 * Überschreibt die Geschwindigkeänderung, um Beschleunigungen zu überwachen.
 		 * @override
 		 */
 	override setVel(vel: { x: number, y: number }): void {
 		if (this.trackingActive) {
-			console.log(`[TRACKER] setVel auf Entity ${this.getId().toString()}:`, vel);
-			console.trace();
+			GameLogger.info(`[TRACKER] setVel auf Entity ${this.getId().toString()}:`, vel);
+			GameLogger.trace();
 		}
 		super.setVel(vel);
 	}

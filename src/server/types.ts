@@ -1,4 +1,4 @@
-import type { GameHandler } from "../engine/Handler";
+import type { GameHandler } from "../engine/Handler.js";
 
 export interface GameRoom {
 	handler: GameHandler;

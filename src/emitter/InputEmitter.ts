@@ -1,5 +1,5 @@
-import { type IInputEmitter } from "../engine/types";
-import { GameLogger } from "../utils/log";
+import { type IInputEmitter } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
 
 /**
  * Die "Steckerleiste" für Inputs.
@@ -9,19 +9,19 @@ import { GameLogger } from "../utils/log";
  * und lokal verarbeitet werden.
  */
 export class CombiEmitter implements IInputEmitter {
-	private emitters: IInputEmitter[] = [];
+	private emitters: IInputEmitter[];
 
 	/**
 		 * @param emitters - Eine Liste von Emittern, die beim Start registriert werden.
 		 */
-	constructor(emitters: IInputEmitter[]) {
+	constructor(emitters: IInputEmitter[] = []) {
 		this.emitters = emitters;
 	}
 
 	/**
 	 * Verteilt den Schuss an alle registrierten Emitter.
 	 */
-	sendShot(actorId: string | number, angle: number, power: number): void {
+	sendShot = (actorId: string | number, angle: number, power: number): void => {
 		this.emitters.forEach(e => e.sendShot(actorId, angle, power));
 	}
 
@@ -39,8 +39,6 @@ export class CombiEmitter implements IInputEmitter {
  */
 export class LogEmitter implements IInputEmitter {
 	sendShot(actorId: string | number, angle: number, power: number) {
-		// Direkte Ausgabe für schnelle Kontrolle
-		console.log({ actorId, angle, power })
 		// Strukturiertes Logging über das Engine-Tool
 		GameLogger.debug("TURN", { actorId, angle, power })
 	}

@@ -11,15 +11,15 @@ export type IInput = {
 	/** Die Stärke des Stoßes (meist 0-100). */
 	power: number;
 }
-
+export type IInputCallbackFunction = (actorId: string | number, angle: number, power: number) => void
 // --- Emitter-Exporte ---
 // Wir exportieren hier alle verfügbaren Emitter, damit man nur 
 // einen einzigen Import-Pfad nutzen muss.
 
-export { CombiEmitter, LogEmitter } from "./InputEmitter.ts"
-export { SocketEmitter } from "./SocketEmitter.ts"
-export { ObjectEmitter } from "./ObjectEmitter"
-export { GameEmitter } from "./EngineEmitter"
+export { CombiEmitter, LogEmitter } from "./InputEmitter.js"
+export { SocketEmitter } from "./SocketEmitter.js"
+export { ObjectEmitter } from "./ObjectEmitter.js"
+export { GameEmitter } from "./EngineEmitter.js"
 
 /**
  * Hilfsfunktion: Berechnet einen Zielpunkt basierend auf Startpunkt, Winkel und Kraft.

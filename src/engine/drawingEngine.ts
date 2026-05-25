@@ -1,7 +1,8 @@
-import p5 from "p5";
-import type { RenderContext } from "./RenderContext";
-import { GameLogger } from "../utils/log";
-
+import type p5Types from "p5";
+import type { RenderContext } from "./RenderContext.js";
+import { GameLogger } from "../utils/log.js";
+import { assetManager } from "../assetManager/loader.js";
+import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
 /**
  * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
  * 
@@ -12,10 +13,7 @@ import { GameLogger } from "../utils/log";
  */
 export class P5Renderer implements RenderContext {
 	/** Die originale p5-Instanz (das Zeichen-API). */
-	p5ctx: p5
-
-	/** Cache für Bilder, damit sie nicht bei jedem Frame neu geladen werden. */
-	assets: Map<string, p5.Image>
+	p5ctx: p5Types
 
 	WORLD_SCALE_X: number = 1
 	WORLD_SCALE_Y: number = 1
@@ -24,14 +22,12 @@ export class P5Renderer implements RenderContext {
 	private renderScale = 1;
 
 	/** 
-	 * @param p - Die p5-Instanz.
+	 * @param p - Die p5Types.-Instanz.
 	 * @param scale - Der Skalierungsfaktor (Pixel pro Welt-Einheit).
 	 * @param worldWidth - Die gewünschte Breite der logischen Welt.
 	 */
-	constructor(p: p5, scale: number, worldWidth: number) {
+	constructor(p: p5Types, scale: number, worldWidth: number) {
 		this.p5ctx = p
-		this.assets = new Map<string, p5.Image>()
-		this.p5ctx.rectMode(p5.CENTER)
 
 		this.renderScale = scale
 		this.WORLD_SCALE_X = scale * 16
@@ -90,28 +86,29 @@ export class P5Renderer implements RenderContext {
 			this.p5ctx.pop();
 		}
 	}
-	loadImage(url: string): void {
-		if (!this.assets.has(url)) {
-			this.assets.set(url, new p5.Image(10, 10))
-			this.p5ctx.loadImage(
-				url,
-				(img: p5.Image) => {
-					this.assets.get(url)!.resize(img.width, img.height);
-					this.assets.get(url)!.copy(img, 0, 0, img.width, img.height, 0, 0, img.width, img.height)
-				},
-				() => { console.error("Error Loading from URL: " + url) }
-			)
-		}
-	}
-	drawImage(url: string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx: number, sy: number, sw: number, sh: number): void {
-		const img = this.assets.get(url);
-		if (!img) { this.loadImage(url); return; }
+	drawImage(key: AssetKey, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
+		const img = assetManager.get(key);
+		if (!img) return;
 
-		this.p5ctx.imageMode(this.p5ctx.CORNER);
-		if (dw == 0) dw = this.WORLD_SIZE_X
-		if (dh == 0) dh = this.WORLD_SIZE_Y
-		this.p5ctx.image(img, this.toPixel(dx), this.toPixel(dy), this.toPixel(dw), this.toPixel(dh),
-			this.toPixel(sx), this.toPixel(sy), this.toPixel(sw), this.toPixel(sh));
+		const targetW = dw === 0 ? this.WORLD_SIZE_X : dw;
+		const targetH = dh === 0 ? this.WORLD_SIZE_Y : dh;
+
+		const ctx = (this.p5ctx as any).drawingContext as CanvasRenderingContext2D;
+
+		if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined) {
+			ctx.drawImage(
+				img,
+				sx, sy, sw, sh,
+				this.toPixel(dx), this.toPixel(dy),
+				this.toPixel(targetW), this.toPixel(targetH)
+			);
+		} else {
+			ctx.drawImage(
+				img,
+				this.toPixel(dx), this.toPixel(dy),
+				this.toPixel(targetW), this.toPixel(targetH)
+			);
+		}
 	}
 	beginClip() {
 		this.p5ctx.beginClip()
@@ -160,8 +157,24 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.mouseWheel = func
 	}
 	resizeCanvas(x: number, y: number): void {
-		this.setScaleFactor(x * .9 / this.WORLD_SIZE_X)
-		this.p5ctx.resizeCanvas(x * .9, y * .9)
+		const maxWidth = x * 0.9;
+		const maxHeight = y * 0.9;
+
+		// Berechne die Skalierungsfaktoren für beide Dimensionen
+		const scaleX = maxWidth / this.WORLD_SIZE_X;
+		const scaleY = maxHeight / this.WORLD_SIZE_Y;
+
+		// Wähle den kleineren Faktor, damit alles in das Fenster passt (Contain-Prinzip)
+		const finalScale = Math.min(scaleX, scaleY);
+
+		// Setze die Skalierung
+		this.setScaleFactor(finalScale);
+
+		// Berechne die finalen Canvas-Dimensionen basierend auf der Weltgröße
+		const finalWidth = this.WORLD_SIZE_X * finalScale;
+		const finalHeight = this.WORLD_SIZE_Y * finalScale;
+
+		this.p5ctx.resizeCanvas(finalWidth, finalHeight);
 	}
 	// --- KOORDINATEN-LOGIK ---
 

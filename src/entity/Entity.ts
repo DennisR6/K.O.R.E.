@@ -1,6 +1,7 @@
-import type { IDrawer, ITicker } from "../engine/RenderContext";
-import type { IPhysicsCircle, Vector2D } from "../physics/physics";
-import type { IKillable } from "./types";
+import type { AssetList } from "../assetManager/assets/assetRegistry.js";
+import type { IDrawer, ITicker } from "../engine/RenderContext.js";
+import type { IPhysicsCircle, Vector2D } from "../physics/physics.js";
+import type { IKillable } from "./types.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -33,7 +34,9 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable {
 	getSize(): Vector2D;
 	setColor(color: string): void;
 
-	setPlayerIcon(icon: string): void;
+	setPlayerIcon(icon: AssetList): void;
 	setSize(size: number): void;
 	getColor(): string;
+	getTeam(): string[];
+	isActive(): boolean
 }

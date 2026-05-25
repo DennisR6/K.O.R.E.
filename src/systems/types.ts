@@ -1,7 +1,7 @@
-import type { GameStateType, TurnPacket } from "../engine/types";
-import type { EntityManager } from "../entity/EntityManager";
-import type { Settings } from "../settings/settings";
-import type { IStructure } from "../structures/structures";
+import type { GameStateType, TurnPacket } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
+import type { Vector2D } from "../physics/physics.js";
+import type { IStructure } from "../structures/types.js";
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.
@@ -17,8 +17,10 @@ export interface IGameContext {
 	/** Der aktuelle globale Spielzustand (z.B. "WAITING", "RUNNING", "GOAL"). */
 	state: GameStateType;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
-	settings: Settings;
+	// settings: GameSettings;
 	dt: number;
+
+	worldSize: Vector2D;
 }
 
 /**

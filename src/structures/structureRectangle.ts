@@ -1,7 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext"
-import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics"
-import { GameLogger } from "../utils/log"
-import type { IStructure } from "./structures"
+import type { RenderContext } from "../engine/RenderContext.js"
+import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics.js"
+import { GameLogger } from "../utils/log.js"
+import type { IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein massives, rechteckiges Hindernis (Block).
@@ -25,15 +25,15 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 
 	/** Kennung der Form für das Physik-System. */
 	private shape: "rectangle";
-	/** Extrem hohe Masse (9000), damit das Objekt bei Kollisionen unbeweglich bleibt. */
-	private mass: number = 9000;
+	/** Extrem hohe Masse (Infinity), damit das Objekt bei Kollisionen unbeweglich bleibt. */
+	private mass: number = Infinity;
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
 	private bounce: number;
 
-	private color: string
+	private color?: string
 	private vel: Vector2D
+	private isPhysicsEnabled: boolean = true
 
-	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
@@ -45,12 +45,12 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	 * @param h - Höhe des Blocks.
 	 * @param color - Füllfarbe des Rechtecks.
 	 */
-	constructor(x: number, y: number, w: number, h: number, color: string) {
+	constructor(x: number, y: number, w: number, h: number, color?: string) {
 		this.x = x
 		this.y = y
 		this.w = w
 		this.h = h
-		this.color = color || "green"
+		this.color = color
 		this.shape = "rectangle"
 		this.vel = { x: 0, y: 0 }
 		this.bounce = Infinity
@@ -59,42 +59,46 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/**
 		 * Zeichnet das Rechteck basierend auf den Dimensionen w und h.
 		 */
-	draw(ctx: RenderContext) {
+	public draw(ctx: RenderContext) {
+		if (!this.color) return
+		ctx.push()
 		ctx.setFillColor(this.color)
+		ctx.setStrokeColor(this.color)
 		ctx.drawRect(this.x, this.y, this.w, this.h)
+		ctx.pop()
 	}
 
-	setBounceFactor(bounce: number): void { this.bounce = bounce }
-	getBounceFactor(): number { return this.bounce }
+	public setBounceFactor(bounce: number): void { this.bounce = bounce }
+	public getBounceFactor(): number { return this.bounce }
 
-	getBounds(): Vector2D { return { x: this.w, y: this.h } }
+	public getBounds(): Vector2D { return { x: this.w, y: this.h } }
 
-	getPos(): Vector2D { return { x: this.x, y: this.y } }
+	public getPos(): Vector2D { return { x: this.x, y: this.y } }
 
-	getVel(): Vector2D { return this.vel }
+	public getVel(): Vector2D { return this.vel }
 
-	onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.debug("Collision with:" + entity.getShape())
+	public onCollision({ entity }: { entity: IPhysics }): void {
+		GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`)
 	}
 
-	setVel(vel: Vector2D): void { this.vel = vel }
+	public setVel(vel: Vector2D): void { this.vel = vel }
 
-	setMass(mass: number): void { this.mass = mass }
+	public setMass(mass: number): void { this.mass = mass }
 
-	getMass(): number { return this.mass }
+	public getMass(): number { return this.mass }
+	public setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y }
+	public getFriction(): number { return this.friction ?? 1 }
 
-	setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y }
-	getFriction(): number { return this.friction ?? 1 }
-
-	setFriction(friction: number): void { this.friction = friction }
+	public setFriction(friction: number): void { this.friction = friction }
 
 	/**
 		 * Platzhalter für zeitgesteuerte Logik (Animationen, Farbwechsel).
 		 * @param _deltatime - Zeitintervall seit dem letzten Update.
 		 * @param _globalfriction - Reibung (wird hier ignoriert, da statisch).
 		 */
-	tick(_deltatime: number, _globalfriction: number): void { }
+	public tick(_deltatime: number, _globalfriction: number): void { }
 
 	/** @returns Immer "rectangle" für den Physics-Dispatcher. */
-	getShape(): "rectangle" { return this.shape }
+	public getShape(): "rectangle" { return this.shape }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 }

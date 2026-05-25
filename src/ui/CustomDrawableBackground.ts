@@ -1,5 +1,5 @@
-import type { RenderContext } from "../engine/RenderContext";
-import { BackgroundColorSystem } from "./Background";
+import type { RenderContext } from "../engine/RenderContext.js";
+import { BackgroundColorSystem } from "./Background.js";
 
 export class CustomDrawableBackground extends BackgroundColorSystem {
 	constructor() {
@@ -16,6 +16,5 @@ export class CustomDrawableBackground extends BackgroundColorSystem {
 	public draw(ctx: RenderContext): void {
 		ctx.clear(this.getColor())
 		ctx.setFillColor("brown")
-		ctx.drawImage("/dark-wood.png")
 	}
 }

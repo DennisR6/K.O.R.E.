@@ -1,5 +1,5 @@
-import type { RenderContext } from "../engine/RenderContext";
-import { StructureCircle } from "./structureCircle.ts"
+import type { RenderContext } from "../engine/RenderContext.js";
+import { StructureCircle } from "./structureCircle.js"
 
 export class DebugStructure extends StructureCircle {
 	structure: StructureCircle
@@ -18,4 +18,5 @@ export class DebugStructure extends StructureCircle {
 		ctx.line(x - r, y + r, x - r, y - r)
 		ctx.line(x - r, y + r, x + r, y + r)
 	}
+
 }

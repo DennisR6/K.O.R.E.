@@ -1,6 +1,6 @@
-import type { FrictionSettings } from "../settings/settings";
-import { GameLogger } from "../utils/log";
-import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics";
+import type { FrictionSettings } from "../settings/settings.js";
+import { GameLogger } from "../utils/log.js";
+import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -139,48 +139,50 @@ export class defaultPhysics implements PhysicsStrategy {
 		const posB = { ...entityB.getPos() };
 		const dist = this.dist(posA, posB);
 
-		if (entityA.getShape() === "circle") entityA as IPhysicsCircle
+		if (dist === 0) return;
+
+		// if (entityA.getShape() === "circle") entityA as IPhysicsCircle
 		switch (true) {
 			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
-				//@ts-ignore
 				const radiusA = entityA.getBounds().x;
-				//@ts-ignore
-				const radiusB = entityB.getBounds().x!;
+				const radiusB = entityB.getBounds().x;
 				const combinedRadius = radiusA + radiusB;
 
-
 				if (dist < combinedRadius) {
-					const safeDist = dist === 0 ? 0.1 : dist;
-
-					const nx = (posB.x - posA.x) / safeDist;
-					const ny = (posB.y - posA.y) / safeDist;
+					const overlap = combinedRadius - dist;
+					// 1. Vektor normalisieren
+					const nx = (posB.x - posA.x) / dist;
+					const ny = (posB.y - posA.y) / dist;
 
 					const invMassA = 1 / entityA.getMass();
 					const invMassB = 1 / entityB.getMass();
 					const totalInvMass = invMassA + invMassB;
 
-					const overlap = combinedRadius - dist;
-					if (totalInvMass > 0) {
-						const moveMagnitude = overlap / totalInvMass;
-						entityA.setPos({
-							x: posA.x - nx * moveMagnitude * invMassA,
-							y: posA.y - ny * moveMagnitude * invMassA
-						});
-						entityB.setPos({
-							x: posB.x + nx * moveMagnitude * invMassB,
-							y: posB.y + ny * moveMagnitude * invMassB
-						});
-					}
+					// --- POSITIONSKORREKTUR (Depenetration) ---
+					const slop = 0.05;
+					const percent = 0.2;
+					const moveMagnitude = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
 
+					const moveA = moveMagnitude * invMassA;
+					const moveB = moveMagnitude * invMassB;
+
+					// Wende Korrektur an
+					entityA.setPos({ x: posA.x - nx * moveA, y: posA.y - ny * moveA });
+					entityB.setPos({ x: posB.x + nx * moveB, y: posB.y + ny * moveB });
+
+					// --- IMPULS-ANTWORT (Auf Basis der URSPRÜNGLICHEN Positionen!) ---
+					// WICHTIG: Nutze die ursprünglichen Variablen velA/velB, 
+					// aber berechne den Impuls basierend auf den Vektoren, 
+					// OHNE die veränderten Positionen erneut abzurufen.
 					const velA = entityA.getVel();
 					const velB = entityB.getVel();
+
 					const relVelX = velB.x - velA.x;
 					const relVelY = velB.y - velA.y;
 					const dotProduct = relVelX * nx + relVelY * ny;
 
 					if (dotProduct < 0) {
 						const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
-
 						const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
 
 						entityA.setVel({
@@ -191,15 +193,15 @@ export class defaultPhysics implements PhysicsStrategy {
 							x: velB.x + (impulseMag * nx * invMassB),
 							y: velB.y + (impulseMag * ny * invMassB)
 						});
-
-						entityA.onCollision({ entity: entityB });
-						entityB.onCollision({ entity: entityA });
 					}
 				}
+
+				entityA.onCollision({ entity: entityB });
+				entityB.onCollision({ entity: entityA });
 				break;
 			}
 			case (entityA.getShape() === "rectangle" && entityB.getShape() === "rectangle"): {
-				console.log("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
+				GameLogger.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				break
 			}
 			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):
@@ -237,16 +239,40 @@ export class defaultPhysics implements PhysicsStrategy {
 					const invM1 = 1 / m1;
 					const invM2 = 1 / m2;
 					const invMassSum = invM1 + invM2;
-
 					// 1. Positionskorrektur (Depenetration)
 					// Verhindert das Ineinandersteckenbleiben proportional zur Masse
-					const totalMove = overlap + 0.01;
+					const totalMove = Math.min(overlap + 0.01, 2.0); // Sicherheits-Clamp
+
+					const EPSILON = 0.05;
+					const correction = totalMove + EPSILON;
+
+					// circle.setPos({
+					// 	x: cPos.x + nx * totalMove * (invM1 / invMassSum),
+					// 	y: cPos.y + ny * totalMove * (invM1 / invMassSum)
+					// });
 					circle.setPos({
-						x: cPos.x + nx * totalMove * (invM1 / invMassSum),
-						y: cPos.y + ny * totalMove * (invM1 / invMassSum)
+						x: cPos.x + nx * correction,
+						y: cPos.y + ny * correction
 					});
 
-					if (m2 !== Infinity) {
+
+
+					if (m2 === Infinity) {
+						// Wenn Rechteck unendlich schwer: Schiebe NUR den Kreis aus der Wand
+						circle.setPos({
+							x: cPos.x + nx * totalMove,
+							y: cPos.y + ny * totalMove
+						});
+					} else {
+						// Wenn Rechteck beweglich: Teile den Impuls wie gehabt
+						const invM1 = 1 / m1;
+						const invM2 = 1 / m2;
+						const invMassSum = invM1 + invM2;
+
+						circle.setPos({
+							x: cPos.x + nx * totalMove * (invM1 / invMassSum),
+							y: cPos.y + ny * totalMove * (invM1 / invMassSum)
+						});
 						rectangle.setPos({
 							x: rPos.x - nx * totalMove * (invM2 / invMassSum),
 							y: rPos.y - ny * totalMove * (invM2 / invMassSum)
@@ -268,7 +294,9 @@ export class defaultPhysics implements PhysicsStrategy {
 						const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
 
 						// Der Impuls-Skalar (J)
-						const j = -(1 + bounce) * dot / invMassSum;
+						// Setze ein hartes Limit für den Impuls
+						const maxImpulse = 50;
+						const j = Math.max(Math.min(-(1 + bounce) * dot / invMassSum, maxImpulse), -maxImpulse);
 
 						// Neue Geschwindigkeiten anwenden
 						circle.setVel({
@@ -345,7 +373,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 
 	public printSettings(who?: string) {
-		GameLogger.debug(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold }, new Error().stack)
+		GameLogger.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
 	}
 
 	/**

@@ -1,6 +1,6 @@
-import { GameState } from "../engine/types";
-import { GameLogger } from "../utils/log";
-import type { IGameContext, ISystem } from "./types";
+import { GameState } from "../engine/types.js";
+import { GameLogger } from "../utils/log.js";
+import type { IGameContext, ISystem } from "./types.js";
 
 /**
  * Ein minimalistisches Rundensystem ohne Spielerwechsel.
@@ -34,10 +34,10 @@ export class Round2PlayerSystem implements ISystem {
 		if (ctx.state !== GameState.PLAYING_DONE) return;
 
 		if (this.yourTurn) {
-			GameLogger.debug(ctx.state, GameState.YOUR_TURN);
+			GameLogger.info(`${ctx.state} -> ${GameState.YOUR_TURN}`)
 			ctx.state = GameState.YOUR_TURN;
 		} else {
-			GameLogger.debug(ctx.state, GameState.OPPONENTS_TURN);
+			GameLogger.info(`${ctx.state} -> ${GameState.OPPONENTS_TURN}`)
 			ctx.state = GameState.OPPONENTS_TURN;
 		}
 

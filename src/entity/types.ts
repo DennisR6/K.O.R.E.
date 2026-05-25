@@ -33,6 +33,7 @@ export interface EntitySnapshot {
 	isStatic?: boolean;
 }
 export interface IKillable {
+	setHP(hp: number): void;
 	getHP(): number;
-	getDeadTimer(): number; // -1 -> lebt noch, 0-> animation vorbei, hp!==0 spielt gerade animationstimer ab
+	isActive(): boolean
 }

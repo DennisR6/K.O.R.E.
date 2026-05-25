@@ -1,7 +1,7 @@
-import type { RenderContext } from "../engine/RenderContext"
-import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics"
-import { GameLogger } from "../utils/log"
-import type { IStructure } from "./structures"
+import type { RenderContext } from "../engine/RenderContext.js"
+import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
+import { GameLogger } from "../utils/log.js"
+import type { IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -22,21 +22,22 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Die Masse ist extrem hoch gesetzt (9000), damit das Hindernis 
 	 * bei Kollisionen als unbeweglich ("immovable") fungiert. 
 	 */
-	private mass: number = 9000;
+	private mass: number = Infinity;
 
-	private color: string
+	private color?: string
 	private bounce: number
 	private vel: Vector2D
+	private isPhysicsEnabled: boolean = true
 
 	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	constructor(x: number, y: number, r: number, color: string) {
+	constructor(x: number, y: number, r: number, color?: string) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = "circle"
-		this.color = color || "green"
+		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
 	}
@@ -45,8 +46,8 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
+		if (!this.color) return
 		ctx.push()
-		// ctx.drawRect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2)
 		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
 		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
@@ -82,9 +83,8 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
-	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.debug("Collision with:" + entity.getShape())
-	}
-	getColor(): string { return this.color }
+	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
+	public getColor(): string | undefined { return this.color }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 }
 

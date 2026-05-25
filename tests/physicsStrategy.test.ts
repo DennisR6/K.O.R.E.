@@ -1,9 +1,9 @@
 import test, { beforeEach, describe } from "node:test"
-import { GameState } from "../src/engine/types.ts"
-import { Player } from "../src/entity/Player.ts"
-import { EntityManager } from "../src/entity/EntityManager.ts"
-import { defaultPhysics } from "../src/physics/defaultPhysics"
-import { PhysicsSystem, IGameContext } from "../src/systems/Systems.ts"
+import { GameState } from "../src/engine/types.js"
+import { Player } from "../src/entity/Player.js"
+import { EntityManager } from "../src/entity/EntityManager.js"
+import { defaultPhysics } from "../src/physics/defaultPhysics.js"
+import { PhysicsSystem, type IGameContext } from "../src/systems/Systems.js"
 import assert from "node:assert"
 
 /**
@@ -45,7 +45,7 @@ describe("PhysicsSystem Integration Tests", () => {
 		p1.setVel({ x: 10, y: 10 });
 
 		for (let i = 0; i < 32; i++) {
-			ps.tick(ctx, 1, ps.strategy.getFriction());
+			ps.ticker(ctx, 1, ps.strategy.getFriction());
 		}
 
 		assert.ok(p1.getPos().x > 100, 'Entity should have moved from starting position');
@@ -69,7 +69,7 @@ describe("PhysicsSystem Integration Tests", () => {
 		ctx.entities.addEntity(p1);
 
 		for (let i = 0; i < 1000; i++) {
-			ps.tick(ctx, 1, physics.getFriction());
+			ps.ticker(ctx, 1, physics.getFriction());
 
 			const posX = p1.getPos().x;
 			const posY = p1.getPos().y;
@@ -96,7 +96,7 @@ describe("PhysicsSystem Integration Tests", () => {
 		p1.setVel({ x: 0.6, y: 0 });
 		ctx.entities.addEntity(p1);
 
-		ps.tick(ctx, 1, physics.getFriction());
+		ps.ticker(ctx, 1, physics.getFriction());
 
 		const velocity = p1.getVel();
 		assert.strictEqual(velocity.x, 0, 'Velocity X should be zeroed after falling below threshold');
@@ -127,7 +127,7 @@ describe("PhysicsSystem Integration Tests", () => {
 
 		for (let i = 0; i < 9; i++) {
 			const lastVelX = p1.getVel().x;
-			ps.tick(ctx, 1, 0.9);
+			ps.ticker(ctx, 1, 0.9);
 
 			assert.ok(p1.getVel().x < lastVelX, `Speed did not decrease in frame ${i}`);
 		}
@@ -151,7 +151,7 @@ describe("PhysicsSystem Integration Tests", () => {
 		assert.strictEqual(entityInSystem, p1, 'The entity reference in the system must be identical to the original object');
 
 		entityInSystem.setVel({ x: 10, y: 10 });
-		ps.tick(ctx, 1, 0.9);
+		ps.ticker(ctx, 1, 0.9);
 
 		assert.ok(p1.getVel().x < 10, 'Updating the system should affect the local object reference');
 	});

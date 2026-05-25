@@ -1,6 +1,8 @@
-import type { RenderContext } from "../engine/RenderContext";
-import type { IPhysics, Vector2D } from "../physics/physics";
-import type { IEntity } from "./Entity";
+import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import type { RenderContext } from "../engine/RenderContext.js";
+import type { IPhysics, Vector2D } from "../physics/physics.js";
+import { GameLogger } from "../utils/log.js";
+import type { IEntity } from "./Entity.js";
 
 
 /**
@@ -41,13 +43,14 @@ export interface IPlayerType {
 	 * Pfad oder Schlüssel für das Icon/Avatar.
 	 * Der P5Renderer nutzt dies, um die entsprechende Textur aus dem Cache zu laden.
 	 */
-	playericon?: string;
+	playericon?: AssetList;
 
 	/** 
 	 * Der physikalische Radius (Größe) des Spielers.
 	 * Standardwert ist meist 12, falls hier nichts definiert wird.
 	 */
 	size?: number;
+	hoop?: string;
 }
 
 /**
@@ -60,7 +63,6 @@ export interface IPlayerType {
  */
 export class Player implements IEntity {
 	private hp: number = 30;
-	private dead: number = -1;
 	/** Eindeutige ID (wird via crypto.randomUUID() generiert, falls nicht vorhanden). */
 	private id: number | string;
 	/** Die aktuelle Position auf dem Spielfeld (Top-Left des Begrenzungsrahmens). */
@@ -78,8 +80,10 @@ export class Player implements IEntity {
 
 	private team: string[];
 	private color: string;
-	private playericon: string;
+	private playericon: AssetList;
 	private shape: "circle"
+	private hoop: AssetList
+	private isPhysicsEnabled: boolean = true
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
@@ -87,13 +91,14 @@ export class Player implements IEntity {
 		this.position = { x: 0, y: 0 }
 		this.team = []
 		this.color = "red"
-		this.playericon = ""
+		this.playericon = AssetList.picturePenguinPenguinIdleFrame1PNG
 		this.shape = "circle"
 		this.velocity = { x: 0, y: 0 } as Vector2D
 		this.bouncyness = 1
 		this.friction = undefined;
 		this.size = 20;
 		this.mass = 1
+		this.hoop = AssetList.pictureReifenWEBP
 	}
 
 	/**
@@ -118,16 +123,8 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		// ctx.drawRect(this.position.x - this.size - 5, this.position.y - this.size - 10, this.getHP(), 5)
-		// ctx.line(this.position.x - this.size, this.position.y - this.size, this.position.x + this.size, this.position.y - this.size)
-		// ctx.line(this.position.x + this.size, this.position.y + this.size, this.position.x + this.size, this.position.y - this.size)
-		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x - this.size, this.position.y - this.size)
-		// ctx.line(this.position.x - this.size, this.position.y + this.size, this.position.x + this.size, this.position.y + this.size)
-
-		// ctx.setFillColor(this.color);
-		// ctx.drawCircle(this.position.x, this.position.y, this.size);
-
-		ctx.drawImage("/picture/Reifen.png", this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
+		if (this.hp <= 0) return
+		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
 
@@ -136,6 +133,13 @@ export class Player implements IEntity {
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
 	public tick(deltaTime: number, _globalFriction: number) {
+		if (this.hp <= 0) {
+			this.position.x = 1_000_000;
+			this.position.y = 1_000_000;
+			this.velocity.x = 0
+			this.velocity.y = 0
+			return
+		}
 		this.position.x += this.velocity.x * deltaTime;
 		this.position.y += this.velocity.y * deltaTime;
 	}
@@ -149,21 +153,24 @@ export class Player implements IEntity {
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
-	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y } }
+	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
 	public setFriction(friction: number): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public getDeadTimer(): number { return this.dead }
-	public addHP(hp: number): void { this.hp += hp }
+	public addHP(hp: number): void { this.hp += hp; GameLogger.info(this.hp) }
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
-	public setPlayerIcon(icon: string): void { this.playericon = icon; }
+	public setPlayerIcon(icon: AssetList): void { this.playericon = icon; }
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): "circle" { return this.shape }
 
 	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
+	public getTeam(): string[] { return this.team }
+	public isActive(): boolean { return this.isActive() }
+	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
+	public setHP(hp: number): void { this.hp = hp }
 }
 
