@@ -153,7 +153,7 @@ export class Player implements IEntity {
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
-	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; GameLogger.info(`PlayerPos ${this.position.x}:${this.position.y} -> ${pos.x}:${pos.y}`) }
+	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
 	public setFriction(friction: number): void { this.friction = friction }

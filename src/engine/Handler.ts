@@ -86,6 +86,7 @@ export class GameHandler implements ITicker, IMouse {
 	private postDrawers: IDrawer[] = []
 	private dt: number = 1;
 	private mouseHandler: IMouseHandler | undefined;
+	private logs: any[] = []
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -365,6 +366,7 @@ export class GameHandler implements ITicker, IMouse {
 	exportGame(): { logs: IInput[], settings: Partial<GameSettings> | any } {
 		return { logs: this.turns, settings: JSON.stringify(this.settings) }
 	}
+	public addLog(log: any) { this.logs.push(log) }
 }
 
 

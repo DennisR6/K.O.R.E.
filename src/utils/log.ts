@@ -58,7 +58,7 @@ export class GameLogger {
 		const timestamp = new Date().toLocaleTimeString();
 
 		if (typeof window !== 'undefined' && window.game?.logs) {
-			window.game.handler.logs.push({
+			window.game.logs.push({
 				timestamp,
 				level,
 				caller,

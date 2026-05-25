@@ -8,8 +8,10 @@ export class DeadlyObstacleCirle extends StructureCircle {
 		super(x, y, r, color)
 	}
 
-	public onCollision(entity: { entity: IEntity }): void {
+	public onCollision({ entity }: { entity: IEntity }): void {
+		console.log("test")
 		if (!(entity instanceof Player)) return
+		console.log("test2")
 		entity.addHP(-100);
 		return
 	}

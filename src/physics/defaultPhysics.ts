@@ -373,7 +373,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 
 	public printSettings(who?: string) {
-		GameLogger.debug(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold }, new Error().stack)
+		GameLogger.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
 	}
 
 	/**

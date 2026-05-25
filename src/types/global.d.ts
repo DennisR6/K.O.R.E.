@@ -5,7 +5,12 @@ declare global {
 		p5: typeof p5;
 		game: {
 			handler: GameHandler
-			logs: string[]
+			logs: {
+				timestamp,
+				level,
+				caller,
+				data: args
+			}[]
 		}
 	}
 	const p5: typeof p5Instance;
