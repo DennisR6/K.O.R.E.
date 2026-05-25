@@ -1,4 +1,4 @@
-import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
+import { AssetList, type AssetKey } from './assets/assetRegistry.js';
 
 class EngineAssetManager {
 	private cache: Map<AssetKey, HTMLImageElement> = new Map();
