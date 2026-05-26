@@ -115,6 +115,7 @@ export class Player implements IEntity {
 		this.setPlayerIcon(player.playericon ?? this.playericon)
 		this.setSize(player.size ?? 20)
 		this.shape = "circle";
+		this.hoop = player.hoop ?? AssetList.pictureReifenPNG
 		return this;
 	}
 
