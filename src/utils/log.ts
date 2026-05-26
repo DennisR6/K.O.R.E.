@@ -18,7 +18,7 @@ export class GameLogger {
 	 * Schaltet die Konsolenausgabe global an/aus.
 	 * @default false (Deaktiviert für Production-Performance)
 	 */
-	private static isEnabled = true;
+	private static isEnabled = !true;
 
 	/**
 		 * Extrahiert den Dateinamen und die Zeilennummer aus dem Stacktrace.
