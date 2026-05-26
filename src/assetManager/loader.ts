@@ -8,7 +8,10 @@ class EngineAssetManager {
 	private isLoading: Set<AssetKey> = new Set();
 
 	get(key: AssetList): HTMLImageElement | null {
-		if (!key) return null
+		if (key === undefined) {
+			console.log(`${key}:${AssetPaths[key]} is undefined`, key)
+			return null
+		}
 		if (this.cache.has(key)) return this.cache.get(key)!;
 
 		const retries = this.errorCount.get(key) || 0;
@@ -22,7 +25,7 @@ class EngineAssetManager {
 	private async startAsyncLoad(key: AssetKey) {
 		if (this.isLoading.has(key)) return
 		this.isLoading.add(key)
-		console.log("loading picture",AssetPaths[key])
+		console.log("downloading picture", AssetPaths[key])
 
 		const currentRetries = this.errorCount.get(key) || 0;
 		this.errorCount.set(key, currentRetries + 1);
