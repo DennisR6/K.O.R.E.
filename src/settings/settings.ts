@@ -198,7 +198,7 @@ export const GameSettings = {
 		{ type: "", id: 0 }
 	],
 	effects: [],
-	background: { type: "image", url: AssetList.billiardGroerLochJungePNG },
+	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },
 	music: ["/..."],
 	team: ["1"]
 } as GameSettings
