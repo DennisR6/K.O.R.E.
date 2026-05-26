@@ -50,7 +50,7 @@ export interface IPlayerType {
 	 * Standardwert ist meist 12, falls hier nichts definiert wird.
 	 */
 	size?: number;
-	hoop?: string;
+	hoop?: AssetList;
 }
 
 /**

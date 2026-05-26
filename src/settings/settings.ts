@@ -67,7 +67,8 @@ export interface SettingsEntity {
 	size?: number;
 	color?: string;
 	team: string[];
-	playericon: AssetKey;
+	playericon: AssetList;
+	hoop: AssetList;
 }
 
 export interface SettingsItem {
@@ -143,6 +144,7 @@ const [x, y] = [800, 450]
 const offset = 30
 const CircleRadius = 15
 const debugColorStruct = undefined
+const defaultHoop = AssetList.pictureReifenWEBP
 export const GameSettings = {
 	id: "",
 	screenResolution: { x, y },
@@ -178,12 +180,12 @@ export const GameSettings = {
 	],
 	players: [
 		/* Formation LINKS (3x2) */
-		{ id: 1, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 2, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 3, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 4, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 5, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 6, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 1, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 2, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 3, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 4, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 5, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 6, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
 		//
 		// /* Formation RECHTS (3x2) */
 		{ id: 7, x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
