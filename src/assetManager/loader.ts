@@ -5,6 +5,7 @@ class EngineAssetManager {
 	private cache: Map<AssetKey, HTMLImageElement> = new Map();
 	private errorCount: Map<AssetKey, number> = new Map();
 	private MAX_RETRIES = 2;
+	private isLoading: Set<AssetKey> = new Set();
 
 	get(key: AssetList): HTMLImageElement | null {
 		if (!key) return null
@@ -19,6 +20,10 @@ class EngineAssetManager {
 	}
 
 	private async startAsyncLoad(key: AssetKey) {
+		if (this.isLoading.has(key)) return
+		this.isLoading.add(key)
+		console.log("loading picture",AssetPaths[key])
+
 		const currentRetries = this.errorCount.get(key) || 0;
 		this.errorCount.set(key, currentRetries + 1);
 
@@ -35,8 +40,10 @@ class EngineAssetManager {
 
 			this.cache.set(key, img);
 			this.errorCount.delete(key);
+			this.isLoading.delete(key)
 		} catch (e) {
 			GameLogger.debug(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
+			this.isLoading.delete(key)
 
 			// Wenn Limit erreicht: JSON Fallback
 			if (currentRetries >= this.MAX_RETRIES) {
