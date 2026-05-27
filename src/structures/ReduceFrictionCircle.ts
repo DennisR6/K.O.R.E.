@@ -1,14 +1,14 @@
-import type { RenderContext } from "../engine/RenderContext.js";
-import type { IEntity } from "../entity/Entity.js";
-import { Player } from "../entity/Player.js";
-import { StructureCircle } from "./structureCircle.js";
+import type { RenderContext } from "../engine/RenderContext";
+import type { IEntity } from "../entity/Entity";
+import { Player } from "../entity/Player";
+import { StructureCircle } from "./structureCircle";
 
-export class DeadlyObstacleCirle extends StructureCircle {
+export class ReduceFrictionCircle extends StructureCircle {
 	constructor(x: number, y: number, r: number, color?: string) { super(x, y, r, color) }
 
 	public onCollision({ entity }: { entity: IEntity }): void {
 		if (!(entity instanceof Player)) return
-		entity.addHP(-100);
+		entity.setFriction(0.3)
 		return
 	}
 

@@ -30,7 +30,7 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
 	private bounce: number;
 
-	private color?: string
+	private color: string | undefined
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true
 
@@ -101,4 +101,6 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	/** @returns Immer "rectangle" für den Physics-Dispatcher. */
 	public getShape(): "rectangle" { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
+	public setPhysicsEnabled(physicsEnabled: boolean) { this.isPhysicsEnabled = physicsEnabled }
+	public setColor(color: string | undefined) { this.color = color }
 }

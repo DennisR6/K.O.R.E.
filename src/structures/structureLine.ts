@@ -27,7 +27,7 @@ export class StructureLine implements IPhysicsRectangle {
 	/** Rückprall-Koeffizient (0 = kein Abprallen, die Kugel "klebt" fast an der Wand). */
 
 	private bounce: number;
-	private color: string
+	private color: string | undefined
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true;
 
@@ -106,4 +106,6 @@ export class StructureLine implements IPhysicsRectangle {
 	/** @returns Immer "rectangle" für den Collision-Dispatcher. */
 	public getShape(): "rectangle" { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
+	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
+	public setColor(color: string | undefined) { this.color = color }
 }
