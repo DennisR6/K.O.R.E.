@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto"
 import { GameHandlerBuilder } from "./src/engine/Handler.ts"
 import { GameSettings } from "./src/settings/settings.ts"
+const PORT = process.env.PORT || 3000
 
 
 // import { ServerHandler } from "./src/server/server.ts"
@@ -24,14 +25,11 @@ class RoomManager {
 	rmUser() { }
 }
 
-class Room {
 
-}
-
-class User {
-	private id: number | string
-}
-const rooms: Room = []
+// class User {
+// 	private id: number | string
+// }
+// const rooms: Room = []
 const rm = new RoomManager()
 Bun.serve({
 	port: 3000,
@@ -45,6 +43,8 @@ Bun.serve({
 		if (url.pathname === "/") {
 			return new Response(Bun.file("./index.html"));
 		}
+
+		if (url.pathname.includes(".json")) console.log(url.pathname)
 
 		return new Response(Bun.file(`./${url.pathname}`));
 	},
@@ -88,27 +88,5 @@ Bun.serve({
 	},
 });
 
-console.log("Server läuft auf http://localhost:3000");
+console.log(`Server läuft auf http://localhost:${PORT}`);
 
-
-
-
-// io.on("connection", (socket) => {
-// 	console.log(`User connected: ${socket.id}`, socket.handshake.auth.token);
-//
-// 	socket.on("shoot", (input: IInput) => {
-// 		const { actorId, angle, power } = input
-// 		const res = handler.simulateTurn(actorId, angle, power)
-// 		console.log(input, res)
-// 		socket.emit("turn", () => res)
-// 	})
-// 	socket.on("disconnect", () => {
-// 		console.log("User disconnected");
-// 	});
-// });
-//
-//
-//
-// httpServer.listen(3000, () => {
-// 	console.log("Socket-Server läuft auf Port 3000");
-// });

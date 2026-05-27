@@ -13,7 +13,7 @@ const handler = new GameHandlerBuilder()
 	.fromSettings(GameSettings)
 	.build()
 
-const socket = new WebSocket("ws://localhost:3000", ["deviceID", crypto.randomUUID()])
+const socket = new WebSocket("wss://lupricht.net/kore/")
 socket.onmessage = (event) => {
 	const output = JSON.parse(event.data)
 	switch (output.type) {
@@ -69,4 +69,4 @@ const sketch = (p: p5Types) => {
 new window.p5(sketch)
 window.game = { handler, logs: [] };
 
-window.addEventListener('keydown', (e) => { });
+window.addEventListener('keydown', (_e) => { });

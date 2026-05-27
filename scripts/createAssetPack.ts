@@ -3,7 +3,7 @@ import { readdirSync, statSync, writeFileSync, mkdirSync, readFileSync } from "n
 import path from "node:path";
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
-const OUTPUT_DIR = path.resolve(__dirname, '../src/assetManager/assets');
+const OUTPUT_DIR = path.resolve(__dirname, '../dist/assetManager/assets/json/');
 
 if (!statSync(OUTPUT_DIR, { throwIfNoEntry: false })) {
 	mkdirSync(OUTPUT_DIR, { recursive: true });
