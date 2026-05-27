@@ -12,8 +12,7 @@ export interface IItem extends IDrawer, ITicker, ISystem {
 	effectParams?: EffectParams;
 }
 
-export interface EffectParams {
-}
+export interface EffectParams { }
 
 export interface Frequency {
 	mode?: string;
@@ -38,3 +37,4 @@ export interface Area {
 	width?: number;
 	height?: number;
 }
+

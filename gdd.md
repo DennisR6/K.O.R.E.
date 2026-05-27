@@ -142,16 +142,17 @@ Items sind **rein deklarativ** und werden **nicht im Code definiert**.
 
 ### Offizielle Item‑Liste
 
-* Anker
-* Magnet
-* Köder
-* Falltür
-* Power‑Dash
-* Verzögerte Mine
-* Mini‑Wall
-* Freeze‑Shot
-* Switch
-* Jägermeister‑Elixier
+* Anker - reduziert den Knockback 
+* Durchlässigkeit - Ghost-Mode
+* Magnet - Anziehen/Abstoßen von spielern
+* Falltür - Todeszone
+* Power‑Dash - friction reduce
+* Verzögerte Mine - Explosion und abstoßen von Spielern
+* Mini‑Wall - eine kleine Portable Wand
+* Freeze‑Shot - Spieler soll nur langsamer sein
+* Switch - Platztausch/Teleportation
+* Jägermeister‑Elixier - Gegnerischer Spieler kann nicht mehr benutzt werden.
+* Vodka Zero - Er schießt nicht perfekt in die richtige Richtung statt 45° einfach +-10°
 
 ---
 

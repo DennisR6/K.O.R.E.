@@ -79,6 +79,8 @@ export const GameState = {
 	GOAL_SCORED: "GOAL_SCORED",
 	TURN_DONE: "TURN_DONE",
 	GAME_OVER: "GAME_OVER",
+	ITEM_DRAW: "ITEM_DRAW",
+	ITEM_END: "ITEM_END",
 } as const;
 
 /** Bequemlichkeits-Typ für alle möglichen GameStates. */
