@@ -72,7 +72,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Arena-Grenzen
 - [x] Out-of-Bounds-Erkennung
-- [ ] Death-Event
+- [x] Death-Event
 
 ---
 
@@ -80,8 +80,8 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Runden-State-Machine (JSON)
 - [ ] Item-Phase
-- [ ] Stoß-Phase
-- [ ] Physik-Phase
+- [x] Stoß-Phase
+- [x] Physik-Phase
 - [x] Spielerwechsel
 
 ### Regeln (datengetrieben)
@@ -126,7 +126,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
   - [x] Arena-Form
 
 ### Hazards
-- [ ] Hazard-Registry
+- [x] Hazard-Registry
 - [ ] Effekte:
   - [ ] ApplyForce
   - [ ] ApplyRotation
@@ -137,7 +137,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 ## Phase 7 – Input-System (Richtung = Rotation)
 
 ### Actions
-- [ ] Aim (Rotation setzen)
+- [x] Aim (Rotation setzen)
 - [x] Charge (Force aufladen)
 - [x] Push (Force anwenden)
 - [ ] UseItem
@@ -152,14 +152,14 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 ## Phase 8 – KI (Rotation + Force)
 
 ### KI-Modell
-- [ ] Zielwinkel berechnen
-- [ ] Force evaluieren
-- [ ] Risikoabschätzung (Out-of-Bounds)
+- [x] Zielwinkel berechnen
+- [x] Force evaluieren
+- [x] Risikoabschätzung (Out-of-Bounds)
 
 ### Schwierigkeit
 - [x] Leicht – Zufallswinkel
-- [ ] Mittel – Heuristik
-- [ ] Schwer – Simulation (Winkel × Force)
+- [x] Mittel – Heuristik
+- [x] Schwer – Simulation (Winkel × Force)
 
 ---
 
