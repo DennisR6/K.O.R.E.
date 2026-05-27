@@ -34,7 +34,6 @@ export class BackgroundImageSystem implements IBackground {
 
 	constructor(url: AssetList) {
 		this.url = url
-
 	}
 
 	/** Statischer Hintergrund: Keine Logik-Updates nötig. */
@@ -67,7 +66,5 @@ export class BackgroundColorSystem implements IBackground {
 		 * Nutzt die ctx.clear Methode, um die gesamte Canvas-Fläche zu übermalen.
 		 */
 	public draw(ctx: RenderContext) { ctx.clear(this.color) }
-	getColor(): string {
-		return this.color
-	}
+	public getColor(): string { return this.color }
 }

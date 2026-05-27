@@ -4,7 +4,7 @@ import type { IItem } from "../item/Items.js";
 import { ItemWall } from "../item/ItemWall.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
 import { GameLogger } from "../utils/log.js";
-import type { IEntity, IInventory } from "./Entity.js";
+import type { IEntity } from "./Entity.js";
 
 
 /**
@@ -109,7 +109,7 @@ export class Player implements IEntity {
 		 * @param player - Die Konfigurationsdaten (IPlayer).
 		 */
 	public new(player: IPlayerType) {
-		this.setId(player.id || crypto.randomUUID())
+		this.setId(player.id || 0)
 		this.setPos({ x: player.x, y: player.y })
 		this.setVel({ x: 0, y: 0 })
 		this.team = player.team ?? this.team;

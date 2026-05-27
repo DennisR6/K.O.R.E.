@@ -367,6 +367,7 @@ export class GameHandler implements ITicker, IMouse {
 }
 
 
+
 export class GameHandlerBuilder {
 	private engine: GameHandler
 	private myTeam: string[] = []
@@ -404,7 +405,7 @@ export class GameHandlerBuilder {
 	public fromSettings(gameSettings: GameSettings): this {
 		this.engine.saveSettings(gameSettings)
 		// Adding Background
-		let background: IBackground = (getBackgoundSystem(gameSettings.background))
+		let background: IBackground = getBackgoundSystem(gameSettings.background)
 
 		// Add Mouse
 		const mouseHandler = new Mouse()

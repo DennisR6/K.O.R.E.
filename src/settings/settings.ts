@@ -188,7 +188,7 @@ export const GameSettings = {
 		{ id: 5, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 6, x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
+		{ id: 6, x: 650, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
 		{ id: 7, x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
 		{ id: 8, x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
 		{ id: 9, x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
@@ -199,8 +199,12 @@ export const GameSettings = {
 	items: [
 		{ type: "", id: 0 }
 	],
-	effects: [],
+	effects: [
+		{ id: "", type: "", value: 0 },
+	],
 	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },
-	music: ["/..."],
+	music: [
+		"/..."
+	],
 	team: ["1"]
 } as GameSettings

@@ -9,7 +9,7 @@ export interface IItem extends IDrawer, ITicker, ISystem {
 	frequency?: Frequency;
 	probability?: number;
 	spawn?: Spawn;
-	effectParams?: EffectParams;
+	effectParams?: EffectParams[];
 }
 
 export interface EffectParams { }
@@ -37,4 +37,5 @@ export interface Area {
 	width?: number;
 	height?: number;
 }
+
 

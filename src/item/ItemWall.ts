@@ -1,19 +1,12 @@
 import type { RenderContext } from "../engine/RenderContext.js";
-import type { EffectParams, Frequency, IItem, Spawn } from "./Items.js";
 import type { IGameContext } from "../systems/types.js"
 import { GameState, type GameStateType } from "../engine/types.js";
 import { ItemCollector } from "./ItemCollector.js";
+import { MinimalItem } from "./minimalItem.js";
+import type { IItem } from "./Items.js";
 
 
-export class ItemWall implements IItem {
-	id?: string;
-	name?: string;
-	effectType?: string;
-	trigger?: string;
-	frequency?: Frequency;
-	probability?: number;
-	spawn?: Spawn;
-	effectParams?: EffectParams;
+export class ItemWall extends MinimalItem {
 	private lastState: GameStateType;
 	private roundsActive: number = 0;
 	private readonly MAX_ROUNDS = 10;
@@ -22,17 +15,10 @@ export class ItemWall implements IItem {
 
 
 	constructor(item: Partial<IItem>) {
-		this.effectParams = item.effectParams
-		this.effectType = item.effectType
-		this.frequency = item.frequency
-		this.id = item.id
-		this.name = item.name
-		this.probability = item.probability
-		this.spawn = item.spawn
-		this.trigger = item.trigger
+		super(item)
 		this.lastState = GameState.YOUR_TURN
-
 	}
+
 	draw(_ctx: RenderContext): void { }
 
 	ticker(ctx: IGameContext, _dt: number, _gf: number) {
@@ -45,14 +31,13 @@ export class ItemWall implements IItem {
 		if (this.roundsActive < this.MAX_ROUNDS) {
 			// Wand spawnen, falls noch nicht geschehen
 			if (!this.isSpawned) {
-				const wall = new ItemCollector();
+				const wall = new ItemCollector({});
 				(wall as any).id = this.wallId;
 				ctx.structures.push(wall);
 				this.isSpawned = true;
 			}
 			this.roundsActive++;
 		} else if (this.isSpawned) {
-			// Wand entfernen nach 3 Runden
 			ctx.structures = ctx.structures.filter(s => (s as any).id !== this.wallId);
 			this.isSpawned = false;
 		}
