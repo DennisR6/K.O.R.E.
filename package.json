@@ -4,6 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
+		"start": "bun run server.ts",
 		"dev": "concurrently \"bun run server.ts\" \"bun run watch:ts\"",
 		"watch:ts": "tsc --watch",
 		"serve": "live-server",
