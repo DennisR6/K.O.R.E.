@@ -205,7 +205,7 @@ export const GameSettings = {
 	friction: FRICTION_TABLE.ice,
 	items: [
 		//@ts-ignore
-		{ type: "", id: 0, effectParams, frequency, probability, effectType }
+		{ type: "", id: 0 }
 	],
 	effects: [],
 	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },
