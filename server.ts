@@ -32,7 +32,7 @@ class RoomManager {
 // const rooms: Room = []
 const rm = new RoomManager()
 Bun.serve({
-	port: 3000,
+	port: PORT,
 
 	async fetch(req, server) {
 		if (server.upgrade(req)) {
