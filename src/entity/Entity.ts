@@ -1,5 +1,6 @@
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IDrawer, ITicker } from "../engine/RenderContext.js";
+import type { IItem } from "../item/Items.js";
 import type { IPhysicsCircle, Vector2D } from "../physics/physics.js";
 import type { IKillable } from "./types.js";
 
@@ -13,7 +14,7 @@ import type { IKillable } from "./types.js";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable {
+export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable, IInventory {
 
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
@@ -39,4 +40,9 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable {
 	getColor(): string;
 	getTeam(): string[];
 	isActive(): boolean
+}
+export interface IInventory {
+	AddItem(item: IItem): void
+	use(item: IItem): void
+	getInventory(): IItem[]
 }

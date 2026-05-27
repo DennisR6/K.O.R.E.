@@ -1,8 +1,10 @@
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
+import type { IItem } from "../item/Items.js";
+import { ItemWall } from "../item/ItemWall.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
 import { GameLogger } from "../utils/log.js";
-import type { IEntity } from "./Entity.js";
+import type { IEntity, IInventory } from "./Entity.js";
 
 
 /**
@@ -173,5 +175,11 @@ export class Player implements IEntity {
 	public isActive(): boolean { return this.isActive() }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
+	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
+	//@ts-ignore
+	public AddItem(item: IItem): void { this.itemlist.push(item) }
+	//@ts-ignore
+	public getInventory(): IItem[] { return new ItemWall({}) }
+	public use(_item: IItem): void { }
 }
 

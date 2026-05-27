@@ -119,6 +119,7 @@ export interface IdefaultPhysics {
 	getBounceFactor(): number;
 	getBounds(): Vector2D
 	physicsEnabled(): boolean;
+	setPhysicsEnabled(physicsEnabled: boolean): void;
 }
 /** Ein rundes Objekt (z.B. ein Ball oder ein Spieler-Pin). */
 export interface IPhysicsCircle extends IdefaultPhysics {

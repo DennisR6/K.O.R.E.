@@ -80,11 +80,14 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 
 	public getShape(): "circle" { return this.shape }
 	public getBounds(): Vector2D { return { x: this.r, y: this.r } }
+
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
+	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
+	public setColor(color: string | undefined) { this.color = color }
 }
 
