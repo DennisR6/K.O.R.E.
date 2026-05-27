@@ -8,7 +8,6 @@ export enum AssetList {
 	eisPNG,
 	lavaPNG,
 	darkwoodPNG,
-	billiardGroerLochJungePNG,
 	copilot20260505233044PNG,
 	billiardPNG,
 	picturePolarBearPolarBearHurtFrame1SVG,
@@ -43,7 +42,8 @@ export enum AssetList {
 	picturePenguinPenguinStarsFrame1PNG,
 	picturePenguinPenguinStarsFrame1WEBP,
 	picturePenguinPenguinStarsFrame2PNG,
-	picturePenguinPenguinStarsFrame2WEBP
+	picturePenguinPenguinStarsFrame2WEBP,
+	billiardGrosserLochJungePNG
 }
 
 export const AssetPaths: Record<AssetList, string> = {
@@ -56,7 +56,6 @@ export const AssetPaths: Record<AssetList, string> = {
 	[AssetList.eisPNG]: "eis.png",
 	[AssetList.lavaPNG]: "lava.png",
 	[AssetList.darkwoodPNG]: "dark-wood.png",
-	[AssetList.billiardGroerLochJungePNG]: "BilliardGroßerLochJunge.png",
 	[AssetList.copilot20260505233044PNG]: "Copilot_20260505_233044.png",
 	[AssetList.billiardPNG]: "billiard.png",
 	[AssetList.picturePolarBearPolarBearHurtFrame1SVG]: "picture/Polar_Bear/Polar_Bear_Hurt_Frame_1.svg",
@@ -91,7 +90,8 @@ export const AssetPaths: Record<AssetList, string> = {
 	[AssetList.picturePenguinPenguinStarsFrame1PNG]: "picture/penguin/Penguin_Stars_Frame_1.png",
 	[AssetList.picturePenguinPenguinStarsFrame1WEBP]: "picture/penguin/Penguin_Stars_Frame_1.webp",
 	[AssetList.picturePenguinPenguinStarsFrame2PNG]: "picture/penguin/Penguin_Stars_Frame_2.png",
-	[AssetList.picturePenguinPenguinStarsFrame2WEBP]: "picture/penguin/Penguin_Stars_Frame_2.webp"
+	[AssetList.picturePenguinPenguinStarsFrame2WEBP]: "picture/penguin/Penguin_Stars_Frame_2.webp",
+	[AssetList.billiardGrosserLochJungePNG]: "BilliardGrosserLochJunge.png"
 };
 
 export type AssetKey = AssetList;

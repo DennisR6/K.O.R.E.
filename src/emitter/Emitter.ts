@@ -17,10 +17,9 @@ export type IInputCallbackFunction = (actorId: string | number, angle: number, p
 // einen einzigen Import-Pfad nutzen muss.
 
 export { CombiEmitter, LogEmitter } from "./InputEmitter.js"
-export { SocketEmitter } from "./SocketEmitter.js"
 export { ObjectEmitter } from "./ObjectEmitter.js"
 export { GameEmitter } from "./EngineEmitter.js"
-
+export { NetworkEmitter } from "./NetworkEmitter.js"
 /**
  * Hilfsfunktion: Berechnet einen Zielpunkt basierend auf Startpunkt, Winkel und Kraft.
  * 

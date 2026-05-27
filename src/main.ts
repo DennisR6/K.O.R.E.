@@ -4,19 +4,39 @@ import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.js";
 import { GameHandlerBuilder } from "./engine/Handler.js";
-import { GameEmitter } from "./emitter/EngineEmitter.js";
+import { NetworkEmitter } from "./emitter/Emitter.js";
 
 
-const handler = new GameHandlerBuilder(2)
+
+const handler = new GameHandlerBuilder()
 	.defaultSystems()
 	.fromSettings(GameSettings)
 	.build()
 
-const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
+const socket = new WebSocket("wss://lupricht.net/kore/")
+socket.onmessage = (event) => {
+	const output = JSON.parse(event.data)
+	switch (output.type) {
+		case "turn": {
+			handler.tickTurn(output.sim)
+			break
+		}
+		case "init": {
+			console.log("init", output)
+			break
+		}
+		default:
+			console.log("TODO", output.type)
+	}
+}
+socket.onopen = () => {
+	socket.send(JSON.stringify({ type: "PING", sender: "Player1" }));
+};
+
+const em = new CombiEmitter([new LogEmitter(), new NetworkEmitter(socket)])
 handler.setEmitter(em)
 handler.start()
 
-const DEFAULTFPS = 60
 const sketch = (p: p5Types) => {
 	let ctx: RenderContext;
 	const scale = (window.window.innerWidth * 0.9) / GameSettings.screenResolution.x
@@ -31,11 +51,6 @@ const sketch = (p: p5Types) => {
 		handler.tick()
 		p.push()
 		handler.drawWorld(ctx)
-		p.pop()
-		p.push()
-		p.stroke(12)
-		p.textSize(24)
-		p.text("press <space> for 1 tick", 100, p.height - 20, undefined, undefined)
 		p.pop()
 	};
 
@@ -54,15 +69,4 @@ const sketch = (p: p5Types) => {
 new window.p5(sketch)
 window.game = { handler, logs: [] };
 
-// In deinem Input-Handler oder Window-Listener
-window.addEventListener('keydown', (e) => {
-	if (e.code === 'Space') {
-		const p1 = handler.getEntityManager().getEntities()[0]
-		const p2 = handler.getEntityManager().getEntities()[1]
-
-		console.table({ PosX: p1.getPos().x, PosY: p1.getPos().y, VelX: p1.getVel().x, VelY: p1.getVel().y });
-		console.table({ PosX: p2.getPos().x, PosY: p2.getPos().y, VelX: p2.getVel().x, VelY: p2.getVel().y });
-
-		handler.tick((1_000 / DEFAULTFPS) / 10);
-	}
-});
+window.addEventListener('keydown', (_e) => { });

@@ -9,8 +9,8 @@ export interface GameSettings {
 	items?: SettingsItem[];
 	background?: SettingsBackground;
 	screenResolution: SettingsScreenResolution;
-	id: string,
 	team: string[],
+	id: string
 }
 
 export interface SettingsScreenResolution {
@@ -67,7 +67,8 @@ export interface SettingsEntity {
 	size?: number;
 	color?: string;
 	team: string[];
-	playericon: AssetKey;
+	playericon: AssetList;
+	hoop: AssetList;
 }
 
 export interface SettingsItem {
@@ -142,9 +143,10 @@ const thickness = 2
 const [x, y] = [800, 450]
 const offset = 30
 const CircleRadius = 15
-const debugColorStruct = "white"
+const debugColorStruct = undefined
+const defaultHoop = AssetList.pictureReifenWEBP
 export const GameSettings = {
-	id: "",
+	id: "0",
 	screenResolution: { x, y },
 	mapBoundarys: [
 		// Rectangles
@@ -157,8 +159,8 @@ export const GameSettings = {
 
 		//RASTER
 		// { type: "rectangle", x: 0, y: 0, w: 800, h: 450, color: "cyan" },
-		{ type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
-		{ type: "rectangle", x: x / 2, y: 100, w: thickness, h: y / 2, color: "black" },
+		// { type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
+		{ type: "rectangle", x: x / 2, y: y / 3, w: thickness, h: y / 3, color: "black" },
 	],
 	hazzards: [
 		{ type: "circle", x: offset + CircleRadius, y: offset + CircleRadius, r: CircleRadius, color: debugColorStruct },
@@ -178,27 +180,27 @@ export const GameSettings = {
 	],
 	players: [
 		/* Formation LINKS (3x2) */
-		{ id: 1, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 2, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 3, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 4, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 5, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
-		{ id: 6, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize },
+		{ id: 0, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 1, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 2, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 3, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 4, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: 5, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 7, x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 8, x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 9, x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 10, x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 11, x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 12, x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize }
+		{ id: 6, x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize },
+		{ id: 7, x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize },
+		{ id: 8, x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize },
+		{ id: 9, x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize },
+		{ id: 10, x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize },
+		{ id: 11, x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2", "1"], size: playerSize }
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [
 		{ type: "", id: 0 }
 	],
 	effects: [],
-	background: { type: "image", url: AssetList.billiardGroerLochJungePNG },
+	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },
 	music: ["/..."],
 	team: ["1"]
 } as GameSettings

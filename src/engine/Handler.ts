@@ -360,12 +360,9 @@ export class GameHandler implements ITicker, IMouse {
 	public setTickRate(tickRate: number) { this.dt = tickRate }
 	public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
 	public setCurrentMousePosition(_pos: Vector2D): void { }
-	saveSettings(settings: any) {
-		this.settings = settings
-	}
-	exportGame(): { logs: IInput[], settings: Partial<GameSettings> | any } {
-		return { logs: this.turns, settings: JSON.stringify(this.settings) }
-	}
+	public saveSettings(settings: any) { this.settings = settings }
+	public getSettings(): GameSettings { return this.settings }
+	exportGame(): { logs: IInput[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
 	public addLog(log: any) { this.logs.push(log) }
 }
 
@@ -419,7 +416,7 @@ export class GameHandlerBuilder {
 		this.engine.addPostDrawer(mouseHandler)
 
 		// Player
-		gameSettings.players?.forEach(player => this.addPlayer(new Player().new({ ...player })))
+		gameSettings.players?.forEach((player, id) => this.addPlayer(new Player().new({ ...player, id })))
 		// Structures
 		gameSettings.mapBoundarys?.forEach(boundary => {
 			if (boundary.type === "circle") this.engine.addStructure(new StructureCircle(boundary.x, boundary.y, boundary.r, boundary.color))
