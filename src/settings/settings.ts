@@ -1,4 +1,5 @@
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
+import type { EffectParams, Frequency, Spawn } from "../item/Items.js";
 
 export interface GameSettings {
 	mapBoundarys?: MapBoundary[];
@@ -72,8 +73,14 @@ export interface SettingsEntity {
 }
 
 export interface SettingsItem {
-	type: string
-	id: number
+	id: string;
+	name: string;
+	effectType: string[];
+	trigger: string;
+	frequency: Frequency;
+	probability: number;
+	spawn: Spawn;
+	effectParams: EffectParams[];
 }
 
 export interface FrictionSettings {
@@ -197,7 +204,8 @@ export const GameSettings = {
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [
-		{ type: "", id: 0 }
+		//@ts-ignore
+		{ type: "", id: 0, effectParams, frequency, probability, effectType }
 	],
 	effects: [],
 	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },

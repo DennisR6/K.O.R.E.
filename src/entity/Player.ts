@@ -4,7 +4,7 @@ import type { IItem } from "../item/Items.js";
 import { ItemWall } from "../item/ItemWall.js";
 import type { IPhysics, Vector2D } from "../physics/physics.js";
 import { GameLogger } from "../utils/log.js";
-import type { IEntity, IInventory } from "./Entity.js";
+import type { IEntity } from "./Entity.js";
 
 
 /**
