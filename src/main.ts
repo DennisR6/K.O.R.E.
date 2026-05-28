@@ -4,8 +4,7 @@ import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
 import { LogEmitter, CombiEmitter } from "./emitter/InputEmitter.js";
 import { GameHandlerBuilder } from "./engine/Handler.js";
-import { GameEmitter } from "./emitter/Emitter.js";
-import { ItemWall } from "./item/ItemWall.js"
+import { NetworkEmitter } from "./emitter/Emitter.js";
 
 
 
@@ -13,33 +12,33 @@ const handler = new GameHandlerBuilder()
 	.defaultSystems()
 	.fromSettings(GameSettings)
 	//@ts-ignore
-	.addSystem(new ItemWall(GameSettings.items!))
+	// .addSystem(new ItemWall(GameSettings.items!))
 	.build()
 
 
-//@ts-ignore
-handler.addPreTickAndDraw(new ItemWall(GameSettings.items!))
-// const socket = new WebSocket("wss://lupricht.net/kore/")
-// socket.onmessage = (event) => {
-// 	const output = JSON.parse(event.data)
-// 	switch (output.type) {
-// 		case "turn": {
-// 			handler.tickTurn(output.sim)
-// 			break
-// 		}
-// 		case "init": {
-// 			console.log("init", output)
-// 			break
-// 		}
-// 		default:
-// 			console.log("TODO", output.type)
-// 	}
-// }
-// socket.onopen = () => {
-// 	socket.send(JSON.stringify({ type: "PING", sender: "Player1" }));
-// };
-//
-const em = new CombiEmitter([new LogEmitter(), new GameEmitter(handler)])
+// //@ts-ignore
+// handler.addPreTickAndDraw(new ItemWall(GameSettings.items!))
+const socket = new WebSocket("wss://lupricht.net/kore/")
+socket.onmessage = (event) => {
+	const output = JSON.parse(event.data)
+	switch (output.type) {
+		case "turn": {
+			handler.tickTurn(output.sim)
+			break
+		}
+		case "init": {
+			console.log("init", output)
+			break
+		}
+		default:
+			console.log("TODO", output.type)
+	}
+}
+socket.onopen = () => {
+	socket.send(JSON.stringify({ type: "PING", sender: "Player1" }));
+};
+
+const em = new CombiEmitter([new LogEmitter(), new NetworkEmitter(socket)])
 handler.setEmitter(em)
 handler.start()
 
