@@ -1,5 +1,4 @@
 import { type IInputEmitter } from "../engine/types.js";
-import { GameLogger } from "../utils/log.js";
 
 /**
  * Die "Steckerleiste" für Inputs.
@@ -21,13 +20,15 @@ export class CombiEmitter implements IInputEmitter {
 	/**
 	 * Verteilt den Schuss an alle registrierten Emitter.
 	 */
-	sendShot = (actorId: string | number, angle: number, power: number): void => {
+	sendShot = (actorId: string, angle: number, power: number): void => {
 		this.emitters.forEach(e => e.sendShot(actorId, angle, power));
 	}
 
 	/** Fügt zur Laufzeit einen weiteren Emitter hinzu. */
-	addEmitter(emitter: IInputEmitter) {
-		this.emitters.push(emitter)
+	addEmitter(...emitter: IInputEmitter[]) {
+		for (const em of emitter) {
+			this.emitters.push(em)
+		}
 	}
 }
 
@@ -38,8 +39,8 @@ export class CombiEmitter implements IInputEmitter {
  * Extrem hilfreich, um zu prüfen, ob die Maus-Berechnungen korrekt ankommen.
  */
 export class LogEmitter implements IInputEmitter {
-	sendShot(actorId: string | number, angle: number, power: number) {
+	sendShot(actorId: string, angle: number, power: number) {
 		// Strukturiertes Logging über das Engine-Tool
-		GameLogger.debug("TURN", { actorId, angle, power })
+		console.debug("TURN", { actorId, angle, power })
 	}
 }

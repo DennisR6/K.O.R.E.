@@ -21,7 +21,7 @@ import type { IGameContext } from "../systems/types.js";
  */
 export class Mouse implements IMouseHandler, IDrawer {
 	private currentMouse: Vector2D
-	private dragStart: Vector2D & { actorId: string | number } | undefined;
+	private dragStart: Vector2D & { actorId: string } | undefined;
 	private entityManager: EntityManager
 	private yourTurn: boolean
 	private myTeam: string[]
@@ -125,7 +125,7 @@ export class Mouse implements IMouseHandler, IDrawer {
 	/**
 	 * Wird aufgerufen, wenn die Maustaste losgelassen wird.
 	 */
-	public handleMouseReleased(cb?: (actorId: number | string, angle: number, power: number) => void): void {
+	public handleMouseReleased(cb?: (actorId: string, angle: number, power: number) => void): void {
 		const output = this.parseLocalInput();
 		this.dragStart = undefined
 		if (output && cb) cb(output.actorId, output.angle, output.power)
@@ -160,6 +160,7 @@ export class Mouse implements IMouseHandler, IDrawer {
 	}
 	public setCurrentMousePosition(pos: Vector2D) { this.currentMouse = { ...pos } }
 	public getCurrentMousePosition(): Vector2D { return this.currentMouse }
+	public getTeam(): string[] { return this.myTeam }
 
 }
 

@@ -1,7 +1,9 @@
+import { EffectType, type Effect, type EffectTrigger } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
-import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics.js"
-import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
+import type { MapBoundarySettingsRect, SettingsEffect } from "../settings/settings.js";
+import { type IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein massives, rechteckiges Hindernis (Block).
@@ -13,7 +15,7 @@ import type { IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
  */
-export class StructureRectangle implements IStructure, IPhysicsRectangle {
+export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>, ISettingsSerialize<MapBoundarySettingsRect<EffectType, EffectTrigger>> {
 	/** X-Koordinate der oberen linken Ecke. */
 	private x: number;
 	/** Y-Koordinate der oberen linken Ecke. */
@@ -22,9 +24,9 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	private w: number;
 	/** Höhe (Height) des Rechtecks. */
 	private h: number;
-
+	private effects: Effect[]
 	/** Kennung der Form für das Physik-System. */
-	private shape: "rectangle";
+	private shape: SHAPE.RECTANGLE;
 	/** Extrem hohe Masse (Infinity), damit das Objekt bei Kollisionen unbeweglich bleibt. */
 	private mass: number = Infinity;
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
@@ -45,15 +47,21 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	 * @param h - Höhe des Blocks.
 	 * @param color - Füllfarbe des Rechtecks.
 	 */
-	constructor(x: number, y: number, w: number, h: number, color?: string) {
+	constructor(x: number, y: number, w: number, h: number, color?: string, effects: SettingsEffect<EffectType, EffectTrigger>[] = []) {
 		this.x = x
 		this.y = y
 		this.w = w
 		this.h = h
 		this.color = color
-		this.shape = "rectangle"
+		this.shape = SHAPE.RECTANGLE
 		this.vel = { x: 0, y: 0 }
 		this.bounce = Infinity
+		this.effects = []
+		for (const effect of effects) {
+			switch (effect.type) {
+				default: console.log(`Effect not implemented in ${getShapeName(this.shape)}`, effect)
+			}
+		}
 	}
 
 	/**
@@ -77,8 +85,8 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 
 	public getVel(): Vector2D { return this.vel }
 
-	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`)
+	public onCollision({ }: { entity: IPhysics<SHAPE> }): void {
+		// console.log(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
 	}
 
 	public setVel(vel: Vector2D): void { this.vel = vel }
@@ -99,8 +107,15 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	public tick(_deltatime: number, _globalfriction: number): void { }
 
 	/** @returns Immer "rectangle" für den Physics-Dispatcher. */
-	public getShape(): "rectangle" { return this.shape }
+	public getShape(): SHAPE.RECTANGLE { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean) { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	public toSettings(): MapBoundarySettingsRect<EffectType, EffectTrigger> {
+		return { type: SHAPE.RECTANGLE, x: this.x, y: this.y, w: this.w, h: this.h, color: this.color, effects: this.effects }
+	}
+	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
+	public getType(): SHAPE.RECTANGLE { return this.shape }
+	public getX(): number { return this.x }
+	public getY(): number { return this.y }
 }

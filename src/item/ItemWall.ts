@@ -1,16 +1,16 @@
 import type { RenderContext } from "../engine/RenderContext.js";
 import type { IGameContext } from "../systems/types.js"
-import { GameState, type GameStateType } from "../engine/types.js";
+import { GameState } from "../engine/types.js";
 import { ItemCollector } from "./ItemCollector.js";
 import { MinimalItem } from "./minimalItem.js";
 import type { IItem } from "./Items.js";
 
 
 export class ItemWall extends MinimalItem {
-	private lastState: GameStateType;
+	private lastState: GameState;
 	private roundsActive: number = 0;
 	private readonly MAX_ROUNDS = 10;
-	private wallId: string = "wall_" + Math.random().toString(36).substr(2, 9);
+	private wallId: string = "wall_" + Math.random().toString(36).substring(2, 9);
 	private isSpawned: boolean = false;
 
 

@@ -1,7 +1,6 @@
 import type { EntityManager } from "../entity/EntityManager.js";
-import { PhysicsSystem } from "./PhysicsSystem.js";
-import type { IGameContext, ISimulator } from "./types.js";
-import { GameState } from "../engine/types.js";
+import type { ISimulator } from "./types.js";
+import type { PhysicsStrategy } from "../physics/physics.js";
 
 /**
  * Der Simulator berechnet Spielzustände unabhängig von der Anzeige.
@@ -11,9 +10,9 @@ import { GameState } from "../engine/types.js";
  * die Animation (Playback) beginnt.
  */
 export class Simulator implements ISimulator {
-	private physics: PhysicsSystem
+	private physics: PhysicsStrategy
 
-	constructor(physics: PhysicsSystem) { this.physics = physics }
+	constructor(physics: PhysicsStrategy) { this.physics = physics }
 
 	/**
 	 * Prüft, ob die Welt "eingeschlafen" ist.
@@ -35,9 +34,7 @@ export class Simulator implements ISimulator {
 		});
 	}
 
-	ticker(ctx: IGameContext, dt: number, friction: number): void {
-		if (ctx.state !== GameState.SIMULATING) return
-		// Wir rufen direkt den Taktgeber der Physik auf
-		this.physics.ticker(ctx, dt, friction ?? this.physics.strategy.getFriction());
+	tick(dt: number, friction: number): void {
+		this.physics.tick(dt, friction ?? this.physics.getFriction());
 	}
 }

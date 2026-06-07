@@ -1,5 +1,4 @@
 import { GameState } from "../engine/types.js";
-import { GameLogger } from "../utils/log.js";
 import type { IGameContext, ISystem } from "./types.js";
 
 /**
@@ -31,13 +30,15 @@ export class Round2PlayerSystem implements ISystem {
 	 * Prüft den Spielzustand und wechselt die Runde, sobald die Action vorbei ist.
 	 */
 	ticker(ctx: IGameContext, _dt: number): void {
+		if (ctx.state == GameState.YOUR_TURN) this.yourTurn = false
+		if (ctx.state == GameState.OPPONENTS_TURN) this.yourTurn = true
 		if (ctx.state !== GameState.PLAYING_DONE) return;
 
 		if (this.yourTurn) {
-			GameLogger.info(`${ctx.state} -> ${GameState.YOUR_TURN}`)
+			// GameLogger.info(`${ctx.state} -> ${GameState.YOUR_TURN}`)
 			ctx.state = GameState.YOUR_TURN;
 		} else {
-			GameLogger.info(`${ctx.state} -> ${GameState.OPPONENTS_TURN}`)
+			// GameLogger.info(`${ctx.state} -> ${GameState.OPPONENTS_TURN}`)
 			ctx.state = GameState.OPPONENTS_TURN;
 		}
 

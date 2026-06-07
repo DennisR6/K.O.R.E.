@@ -43,7 +43,8 @@ export enum AssetList {
 	picturePenguinPenguinStarsFrame1WEBP,
 	picturePenguinPenguinStarsFrame2PNG,
 	picturePenguinPenguinStarsFrame2WEBP,
-	billiardGrosserLochJungePNG
+	billiardGrosserLochJungePNG,
+	SlipstrikeIceMap,
 }
 
 export const AssetPaths: Record<AssetList, string> = {
@@ -91,7 +92,8 @@ export const AssetPaths: Record<AssetList, string> = {
 	[AssetList.picturePenguinPenguinStarsFrame1WEBP]: "picture/penguin/Penguin_Stars_Frame_1.webp",
 	[AssetList.picturePenguinPenguinStarsFrame2PNG]: "picture/penguin/Penguin_Stars_Frame_2.png",
 	[AssetList.picturePenguinPenguinStarsFrame2WEBP]: "picture/penguin/Penguin_Stars_Frame_2.webp",
-	[AssetList.billiardGrosserLochJungePNG]: "BilliardGrosserLochJunge.png"
+	[AssetList.billiardGrosserLochJungePNG]: "BilliardGrosserLochJunge.png",
+	[AssetList.SlipstrikeIceMap]: "Slip_Stirke_Map_Ice.jpg",
 };
 
 export type AssetKey = AssetList;

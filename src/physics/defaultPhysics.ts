@@ -1,6 +1,5 @@
 import type { FrictionSettings } from "../settings/settings.js";
-import { GameLogger } from "../utils/log.js";
-import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics.js";
+import { getShapeName, PhysicsLevel, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -17,13 +16,14 @@ import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vect
  * Falls du mehr Infos brauchst, findest du diese im Test unter tests/physics.test.ts
  */
 export class defaultPhysics implements PhysicsStrategy {
+	private readonly STOP_THRESHOLD = 0.01;
 	/** Exponentielle Reibung (Multiplikator pro Frame, z.B. 0.995). */
-	friction: number;
+	private friction: number;
 	/** Linearer Widerstand (fester Abzug pro Frame). */
-	linearDrag: number;
+	private linearDrag: number;
 	/** Geschwindigkeits-Grenze, unter der ein Objekt als "stehend" gilt. */
-	stopThreshold: number;
-
+	private stopThreshold: number;
+	private queue: [IPhysics<SHAPE>[]]
 	/**
 	 * @param settings - Optionale Reibungseinstellungen. Falls leer, werden Standardwerte genutzt.
 	 */
@@ -32,6 +32,8 @@ export class defaultPhysics implements PhysicsStrategy {
 		this.friction = settings?.friction ?? defaults.friction
 		this.linearDrag = settings?.linearDrag ?? defaults.linearDrag
 		this.stopThreshold = settings?.stopThreshold ?? defaults.stopThreshold
+		this.queue = [[]]
+		for (let i = 1; i < PhysicsLevel.LastLevel; ++i) this.queue.push([])
 	}
 
 	public getDefaults(): FrictionSettings {
@@ -93,28 +95,30 @@ export class defaultPhysics implements PhysicsStrategy {
 		return Math.max(min, Math.min(max, val))
 	}
 
-	public checkCollision(entityA: IPhysics, entityB: IPhysics): boolean {
+	public checkCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): boolean {
 		switch (true) {
-			case entityA.getShape() == "circle" && entityB.getShape() == "circle":
-				return this.checkCollisionCircles(entityA as IPhysicsCircle, entityB as IPhysicsCircle)
-			case entityA.getShape() == "rectangle" && entityB.getShape() == "circle":
-				return this.checkCollisionCircleRect(entityB as IPhysicsCircle, entityA as IPhysicsRectangle);
-			case entityA.getShape() == "circle" && entityB.getShape() == "rectangle":
-				return this.checkCollisionCircleRect(entityA as IPhysicsCircle, entityB as IPhysicsRectangle)
-			case entityA.getShape() == "rectangle" && entityB.getShape() == "rectangle":
-				return this.checkCollisionRects(entityA as IPhysicsRectangle, entityB as IPhysicsRectangle)
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.CIRCLE:
+				return this.checkCollisionCircles(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.CIRCLE>)
+			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
+				return this.checkCollisionCircleRect(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.RECTANGLE>);
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
+				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
+			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
+				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
+			default:
+				console.log(`Collision not implemented for ${getShapeName(entityA.getShape())} ${getShapeName(entityB.getShape())}`)
 		}
 		return false
 	}
 
-	public checkCollisionCircles(entityA: IPhysicsCircle, entityB: IPhysicsCircle): boolean {
+	public checkCollisionCircles(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.CIRCLE>): boolean {
 		const d2 = this.distSq(entityA.getPos(), entityB.getPos());
 		const rSum = entityA.getBounds().x + entityB.getBounds().x;
 
 		return d2 <= (rSum * rSum);
 	}
 
-	public checkCollisionRects(entityA: IPhysicsRectangle, entityB: IPhysicsRectangle): boolean {
+	public checkCollisionRects(entityA: IPhysics<SHAPE.RECTANGLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
 		return Ax <= Bx + entityB.getBounds().x &&
@@ -123,7 +127,7 @@ export class defaultPhysics implements PhysicsStrategy {
 			Ay + entityA.getBounds().y >= By;
 	}
 
-	public checkCollisionCircleRect(entityA: IPhysicsCircle, entityB: IPhysicsRectangle): boolean {
+	public checkCollisionCircleRect(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
 		const closest = {
@@ -134,16 +138,15 @@ export class defaultPhysics implements PhysicsStrategy {
 		return d2 <= (entityA.getBounds().x * entityA.getBounds().x);
 	}
 
-	public handleCollision(entityA: IPhysics, entityB: IPhysics): void {
+	public handleCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): void {
 		const posA = { ...entityA.getPos() };
 		const posB = { ...entityB.getPos() };
 		const dist = this.dist(posA, posB);
 
 		if (dist === 0) return;
 
-		// if (entityA.getShape() === "circle") entityA as IPhysicsCircle
 		switch (true) {
-			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.CIRCLE): {
 				const radiusA = entityA.getBounds().x;
 				const radiusB = entityB.getBounds().x;
 				const combinedRadius = radiusA + radiusB;
@@ -196,18 +199,18 @@ export class defaultPhysics implements PhysicsStrategy {
 					}
 				}
 
-				entityA.onCollision({ entity: entityB });
-				entityB.onCollision({ entity: entityA });
+				entityA.onCollision({ entity: entityB as IPhysics<SHAPE.CIRCLE> });
+				entityB.onCollision({ entity: entityA as IPhysics<SHAPE.CIRCLE> });
 				break;
 			}
-			case (entityA.getShape() === "rectangle" && entityB.getShape() === "rectangle"): {
-				GameLogger.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
+			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
+				console.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				break
 			}
-			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):
-			case (entityA.getShape() === "rectangle" && entityB.getShape() === "circle"): {
-				const circle = (entityA.getShape() === "circle" ? entityA : entityB) as IPhysicsCircle;
-				const rectangle = (entityA.getShape() === "rectangle" ? entityA : entityB) as IPhysicsRectangle;
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):
+			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.CIRCLE): {
+				const circle = (entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB) as IPhysics<SHAPE.CIRCLE>;
+				const rectangle = (entityA.getShape() === SHAPE.RECTANGLE ? entityA : entityB) as IPhysics<SHAPE.RECTANGLE>;
 
 				const cPos = circle.getPos();
 				const rPos = rectangle.getPos();
@@ -326,7 +329,7 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 	}
 
-	public applyImpulse(entity: IPhysics, angle: number, power: number): void {
+	public applyImpulse(entity: IPhysics<SHAPE>, angle: number, power: number): void {
 		const mass = entity.getMass();
 		if (mass === Infinity) return;
 
@@ -349,7 +352,7 @@ export class defaultPhysics implements PhysicsStrategy {
 		return this.friction
 	}
 
-	public applyFriction(entity: IPhysics, dt: number): void {
+	public applyFriction(entity: IPhysics<SHAPE>, dt: number): void {
 		let { x: vx, y: vy } = entity.getVel();
 
 		const f = Math.pow(this.friction, dt);
@@ -373,7 +376,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 
 	public printSettings(who?: string) {
-		GameLogger.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
+		console.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
 	}
 
 	/**
@@ -432,5 +435,87 @@ export class defaultPhysics implements PhysicsStrategy {
 			y += vy;
 		}
 		return { x, y };
+	}
+	public toSettings(): FrictionSettings { return { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold } }
+	public addToQueue(level: PhysicsLevel, shape: IPhysics<SHAPE>): void { this.queue[level as number].push(shape) }
+
+
+	public tick(dt: number = 1, _friction: number = this.friction): void {
+		let totalMovement = 0;
+
+		this.resolveAllCollisions();
+
+		this.queue.forEach(level =>
+			level.forEach((shape: IPhysics<SHAPE>) => {
+				this.applyFriction(shape, dt)
+
+				const { x, y } = shape.getPos()
+				const { x: vx, y: vy } = shape.getVel()
+				shape.setPos({ x: x + vx * dt, y: y + vy * dt })
+				this.constrainToMap(shape, { x: 0, y: 0, w: 800, h: 450 });
+
+				const speed = Math.sqrt(shape.getVel().x ** 2 + shape.getVel().y ** 2);
+				if (speed < this.STOP_THRESHOLD) {
+					shape.setVel({ x: 0, y: 0 });
+				} else {
+					totalMovement += speed;
+				}
+			}));
+	}
+
+	/**
+	 * Berechnet die Physik für den aktuellen Frame.
+	 * Wendet Kollisionen und Reibung an und stoppt Objekte, die die 
+	 * Mindestgeschwindigkeit unterschreiten.
+	 */
+	private resolveAllCollisions() {
+		const levels = Object.keys(this.queue).map(Number);
+
+		for (let i = 0; i < levels.length; i++) {
+			for (let j = i; j < levels.length; j++) {
+				const levelA = this.queue[levels[i]];
+				const levelB = this.queue[levels[j]];
+
+				for (const entityA of levelA) {
+					for (const entityB of levelB) {
+						if (entityA === entityB) continue;
+
+						if (this.checkCollision(entityA, entityB)) {
+							this.handleCollision(entityA, entityB);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private constrainToMap(shape: IPhysics<SHAPE>, { x, y, w, h }: { x: number, y: number, w: number, h: number }) {
+		const pos = shape.getPos();
+		const radius = shape.getBounds().x;
+		const bounds = { minX: x, maxX: w, minY: y, maxY: h };
+
+		if (pos.x - radius < bounds.minX) {
+			shape.setPos({ x: bounds.minX + radius, y: pos.y });
+			shape.setVel({ x: 0, y: shape.getVel().y });
+		} else if (pos.x + radius > bounds.maxX) {
+			shape.setPos({ x: bounds.maxX - radius, y: pos.y });
+			shape.setVel({ x: 0, y: shape.getVel().y });
+		}
+
+		if (pos.y - radius < bounds.minY) {
+			shape.setPos({ x: bounds.minY + radius, y: pos.y });
+			shape.setVel({ x: 0, y: shape.getVel().y });
+		} else if (pos.y + radius > bounds.maxY) {
+			shape.setPos({ x: bounds.maxY - radius, y: pos.y });
+			shape.setVel({ x: 0, y: shape.getVel().y });
+		}
+	}
+	isMoving(): boolean {
+		return !this.queue.every(level => level.every(shape => {
+			const { x, y } = shape.getVel()
+			if (x > Math.abs(this.STOP_THRESHOLD)) return false
+			if (y > Math.abs(this.STOP_THRESHOLD)) return false
+			return true
+		}))
 	}
 }

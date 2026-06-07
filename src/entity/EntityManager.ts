@@ -2,9 +2,10 @@ import { type IEntity } from "./Entity.js";
 import type { SettingsEntity } from "../settings/settings.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
+import type { UUID } from "node:crypto";
 
 type SerializedPlayerStats = {
-	id: number | string
+	id: UUID
 	x: number
 	y: number
 	vx: number
@@ -51,7 +52,7 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Sucht eine Entity anhand ihrer eindeutigen ID.
 		 * @param id - Die ID der gesuchten Entity.
 		 */
-	public getEntityById(id: string | number): IEntity | undefined {
+	public getEntityById(id: string): IEntity | undefined {
 		return this.entities.find(e => e.getId() === id);
 	}
 

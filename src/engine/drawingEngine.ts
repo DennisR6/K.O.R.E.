@@ -1,6 +1,5 @@
 import type p5Types from "p5";
 import type { RenderContext } from "./RenderContext.js";
-import { GameLogger } from "../utils/log.js";
 import { assetManager } from "../assetManager/loader.js";
 import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
 /**
@@ -54,7 +53,7 @@ export class P5Renderer implements RenderContext {
 	}
 	drawCircle(x: number, y: number, radius: number) {
 		if (isNaN(x) || isNaN(y) || isNaN(radius)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), this.toPixel(radius * 2))
@@ -64,7 +63,7 @@ export class P5Renderer implements RenderContext {
 	}
 	drawText(text: string, x: number, y: number, fontSize?: number) {
 		if (isNaN(x) || isNaN(y)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.textSize(fontSize || 12)
@@ -127,21 +126,21 @@ export class P5Renderer implements RenderContext {
 	}
 	rotate(x: number): void {
 		if (Number.isNaN(x)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.rotate(x)
 	}
 	scale(x: number): void {
 		if (isNaN(x)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.scale(x)
 	}
 	translate(x: number, y: number): void {
 		if (Number.isNaN(x) || Number.isNaN(y)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.translate(x, y)

@@ -1,5 +1,7 @@
 import type { IInputEmitter } from "../engine/types.js";
-import { GameLogger } from "../utils/log.js";
+import { NetworkMessageType, type NetworkShoot } from "../server/server.js";
+import { wrap } from "../utils/net.js";
+import type { UUID } from "crypto";
 
 /**
  * Der Netzwerk-Emitter.
@@ -10,9 +12,13 @@ import { GameLogger } from "../utils/log.js";
  */
 export class NetworkEmitter implements IInputEmitter {
 	socket: WebSocket
+	userid: UUID
+	gameid: UUID
 
-	constructor(socket: WebSocket) {
+	constructor(socket: WebSocket, userid: UUID, gameid: UUID) {
 		this.socket = socket
+		this.userid = userid
+		this.gameid = gameid
 	}
 
 	/**
@@ -21,8 +27,8 @@ export class NetworkEmitter implements IInputEmitter {
 	 * Die Event-Struktur ('shoot') und die Payload 
 	 * könnten sich ändern, sobald das Netzwerk-Protokoll finalisiert ist.
 	 */
-	sendShot(actorId: string | number, angle: number, power: number): void {
-		GameLogger.info(actorId, angle, power)
-		this.socket.send(JSON.stringify({ type: "shoot", actorId, angle, power }))
+	sendShot(actorId: string, angle: number, power: number): void {
+		console.info(actorId, angle, power)
+		this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power, userid: this.userid, gameid: this.gameid }))
 	}
 }

@@ -1,3 +1,6 @@
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { FrictionSettings } from "../settings/settings.js";
+
 /**
  * Ein Punkt oder eine Richtung im 2D-Raum.
  * 
@@ -11,14 +14,18 @@ export interface Vector2D {
 	/** Die Position auf der vertikalen Achse. */
 	y: number;
 }
-
+export const enum PhysicsLevel {
+	Entity,
+	Map,
+	LastLevel
+}
 /**
  * Das mathematische Gehirn der Engine.
  * 
  * Dieses Interface erzwingt, dass jede Physik-Implementierung (z.B. Arcade, Realistic)
  * sowohl die Rechenlogik (Vektoren) als auch die physikalischen Regeln (Kollision) definiert.
  */
-export interface PhysicsStrategy {
+export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
 	/** Berechnet den Abprall-Vektor (wie ein Ball an der Wand). */
 	calculateBounce(vel: Vector2D, normal: Vector2D): Vector2D;
 
@@ -55,28 +62,28 @@ export interface PhysicsStrategy {
 	// --- Kollisions-Logik ---
 
 	/** Prüft, ob sich zwei Kreise berühren. */
-	checkCollisionCircles(entityA: IPhysicsCircle, entityB: IPhysicsCircle): boolean;
+	checkCollisionCircles(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.CIRCLE>): boolean;
 
 	/** Prüft, ob sich zwei Rechtecke überschneiden. */
-	checkCollisionRects(entityA: IPhysicsRectangle, entityB: IPhysicsRectangle): boolean;
+	checkCollisionRects(entityA: IPhysics<SHAPE.RECTANGLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean;
 
 	/** Die All-in-One Prüfung: Erkennt automatisch, welche Formen kollidieren. */
-	checkCollision(entityA: IPhysics, entityB: IPhysics): boolean;
+	checkCollision(entityA: IPhysics<any>, entityB: IPhysics<any>): boolean;
 
 	/** Spezialprüfung: Kollision zwischen einem Kreis und einem Rechteck. */
-	checkCollisionCircleRect(entityA: IPhysicsCircle, entityB: IPhysicsRectangle): boolean;
+	checkCollisionCircleRect(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean;
 
 	/** Löst die Kollision auf (schubst Objekte auseinander, damit sie nicht ineinander stecken). */
-	handleCollision(entityA: IPhysics, entityB: IPhysics): void;
+	handleCollision(entityA: IPhysics<any>, entityB: IPhysics<any>): void;
 
 	/** Gibt den aktuellen Reibungswert zurück. */
 	getFriction(): number;
 
 	/** Gibt einem Objekt einen Stoß in eine bestimmte Richtung mit einer gewissen Kraft. */
-	applyImpulse(entity: IPhysics, angle: number, power: number): void;
+	applyImpulse(entity: IPhysics<any>, angle: number, power: number): void;
 
 	/** Verlangsamt ein Objekt basierend auf der Zeit (bremst es ab). */
-	applyFriction(entity: IPhysics, dt: number): void;
+	applyFriction(entity: IPhysics<any>, dt: number): void;
 
 	/** Sagt voraus, wo ein Objekt stehen bleiben wird (Bremspfad-Vorschau). */
 	calculateStop(startPos: Vector2D, initialVel: Vector2D): Vector2D;
@@ -87,6 +94,9 @@ export interface PhysicsStrategy {
 	// --- DEBUG ---
 	/** Schreibt die aktuellen Einstellungen der Physik-Engine in die Konsole. */
 	printSettings(who?: string): void;
+	addToQueue(level: PhysicsLevel, shape: IPhysics<SHAPE>): void
+	tick(dt: number, friction: number): void
+	isMoving(): boolean
 }
 /** 
  * Die physikalischen Grundeigenschaften für jedes Objekt im Spiel.
@@ -112,7 +122,7 @@ export interface IdefaultPhysics {
 	 * Diese Funktion wird aufgerufen, wenn das Objekt etwas berührt. 
 	 * Hier kann man z.B. Sounds abspielen oder Punkte zählen.
 	 */
-	onCollision({ entity }: { entity: IPhysics }): void;
+	onCollision({ entity }: { entity: IPhysics<SHAPE> }): void;
 
 	setBounceFactor(bounce: number): void;
 	/** Wie stark das Objekt abprallt (0 = gar nicht, 1 = wie ein Gummiball). */
@@ -120,20 +130,31 @@ export interface IdefaultPhysics {
 	getBounds(): Vector2D
 	physicsEnabled(): boolean;
 	setPhysicsEnabled(physicsEnabled: boolean): void;
+	getShape(): SHAPE
 }
 /** Ein rundes Objekt (z.B. ein Ball oder ein Spieler-Pin). */
-export interface IPhysicsCircle extends IdefaultPhysics {
-	/** Gibt "circle" zurück, damit die Engine weiß, wie man Kollisionen rechnet. */
-	getShape(): "circle";
-}
-
+export interface CirclePhysics extends IdefaultPhysics { getShape(): SHAPE.CIRCLE; }
 /** Ein eckiges Objekt (z.B. eine Wand, ein Tor oder ein Hindernis). */
-export interface IPhysicsRectangle extends IdefaultPhysics {
-	/** Gibt "rectangle" zurück. */
-	getShape(): "rectangle";
-}
+export interface RectanglePhysics extends IdefaultPhysics { getShape(): SHAPE.RECTANGLE; }
+export interface LinePhysics extends IdefaultPhysics { getShape(): SHAPE.LINE; }
 
 /** 
  * Kombi-Typ: Ein Objekt in der Physik-Engine ist ENTWEDER ein Kreis ODER ein Rechteck. 
  * (Es kann in der Zukunft Erweitert werden, aber aktuell sind es nur die 2) */
-export type IPhysics = IPhysicsCircle | IPhysicsRectangle;
+export const enum SHAPE { CIRCLE, LINE, RECTANGLE }
+export type PhyicsMap = {
+	[SHAPE.CIRCLE]: CirclePhysics
+	[SHAPE.RECTANGLE]: RectanglePhysics
+	[SHAPE.LINE]: LinePhysics
+}
+export type IPhysics<T extends SHAPE> = PhyicsMap[T]
+
+export function getShapeName(input: SHAPE): string {
+	switch (input) {
+		case SHAPE.CIRCLE: return "circle"
+		case SHAPE.RECTANGLE: return "rectangle"
+		case SHAPE.LINE: return "line"
+		default: return "TODO"
+	}
+}
+

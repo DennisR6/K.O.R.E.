@@ -1,4 +1,3 @@
-import { GameLogger } from "../utils/log.js";
 import { Player } from "./Player.js";
 
 /**
@@ -39,9 +38,9 @@ export class DebugPlayer extends Player {
 			(x > pos.x * 1.1 || x < pos.x * 0.9) ||
 			(y > pos.y * 1.1 || y < pos.y * 0.9)
 		) {
-			GameLogger.error("Position weicht massiv ab!");
+			console.error("Position weicht massiv ab!");
 		}
-		GameLogger.trace(this)
+		console.trace(this)
 		super.setPos(pos);
 	}
 
@@ -51,8 +50,8 @@ export class DebugPlayer extends Player {
 		 */
 	override setVel(vel: { x: number, y: number }): void {
 		if (this.trackingActive) {
-			GameLogger.info(`[TRACKER] setVel auf Entity ${this.getId().toString()}:`, vel);
-			GameLogger.trace();
+			console.info(`[TRACKER] setVel auf Entity ${this.getId().toString()}:`, vel);
+			console.trace();
 		}
 		super.setVel(vel);
 	}

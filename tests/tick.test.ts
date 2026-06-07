@@ -6,7 +6,7 @@ describe("teste, ob ein tick von 1 identisch ist, wie 100 ticks mit 0.1", { time
 	test("teste, ob ein tick von 1 identisch ist, wie 100 ticks mit 0.1", () => {
 		const handler = new GameHandlerBuilder()
 			.defaultSystems()
-			.addPlayer(new Player().new({ x: 100, y: 100, id: "p1" }))
+			.addPlayer(new Player().new({ x: 100, y: 100, id: "390adcee-c46c-4e71-b81a-33f18d488846" }))
 			.build()
 			.start()
 		let res;

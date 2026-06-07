@@ -4,6 +4,7 @@ import { Player } from "../entity/Player.js";
 import { StructureCircle } from "./structureCircle.js";
 
 export class DeadlyObstacleCirle extends StructureCircle {
+	secondaryColor: string = "green"
 	constructor(x: number, y: number, r: number, color?: string) { super(x, y, r, color) }
 
 	public onCollision({ entity }: { entity: IEntity }): void {
@@ -16,12 +17,14 @@ export class DeadlyObstacleCirle extends StructureCircle {
 		if (!this.getColor()) return
 
 		ctx.push()
-		ctx.setFillColor(this.getColor()!)
-		ctx.setStrokeColor(this.getColor()!)
-
 		const { x, y } = this.getPos()
 		const { x: r } = this.getBounds()
+		ctx.setFillColor(this.secondaryColor)
+		ctx.setStrokeColor(this.secondaryColor)
 		ctx.drawCircle(x, y, r * 2)
+		ctx.setFillColor(this.getColor()!)
+		ctx.setStrokeColor(this.getColor()!)
+		ctx.drawCircle(x, y, r)
 		ctx.pop()
 	}
 }

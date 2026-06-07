@@ -1,7 +1,9 @@
+import { EffectTrigger, EffectType, type Effect } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
-import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
-import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
+import type { MapBoundarySettingsCircle, SettingsEffect } from "../settings/settings.js";
+import { type Structure } from "./types.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -12,12 +14,12 @@ import type { IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsCircle} Notwendig für die Kreis-Kreis-Kollisionslogik.
  */
-export class StructureCircle implements IStructure, IPhysicsCircle {
+export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.CIRCLE>, ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger>> {
 	private position: Vector2D
 	/** Radius des Kreises. */
 	private r: number;
 	/** Kennung der Form für das Physik-System. */
-	private shape: "circle";
+	private shape: SHAPE.CIRCLE;
 	/** 
 	 * Die Masse ist extrem hoch gesetzt (9000), damit das Hindernis 
 	 * bei Kollisionen als unbeweglich ("immovable") fungiert. 
@@ -33,13 +35,24 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	constructor(x: number, y: number, r: number, color?: string) {
+	private effects: Effect[]
+	constructor(x: number, y: number, r: number, color?: string, effects: SettingsEffect<EffectType, EffectTrigger>[] = []) {
 		this.position = { x, y }
 		this.r = r
-		this.shape = "circle"
+		this.shape = SHAPE.CIRCLE
 		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
+		this.effects = []
+		console.log(effects)
+		for (const effect of effects) {
+			switch (effect.type) {
+				case EffectType.Damage:
+					console.log(effect)
+					break
+				default: console.log(`Effect not implemented in ${getShapeName(this.shape)}`, effect)
+			}
+		}
 	}
 	/**
 	 * Zeichnet die Struktur. 
@@ -61,8 +74,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 		if (
 			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
 			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
-		)
-			GameLogger.error("STRUCTURE: Position weicht massiv ab!");
+		) { console.error("STRUCTURE: Position weicht massiv ab!"); }
 
 		this.position.x = pos.x
 		this.position.y = pos.y
@@ -78,16 +90,30 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public setFriction(_friction: number): void { }
 	public getFriction(): number { return 0 }
 
-	public getShape(): "circle" { return this.shape }
+	public getShape(): SHAPE.CIRCLE { return this.shape }
 	public getBounds(): Vector2D { return { x: this.r, y: this.r } }
 
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
-	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
+		console.info(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
+		this.effects.forEach(effect => console.log("Effect", effect))
+	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	public applyEffects(): void {
+		for (const eff of this.effects) { eff; }
+	}
+	public toSettings(): MapBoundarySettingsCircle<EffectType, EffectTrigger> {
+		return { type: this.shape, x: this.position.x, y: this.position.y, r: this.r, color: this.color, effects: this.effects }
+	}
+
+	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
+	public getType(): SHAPE.CIRCLE { return this.shape }
+	public getX(): number { return this.position.x }
+	public getY(): number { return this.position.y }
 }
 

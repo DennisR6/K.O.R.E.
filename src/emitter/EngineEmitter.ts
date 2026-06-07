@@ -1,6 +1,5 @@
 import type { GameHandler } from "../engine/Handler.js";
 import type { IInputEmitter } from "../engine/types.js";
-import { GameLogger, LogLevel } from "../utils/log.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -13,9 +12,10 @@ export class GameEmitter implements IInputEmitter {
 	handler: GameHandler
 	constructor(handler: GameHandler) { this.handler = handler }
 
-	sendShot(actorId: string | number, angle: number, power: number): void {
-		GameLogger.info(LogLevel.INFO, "Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
-		const sim = this.handler.simulateTurn(actorId, angle, power)
-		this.handler.tickTurn(sim)
+	sendShot(actorId: string, angle: number, power: number): void {
+		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
+		this.handler.applyRawTurn({ actorId, angle, power })
+		// const sim = this.handler.simulateTurn(actorId, angle, power)
+		// this.handler.tickTurn(sim)
 	}
 }

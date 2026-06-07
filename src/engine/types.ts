@@ -1,6 +1,7 @@
 import { EntityManager } from "../entity/EntityManager.js";
 import type { EntitySnapshot } from "../entity/types.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
+import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
 
 /**
@@ -10,7 +11,7 @@ import type { IGameContext, ISystem } from "../systems/types.js";
  */
 export interface TurnPacket {
 	/** Wer hat den Schuss abgegeben? */
-	actorId: string | number;
+	actorId: string;
 	/** Mit welchen Werten wurde geschossen? */
 	input: { angle: number; power: number };
 	/** Wie viele Frames dauert die Animation insgesamt? */
@@ -25,7 +26,7 @@ export interface TurnPacket {
  * Entkoppelt die Eingabe (Maus/Tastatur) von der Verarbeitung (Netzwerk/Lokal).
  */
 export interface IInputEmitter {
-	sendShot(actorId: string | number, angle: number, power: number): void;
+	sendShot(actorId: string, angle: number, power: number): void;
 }
 
 /**
@@ -57,31 +58,50 @@ export interface IInputEmitter {
  *    // Erlaube Maus-Interaktion 
  * }
  */
-export const GameState = {
+export const enum GameState {
 	/** Default-Status vor der Initialisierung */
-	STARTING: "STARTING",
+	STARTING,
 	/** Wartebereich für Multiplayer-Verbindungen */
-	WAITING_FOR_PLAYERS: "WAITING_FOR_PLAYERS",
+	WAITING_FOR_PLAYERS,
 	/** Der lokale Spieler ist am Zug */
-	YOUR_TURN: "YOUR_TURN",
+	YOUR_TURN,
 	/** Der Gegner ist am Zug (Remote oder KI) */
-	OPPONENTS_TURN: "OPPONENTS_TURN",
+	OPPONENTS_TURN,
 	/** Physik wird im Hintergrund vorausberechnet (Simulator aktiv) */
-	SIMULATING: "SIMULATING",
+	SIMULATING,
 	/** Berechnung abgeschlossen, bereit für die Darstellung */
-	SIMULATING_DONE: "SIMULATING_DONE",
+	SIMULATING_DONE,
 	/** Die berechneten Daten werden animiert dargestellt (Playback aktiv) */
-	PLAYING: "PLAYING",
+	PLAYING,
 	/** Animation beendet, Zeit für die nächste Phase (RoundHandler übernimmt) */
-	PLAYING_DONE: "PLAYING_DONE",
+	PLAYING_DONE,
 
 	/** Das ist aktuell noch nicht implementiert */
-	GOAL_SCORED: "GOAL_SCORED",
-	TURN_DONE: "TURN_DONE",
-	GAME_OVER: "GAME_OVER",
-	ITEM_DRAW: "ITEM_DRAW",
-	ITEM_END: "ITEM_END",
-} as const;
+	GOAL_SCORED,
+	TURN_DONE,
+	GAME_OVER,
+	ITEM_DRAW,
+	ITEM_END,
+};
+
+export function getEngineStateName(state: GameState) {
+	switch (state) {
+		case (GameState.STARTING): return "STARTING"
+		case (GameState.WAITING_FOR_PLAYERS): return "WAITING_FOR_PLAYERS"
+		case (GameState.YOUR_TURN): return "YOUR_TURN"
+		case (GameState.OPPONENTS_TURN): return "OPPONENTS_TURN"
+		case (GameState.SIMULATING): return "SIMULATING"
+		case (GameState.SIMULATING_DONE): return "SIMULATING_DONE"
+		case (GameState.PLAYING): return "PLAYING"
+		case (GameState.PLAYING_DONE): return "PLAYING_DONE"
+		case (GameState.GOAL_SCORED): return "GOAL_SCORED"
+		case (GameState.TURN_DONE): return "TURN_DONE"
+		case (GameState.GAME_OVER): return "GAME_OVER"
+		case (GameState.ITEM_DRAW): return "ITEM_DRAW"
+		case (GameState.ITEM_END): return "ITEM_END"
+		default: return "NOT IMPLEMENTED STATE"
+	}
+}
 
 /** Bequemlichkeits-Typ für alle möglichen GameStates. */
 export type GameStateType = keyof typeof GameState;
@@ -92,10 +112,11 @@ export type GameStateType = keyof typeof GameState;
 export interface IMouse {
 	handleMousePressed(mouseX: number, mouseY: number): void;
 	updateMouse(mouseX: number, mouseY: number): void;
-	handleMouseReleased(cb?: (actorId: number | string, angle: number, power: number) => void): void;
+	handleMouseReleased(cb?: (actorId: string, angle: number, power: number) => void): void;
 	handleMouseWheel(event: WheelEvent): void;
 	setCurrentMousePosition(pos: Vector2D): void;
 	getCurrentMousePosition(): Vector2D;
+	getTeam(): string[]
 }
 
 /**
@@ -115,5 +136,23 @@ export type HandlerDependencies = {
 /**
  * Das universelle Format für einen Spiel-Input.
  */
-export type IInput = { actorId: string | number, angle: number, power: number }
+export type IInput = { actorId: string, angle: number, power: number }
 export interface IMouseHandler extends IMouse, ISystem { }
+export interface IU8Serialize<T> {
+	serialize(): Uint8Array
+	deserialize(input: Uint8Array): T
+}
+
+export interface IJSONSerialize {
+	serialize(): string
+	deserialize(input: string): void
+}
+
+export interface ISettingsSerialize<T> {
+	toSettings(): T
+}
+
+
+export interface EngineSettings extends GameSettings {
+	state: GameState
+}

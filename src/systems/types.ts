@@ -1,4 +1,4 @@
-import type { GameStateType, TurnPacket } from "../engine/types.js";
+import type { GameState, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { IStructure } from "../structures/types.js";
@@ -15,7 +15,7 @@ export interface IGameContext {
 	/** Liste aller statischen Hindernisse auf der Map. */
 	structures: IStructure[];
 	/** Der aktuelle globale Spielzustand (z.B. "WAITING", "RUNNING", "GOAL"). */
-	state: GameStateType;
+	state: GameState;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
 	// settings: GameSettings;
 	dt: number;
@@ -57,6 +57,6 @@ export interface IPlayback extends ISystem {
  * Der ISimulator ist die "Rechen-Instanz" der Engine.
  * Er berechnet physikalische Zustände in der Zukunft, ohne sie grafisch anzuzeigen.
  */
-export interface ISimulator extends ISystem {
+export interface ISimulator {
 	isStatic(entities: EntityManager): boolean;
 }

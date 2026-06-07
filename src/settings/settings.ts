@@ -1,16 +1,24 @@
+import type { UUID } from "node:crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
+import type { SHAPE } from "../physics/physics.js";
+import { BilliardMap } from "./billiardMap.js"
+import { IceMap } from "./iceMap.js";
+import { EffectTrigger, EffectType } from "../effects/types.js";
+
+const MAPS = { BilliardMap, IceMap }
+MAPS;
 
 export interface GameSettings {
-	mapBoundarys?: MapBoundary[];
-	hazzards?: MapBoundary[];
-	players?: SettingsEntity[];
-	friction?: FrictionSettings;
-	effects?: SettingsEffect[];
-	items?: SettingsItem[];
-	background?: SettingsBackground;
+	id: UUID
 	screenResolution: SettingsScreenResolution;
+	players: SettingsEntity[];
 	team: string[],
-	id: string
+	allTeam: string[],
+	mapBoundarys: MapBoundarySettings<EffectType, EffectTrigger>[];
+	background: SettingsBackground;
+	friction: FrictionSettings;
+	effects: SettingsEffect<EffectType, EffectTrigger>[];
+	items: SettingsItem[];
 }
 
 export interface SettingsScreenResolution {
@@ -29,39 +37,51 @@ export interface SettingsBackgroundColor {
 	color: string
 }
 
-export interface SettingsEffect {
-	id: string;
-	type: string;
-	value: number;
+export interface SettingsEffect<T extends EffectType, K extends EffectTrigger> {
+	type: T,
+	trigger: K,
+	values: SettingsEffectTypeValues[T];
+	triggerValues: SettingsEffectTriggerValues[K],
+}
+export interface SettingsEffectTriggerValues {
+	[EffectTrigger.Collision]: {},
+	[EffectTrigger.RoundBased]: {},
+}
+type SettingsEffectTypeValues = {
+	[EffectType.Damage]: { damage: number },
+	[EffectType.Physics]: {},
+	[EffectType.None]: {},
 }
 
-export type MapBoundary = MapBoundaryCircle | MapBoundaryLine | MapBoundaryRect
-export interface IMapBoundary {
+export type MapBoundarySettings<T extends EffectType, K extends EffectTrigger> = MapBoundarySettingsCircle<T, K> | MapBoundarySettingsLine<T, K> | MapBoundarySettingsRect<T, K>
+export interface IMapBoundarySettings<T extends EffectType, K extends EffectTrigger> {
+	type: SHAPE
 	x: number;
 	y: number;
+	effects: SettingsEffect<T, K>[]
 }
-export interface MapBoundaryCircle extends IMapBoundary {
-	type: "circle"
+export interface MapBoundarySettingsCircle<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+	type: SHAPE.CIRCLE
 	r: number;
 	color?: string;
 }
 
-export interface MapBoundaryLine extends IMapBoundary {
-	type: "line"
+export interface MapBoundarySettingsLine<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+	type: SHAPE.LINE
 	x2: number;
 	y2: number;
 	color?: string;
 }
 
-export interface MapBoundaryRect extends IMapBoundary {
-	type: "rectangle"
+export interface MapBoundarySettingsRect<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+	type: SHAPE.RECTANGLE
 	w: number;
 	h: number;
 	color?: string;
 }
 
 export interface SettingsEntity {
-	id: string | number;
+	id: UUID;
 	x: number;
 	y: number;
 	size?: number;
@@ -72,8 +92,8 @@ export interface SettingsEntity {
 }
 
 export interface SettingsItem {
+	id: UUID
 	type: string
-	id: number
 }
 
 export interface FrictionSettings {
@@ -137,74 +157,33 @@ export const FRICTION_TABLE = {
 	}
 } as const
 
+export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings<EffectType, EffectTrigger>[], background: SettingsBackground }
 
 const playerSize = 14
-const thickness = 2
-const [x, y] = [800, 450]
-const offset = 30
-const CircleRadius = 15
-const debugColorStruct = undefined
 const defaultHoop = AssetList.pictureReifenWEBP
-export const GameSettings = {
-	id: "0",
-	screenResolution: { x, y },
-	mapBoundarys: [
-		// Rectangles
-		{ type: "rectangle", x: 45, y: 75, w: thickness, h: 300, color: debugColorStruct },
-		{ type: "rectangle", x: 75, y: 45, w: 300, h: thickness, color: debugColorStruct },
-		{ type: "rectangle", x: 425, y: 45, w: 300, h: thickness, color: debugColorStruct },
-		{ type: "rectangle", x: 75, y: 405, w: 300, h: thickness, color: debugColorStruct },
-		{ type: "rectangle", x: 425, y: 405, w: 300, h: thickness, color: debugColorStruct },
-		{ type: "rectangle", x: 800 - 45, y: 75, w: thickness, h: 300, color: debugColorStruct },
-
-		//RASTER
-		// { type: "rectangle", x: 0, y: 0, w: 800, h: 450, color: "cyan" },
-		// { type: "rectangle", x: x - offset, y: 100, w: thickness, h: y / 2, color: "black" },
-		{ type: "rectangle", x: x / 2, y: y / 3, w: thickness, h: y / 3, color: "black" },
-	],
-	hazzards: [
-		{ type: "circle", x: offset + CircleRadius, y: offset + CircleRadius, r: CircleRadius, color: debugColorStruct },
-		// Circles
-		// OBEN MITTE
-		{ type: "circle", x: x / 2, y: offset + 5, r: CircleRadius, color: debugColorStruct },
-		// OBEN RECHTS
-		{ type: "circle", x: (x - offset - CircleRadius), y: offset + CircleRadius, r: CircleRadius, color: debugColorStruct },
-		// TEST
-		// { type: "circle", x: (800 - CircleRadius) / 2, y: y / 2, r: CircleRadius, color: "magenta" },
-		// UNTEN LINKS
-		{ type: "circle", x: offset + 10, y: 408, r: CircleRadius, color: debugColorStruct },
-		// UNTEN MITTE
-		{ type: "circle", x: x / 2, y: 413, r: CircleRadius, color: debugColorStruct },
-		// UNTEN RECHTS
-		{ type: "circle", x: 760, y: 408, r: CircleRadius, color: debugColorStruct },
-	],
+export const GameSettings: GameSettings = {
+	id: "8a67d1b0-5c76-4348-bc7a-012d8c9746cc",
 	players: [
 		/* Formation LINKS (3x2) */
-		{ id: 0, x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: 1, x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: 2, x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: 3, x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: 4, x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: 5, x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "300591aa-e47e-4708-8da8-e8feb9938555", x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "46d4ce14-0437-4a01-a99f-7bddff12e507", x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "1a4f0fd9-4a26-4ac5-8332-c18b68f4f084", x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "1ea70b24-bb63-4346-ad58-dcc85f2f3bbb", x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "2663d694-7e93-4a1c-8fb8-9b905e3174a8", x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
+		{ id: "26a4b2f4-228f-449b-babf-ad935723bc73", x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
 		//
 		// /* Formation RECHTS (3x2) */
-		{ id: 6, x: 650, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 7, x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 8, x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 9, x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 10, x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize },
-		{ id: 11, x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize }
+		{ id: "2ce98548-ab1e-482a-8130-fd270233cd97", x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
+		{ id: "ff8e2c75-da89-4d54-b2fa-fbec418d0200", x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
+		{ id: "f71b2986-d32a-46a0-8fb4-e8f95beb8de9", x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
+		{ id: "f2c7eb70-aebd-4231-ba9d-4f5fa2d547cd", x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
+		{ id: "58e7ac62-98fa-4552-87d0-49689a27a484", x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
+		{ id: "3f66b025-978b-4de9-8032-996440744939", x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop }
 	],
 	friction: FRICTION_TABLE.ice,
-	items: [
-		{ type: "", id: 0 }
-	],
-	effects: [
-		{ id: "", type: "", value: 0 },
-	],
-	background: { type: "image", url: AssetList.billiardGrosserLochJungePNG },
-	music: [
-		"/..."
-	],
-	team: ["1"]
-} as GameSettings
+	items: [],
+	effects: [],
+	allTeam: ["1", "2"],
+	team: ["1"],
+	...MAPS.BilliardMap,
+}

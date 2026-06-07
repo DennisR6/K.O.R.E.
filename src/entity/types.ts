@@ -8,7 +8,7 @@
  */
 export interface EntitySnapshot {
 	/** Die eindeutige ID der Entity, um sie im EntityManager wiederzufinden. */
-	id: string | number;
+	id: string;
 
 	/** Die X-Position in Welt-Einheiten zum Zeitpunkt des Snapshots. */
 	x: number;
@@ -35,5 +35,6 @@ export interface EntitySnapshot {
 export interface IKillable {
 	setHP(hp: number): void;
 	getHP(): number;
+	addHP(hp: number): void
 	isActive(): boolean
 }

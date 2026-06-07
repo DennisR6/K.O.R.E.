@@ -1,25 +1,20 @@
-import { type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
+import { PhysicsLevel, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
 import { EntityManager } from "../entity/EntityManager.js";
-import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
-import { GameState } from "./types.js";
-import type { GameStateType, IInput, IInputEmitter, IMouse, IMouseHandler, TurnPacket } from "./types.js"
+import { GameState, getEngineStateName } from "./types.js";
+import type { EngineSettings, IInput, IInputEmitter, IMouse, IMouseHandler, ISettingsSerialize, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
-import { GameLogger } from "../utils/log.js";
-import { FRICTION_TABLE, GameSettings, type FrictionSettings } from "../settings/settings.js"
-import { Round2PlayerSystem } from "../systems/RoundSystem.js";
-import { getBackgoundSystem } from "../ui/Background.js";
+import { GameSettings, type FrictionSettings } from "../settings/settings.js"
+import { Round2PlayerSystem } from "../systems/RoundSystem.js"; import { getBackgoundSystem } from "../ui/Background.js";
 import { Mouse } from "../ui/Mouse.js";
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
-import { Simulator } from "../systems/Simulator.js";
 import { Player } from "../entity/Player.js";
-import { StructureCircle } from "../structures/structureCircle.js";
-import { StructureRectangle } from "../structures/structureRectangle.js";
-import { DeadlyObstacleCirle } from "../structures/DeadlyObstacleCircle.js";
+import { FullStructure } from "../structures/fullStructure.js";
+import type { UUID } from "crypto";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -71,14 +66,14 @@ import { DeadlyObstacleCirle } from "../structures/DeadlyObstacleCircle.js";
  * @implements {ITicker} Erlaubt der Engine, den Game-Loop zu triggern.
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
-export class GameHandler implements ITicker, IMouse {
-	private turns: IInput[] = []
+export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSettings> {
+	private id: UUID
+	private turns: TurnPacket[] = []
 	private settings: any
 	private context: IGameContext;
 	private systems: ISystem[] = [];
 	private entityManager: EntityManager;
 	private physicsStrategy: PhysicsStrategy
-	private lastTurnFinalState: any[] | null = null;
 	private inputEmitter: IInputEmitter | undefined = undefined;
 	private preTickers: ITicker[] = []
 	private postTickers: ITicker[] = []
@@ -97,8 +92,9 @@ export class GameHandler implements ITicker, IMouse {
 		 * @param systems - Eine Liste von Modulen, die pro Tick laufen (z.B. Physik, Animation).
 		 */
 	constructor() {
+		this.id = crypto.randomUUID()
 		const em = new EntityManager([])
-		this.context = { state: GameState.STARTING, dt: 1, entities: em, structures: [], worldSize: { x: 400, y: 400 } }
+		this.context = { state: GameState.STARTING, dt: 1, entities: em, structures: [], worldSize: { x: 0, y: 0 } }
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
 	}
@@ -112,107 +108,77 @@ export class GameHandler implements ITicker, IMouse {
 	}
 
 
-	/**
-		 * Die "Glaskugel" der Engine: Berechnet einen kompletten Zug im Voraus.
-		 * 
-		 * Erstellt eine Kopie der aktuellen Welt und lässt die Physik so lange laufen, 
-		 * bis alles wieder stillsteht. Der eigentliche Spielzustand bleibt unberührt.
-		 * 
-		 * @param actorId - Wer führt den Zug aus?
-		 * @param angle - In welche Richtung wird geschossen?
-		 * @param power - Wie stark ist der Stoß?
-		 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
-		 */
-	public simulateTurn(actorId: string | number, angle: number, power: number): TurnPacket {
-		this.turns.push({ actorId, angle, power })
-		const simulator = this.systems.find(x => x instanceof Simulator)
-		if (simulator === undefined) throw new Error("No Simulation Engine added")
-		this.setState(GameState.SIMULATING);
-		const tempManager = this.entityManager.clone();
-
-		const actor = tempManager.getEntityById(actorId);
-		if (!actor) throw new Error(`Actor ${actorId} not found`);
-
-		this.physicsStrategy.applyImpulse(actor, angle, power);
-
-		const physSystem = this.systems.find(x => x instanceof PhysicsSystem)
-		if (!physSystem) throw new Error("Kein Physik System installiert")
-
-		const frameSteps = []
-		let frames = 0;
-		const mockContext = this.getContext()
-		mockContext.entities = tempManager
-		while (!simulator.isStatic(tempManager) && frames < 1200) {
-			simulator.ticker(mockContext, this.dt, this.physicsStrategy.getFriction());
-			frames++;
-			const finalState = tempManager.serialize();
-			frameSteps.push(finalState)
-		}
-
-		const finalState = tempManager.serialize();
-		this.setState(GameState.SIMULATING_DONE);
-		return {
-			actorId,
-			input: { angle, power },
-			durationFrames: frames,
-			finalState
-		};
-	}
+	// /**
+	// 	 * Die "Glaskugel" der Engine: Berechnet einen kompletten Zug im Voraus.
+	// 	 * 
+	// 	 * Erstellt eine Kopie der aktuellen Welt und lässt die Physik so lange laufen, 
+	// 	 * bis alles wieder stillsteht. Der eigentliche Spielzustand bleibt unberührt.
+	// 	 * 
+	// 	 * @param actorId - Wer führt den Zug aus?
+	// 	 * @param angle - In welche Richtung wird geschossen?
+	// 	 * @param power - Wie stark ist der Stoß?
+	// 	 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
+	// 	 */
+	// public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
+	// 	const settings = this.toSettings()
+	// 	this.setState(GameState.SIMULATING);
+	// 	const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build().start()
+	// 	const actor = g.getEntityManager().getEntityById(actorId)
+	// 	if (!actor) throw new Error(`Actor ${actorId} not found`);
+	// 	console.log(actorId, angle, power)
+	// 	g.physicsStrategy.applyImpulse(actor, angle, power);
+	// 	const frameSteps = []
+	// 	let frames = 0;
+	// 	while (g.getPhysics().isMoving() && frames < 1200) {
+	// 		g.tick()
+	// 		frames++;
+	// 		const step = g.getEntityManager().serialize()
+	// 		frameSteps.push(step)
+	// 	}
+	// 	const finalState = g.getEntityManager().serialize();
+	// 	this.setState(GameState.SIMULATING_DONE);
+	// 	return {
+	// 		actorId,
+	// 		input: { angle, power },
+	// 		durationFrames: frames,
+	// 		finalState
+	// 	};
+	// }
 
 	/**
 		 * Führt den zuvor berechneten Zug visuell für den Spieler aus.
 		 * 
 		 * Nutzt das TurnPacket aus `simulateTurn`, um die Animation zu starten. 
-		 * Hier sieht der Junior (und der Spieler) erst die Bewegung auf dem Bildschirm.
+		 * Hier sieht der Spieler erst die Bewegung auf dem Bildschirm.
 		 * 
 		 * @param packet - Das Datenpaket aus der Simulation.
 		 */
 	public tickTurn(packet: TurnPacket): void {
+		this.turns.push(packet)
 		this.setState(GameState.PLAYING)
-
 		const actor = this.entityManager.getEntityById(packet.actorId);
-		if (actor) this.physicsStrategy.applyImpulse(actor, packet.input.angle, packet.input.power);
-
-		const physSystem = this.systems.find(x => x instanceof PhysicsSystem)
-		if (!physSystem) throw new Error("Kein Physik System installiert")
+		if (actor) this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
 
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
+		if (!playback) return
 		playback.start(packet.durationFrames, packet.finalState, () => {
-			GameLogger.debug("Playing done")
-			this.entityManager.resetSpeeds()
 			this.setState(GameState.PLAYING_DONE)
 		});
 	}
 
-	/**
-		 * Beendet den aktuellen Zug sofort und erzwingt den Endzustand.
-		 * 
-		 * Diese Methode ist der "Hard-Reset":
-		 * 1. Sie teleportiert alle Objekte sofort an ihre berechneten Endpositionen.
-		 * 2. Sie stoppt alle laufenden Animationen im PlaybackSystem.
-		 * 3. Sie setzt den GameState direkt auf PLAYING_DONE.
-		 * 
-		 * Nützlich für: "Animation überspringen" oder um sicherzustellen, dass 
-		 * alle Clients exakt die gleichen Daten haben (Sync).
-		 */
-	public finalizeTurnManual(): void {
-		if (this.lastTurnFinalState) {
-			this.lastTurnFinalState.forEach(saved => {
-				const entity = this.context.entities.getEntityById(saved.id)
-				if (entity) {
-					entity.setPos({ x: saved.x, y: saved.y });
-					entity.setVel({ x: 0, y: 0 }); // Im Stillstand Vel auf 0
-				}
-			});
+
+	public applyRawTurn({ actorId, angle, power }: IInput): TurnPacket | undefined {
+		const actor = this.entityManager.getEntityById(actorId);
+		if (!actor) { console.log("Player not Found"); return }
+		this.physicsStrategy.applyImpulse(actor, angle, power);
+		let durationFrames = 0
+		const finalState = this.getEntityManager().serialize()
+		return {
+			durationFrames,
+			finalState,
+			actorId,
+			input: { angle, power }
 		}
-
-		this.setState(GameState.PLAYING_DONE)
-
-		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
-		if (!playback) return
-		playback.start(0, []);
-
-		this.lastTurnFinalState = null;
 	}
 
 	/**
@@ -227,9 +193,9 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public tick(dt: number = this.dt) {
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
+		this.physicsStrategy.tick(dt, 1)
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
-		// this.entityManager.tick(dt, this.physicsStrategy.getFriction())
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 	}
 
@@ -245,7 +211,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public drawWorld(renderer: RenderContext): void {
 		renderer.clear()
-		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
+		renderer.drawText(getEngineStateName(this.context.state), renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
 		this.preDrawers.forEach(d => d.draw(renderer))
 		this.context.structures.forEach(str => str.draw(renderer))
 		// 2. Entities (Player/Pucks) zeichnen
@@ -269,7 +235,7 @@ export class GameHandler implements ITicker, IMouse {
 		 */
 	public drawUI(renderer: RenderContext) {
 		renderer.setFillColor("black")
-		renderer.drawText(this.context.state, renderer.WORLD_SIZE_X / 2, renderer.WORLD_SIZE_Y / 2, 32)
+		renderer.drawText(getEngineStateName(this.context.state), renderer.WORLD_SIZE_X / 2, renderer.WORLD_SIZE_Y / 2, 32)
 		if (this.context.state != GameState.YOUR_TURN && this.context.state != GameState.OPPONENTS_TURN) return
 	}
 
@@ -344,26 +310,62 @@ export class GameHandler implements ITicker, IMouse {
 	public addSystem(system: ISystem) { this.systems.push(system) }
 	public getEntityManager(): EntityManager { return this.entityManager }
 
-	public setState(state: GameStateType): void {
-		GameLogger.info(`${this.getState()} -> ${state}`)
+	public setState(state: GameState): void {
+		console.info(`${getEngineStateName(this.getState())} -> ${getEngineStateName(state)}`)
 		this.context.state = state
 	}
 
-	public getState(): GameStateType { return this.context.state }
+	public getState(): GameState { return this.context.state }
 	public setEmitter = (emitter: IInputEmitter) => { this.inputEmitter = emitter; }
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
-	public start(state?: GameStateType): this { this.context.state = state ?? GameState.YOUR_TURN; return this }
-	public addStructure(structure: IStructure) { this.context.structures.push(structure) }
+	public start(state?: GameState): this { this.context.state = state ?? GameState.YOUR_TURN; return this }
+	public addStructure(structure: IStructure & IPhysics<SHAPE>) {
+		this.context.structures.push(structure)
+		this.physicsStrategy.addToQueue(PhysicsLevel.Map, structure)
+	}
 	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
 	public getMouseHandler() { return this.mouseHandler }
 
-	public setTickRate(tickRate: number) { this.dt = tickRate }
-	public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
+	public setTickRate(tickRate: number) { this.dt = tickRate } public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
 	public setCurrentMousePosition(_pos: Vector2D): void { }
 	public saveSettings(settings: any) { this.settings = settings }
 	public getSettings(): GameSettings { return this.settings }
-	exportGame(): { logs: IInput[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
+	public exportGame(): { logs: TurnPacket[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
 	public addLog(log: any) { this.logs.push(log) }
+
+	public serialize(): string {
+		return JSON.stringify(this)
+	}
+	public deserialize(_: string): GameHandler {
+		// const state = JSON.parse(input)
+		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(GameSettings).build()
+		// for (const key of Object.keys(state)) {
+		// 	//@ts-ignore
+		// 	handler[key] = state[key]
+		// }
+		return handler
+	}
+	public getGameId(): UUID {
+		return this.id
+	}
+	public toSettings(): EngineSettings {
+		return {
+			state: this.getState(),
+			background: this.settings.background,
+			friction: this.getPhysics().toSettings(),
+			id: this.getGameId(),
+			mapBoundarys: this.context.structures.map(str => str.toSettings()),
+			screenResolution: this.getContext().worldSize,
+			team: this.mouseHandler?.getTeam() ?? [],
+			allTeam: [],
+			effects: [],
+			items: [],
+			players: this.entityManager.getEntities().map(x => x.toSettings()),
+		}
+	}
+	public getTeam(): string[] { return this.mouseHandler?.getTeam() ?? [] }
+	public setId(id: UUID) { this.id = id }
+	public getId(): string { return this.id }
 }
 
 
@@ -372,6 +374,7 @@ export class GameHandlerBuilder {
 	private engine: GameHandler
 	private myTeam: string[] = []
 	private enemyTeam: string[] = []
+	private state: GameState = GameState.YOUR_TURN
 	constructor(tickRate?: number) { this.engine = new GameHandler(); this.engine.setTickRate(tickRate ?? 1) }
 
 
@@ -382,19 +385,25 @@ export class GameHandlerBuilder {
 		this.engine.addPostDrawer(mousehandler)
 		return this
 	}
-	public addPlayer(player: IEntity): this { this.engine.getEntityManager().addEntity(player); return this }
-	public addStructure(structure: IStructure): this { this.engine.addStructure(structure); return this }
-	public addHazzard(structure: IStructure): this { this.engine.addStructure(structure); return this }
+	public addPlayer(player: IEntity): this {
+		this.engine.getEntityManager().addEntity(player);
+		this.engine.getPhysics().addToQueue(PhysicsLevel.Entity, player)
+		return this
+	}
+	public addStructure(structure: IStructure & IPhysics<SHAPE>): this {
+		this.engine.addStructure(structure);
+		this.engine.getPhysics().addToQueue(PhysicsLevel.Map, structure)
+		return this
+	}
 	public addBackground(background: IBackground): this { this.engine.addPreTickAndDraw(background); return this }
 	public setPlayerTeam(teams: string[]): this { teams.forEach(team => this.myTeam.push(team)); return this }
 	public setOpponentTeam(teams: string[]): this { teams.forEach(team => this.enemyTeam.push(team)); return this }
+	public addPhysics(physics: PhysicsStrategy) { this.engine.setPhysics(physics); return this }
 	public defaultSystems(friction?: FrictionSettings): this {
-		const physicsSystem = new PhysicsSystem(new defaultPhysics(friction ?? FRICTION_TABLE.ice))
-		const simulator = new Simulator(physicsSystem)
+		const physics = new defaultPhysics(friction)
 
 		this
-			.addSystem(physicsSystem)
-			.addSystem(simulator)
+			.addPhysics(physics)
 			.addSystem(new PlaybackSystem())
 			.addSystem(new Round2PlayerSystem(false))
 
@@ -402,39 +411,41 @@ export class GameHandlerBuilder {
 	}
 	public addEmitter(emitter: IInputEmitter): this { this.engine.setEmitter(emitter); return this }
 
-	public fromSettings(gameSettings: GameSettings): this {
+	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
 		this.engine.saveSettings(gameSettings)
+		const { screenResolution, background, team, mapBoundarys, players } = gameSettings
+		this.engine.setId(gameSettings.id)
+		//@ts-ignore
+		this.engine.context.worldSize = gameSettings.screenResolution
+		if ("state" in gameSettings) this.state = gameSettings.state
+		this.setWorldSize(screenResolution.x, screenResolution.y)
 		// Adding Background
-		let background: IBackground = getBackgoundSystem(gameSettings.background)
+		let backgroundSettings: IBackground = getBackgoundSystem(background)
 
 		// Add Mouse
 		const mouseHandler = new Mouse()
 		mouseHandler.setEntityManager(this.engine.getEntityManager())
 		mouseHandler.setPhysics(this.engine.getPhysics())
-		mouseHandler.addTeam(gameSettings.team)
+		mouseHandler.addTeam(team)
 		this.addSystem(mouseHandler)
 		this.engine.setMouseHandler(mouseHandler)
 		this.engine.addPostDrawer(mouseHandler)
 
 		// Player
-		gameSettings.players?.forEach((player, id) => this.addPlayer(new Player().new({ ...player, id })))
+		players.forEach((player) => this.addPlayer(new Player().new({ ...player })))
 		// Structures
-		gameSettings.mapBoundarys?.forEach(boundary => {
-			if (boundary.type === "circle") this.engine.addStructure(new StructureCircle(boundary.x, boundary.y, boundary.r, boundary.color))
-			if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h, boundary.color))
-		})
-		// Hazzards
-		gameSettings.hazzards?.forEach(boundary => {
-			if (boundary.type === "circle") this.engine.addStructure(new DeadlyObstacleCirle(boundary.x, boundary.y, boundary.r, boundary.color))
-			// if (boundary.type === "rectangle") this.engine.addStructure(new StructureRectangle(boundary.x, boundary.y, boundary.w, boundary.h, boundary.color))
+		mapBoundarys.forEach(boundary => {
+			if (boundary.type) { }
+			const str = new FullStructure(boundary)
+			if (str.isPhysicsObj()) this.engine.addStructure(str)
 		})
 
 		return this
-			.addBackground(background)
-			.setWorldSize(gameSettings.screenResolution.x, gameSettings.screenResolution.y)
+			.addBackground(backgroundSettings)
+			.setWorldSize(screenResolution.x, screenResolution.y)
 			.addUIMouse(mouseHandler)
 	}
 
 	public setWorldSize(x: number, y: number): this { this.engine.getContext().worldSize = { x, y }; return this }
-	public build(): GameHandler { return this.engine }
+	public build(): GameHandler { return this.engine.start(this.state) }
 }

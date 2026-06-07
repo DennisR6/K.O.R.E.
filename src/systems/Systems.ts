@@ -15,7 +15,6 @@ export type { IUiSystem } from "./UiSystem.js"
  * Das PhysicsSystem kümmert sich um die Berechnung von Bewegungen und Kollisionen.
  * Es ist der "Motor" unter der Haube.
  */
-export { PhysicsSystem } from "../systems/PhysicsSystem.js";
 
 /** 
  * Das PlaybackSystem ermöglicht das Abspielen von aufgezeichneten Spielzügen.
@@ -26,7 +25,7 @@ export { PlaybackSystem } from "./PlayBackSystem.js";
 /** 
  * Das BoundarySystem ist für die visuelle Darstellung der Spielfeldbegrenzungen zuständig.
  */
-export { BoundarySystem } from "./BoundarySystem.js";
+// export { BoundarySystem } from "./BoundarySystem.js";
 
 /** 
  * Das Round2PlayerSystem steuert die Spiellogik: 

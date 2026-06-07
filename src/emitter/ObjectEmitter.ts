@@ -17,7 +17,7 @@ export class ObjectEmitter implements IInputEmitter {
 	/**
 	 * Empfängt den Schuss und legt ihn in den Zwischenspeicher.
 	 */
-	sendShot(actorId: string | number, angle: number, power: number): void {
+	sendShot(actorId: string, angle: number, power: number): void {
 		this.lastShot = { actorId, angle, power }
 	}
 
