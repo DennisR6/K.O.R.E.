@@ -97,8 +97,8 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		console.info(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
-		this.effects.forEach(effect => console.log("Effect", effect))
+		// console.info(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
+		this.effects.forEach(effect => console.log("Effect triggered", entity, effect))
 	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }

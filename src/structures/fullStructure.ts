@@ -41,5 +41,5 @@ export class FullStructure implements
 	public getX(): number { return this.str.getX() }
 	public getY(): number { return this.str.getY() }
 	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.str.getEffects() }
-	public isPhysicsObj(): this is IPhysics<SHAPE> { return typeof (this as any).str.getShape() === 'function' }
+	public isPhysicsObj(): this is IStructure & IPhysics<SHAPE> { return typeof (this as any).str.getShape() === 'function' }
 }

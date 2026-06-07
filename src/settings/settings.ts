@@ -185,5 +185,5 @@ export const GameSettings: GameSettings = {
 	effects: [],
 	allTeam: ["1", "2"],
 	team: ["1"],
-	...MAPS.BilliardMap,
+	...MAPS.IceMap,
 }

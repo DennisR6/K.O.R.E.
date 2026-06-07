@@ -102,6 +102,7 @@ export class defaultPhysics implements PhysicsStrategy {
 			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.RECTANGLE>);
 			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
+			case entityB.getShape() == SHAPE.CIRCLE && entityA.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
 			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
@@ -204,7 +205,7 @@ export class defaultPhysics implements PhysicsStrategy {
 				break;
 			}
 			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
-				console.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
+				console.error("TODO! /src/phyics/defaultPhysics.ts", getShapeName(entityA.getShape()), getShapeName(entityB.getShape()))
 				break
 			}
 			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):

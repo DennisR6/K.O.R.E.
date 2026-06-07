@@ -167,18 +167,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 
 
-	public applyRawTurn({ actorId, angle, power }: IInput): TurnPacket | undefined {
+	public applyRawTurn({ actorId, angle, power }: IInput) {
 		const actor = this.entityManager.getEntityById(actorId);
 		if (!actor) { console.log("Player not Found"); return }
 		this.physicsStrategy.applyImpulse(actor, angle, power);
-		let durationFrames = 0
-		const finalState = this.getEntityManager().serialize()
-		return {
-			durationFrames,
-			finalState,
-			actorId,
-			input: { angle, power }
-		}
 	}
 
 	/**
@@ -192,6 +184,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 */
 	public tick(dt: number = this.dt) {
+		if (this.getState() === GameState.PLAYING && !this.getPhysics().isMoving()) {
+			console.log(this.entityManager.getEntities().map(x => x.getVel()))
+			this.setState(GameState.PLAYING_DONE)
+		}
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		this.physicsStrategy.tick(dt, 1)
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
@@ -311,7 +307,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getEntityManager(): EntityManager { return this.entityManager }
 
 	public setState(state: GameState): void {
-		console.info(`${getEngineStateName(this.getState())} -> ${getEngineStateName(state)}`)
+		// console.info(`${getEngineStateName(this.getState())} -> ${getEngineStateName(state)}`)
 		this.context.state = state
 	}
 
@@ -319,9 +315,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setEmitter = (emitter: IInputEmitter) => { this.inputEmitter = emitter; }
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.YOUR_TURN; return this }
-	public addStructure(structure: IStructure & IPhysics<SHAPE>) {
+	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
 		this.context.structures.push(structure)
-		this.physicsStrategy.addToQueue(PhysicsLevel.Map, structure)
+		if ("getShape" in structure) this.physicsStrategy.addToQueue(PhysicsLevel.Map, structure)
 	}
 	public setMouseHandler(mouseHandler: IMouseHandler | undefined): void { this.mouseHandler = mouseHandler }
 	public getMouseHandler() { return this.mouseHandler }
@@ -390,9 +386,11 @@ export class GameHandlerBuilder {
 		this.engine.getPhysics().addToQueue(PhysicsLevel.Entity, player)
 		return this
 	}
-	public addStructure(structure: IStructure & IPhysics<SHAPE>): this {
-		this.engine.addStructure(structure);
-		this.engine.getPhysics().addToQueue(PhysicsLevel.Map, structure)
+	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>): this {
+		if (structure) this.engine.addStructure(structure);
+		if ("getShape" in structure) {
+			this.engine.getPhysics().addToQueue(PhysicsLevel.Map, structure)
+		}
 		return this
 	}
 	public addBackground(background: IBackground): this { this.engine.addPreTickAndDraw(background); return this }
@@ -437,7 +435,8 @@ export class GameHandlerBuilder {
 		mapBoundarys.forEach(boundary => {
 			if (boundary.type) { }
 			const str = new FullStructure(boundary)
-			if (str.isPhysicsObj()) this.engine.addStructure(str)
+			if (str.isPhysicsObj()) this.engine.getPhysics().addToQueue(PhysicsLevel.Map, str)
+			this.engine.addStructure(str)
 		})
 
 		return this
