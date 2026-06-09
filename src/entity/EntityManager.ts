@@ -3,6 +3,8 @@ import type { SettingsEntity } from "../settings/settings.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
 import type { UUID } from "node:crypto";
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { EngineSettingsEntity } from "./types.js";
 
 type SerializedPlayerStats = {
 	id: UUID
@@ -21,7 +23,7 @@ type SerializedPlayerStats = {
  * @implements {IDrawer} Ermöglicht das Zeichnen aller verwalteten Entities.
  * @implements {ITicker} Ermöglicht das physikalische Update aller verwalteten Entities.
  */
-export class EntityManager implements IDrawer, ITicker {
+export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<SettingsEntity[]> {
 	/** Die Liste aller aktuell im Spiel befindlichen Objekte. */
 	private entities: IEntity[] = [];
 
@@ -96,7 +98,7 @@ export class EntityManager implements IDrawer, ITicker {
 		state.forEach(data => {
 			let existing = this.getEntityById(data.id);
 			if (!existing) {
-				existing = new Player().new({ id: data.id, x: data.x, y: data.y, color: data.color, size: data.size });
+				existing = new Player().new({ id: data.id, position: { x: data.x, y: data.y }, color: data.color, size: data.size });
 				this.addEntity(existing);
 			}
 			// DEBUG: Vergleiche das Original (falls vorhanden) mit dem Klon
@@ -109,8 +111,8 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Dies wird vom Simulator genutzt, um Spielzüge in einer "Parallelwelt" 
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
-	addPlayer(data: SettingsEntity) {
-		const p = new Player().new({ x: data.x, y: data.y, size: data.size ?? 12, color: data.color, id: data.id, team: data.team, playericon: data.playericon });
+	addPlayer(data: EngineSettingsEntity) {
+		const p = new Player().new({ ...data });
 		this.entities.push(p);
 	}
 
@@ -142,4 +144,5 @@ export class EntityManager implements IDrawer, ITicker {
 		newManager.applySerializedState(data);
 		return newManager;
 	}
+	toSettings(): SettingsEntity[] { return this.entities.map(player => player.toSettings()) }
 }

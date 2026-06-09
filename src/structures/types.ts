@@ -2,10 +2,7 @@
  * @fileoverview Zentraler Hub für statische Kartenstrukturen.
  */
 
-import type { EffectTrigger, EffectType } from "../effects/types.js";
-import type { ISettingsSerialize } from "../engine/types.js";
 import type { IPhysics, SHAPE } from "../physics/physics.js";
-import type { MapBoundarySettingsCircle, MapBoundarySettingsLine, MapBoundarySettingsRect, SettingsEffect } from "../settings/settings.js";
 import { StructureCircle } from "./structureCircle.js";
 import { StructureLine } from "./structureLine.js";
 import { StructureRectangle } from "./structureRectangle.js";
@@ -18,9 +15,10 @@ export { StructureRectangle } from "./structureRectangle.js";
 
 export interface IStructure extends
 	IDrawer,
-	ITicker,
-	IMapBoundary<EffectType, EffectTrigger>,
-	ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger>> { }
+	ITicker
+// ,IMapBoundary<EffectType, EffectTrigger>
+// ,ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger>> 
+{ }
 export type StructureMap = {
 	[SHAPE.CIRCLE]: StructureCircle & IPhysics<SHAPE.CIRCLE>
 	[SHAPE.RECTANGLE]: StructureRectangle & IPhysics<SHAPE.RECTANGLE>
@@ -29,28 +27,28 @@ export type StructureMap = {
 
 export type Structure<T extends SHAPE> = StructureMap[T]
 
-export type MapBoundary<T extends EffectType, K extends EffectTrigger> = MapBoundaryCircle<T, K> | MapBoundaryLine<T, K> | MapBoundaryRect<T, K>
-export interface IMapBoundary<T extends EffectType, K extends EffectTrigger> {
+export type MapBoundary = MapBoundaryCircle | MapBoundaryLine | MapBoundaryRect
+export interface IMapBoundary {
 	getType(): SHAPE
 	getX(): number;
 	getY(): number;
-	getEffects(): SettingsEffect<T, K>[]
+	// getEffects(): SettingsEffect<T, K>[]
 }
 
-export interface MapBoundaryCircle<T extends EffectType, K extends EffectTrigger> extends IMapBoundary<T, K> {
+export interface MapBoundaryCircle extends IMapBoundary {
 	type: SHAPE.CIRCLE
 	r: number;
 	color?: string;
 }
 
-export interface MapBoundaryLine<T extends EffectType, K extends EffectTrigger> extends IMapBoundary<T, K> {
+export interface MapBoundaryLine extends IMapBoundary {
 	type: SHAPE.LINE
 	x2: number;
 	y2: number;
 	color?: string;
 }
 
-export interface MapBoundaryRect<T extends EffectType, K extends EffectTrigger> extends IMapBoundary<T, K> {
+export interface MapBoundaryRect extends IMapBoundary {
 	type: SHAPE.RECTANGLE
 	w: number;
 	h: number;

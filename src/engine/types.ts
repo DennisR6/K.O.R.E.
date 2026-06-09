@@ -82,6 +82,7 @@ export const enum GameState {
 	GAME_OVER,
 	ITEM_DRAW,
 	ITEM_END,
+	WAITING_FOR_SERVER,
 };
 
 export function getEngineStateName(state: GameState) {
@@ -99,6 +100,7 @@ export function getEngineStateName(state: GameState) {
 		case (GameState.GAME_OVER): return "GAME_OVER"
 		case (GameState.ITEM_DRAW): return "ITEM_DRAW"
 		case (GameState.ITEM_END): return "ITEM_END"
+		case (GameState.WAITING_FOR_SERVER): return "Waiting for Server"
 		default: return "NOT IMPLEMENTED STATE"
 	}
 }
@@ -116,7 +118,6 @@ export interface IMouse {
 	handleMouseWheel(event: WheelEvent): void;
 	setCurrentMousePosition(pos: Vector2D): void;
 	getCurrentMousePosition(): Vector2D;
-	getTeam(): string[]
 }
 
 /**
@@ -152,7 +153,7 @@ export interface ISettingsSerialize<T> {
 	toSettings(): T
 }
 
-
 export interface EngineSettings extends GameSettings {
 	state: GameState
+	turnNumber: number
 }

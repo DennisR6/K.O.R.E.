@@ -41,6 +41,6 @@ export class CombiEmitter implements IInputEmitter {
 export class LogEmitter implements IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number) {
 		// Strukturiertes Logging über das Engine-Tool
-		console.debug("TURN", { actorId, angle, power })
+		console.debug("Log Emitter", { actorId, angle, power })
 	}
 }

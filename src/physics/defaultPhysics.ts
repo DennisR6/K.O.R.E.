@@ -205,7 +205,7 @@ export class defaultPhysics implements PhysicsStrategy {
 				break;
 			}
 			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
-				console.error("TODO! /src/phyics/defaultPhysics.ts", getShapeName(entityA.getShape()), getShapeName(entityB.getShape()))
+				// console.error("TODO! /src/phyics/defaultPhysics.ts", getShapeName(entityA.getShape()), getShapeName(entityB.getShape()))
 				break
 			}
 			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):
@@ -453,7 +453,7 @@ export class defaultPhysics implements PhysicsStrategy {
 				const { x, y } = shape.getPos()
 				const { x: vx, y: vy } = shape.getVel()
 				shape.setPos({ x: x + vx * dt, y: y + vy * dt })
-				this.constrainToMap(shape, { x: 0, y: 0, w: 800, h: 450 });
+				// this.constrainToMap(shape, { x: 0, y: 0, w: 800, h: 450 });
 
 				const speed = Math.sqrt(shape.getVel().x ** 2 + shape.getVel().y ** 2);
 				if (speed < this.STOP_THRESHOLD) {
@@ -490,27 +490,27 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 	}
 
-	private constrainToMap(shape: IPhysics<SHAPE>, { x, y, w, h }: { x: number, y: number, w: number, h: number }) {
-		const pos = shape.getPos();
-		const radius = shape.getBounds().x;
-		const bounds = { minX: x, maxX: w, minY: y, maxY: h };
-
-		if (pos.x - radius < bounds.minX) {
-			shape.setPos({ x: bounds.minX + radius, y: pos.y });
-			shape.setVel({ x: 0, y: shape.getVel().y });
-		} else if (pos.x + radius > bounds.maxX) {
-			shape.setPos({ x: bounds.maxX - radius, y: pos.y });
-			shape.setVel({ x: 0, y: shape.getVel().y });
-		}
-
-		if (pos.y - radius < bounds.minY) {
-			shape.setPos({ x: bounds.minY + radius, y: pos.y });
-			shape.setVel({ x: 0, y: shape.getVel().y });
-		} else if (pos.y + radius > bounds.maxY) {
-			shape.setPos({ x: bounds.maxY - radius, y: pos.y });
-			shape.setVel({ x: 0, y: shape.getVel().y });
-		}
-	}
+	// private constrainToMap(shape: IPhysics<SHAPE>, { x, y, w, h }: { x: number, y: number, w: number, h: number }) {
+	// 	const pos = shape.getPos();
+	// 	const radius = shape.getBounds().x;
+	// 	const bounds = { minX: x, maxX: w, minY: y, maxY: h };
+	//
+	// 	if (pos.x - radius < bounds.minX) {
+	// 		shape.setPos({ x: bounds.minX + radius, y: pos.y });
+	// 		shape.setVel({ x: 0, y: shape.getVel().y });
+	// 	} else if (pos.x + radius > bounds.maxX) {
+	// 		shape.setPos({ x: bounds.maxX - radius, y: pos.y });
+	// 		shape.setVel({ x: 0, y: shape.getVel().y });
+	// 	}
+	//
+	// 	if (pos.y - radius < bounds.minY) {
+	// 		shape.setPos({ x: pos.x, y: bounds.minY + radius });
+	// 		shape.setVel({ x: shape.getVel().x, y: 0 });
+	// 	} else if (pos.y + radius > bounds.maxY) {
+	// 		shape.setPos({ x: pos.x, y: bounds.maxY - radius });
+	// 		shape.setVel({ x: shape.getVel().x, y: 0 });
+	// 	}
+	// }
 	isMoving(): boolean {
 		return !this.queue.every(level => level.every(shape => {
 			const { x, y } = shape.getVel()

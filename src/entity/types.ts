@@ -1,3 +1,8 @@
+import type { UUID } from "node:crypto";
+import type { SHAPE, Vector2D } from "../physics/physics";
+import type { SettingsEntity } from "../settings/settings";
+import type { AssetList } from "../assetManager/assets/assetRegistry";
+
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
  * 
@@ -36,5 +41,22 @@ export interface IKillable {
 	setHP(hp: number): void;
 	getHP(): number;
 	addHP(hp: number): void
-	isActive(): boolean
+	isDead(): boolean
 }
+export interface EngineSettingsEntity extends SettingsEntity {
+	id: UUID;
+	position: Vector2D;
+	velocity: Vector2D;
+	hp: number;
+	bouncyness: number;
+	mass: number;
+	size: number;
+	friction: number | undefined;
+	team: number[];
+	color: string;
+	playericon: AssetList;
+	shape: SHAPE.CIRCLE
+	hoop: AssetList
+	isPhysicsEnabled: boolean
+	isDead: boolean
+}	

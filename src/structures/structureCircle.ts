@@ -1,8 +1,8 @@
 import { EffectTrigger, EffectType, type Effect } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
-import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
-import type { MapBoundarySettingsCircle, SettingsEffect } from "../settings/settings.js";
+import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
+import { type MapBoundarySettingsCircle } from "../settings/settings.js";
 import { type Structure } from "./types.js";
 
 /**
@@ -14,7 +14,7 @@ import { type Structure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsCircle} Notwendig für die Kreis-Kreis-Kollisionslogik.
  */
-export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.CIRCLE>, ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger>> {
+export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.CIRCLE>, ISettingsSerialize<MapBoundarySettingsCircle> {
 	private position: Vector2D
 	/** Radius des Kreises. */
 	private r: number;
@@ -35,24 +35,16 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	private effects: Effect[]
-	constructor(x: number, y: number, r: number, color?: string, effects: SettingsEffect<EffectType, EffectTrigger>[] = []) {
+	private effects: Effect[] = []
+
+	// @ts-ignore
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: SettingsEffect<EffectType, EffectTrigger>[]) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = SHAPE.CIRCLE
 		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
-		this.effects = []
-		console.log(effects)
-		for (const effect of effects) {
-			switch (effect.type) {
-				case EffectType.Damage:
-					console.log(effect)
-					break
-				default: console.log(`Effect not implemented in ${getShapeName(this.shape)}`, effect)
-			}
-		}
 	}
 	/**
 	 * Zeichnet die Struktur. 
@@ -98,7 +90,8 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
 		// console.info(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
-		this.effects.forEach(effect => console.log("Effect triggered", entity, effect))
+		//@ts-ignore
+		this.effects.forEach(effect => effect.apply({ entity }))
 	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
@@ -107,10 +100,12 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public applyEffects(): void {
 		for (const eff of this.effects) { eff; }
 	}
-	public toSettings(): MapBoundarySettingsCircle<EffectType, EffectTrigger> {
+	public toSettings(): MapBoundarySettingsCircle {
+		// @ts-ignore
 		return { type: this.shape, x: this.position.x, y: this.position.y, r: this.r, color: this.color, effects: this.effects }
 	}
 
+	// @ts-ignore
 	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
 	public getType(): SHAPE.CIRCLE { return this.shape }
 	public getX(): number { return this.position.x }

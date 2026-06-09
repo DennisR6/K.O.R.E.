@@ -1,6 +1,4 @@
 import type { IInputEmitter } from "../engine/types.js";
-import { NetworkMessageType, type NetworkShoot } from "../server/server.js";
-import { wrap } from "../utils/net.js";
 import type { UUID } from "crypto";
 
 /**
@@ -28,7 +26,7 @@ export class NetworkEmitter implements IInputEmitter {
 	 * könnten sich ändern, sobald das Netzwerk-Protokoll finalisiert ist.
 	 */
 	sendShot(actorId: string, angle: number, power: number): void {
-		console.info(actorId, angle, power)
-		this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power, userid: this.userid, gameid: this.gameid }))
+		console.info("Network Emitter", actorId, angle, power)
+		// this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power, userid: this.userid, gameid: this.gameid }))
 	}
 }

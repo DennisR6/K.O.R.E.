@@ -1,11 +1,11 @@
-import type { UUID } from "node:crypto";
+import type { UUID } from "crypto";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import type { IItem } from "../item/Items.js";
-import { ItemWall } from "../item/ItemWall.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
-import type { SettingsEntity } from "../settings/settings.js";
 import type { IEntity } from "./Entity.js";
+import type { EngineSettingsEntity } from "./types.js";
+import type { Effect } from "../effects/types.js";
 
 
 /**
@@ -23,18 +23,13 @@ export interface IPlayerType {
 	 */
 	id?: UUID;
 
-	/** Startposition auf der X-Achse (Welt-Einheiten). */
-	x: number;
-
-	/** Startposition auf der Y-Achse (Welt-Einheiten). */
-	y: number;
-
+	position: Vector2D,
 	/** 
 	 * Team-Zugehörigkeit. 
 	 * Kann genutzt werden, um Kollisionen im selben Team zu ignorieren 
 	 * oder für die Punkteberechnung.
 	 */
-	team?: string[];
+	team?: number[];
 
 	/** 
 	 * Die Primärfarbe des Spielers.
@@ -80,19 +75,20 @@ export class Player implements IEntity {
 	private size: number = 1;
 	/** Individuelle Reibung (überschreibt bei Bedarf die globale Reibung). */
 	private friction: number | undefined;
-
-	private team: string[];
+	private effect: Effect[] = []
+	private team: number[] = [];
 	private color: string;
 	private playericon: AssetList;
 	private shape: SHAPE.CIRCLE
 	private hoop: AssetList
 	private isPhysicsEnabled: boolean = true
+	private dead: boolean = false
+	private items: IItem[] = []
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
 		this.id = crypto.randomUUID()
 		this.position = { x: 0, y: 0 }
-		this.team = []
 		this.color = "red"
 		this.playericon = AssetList.picturePenguinPenguinIdleFrame1PNG
 		this.shape = SHAPE.CIRCLE
@@ -111,14 +107,14 @@ export class Player implements IEntity {
 		 */
 	public new(player: IPlayerType) {
 		this.setId(player.id || crypto.randomUUID())
-		this.setPos({ x: player.x, y: player.y })
-		this.setVel({ x: 0, y: 0 })
+		this.setPos({ ...player.position })
 		this.team = player.team ?? this.team;
 		this.setColor(player.color ?? "red")
 		this.setPlayerIcon(player.playericon ?? this.playericon)
 		this.setSize(player.size ?? 20)
 		this.shape = SHAPE.CIRCLE;
 		this.hoop = player.hoop ?? AssetList.pictureReifenPNG
+		this.effect.push()
 		return this;
 	}
 
@@ -127,7 +123,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		if (this.hp <= 0) return
+		// if (this.hp <= 0) return
 		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
@@ -136,16 +132,15 @@ export class Player implements IEntity {
 		 * Integriert die Geschwindigkeit in die Position basierend auf der vergangenen Zeit.
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
-	public tick(deltaTime: number, _globalFriction: number) {
+	public tick(_deltaTime: number, _globalFriction: number) {
 		if (this.hp <= 0) {
-			this.position.x = 1_000_000;
-			this.position.y = 1_000_000;
-			this.velocity.x = 0
-			this.velocity.y = 0
-			return
 		}
-		this.position.x += this.velocity.x * deltaTime;
-		this.position.y += this.velocity.y * deltaTime;
+		// 	this.position.x = 1_000_000;
+		// 	this.position.y = 1_000_000;
+		// 	this.velocity.x = 0
+		// 	this.velocity.y = 0
+		// 	return
+		// }
 	}
 
 	public setId(id: UUID): void { this.id = id }
@@ -160,10 +155,10 @@ export class Player implements IEntity {
 	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
-	public setFriction(friction: number): void { this.friction = friction }
+	public setFriction(friction: number | undefined): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public addHP(hp: number): void { this.hp += hp; console.info(this.hp) }
+	public addHP(hp: number): void { console.trace(this.hp, hp); this.hp += hp; }
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
@@ -172,27 +167,58 @@ export class Player implements IEntity {
 	public getShape(): SHAPE.CIRCLE { return this.shape }
 
 	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void { }
-	public getTeam(): string[] { return this.team }
-	public isActive(): boolean { return this.isActive() }
+	public getTeam(): number[] { return this.team }
+	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
-	//@ts-ignore
-	public AddItem(item: IItem): void { this.itemlist.push(item) }
-	//@ts-ignore
-	public getInventory(): IItem[] { return new ItemWall({}) }
+	// public AddItem(item: IItem): void { }
+	// public getInventory(): IItem[] { return [] }
 	public use(_item: IItem): void { }
-	public toSettings(): SettingsEntity {
+
+	public toSettings(): EngineSettingsEntity {
 		return {
 			id: this.getId(),
+			position: this.position,
+			velocity: this.velocity,
 			playericon: this.playericon,
 			team: this.team,
-			x: this.position.x,
-			y: this.position.y,
 			hoop: this.hoop,
 			color: this.color,
 			size: this.size,
+			hp: this.hp,
+			bouncyness: this.bouncyness,
+			mass: this.mass,
+			friction: this.friction,
+			shape: this.shape,
+			isPhysicsEnabled: this.isPhysicsEnabled,
+			isDead: this.dead,
 		}
 	}
+	public setTeam(team: number[]) { this.team = team }
+	public setHoop(asset: AssetList) { this.hoop = asset }
+	public setBouncyness(bouncyness: number) { this.bouncyness = bouncyness }
+	public setIsDead(dead: boolean) { this.dead = dead }
+	public AddItem(item: IItem): void { this.items.push(item) }
+	public getInventory(): IItem[] { return this.items }
+	public isDead(): boolean { return this.dead }
 }
 
+
+export function createPlayerFromSettings(settings: EngineSettingsEntity): Player {
+	const player = new Player()
+	player.setId(settings.id)
+	player.setPos(settings.position)
+	player.setVel(settings.velocity)
+	player.setPlayerIcon(settings.playericon)
+	player.setTeam(settings.team)
+	player.setHoop(settings.hoop)
+	player.setColor(settings.color)
+	player.setSize(settings.size)
+	player.setHP(settings.hp)
+	player.setBouncyness(settings.bouncyness)
+	player.setMass(settings.mass)
+	player.setFriction(settings.friction)
+	player.setIsDead(settings.isDead)
+	return player
+}

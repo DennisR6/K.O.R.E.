@@ -21,28 +21,25 @@ export class NoRoundSystem implements ISystem {
  * Es fungiert als Zustandsautomat (State Machine), der nach jedem 
  * abgeschlossenen Zug zwischen dem eigenen und dem gegnerischen Zug wechselt.
  */
-export class Round2PlayerSystem implements ISystem {
+export class RoundPlayerSystem implements ISystem {
 	/** Interner Flag, um den aktuellen Besitzer des Zuges zu tracken. */
-	private yourTurn: boolean = false;
-
-	constructor(yourTurn: boolean) { this.yourTurn = yourTurn }
+	private lastNumber: number = 0;
+	private myNumber: number = 0;
+	constructor(myNumber: number = 0) { this.myNumber = myNumber }
 	/**
 	 * Prüft den Spielzustand und wechselt die Runde, sobald die Action vorbei ist.
 	 */
 	ticker(ctx: IGameContext, _dt: number): void {
-		if (ctx.state == GameState.YOUR_TURN) this.yourTurn = false
-		if (ctx.state == GameState.OPPONENTS_TURN) this.yourTurn = true
+		this.lastNumber = ctx.currTurn
 		if (ctx.state !== GameState.PLAYING_DONE) return;
-
-		if (this.yourTurn) {
+		if (this.lastNumber == this.myNumber) {
 			// GameLogger.info(`${ctx.state} -> ${GameState.YOUR_TURN}`)
 			ctx.state = GameState.YOUR_TURN;
 		} else {
 			// GameLogger.info(`${ctx.state} -> ${GameState.OPPONENTS_TURN}`)
 			ctx.state = GameState.OPPONENTS_TURN;
 		}
-
-		this.yourTurn = !this.yourTurn;
+		this.lastNumber += 1
 	}
 }
 

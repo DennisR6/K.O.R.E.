@@ -14,7 +14,8 @@ export class GameEmitter implements IInputEmitter {
 
 	sendShot(actorId: string, angle: number, power: number): void {
 		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
-		this.handler.applyRawTurn({ actorId, angle, power })
+		const sim = this.handler.simulateTurn(actorId, angle, power)
 		this.handler.setState(GameState.PLAYING)
+		this.handler.tickTurn(sim)
 	}
 }

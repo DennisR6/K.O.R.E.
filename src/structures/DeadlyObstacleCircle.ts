@@ -1,3 +1,4 @@
+import type { EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import type { IEntity } from "../entity/Entity.js";
 import { Player } from "../entity/Player.js";
@@ -5,7 +6,7 @@ import { StructureCircle } from "./structureCircle.js";
 
 export class DeadlyObstacleCirle extends StructureCircle {
 	secondaryColor: string = "green"
-	constructor(x: number, y: number, r: number, color?: string) { super(x, y, r, color) }
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: EffectSettings[]) { super(x, y, r, color, effects) }
 
 	public onCollision({ entity }: { entity: IEntity }): void {
 		if (!(entity instanceof Player)) return

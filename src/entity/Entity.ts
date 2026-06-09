@@ -4,8 +4,7 @@ import type { IDrawer, ITicker } from "../engine/RenderContext.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { IItem } from "../item/Items.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
-import type { SettingsEntity } from "../settings/settings.js";
-import type { IKillable } from "./types.js";
+import type { EngineSettingsEntity, IKillable } from "./types.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -17,7 +16,7 @@ import type { IKillable } from "./types.js";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<SettingsEntity> {
+export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<EngineSettingsEntity> {
 
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
@@ -41,7 +40,8 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	setPlayerIcon(icon: AssetList): void;
 	setSize(size: number): void;
 	getColor(): string;
-	getTeam(): string[];
+	getTeam(): number[];
+	setTeam(team: number[]): void
 	isActive(): boolean
 }
 export interface IInventory {

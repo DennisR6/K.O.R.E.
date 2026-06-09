@@ -1,47 +1,39 @@
-import type { RenderContext } from "../engine/RenderContext.js";
-import type { IGameContext } from "../systems/types.js"
-import { GameState } from "../engine/types.js";
-import { ItemCollector } from "./ItemCollector.js";
-import { MinimalItem } from "./minimalItem.js";
-import type { IItem } from "./Items.js";
-
-
-export class ItemWall extends MinimalItem {
-	private lastState: GameState;
-	private roundsActive: number = 0;
-	private readonly MAX_ROUNDS = 10;
-	private wallId: string = "wall_" + Math.random().toString(36).substring(2, 9);
-	private isSpawned: boolean = false;
-
-
-	constructor(item: Partial<IItem>) {
-		super(item)
-		this.lastState = GameState.YOUR_TURN
-	}
-
-	draw(_ctx: RenderContext): void { }
-
-	ticker(ctx: IGameContext, _dt: number, _gf: number) {
-		// Nur reagieren, wenn der Status sich geändert hat
-		if (this.lastState === ctx.state) return;
-		this.lastState = ctx.state;
-
-		// Wir zählen nur, wenn der Zustand "YOUR_TURN" erreicht wird
-		if (this.lastState === GameState.YOUR_TURN) return
-		if (this.roundsActive < this.MAX_ROUNDS) {
-			// Wand spawnen, falls noch nicht geschehen
-			if (!this.isSpawned) {
-				const wall = new ItemCollector({});
-				(wall as any).id = this.wallId;
-				ctx.structures.push(wall);
-				this.isSpawned = true;
-			}
-			this.roundsActive++;
-		} else if (this.isSpawned) {
-			ctx.structures = ctx.structures.filter(s => (s as any).id !== this.wallId);
-			this.isSpawned = false;
-		}
-		console.log(ctx.structures)
-	}
-	tick(_deltatime: number, _globalfriction: number): void { }
-}
+// export class ItemWall extends MinimalItem {
+// 	private lastState: GameState;
+// 	private roundsActive: number = 0;
+// 	private readonly MAX_ROUNDS = 10;
+// 	private wallId: string = "wall_" + Math.random().toString(36).substring(2, 9);
+// 	private isSpawned: boolean = false;
+//
+//
+// 	constructor(item: Partial<IItem>) {
+// 		super(item)
+// 		this.lastState = GameState.YOUR_TURN
+// 	}
+//
+// 	draw(_ctx: RenderContext): void { }
+//
+// 	ticker(ctx: IGameContext, _dt: number, _gf: number) {
+// 		// Nur reagieren, wenn der Status sich geändert hat
+// 		if (this.lastState === ctx.state) return;
+// 		this.lastState = ctx.state;
+//
+// 		// Wir zählen nur, wenn der Zustand "YOUR_TURN" erreicht wird
+// 		if (this.lastState === GameState.YOUR_TURN) return
+// 		if (this.roundsActive < this.MAX_ROUNDS) {
+// 			// Wand spawnen, falls noch nicht geschehen
+// 			if (!this.isSpawned) {
+// 				const wall = new ItemCollector({});
+// 				(wall as any).id = this.wallId;
+// 				ctx.structures.push(wall);
+// 				this.isSpawned = true;
+// 			}
+// 			this.roundsActive++;
+// 		} else if (this.isSpawned) {
+// 			ctx.structures = ctx.structures.filter(s => (s as any).id !== this.wallId);
+// 			this.isSpawned = false;
+// 		}
+// 		console.log(ctx.structures)
+// 	}
+// 	tick(_deltatime: number, _globalfriction: number): void { }
+// }

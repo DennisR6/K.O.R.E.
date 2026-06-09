@@ -1,9 +1,9 @@
-import type { UUID } from "node:crypto";
+import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
-import type { SHAPE } from "../physics/physics.js";
+import type { SHAPE, Vector2D } from "../physics/physics.js";
 import { BilliardMap } from "./billiardMap.js"
-import { IceMap } from "./iceMap.js";
-import { EffectTrigger, EffectType } from "../effects/types.js";
+import IceMap from "./iceMap.js";
+import type { EffectSettings } from "../effects/types.js";
 
 const MAPS = { BilliardMap, IceMap }
 MAPS;
@@ -12,13 +12,17 @@ export interface GameSettings {
 	id: UUID
 	screenResolution: SettingsScreenResolution;
 	players: SettingsEntity[];
-	team: string[],
-	allTeam: string[],
-	mapBoundarys: MapBoundarySettings<EffectType, EffectTrigger>[];
+	mapBoundarys: MapBoundarySettings[];
 	background: SettingsBackground;
 	friction: FrictionSettings;
-	effects: SettingsEffect<EffectType, EffectTrigger>[];
+	effects: EffectSettings[];
 	items: SettingsItem[];
+	myTeam: number[],
+	allTeams?: string[],
+	allTeamSize: number,
+	minPlayers: number,
+	maxPlayers: number,
+	turn?: number
 }
 
 export interface SettingsScreenResolution {
@@ -37,43 +41,29 @@ export interface SettingsBackgroundColor {
 	color: string
 }
 
-export interface SettingsEffect<T extends EffectType, K extends EffectTrigger> {
-	type: T,
-	trigger: K,
-	values: SettingsEffectTypeValues[T];
-	triggerValues: SettingsEffectTriggerValues[K],
-}
-export interface SettingsEffectTriggerValues {
-	[EffectTrigger.Collision]: {},
-	[EffectTrigger.RoundBased]: {},
-}
-type SettingsEffectTypeValues = {
-	[EffectType.Damage]: { damage: number },
-	[EffectType.Physics]: {},
-	[EffectType.None]: {},
-}
 
-export type MapBoundarySettings<T extends EffectType, K extends EffectTrigger> = MapBoundarySettingsCircle<T, K> | MapBoundarySettingsLine<T, K> | MapBoundarySettingsRect<T, K>
-export interface IMapBoundarySettings<T extends EffectType, K extends EffectTrigger> {
+
+
+export type MapBoundarySettings = MapBoundarySettingsCircle | MapBoundarySettingsLine | MapBoundarySettingsRect
+export interface IMapBoundarySettings {
 	type: SHAPE
 	x: number;
 	y: number;
-	effects: SettingsEffect<T, K>[]
 }
-export interface MapBoundarySettingsCircle<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+export interface MapBoundarySettingsCircle extends IMapBoundarySettings {
 	type: SHAPE.CIRCLE
 	r: number;
 	color?: string;
 }
 
-export interface MapBoundarySettingsLine<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+export interface MapBoundarySettingsLine extends IMapBoundarySettings {
 	type: SHAPE.LINE
 	x2: number;
 	y2: number;
 	color?: string;
 }
 
-export interface MapBoundarySettingsRect<T extends EffectType, K extends EffectTrigger> extends IMapBoundarySettings<T, K> {
+export interface MapBoundarySettingsRect extends IMapBoundarySettings {
 	type: SHAPE.RECTANGLE
 	w: number;
 	h: number;
@@ -82,11 +72,10 @@ export interface MapBoundarySettingsRect<T extends EffectType, K extends EffectT
 
 export interface SettingsEntity {
 	id: UUID;
-	x: number;
-	y: number;
-	size?: number;
+	position: Vector2D
+	size: number;
 	color?: string;
-	team: string[];
+	team: number[];
 	playericon: AssetList;
 	hoop: AssetList;
 }
@@ -157,33 +146,69 @@ export const FRICTION_TABLE = {
 	}
 } as const
 
-export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings<EffectType, EffectTrigger>[], background: SettingsBackground }
+export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings[], background: SettingsBackground }
 
 const playerSize = 14
 const defaultHoop = AssetList.pictureReifenWEBP
+const team1 = [
+	{ id: "300591aa-e47e-4708-8da8-e8feb9938555" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+	{ id: "46d4ce14-0437-4a01-a99f-7bddff12e507" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+	{ id: "1a4f0fd9-4a26-4ac5-8332-c18b68f4f084" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+	{ id: "1ea70b24-bb63-4346-ad58-dcc85f2f3bbb" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+	{ id: "2663d694-7e93-4a1c-8fb8-9b905e3174a8" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+	{ id: "26a4b2f4-228f-449b-babf-ad935723bc73" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop },
+]
+const team2 = [
+	{ id: "2ce98548-ab1e-482a-8130-fd270233cd97" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop },
+	{ id: "ff8e2c75-da89-4d54-b2fa-fbec418d0200" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop },
+	{ id: "f71b2986-d32a-46a0-8fb4-e8f95beb8de9" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop },
+	{ id: "f2c7eb70-aebd-4231-ba9d-4f5fa2d547cd" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop },
+	{ id: "58e7ac62-98fa-4552-87d0-49689a27a484" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop },
+	{ id: "3f66b025-978b-4de9-8032-996440744939" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop }
+]
+
+IceMap.createPlayerStartPoints(0, team1)
+IceMap.createPlayerStartPoints(1, team2)
 export const GameSettings: GameSettings = {
 	id: "8a67d1b0-5c76-4348-bc7a-012d8c9746cc",
 	players: [
 		/* Formation LINKS (3x2) */
-		{ id: "300591aa-e47e-4708-8da8-e8feb9938555", x: 100, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: "46d4ce14-0437-4a01-a99f-7bddff12e507", x: 200, y: 100, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: "1a4f0fd9-4a26-4ac5-8332-c18b68f4f084", x: 100, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: "1ea70b24-bb63-4346-ad58-dcc85f2f3bbb", x: 200, y: 200, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: "2663d694-7e93-4a1c-8fb8-9b905e3174a8", x: 90, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		{ id: "26a4b2f4-228f-449b-babf-ad935723bc73", x: 200, y: 300, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: ["1"], size: playerSize, hoop: defaultHoop },
-		//
+		...team1,
 		// /* Formation RECHTS (3x2) */
-		{ id: "2ce98548-ab1e-482a-8130-fd270233cd97", x: 600, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
-		{ id: "ff8e2c75-da89-4d54-b2fa-fbec418d0200", x: 700, y: 100, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
-		{ id: "f71b2986-d32a-46a0-8fb4-e8f95beb8de9", x: 700, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
-		{ id: "f2c7eb70-aebd-4231-ba9d-4f5fa2d547cd", x: 600, y: 200, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
-		{ id: "58e7ac62-98fa-4552-87d0-49689a27a484", x: 600, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop },
-		{ id: "3f66b025-978b-4de9-8032-996440744939", x: 700, y: 300, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: ["2"], size: playerSize, hoop: defaultHoop }
+		...team2,
 	],
 	friction: FRICTION_TABLE.ice,
 	items: [],
 	effects: [],
-	allTeam: ["1", "2"],
-	team: ["1"],
-	...MAPS.IceMap,
+	minPlayers: 2,
+	maxPlayers: 2,
+	allTeams: ["1bafa3d2-b0e3-4e66-8c4f-e8da14278123", "5935f4b2-b3bd-4792-a356-fdf74f20ca2e"],
+	allTeamSize: 2,
+	myTeam: [],
+	...IceMap.IceMap,
+}
+
+
+export function arrangeInGrid(
+	players: SettingsEntity[],
+	rect: { x: number, y: number, w: number, h: number },
+	padding: number = 0
+) {
+	if (players.length === 0) return;
+
+	const size = players[0].size * 2;
+	const cellSize = size + padding + 1;
+
+	const cols = Math.max(1, Math.floor(rect.w / cellSize));
+	const rows = Math.max(1, Math.floor(rect.h / cellSize));
+
+	if (cols * rows < players.length) throw new Error("Nicht genug Platz für alle Spieler!");
+
+	players.forEach((player, index) => {
+		const col = index % cols;
+		const row = Math.floor(index / cols);
+
+		player.position.x = rect.x + (col * cellSize) + (size / 2);
+		player.position.y = rect.y + (row * cellSize) + (size / 2);
+	});
 }

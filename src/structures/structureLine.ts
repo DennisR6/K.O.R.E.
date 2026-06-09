@@ -1,8 +1,8 @@
-import { EffectType, type Effect, type EffectTrigger } from "../effects/types.js";
+import { type Effect, type EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
 import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
-import type { MapBoundarySettingsLine, SettingsEffect } from "../settings/settings.js";
+import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
 
 /**
@@ -13,7 +13,7 @@ import type { IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
  */
-export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISettingsSerialize<MapBoundarySettingsLine<EffectType, EffectTrigger>> {
+export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISettingsSerialize<MapBoundarySettingsLine> {
 	/** Koordinaten der Linie. */
 	private position: Vector2D
 	private w: number; //x2
@@ -30,8 +30,8 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true;
 
-	private effects: Effect[]
 	// @ts-ignore
+	private effects: Effect[] = []
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
@@ -43,7 +43,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 		 * @param y2 - Höhe des Hindernisses.
 		 * @param color - Farbe der Wand.
 		 */
-	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: SettingsEffect<EffectType, EffectTrigger>[] = []) {
+	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = []) {
 		this.position = { x, y }
 		this.w = x2
 		this.h = y2
@@ -104,11 +104,13 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
-	public toSettings(): MapBoundarySettingsLine<EffectType, EffectTrigger> {
-		return { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: this.effects }
+	public toSettings(): MapBoundarySettingsLine {
+		return { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color }
 	}
-	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
+	public getEffects(): EffectSettings[] { return [] }
 	public getType(): SHAPE.LINE { return this.shape }
 	public getX(): number { return this.position.x }
 	public getY(): number { return this.position.y }
+
+	public apply(settings: MapBoundarySettingsLine): void { throw new Error("TODO!" + settings) }
 }

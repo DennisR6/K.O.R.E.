@@ -31,5 +31,5 @@ export { PlaybackSystem } from "./PlayBackSystem.js";
  * Das Round2PlayerSystem steuert die Spiellogik: 
  * Wer ist dran? Wann beginnt eine neue Runde? Wer hat gewonnen?
  */
-export { Round2PlayerSystem } from "./RoundSystem.js";
+export { RoundPlayerSystem } from "./RoundSystem.js";
 export { Simulator } from "./Simulator.js"

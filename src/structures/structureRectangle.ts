@@ -1,8 +1,6 @@
-import { EffectType, type Effect, type EffectTrigger } from "../effects/types.js";
+import { EffectType, type Effect } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
-import type { ISettingsSerialize } from "../engine/types.js";
 import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
-import type { MapBoundarySettingsRect, SettingsEffect } from "../settings/settings.js";
 import { type IStructure } from "./types.js";
 
 /**
@@ -15,7 +13,7 @@ import { type IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
  */
-export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>, ISettingsSerialize<MapBoundarySettingsRect<EffectType, EffectTrigger>> {
+export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE> {
 	/** X-Koordinate der oberen linken Ecke. */
 	private x: number;
 	/** Y-Koordinate der oberen linken Ecke. */
@@ -47,7 +45,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	 * @param h - Höhe des Blocks.
 	 * @param color - Füllfarbe des Rechtecks.
 	 */
-	constructor(x: number, y: number, w: number, h: number, color?: string, effects: SettingsEffect<EffectType, EffectTrigger>[] = []) {
+	constructor(x: number, y: number, w: number, h: number, color?: string, effects: Effect[] = []) {
 		this.x = x
 		this.y = y
 		this.w = w
@@ -58,7 +56,9 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 		this.bounce = Infinity
 		this.effects = []
 		for (const effect of effects) {
-			switch (effect.type) {
+			switch (effect.getType()) {
+				//@ts-ignore
+				case EffectType.Damage: this.effects.push(new EffectDamage(effect.values.damage)); break;
 				default: console.log(`Effect not implemented in ${getShapeName(this.shape)}`, effect)
 			}
 		}
@@ -94,7 +94,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	public setMass(mass: number): void { this.mass = mass }
 
 	public getMass(): number { return this.mass }
-	public setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y }
+	public setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y; }
 	public getFriction(): number { return this.friction ?? 1 }
 
 	public setFriction(friction: number): void { this.friction = friction }
@@ -111,10 +111,10 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean) { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
-	public toSettings(): MapBoundarySettingsRect<EffectType, EffectTrigger> {
-		return { type: SHAPE.RECTANGLE, x: this.x, y: this.y, w: this.w, h: this.h, color: this.color, effects: this.effects }
-	}
-	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
+	// public toSettings(): MapBoundarySettingsRect<EffectType, EffectTrigger> {
+	// 	return { type: SHAPE.RECTANGLE, x: this.x, y: this.y, w: this.w, h: this.h, color: this.color, effects: this.effects }
+	// }
+	// public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
 	public getType(): SHAPE.RECTANGLE { return this.shape }
 	public getX(): number { return this.x }
 	public getY(): number { return this.y }

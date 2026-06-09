@@ -1,21 +1,17 @@
-import type { EffectTrigger, EffectType } from "../effects/types.js";
+import type { EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js";
-import type { ISettingsSerialize } from "../engine/types.js";
-import { SHAPE, type IdefaultPhysics, type IPhysics, type Vector2D } from "../physics/physics.js";
-import type { MapBoundarySettings, MapBoundarySettingsCircle, MapBoundarySettingsLine, MapBoundarySettingsRect, SettingsEffect } from "../settings/settings.js";
+import { getShapeName, SHAPE, type IdefaultPhysics, type IPhysics, type Vector2D } from "../physics/physics.js";
+import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
 
-export class FullStructure implements
-	IStructure,
-	ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger>>,
-	IdefaultPhysics {
+export class FullStructure implements IStructure, IdefaultPhysics {
 	str: IStructure & IPhysics<SHAPE>
-	constructor(str: MapBoundarySettings<EffectType, EffectTrigger>) {
+	constructor(str: MapBoundarySettings) {
 		switch (str.type) {
-			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects); break;
-			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects); break;
-			default: this.str = new StructureRectangle(str.x, str.y, str.x + 20, str.y + 20, str.color, str.effects); console.log(`STRUCTURE ${SHAPE.LINE} not implemented`);
+			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, []); break;
+			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, []); break;
+			default: this.str = new StructureRectangle(str.x, str.y, str.x + 20, str.y + 20, str.color, []); console.log(`STRUCTURE ${getShapeName(str.type)} not implemented`);
 		}
 	}
 
@@ -36,10 +32,6 @@ export class FullStructure implements
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.str.setPhysicsEnabled(physicsEnabled) }
 	public setPos(pos: Vector2D): void { this.str.setPos(pos) }
 	public setVel(vel: Vector2D): void { this.str.setVel(vel) }
-	public toSettings(): MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger> { return this.str.toSettings() }
-	public getType(): SHAPE { return this.str.getType() }
-	public getX(): number { return this.str.getX() }
-	public getY(): number { return this.str.getY() }
-	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.str.getEffects() }
+	public getEffects(): EffectSettings[] { return [] }
 	public isPhysicsObj(): this is IStructure & IPhysics<SHAPE> { return typeof (this as any).str.getShape() === 'function' }
 }
