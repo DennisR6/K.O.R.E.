@@ -1,6 +1,6 @@
 import { EntityManager } from "../entity/EntityManager.js";
-import type { EntitySnapshot } from "../entity/types.js";
-import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
+import type { EngineSettingsEntity } from "../entity/types.js";
+import type { PhysicsStrategy } from "../physics/physics.js";
 import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
 
@@ -17,7 +17,7 @@ export interface TurnPacket {
 	/** Wie viele Frames dauert die Animation insgesamt? */
 	durationFrames: number;
 	/** Der Zustand aller Objekte NACH dem Schuss (Endpositionen). */
-	finalState: EntitySnapshot[];
+	finalState: EngineSettingsEntity[];
 }
 
 
@@ -57,51 +57,51 @@ export interface IInputEmitter {
  * if (context.state === GameState.YOUR_TURN) { 
  *    // Erlaube Maus-Interaktion 
  * }
+ * das ist auch gleichzeitig die Dokumentation für den Ablaufplan in der Engine:
+ * alles was untereinander ist läuft nacheinander ab und was nebeneinander ist ist quasi eine abzweigung
+ * bsp.
+ * starting ist immer der anfang
+ * dann wird "immer" auf waiting for players gewechselt um auf die restlichen spieler zu warten
+ * lokal wird da einfach der state durchgereicht.
+ * danach wird entschieden, ob du oder der gegner dran ist und dementsprechend dann YOUR_TURN oder OPPONENTS_TURN gesetzt.
+ * wenn der INPUT gemacht worden ist, dann wird TURN_DONE aufgerufen und 
  */
 export const enum GameState {
-	/** Default-Status vor der Initialisierung */
-	STARTING,
-	/** Wartebereich für Multiplayer-Verbindungen */
-	WAITING_FOR_PLAYERS,
-	/** Der lokale Spieler ist am Zug */
-	YOUR_TURN,
-	/** Der Gegner ist am Zug (Remote oder KI) */
-	OPPONENTS_TURN,
-	/** Physik wird im Hintergrund vorausberechnet (Simulator aktiv) */
-	SIMULATING,
-	/** Berechnung abgeschlossen, bereit für die Darstellung */
-	SIMULATING_DONE,
-	/** Die berechneten Daten werden animiert dargestellt (Playback aktiv) */
-	PLAYING,
-	/** Animation beendet, Zeit für die nächste Phase (RoundHandler übernimmt) */
-	PLAYING_DONE,
-
-	/** Das ist aktuell noch nicht implementiert */
-	GOAL_SCORED,
-	TURN_DONE,
-	GAME_OVER,
-	ITEM_DRAW,
-	ITEM_END,
-	WAITING_FOR_SERVER,
+	Starting = "GameState.Starting",
+	Waiting_for_Players = "GameState.Waiting_for_Players",
+	ChooseTeam = "GameState.ChooseTeam",
+	Your_turn = "GameState.Your_turn",
+	Opponents_turn = "GameState.Opponents_turn",
+	Turn_done = "GameState.Turn_done",
+	Round_done = "GameState.Round_done",
+	Simulating = "GameState.Simulating",
+	Simulating_done = "GameState.Simulating_done",
+	Playing = "GameState.Playing",
+	Playing_done = "GameState.Playing_done",
+	Waiting_for_server = "GameState.Waiting_for_server",
+	Game_over = "GameState.Game_over",
+	Goal_scored = "GameState.Goal_scored",
+	Error = "GameState.Error",
 };
 
 export function getEngineStateName(state: GameState) {
 	switch (state) {
-		case (GameState.STARTING): return "STARTING"
-		case (GameState.WAITING_FOR_PLAYERS): return "WAITING_FOR_PLAYERS"
-		case (GameState.YOUR_TURN): return "YOUR_TURN"
-		case (GameState.OPPONENTS_TURN): return "OPPONENTS_TURN"
-		case (GameState.SIMULATING): return "SIMULATING"
-		case (GameState.SIMULATING_DONE): return "SIMULATING_DONE"
-		case (GameState.PLAYING): return "PLAYING"
-		case (GameState.PLAYING_DONE): return "PLAYING_DONE"
-		case (GameState.GOAL_SCORED): return "GOAL_SCORED"
-		case (GameState.TURN_DONE): return "TURN_DONE"
-		case (GameState.GAME_OVER): return "GAME_OVER"
-		case (GameState.ITEM_DRAW): return "ITEM_DRAW"
-		case (GameState.ITEM_END): return "ITEM_END"
-		case (GameState.WAITING_FOR_SERVER): return "Waiting for Server"
-		default: return "NOT IMPLEMENTED STATE"
+		case GameState.Starting: return "Starting"
+		case GameState.Waiting_for_Players: return "Waiting for Players"
+		case GameState.ChooseTeam: return "ChooseTeam"
+		case GameState.Your_turn: return "Your Turn"
+		case GameState.Opponents_turn: return "Opponents Turn"
+		case GameState.Turn_done: return "Turn done"
+		case GameState.Round_done: return "Round done"
+		case GameState.Simulating: return "Simulating"
+		case GameState.Simulating_done: return "Simulating done"
+		case GameState.Playing: return "Playing"
+		case GameState.Playing_done: return "Playing done"
+		case GameState.Waiting_for_server: return "Waiting for_server"
+		case GameState.Game_over: return "Game over"
+		case GameState.Goal_scored: return "GOAL SCORED"
+		case GameState.Error: return "Engine is in an ErrorState"
+		default: return `GameState ${state} not implemented`
 	}
 }
 
@@ -112,12 +112,10 @@ export type GameStateType = keyof typeof GameState;
  * Definiert die Interaktionsmöglichkeiten mit der Maus.
  */
 export interface IMouse {
-	handleMousePressed(mouseX: number, mouseY: number): void;
-	updateMouse(mouseX: number, mouseY: number): void;
-	handleMouseReleased(cb?: (actorId: string, angle: number, power: number) => void): void;
+	handleMousePressed(x: number, y: number): void;
+	updateMouse(x: number, y: number): void;
+	handleMouseReleased(): void;
 	handleMouseWheel(event: WheelEvent): void;
-	setCurrentMousePosition(pos: Vector2D): void;
-	getCurrentMousePosition(): Vector2D;
 }
 
 /**
@@ -156,4 +154,24 @@ export interface ISettingsSerialize<T> {
 export interface EngineSettings extends GameSettings {
 	state: GameState
 	turnNumber: number
+	players: EngineSettingsEntity[];
+	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }
+
+
+// export interface GameSettings {
+// 	id: UUID
+// 	screenResolution: SettingsScreenResolution;
+// 	players: SettingsEntity[];
+// 	mapBoundarys: MapBoundarySettings[];
+// 	background: SettingsBackground;
+// 	friction: FrictionSettings;
+// 	effects: FullEffectSettings[];
+// 	items: SettingsItem[];
+// 	myTeam: number[],
+// 	allTeams?: string[],
+// 	allTeamSize: number,
+// 	minPlayers: number,
+// 	maxPlayers: number,
+// 	turn?: number
+// }

@@ -2,6 +2,7 @@ import type { UUID } from "node:crypto";
 import type { SHAPE, Vector2D } from "../physics/physics";
 import type { SettingsEntity } from "../settings/settings";
 import type { AssetList } from "../assetManager/assets/assetRegistry";
+import type { FullEffectSettings } from "../effects/types";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -59,4 +60,5 @@ export interface EngineSettingsEntity extends SettingsEntity {
 	hoop: AssetList
 	isPhysicsEnabled: boolean
 	isDead: boolean
+	effects: FullEffectSettings[]
 }	

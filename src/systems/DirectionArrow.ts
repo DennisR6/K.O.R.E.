@@ -26,16 +26,16 @@ export class DirectionArrow implements IDrawer, ISystem {
 		ctx.pop()
 	}
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
-		if (ctx.state !== GameState.YOUR_TURN) {
+		if (ctx.state !== GameState.Your_turn) {
 			this.player = undefined
 			return
 		}
 		this.player = ctx.entities.getEntityAt(ctx.mouse.start.x, ctx.mouse.start.y, 24)
 		if (!this.player) return
-		this.start = ctx.mouse.start
+		this.start = this.player.getPos()
 		this.end = ctx.mouse.end
 		if (!ctx.mouse.released) return
-		ctx.state = GameState.TURN_DONE
+		ctx.state = GameState.Turn_done
 		ctx.mouse.pressed = false
 		ctx.mouse.released = false
 	}

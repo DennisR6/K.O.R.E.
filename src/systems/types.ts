@@ -23,6 +23,7 @@ export interface IGameContext {
 	worldSize: Vector2D;
 	physics: PhysicsStrategy
 	currTurn: number
+	myTeamNumber: number
 }
 
 /**

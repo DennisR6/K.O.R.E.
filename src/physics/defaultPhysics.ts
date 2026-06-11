@@ -1,5 +1,6 @@
+import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { getShapeName, PhysicsLevel, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
+import { getShapeName, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -16,14 +17,13 @@ import { getShapeName, PhysicsLevel, SHAPE, type IPhysics, type PhysicsStrategy,
  * Falls du mehr Infos brauchst, findest du diese im Test unter tests/physics.test.ts
  */
 export class defaultPhysics implements PhysicsStrategy {
-	private readonly STOP_THRESHOLD = 0.01;
 	/** Exponentielle Reibung (Multiplikator pro Frame, z.B. 0.995). */
-	private friction: number;
+	friction: number;
 	/** Linearer Widerstand (fester Abzug pro Frame). */
-	private linearDrag: number;
+	linearDrag: number;
 	/** Geschwindigkeits-Grenze, unter der ein Objekt als "stehend" gilt. */
-	private stopThreshold: number;
-	private queue: [IPhysics<SHAPE>[]]
+	stopThreshold: number;
+
 	/**
 	 * @param settings - Optionale Reibungseinstellungen. Falls leer, werden Standardwerte genutzt.
 	 */
@@ -32,8 +32,6 @@ export class defaultPhysics implements PhysicsStrategy {
 		this.friction = settings?.friction ?? defaults.friction
 		this.linearDrag = settings?.linearDrag ?? defaults.linearDrag
 		this.stopThreshold = settings?.stopThreshold ?? defaults.stopThreshold
-		this.queue = [[]]
-		for (let i = 1; i < PhysicsLevel.LastLevel; ++i) this.queue.push([])
 	}
 
 	public getDefaults(): FrictionSettings {
@@ -102,7 +100,6 @@ export class defaultPhysics implements PhysicsStrategy {
 			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.RECTANGLE>);
 			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
-			case entityB.getShape() == SHAPE.CIRCLE && entityA.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
 			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
@@ -205,7 +202,7 @@ export class defaultPhysics implements PhysicsStrategy {
 				break;
 			}
 			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
-				// console.error("TODO! /src/phyics/defaultPhysics.ts", getShapeName(entityA.getShape()), getShapeName(entityB.getShape()))
+				console.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				break
 			}
 			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):
@@ -372,7 +369,6 @@ export class defaultPhysics implements PhysicsStrategy {
 			vx = 0;
 			vy = 0;
 		}
-
 		entity.setVel({ x: vx, y: vy });
 	}
 
@@ -437,86 +433,24 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 		return { x, y };
 	}
-	public toSettings(): FrictionSettings { return { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold } }
-	public addToQueue(level: PhysicsLevel, shape: IPhysics<SHAPE>): void { this.queue[level as number].push(shape) }
-
-
-	public tick(dt: number = 1, _friction: number = this.friction): void {
-		let totalMovement = 0;
-
-		this.resolveAllCollisions();
-
-		this.queue.forEach(level =>
-			level.forEach((shape: IPhysics<SHAPE>) => {
-				this.applyFriction(shape, dt)
-
-				const { x, y } = shape.getPos()
-				const { x: vx, y: vy } = shape.getVel()
-				shape.setPos({ x: x + vx * dt, y: y + vy * dt })
-				// this.constrainToMap(shape, { x: 0, y: 0, w: 800, h: 450 });
-
-				const speed = Math.sqrt(shape.getVel().x ** 2 + shape.getVel().y ** 2);
-				if (speed < this.STOP_THRESHOLD) {
-					shape.setVel({ x: 0, y: 0 });
-				} else {
-					totalMovement += speed;
-				}
-			}));
-	}
-
-	/**
-	 * Berechnet die Physik für den aktuellen Frame.
-	 * Wendet Kollisionen und Reibung an und stoppt Objekte, die die 
-	 * Mindestgeschwindigkeit unterschreiten.
-	 */
-	private resolveAllCollisions() {
-		const levels = Object.keys(this.queue).map(Number);
-
-		for (let i = 0; i < levels.length; i++) {
-			for (let j = i; j < levels.length; j++) {
-				const levelA = this.queue[levels[i]];
-				const levelB = this.queue[levels[j]];
-
-				for (const entityA of levelA) {
-					for (const entityB of levelB) {
-						if (entityA === entityB) continue;
-
-						if (this.checkCollision(entityA, entityB)) {
-							this.handleCollision(entityA, entityB);
-						}
-					}
-				}
-			}
+	toSettings(): FrictionSettings {
+		return {
+			friction: this.friction,
+			linearDrag: this.linearDrag,
+			stopThreshold: this.stopThreshold
 		}
 	}
 
-	// private constrainToMap(shape: IPhysics<SHAPE>, { x, y, w, h }: { x: number, y: number, w: number, h: number }) {
-	// 	const pos = shape.getPos();
-	// 	const radius = shape.getBounds().x;
-	// 	const bounds = { minX: x, maxX: w, minY: y, maxY: h };
-	//
-	// 	if (pos.x - radius < bounds.minX) {
-	// 		shape.setPos({ x: bounds.minX + radius, y: pos.y });
-	// 		shape.setVel({ x: 0, y: shape.getVel().y });
-	// 	} else if (pos.x + radius > bounds.maxX) {
-	// 		shape.setPos({ x: bounds.maxX - radius, y: pos.y });
-	// 		shape.setVel({ x: 0, y: shape.getVel().y });
-	// 	}
-	//
-	// 	if (pos.y - radius < bounds.minY) {
-	// 		shape.setPos({ x: pos.x, y: bounds.minY + radius });
-	// 		shape.setVel({ x: shape.getVel().x, y: 0 });
-	// 	} else if (pos.y + radius > bounds.maxY) {
-	// 		shape.setPos({ x: pos.x, y: bounds.maxY - radius });
-	// 		shape.setVel({ x: shape.getVel().x, y: 0 });
-	// 	}
-	// }
-	isMoving(): boolean {
-		return !this.queue.every(level => level.every(shape => {
-			const { x, y } = shape.getVel()
-			if (x > Math.abs(this.STOP_THRESHOLD)) return false
-			if (y > Math.abs(this.STOP_THRESHOLD)) return false
-			return true
-		}))
+
+	public isStatic(entities: EntityManager): boolean {
+		// Epsilon ist unser Toleranzwert. 
+		// Alles unter 0.1 Pixel/Sekunde gilt als "stehend".
+		const epsilon = 0.1;
+
+		return entities.getEntities().every(e => {
+			const vel = e.getVel();
+			return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
+		});
 	}
+
 }

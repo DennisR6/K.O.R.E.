@@ -8,14 +8,16 @@ export class EmitterSystem implements ISystem {
 	constructor(em?: IInputEmitter) {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
-
 	}
 	private getLocalInput(start: Vector2D, now: Vector2D): { angle: number, power: number } | undefined {
 		const dx = now.x - start.x;
 		const dy = now.y - start.y;
-		const rawPower = Math.sqrt(dx * dx + dy * dy);
+		let rawPower = Math.sqrt(dx * dx + dy * dy);
 
-		if (rawPower < 5) return undefined;
+		if (rawPower < 5) {
+			console.log("rawpower: ", rawPower, "is too lwo")
+			return undefined
+		}
 
 		const DISTANCE_FOR_MAX_POWER = 100;
 
@@ -39,13 +41,21 @@ export class EmitterSystem implements ISystem {
 
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
-		if (ctx.state !== GameState.TURN_DONE) return
+		if (ctx.state !== GameState.Turn_done) return
 		const { start, end } = ctx.mouse
-		const p = ctx.entities.getEntityAt(start.x, start.y)
-		if (!p) throw new Error("SOMETHING WENT WRONG")
+		const p = ctx.entities.getEntityAt(start.x, start.y, 24)!
+		if (!p) {
+			console.error("Player not found")
+			return
+		}
+		console.log("start", start)
+		console.log("end", end)
 		const res = this.getLocalInput(start, end)
-		if (!res) throw new Error("SOMETHING WENT WRONG")
+		if (!res) {
+			console.error("could not calculate the Shot")
+			return
+		}
 		this.emitter.sendShot(p.getId(), res.angle, res.power)
-		ctx.state = GameState.WAITING_FOR_SERVER
+		ctx.state = GameState.Your_turn
 	}
 }

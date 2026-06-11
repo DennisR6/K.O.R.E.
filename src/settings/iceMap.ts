@@ -1,4 +1,7 @@
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import { EffectMove } from "../effects/movement.js";
+import { EffectPhysics } from "../effects/physics.js";
+import { EffectTrigger, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type SettingsEntity, type SettingsMap } from "./settings.js";
 
@@ -17,41 +20,35 @@ function createPlayerStartPoints(team: number, players: SettingsEntity[]) {
 	]
 	arrangeInGrid(players, teamNr[team], 46)
 }
-// const Wall = { type: EffectType.Physics, trigger: EffectTrigger.Always, values: {}, triggerValues: {} }
-// const Deadly = { type: EffectType.Damage, trigger: EffectTrigger.Collision, values: { damage: -100 }, triggerValues: {} }
+const friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }
+const defaultEffects: FullEffectSettings[] = [
+	{
+		trigger: EffectTrigger.Always, triggerValue: [],
+		...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings(),
+	},
+	{
+		trigger: EffectTrigger.Always, triggerValue: [],
+		...new EffectPhysics({ typeValue: { ...friction } }).toSettings()
+	},
+]
+
 const IceMap: SettingsMap = {
 	screenResolution: { x, y },
-	background: { type: "image", url: AssetList.SlipstrikeIceMap },
+	background: { type: "image", url: AssetList.slipStirkeMapIceJPG },
 	mapBoundarys: [
-		// { type: SHAPE.RECTANGLE, x: 66, y: 90, w: thickness, h: 270, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: 105, y: 55, w: 270, h: thickness, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: 425, y: 55, w: 270, h: thickness, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: 105, y: y - 65, w: 270, h: thickness, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: 425, y: y - 65, w: 270, h: thickness, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: 800 - 66 - thickness, y: 90, w: thickness, h: 270, color: debugColorStruct, effects: [Wall] },
-		// { type: SHAPE.RECTANGLE, x: x / 2, y: 450 / 3, w: thickness, h: 450 / 3, color: "blue", effects: [Wall] },
-		//
-		// { type: SHAPE.CIRCLE, x: 73, y: 58, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		// { type: SHAPE.CIRCLE, x: x - 73, y: 58, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		// { type: SHAPE.CIRCLE, x: x - 73, y: y - 58, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		// { type: SHAPE.CIRCLE, x: 73, y: y - 58, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		// { type: SHAPE.CIRCLE, x: x / 2, y: 44, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		// { type: SHAPE.CIRCLE, x: x / 2, y: y - 44, r: thickness, color: debugColorStruct, effects: [Deadly, Wall] },
-		//
-
-		{ type: SHAPE.RECTANGLE, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, },
-		{ type: SHAPE.RECTANGLE, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct },
-		{ type: SHAPE.RECTANGLE, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, },
-		{ type: SHAPE.RECTANGLE, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct },
-		{ type: SHAPE.RECTANGLE, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct },
-		{ type: SHAPE.RECTANGLE, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct },
-		{ type: SHAPE.RECTANGLE, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct },
-		{ type: 0, x: 60, y: 45, r: 10, color: debugColorStruct },
-		{ type: 0, x: 720, y: 50, r: 10, color: debugColorStruct },
-		{ type: 0, x: 720, y: 385, r: 10, color: debugColorStruct },
-		{ type: 0, x: 60, y: 385, r: 10, color: debugColorStruct },
-		{ type: 0, x: 390, y: 35, r: 10, color: debugColorStruct },
-		{ type: 0, x: 390, y: 400, r: 10, color: debugColorStruct }
+		{ type: SHAPE.RECTANGLE, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: SHAPE.RECTANGLE, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
+		{ type: 0, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects] }
 	],
 }
 

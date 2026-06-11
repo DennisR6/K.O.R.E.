@@ -1,4 +1,5 @@
 import type { ISettingsSerialize } from "../engine/types.js";
+import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
 
 /**
@@ -14,11 +15,7 @@ export interface Vector2D {
 	/** Die Position auf der vertikalen Achse. */
 	y: number;
 }
-export const enum PhysicsLevel {
-	Entity,
-	Map,
-	LastLevel
-}
+
 /**
  * Das mathematische Gehirn der Engine.
  * 
@@ -94,16 +91,15 @@ export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
 	// --- DEBUG ---
 	/** Schreibt die aktuellen Einstellungen der Physik-Engine in die Konsole. */
 	printSettings(who?: string): void;
-	addToQueue(level: PhysicsLevel, shape: IPhysics<SHAPE>): void
-	tick(dt: number, friction: number): void
-	isMoving(): boolean
+	isStatic(entity: EntityManager): boolean;
 }
-
 /** 
  * Die physikalischen Grundeigenschaften für jedes Objekt im Spiel.
  * Hier legst du fest, wie schwer ein Objekt ist, wie schnell es sich bewegt und was passiert, wenn es knallt.
  */
 export interface IdefaultPhysics {
+	/** Setzt die aktuelle Geschwindigkeit. */
+	setVel(vel: Vector2D): void;
 	/** Setzt das Gewicht des Objekts (Wichtig für Kollisionen: Schwer schubst Leicht). */
 	setMass(mass: number): void;
 	/** Teleportiert das Objekt an eine bestimmte Stelle. */
@@ -115,15 +111,14 @@ export interface IdefaultPhysics {
 	setFriction(friction: number): void;
 
 	getMass(): number;
-
 	getVel(): Vector2D;
-	setVel(vel: Vector2D): void;
 
 	/** 
 	 * Diese Funktion wird aufgerufen, wenn das Objekt etwas berührt. 
 	 * Hier kann man z.B. Sounds abspielen oder Punkte zählen.
 	 */
 	onCollision({ entity }: { entity: IPhysics<SHAPE> }): void;
+
 	setBounceFactor(bounce: number): void;
 	/** Wie stark das Objekt abprallt (0 = gar nicht, 1 = wie ein Gummiball). */
 	getBounceFactor(): number;

@@ -3,7 +3,7 @@ import type { UUID } from "crypto";
 
 
 export function loginUser(userid: UUID | undefined): boolean {
-	if (userid === undefined) return false
+	if (userid == undefined) return false
 	// const query = DB.db.query("select userid from users where userid=?1")
 	// const res = query.get(userid) as { userid: UUID } | null
 	// if (!res) return false

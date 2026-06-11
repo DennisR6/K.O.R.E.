@@ -1,22 +1,28 @@
 import type { UUID } from "crypto";
 
+const UserIdKey = "userid"
+const GameIdKey = "gameid"
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 export function getUserUUUID(): UUID | null {
 	if (typeof window === 'undefined') return null
-	return window.localStorage.getItem("userid") as UUID | null
+	return window.localStorage.getItem(UserIdKey) as UUID | null
 }
 export function setUserUUUID(uuid: UUID | undefined): UUID {
+	if (!uuid) {
+		window.localStorage.removeItem(UserIdKey)
+		return "0-0-0-0-0"
+	}
 	let newuuid: UUID
 	if (!uuid) newuuid = crypto.randomUUID()
 	else newuuid = uuid
-	window.localStorage.setItem("userid", newuuid)
+	window.localStorage.setItem(UserIdKey, newuuid)
 	return newuuid
 }
 export function getGameUUUID(): UUID | null {
 	if (typeof window === 'undefined') return null
-	return window.localStorage.getItem("gameid") as (UUID | null)
+	return window.localStorage.getItem(GameIdKey) as (UUID | null)
 }
 
 

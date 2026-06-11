@@ -2,19 +2,8 @@ import { type IEntity } from "./Entity.js";
 import type { SettingsEntity } from "../settings/settings.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
-import type { UUID } from "node:crypto";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { EngineSettingsEntity } from "./types.js";
-
-type SerializedPlayerStats = {
-	id: UUID
-	x: number
-	y: number
-	vx: number
-	vy: number
-	size: number
-	color: string
-}
 
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
@@ -30,8 +19,8 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 	/**
 	 * @param entities - Initiale Liste von Entities (z.B. Spieler oder Pucks).
 	 */
-	constructor(entities: IEntity[]) {
-		this.entities = entities
+	constructor(entities: SettingsEntity[] | EngineSettingsEntity[]) {
+		entities.forEach(entity => new Player().new(entity))
 	}
 
 	/**
@@ -77,33 +66,14 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		this.entities.forEach(entity => entity.setVel({ x: 0, y: 0 }))
 	}
 
-	public serialize(): SerializedPlayerStats[] {
-		return this.entities.map(e => ({
-			id: e.getId(),
-			x: e.getPos().x,
-			y: e.getPos().y,
-			vx: e.getVel()?.x ?? 0,
-			vy: e.getVel()?.y ?? 0,
-			size: e.getBounds().x,
-			color: e.getColor()
-		}));
-	}
 
 	/**
 		 * Verwandelt den aktuellen Zustand aller Entities in ein flaches Daten-Array.
 		 * Wichtig für Netzwerk-Übertragung oder Snapshots für den Simulator.
 		 * @returns Ein Array mit IDs, Positionen und Geschwindigkeiten.
 		 */
-	public applySerializedState(state: SerializedPlayerStats[]) {
-		state.forEach(data => {
-			let existing = this.getEntityById(data.id);
-			if (!existing) {
-				existing = new Player().new({ id: data.id, position: { x: data.x, y: data.y }, color: data.color, size: data.size });
-				this.addEntity(existing);
-			}
-			// DEBUG: Vergleiche das Original (falls vorhanden) mit dem Klon
-			// console.log(`Entity ${data.id} - Mass: ${existing.getMass()}, Size: ${existing.getBounds().x}`);
-		});
+	public serialize(): EngineSettingsEntity[] {
+		return this.entities.map(player => player.toSettings())
 	}
 
 	/**
@@ -111,7 +81,11 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		 * Dies wird vom Simulator genutzt, um Spielzüge in einer "Parallelwelt" 
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
-	addPlayer(data: EngineSettingsEntity) {
+	public applySerializedState(state: SettingsEntity[]) {
+		state.forEach(data => this.entities.push(new Player().new(data)));
+	}
+
+	public addPlayer(data: EngineSettingsEntity) {
 		const p = new Player().new({ ...data });
 		this.entities.push(p);
 	}
@@ -121,7 +95,7 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 * @param friction - Der Reibungswert der aktuellen Welt.
 		 */
-	tick(dt: number, friction: number) {
+	public tick(dt: number, friction: number) {
 		this.entities.forEach(e => e.tick(dt, friction));
 	}
 
@@ -129,7 +103,7 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		 * Zeichnet alle Entities auf den übergebenen RenderContext.
 		 * @param ctx - Der P5- oder alternative Renderer.
 		 */
-	draw(ctx: RenderContext): void {
+	public draw(ctx: RenderContext): void {
 		this.entities.forEach(entity => entity.draw(ctx))
 	}
 
@@ -139,10 +113,11 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
 	public clone(): EntityManager {
-		const newManager = new EntityManager([]);
-		const data = this.serialize();
-		newManager.applySerializedState(data);
-		return newManager;
+		const settings = this.toSettings()
+		// const newManager = new EntityManager([]);
+		// const data = this.serialize();
+		// newManager.applySerializedState(data);
+		return new EntityManager(settings);
 	}
-	toSettings(): SettingsEntity[] { return this.entities.map(player => player.toSettings()) }
+	public toSettings(): SettingsEntity[] { return this.entities.map(player => player.toSettings()) }
 }

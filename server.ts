@@ -1,9 +1,12 @@
 import { unwrap, wrap } from "./src/utils/net.ts"
-import { getNetworkPacketType, NetworkError, NetworkMessageType, NetworkNewUser, NetworkPing, NetworkWaitingRoom, UnTypedNetworkMessage, WebSocketData } from "./src/server/types.ts";
+import { getNetworkPacketType, NetworkError, NetworkInit, NetworkMessageType, NetworkNewUser, NetworkPing, NetworkTurn, NetworkWaitingRoom, UnTypedNetworkMessage, WebSocketData } from "./src/server/types.ts";
 import { loginUser, loginUserFailed } from "./src/server/server.ts";
-import { accesstokenSockets, userAccesstoken } from "./src/server/db.ts";
+import { accesstokenSockets, userAccesstoken, USERID } from "./src/server/db.ts";
+import { GameSettings } from "./src/settings/settings.ts";
+import { UUID } from "crypto";
 const PORT = process.env.PORT || 3000
 
+const waitingRoom: USERID[] = []
 Bun.serve<WebSocketData>({
 	port: PORT,
 	async fetch(req, server) {
@@ -16,8 +19,6 @@ Bun.serve<WebSocketData>({
 			return new Response(Bun.file("./index.html"));
 		}
 
-		if (url.pathname.includes(".json")) console.log(url.pathname)
-
 		return new Response(Bun.file(`./${url.pathname}`));
 	},
 
@@ -27,7 +28,6 @@ Bun.serve<WebSocketData>({
 			accesstokenSockets.set(ws.data.accesstoken, ws)
 		},
 		async message(ws: Bun.ServerWebSocket<WebSocketData>, message: string) {
-			console.log(ws.data)
 			const output = unwrap(message) as UnTypedNetworkMessage
 			if (!output.type) {
 				ws.send(wrap<NetworkError>({ type: NetworkMessageType.ERROR, message: "Error with Network Package" }))
@@ -36,17 +36,36 @@ Bun.serve<WebSocketData>({
 			console.log(getNetworkPacketType(output.type), output)
 			switch (output.type) {
 				case NetworkMessageType.LOGIN: {
+					let token = output.userid
 					if (!loginUser(output.userid)) {
-						const id = loginUserFailed()
-						userAccesstoken.set(id, ws.data.accesstoken)
-						ws.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: id }))
+						token = loginUserFailed()
+						ws.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: token }))
 						return
 					}
-					userAccesstoken.set(output.userid!, ws.data.accesstoken)
+					if (!token) {
+						console.log("ERROR RETURN")
+						ws.send(wrap<NetworkError>({ type: NetworkMessageType.ERROR, message: "Could not create Account for you" }));
+						return
+					}
+					userAccesstoken.set(token!, ws.data.accesstoken)
+					console.log("waitingRoom push")
+					waitingRoom.push(token)
 					ws.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
 					return
 				}
 				case NetworkMessageType.SHOOT: {
+					ws.send(wrap<NetworkTurn>({
+						type: NetworkMessageType.TURN, sim: {
+							actorId: "",
+							finalState: [],
+							durationFrames: 200,
+							input: {
+								angle: 200,
+								power: 10,
+							}
+						}
+					}))
+
 					// HANDLESHOOT(output)
 					break
 				}
@@ -82,3 +101,18 @@ Bun.serve<WebSocketData>({
 	},
 });
 console.log(`Server läuft auf http://localhost:${PORT}`);
+
+setInterval(() => {
+	if (waitingRoom.length >= 2) {
+		const p1 = waitingRoom.shift()!
+		const p2 = waitingRoom.shift()!
+		console.log("Found a game", p1, p2)
+		const newSettings = { ...GameSettings }
+		newSettings.allTeams = [p1, p2]
+		for (const p of newSettings.allTeams) {
+			const at1 = userAccesstoken.get(p as UUID)!
+			const sock1 = accesstokenSockets.get(at1)!
+			sock1.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: newSettings }))
+		}
+	}
+}, 2000)

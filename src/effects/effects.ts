@@ -1,19 +1,41 @@
+import type { IPhysics, SHAPE } from "../physics/physics.js";
+import { EffectDamage } from "./damage.js";
+import { EffectMove } from "./movement.js";
+import { EffectPhysics } from "./physics.js";
+import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
-// export class EffectDamage implements IEffectDamage {
-// 	private damage: number
-// 	constructor(damage: number) { this.damage = damage }
-// 	isKillable(entity: any): entity is IKillable {
-// 		const addHP = 'addHP' in entity && typeof entity.addHP === 'function';
-// 		const setHP = 'setHP' in entity && typeof entity.setHP === 'function';
-// 		const getHP = 'getHP' in entity && typeof entity.getHP === 'function';
-// 		return (addHP && setHP && getHP)
+export class MetaEffect implements Effect {
+	private eff: Effect
+	constructor(effect: EffectSettings) {
+		switch (effect.type) {
+			case EffectType.Damage: this.eff = new EffectDamage(effect); return
+			case EffectType.Movement: this.eff = new EffectMove(effect); return
+			case EffectType.Physics: this.eff = new EffectPhysics(effect); return
+			case EffectType.Multi: this.eff = new EffectMove(effect); return
+			default: {
+				this.eff = new EffectMove(effect)
+				console.trace("This item is not Implemented yet.", effect); return
+			}
+		}
+	}
+	apply(entity: IPhysics<SHAPE>, override?: any): void { this.eff.apply(entity, override) }
+	getType(): EffectType { return this.eff.getType() }
+	toSettings(): EffectSettings { return this.eff.toSettings() }
+}
+
+// export class MultiEffect implements MetaEffect {
+// 	private eff: Effect[] = []
+// 	constructor(effect: EffectSettings[]) {
+// 		for (const eff of effect) this.eff.push(new MetaEffect(eff))
 // 	}
-// 	apply({ entity }: { entity: SHAPE; }): void {
-// 		if (this.isKillable(entity)) entity.addHP(this.damage)
+// 	apply(entity: IPhysics<SHAPE>, override?: any): void {
+// 		this.eff.apply(entity, override)
+// 	}
+// 	getType(): EffectType {
+// 		return this.eff.getType()
+// 	}
+// 	toSettings(): EffectSettings {
+// 		return this.eff.toSettings()
 // 	}
 // }
-//
-// export class EffectWall implements IEffectWall {
-// 	constructor() { }
-// 	apply({ }: { entity: SHAPE; }): void { }
-// }
+

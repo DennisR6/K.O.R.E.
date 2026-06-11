@@ -1,6 +1,6 @@
 import { GameState } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { EntitySnapshot } from "../entity/types.js";
+import type { EngineSettingsEntity } from "../entity/types.js";
 import type { IGameContext } from "./types.js";
 
 /**
@@ -16,7 +16,7 @@ export class PlaybackSystem implements PlaybackSystem {
 	/** Anzahl der verbleibenden Frames, bis der Endzustand erzwungen wird. */
 	private remainingFrames = 0;
 	/** Der Zielzustand (Snapshot), an den die Entities angeglichen werden. */
-	private finalState: EntitySnapshot[] | undefined;
+	private finalState: EngineSettingsEntity[] | undefined;
 	/** Ein optionaler Callback, der ausgeführt wird, wenn der Sync abgeschlossen ist. */
 	private cb: (() => void) | undefined;
 
@@ -26,7 +26,7 @@ export class PlaybackSystem implements PlaybackSystem {
 		 * @param finalState - Die exakten Ziel-Daten (Position/Velocity) am Ende.
 		 * @param cb - (Optional) Aktion nach Abschluss (z.B. UI einblenden).
 		 */
-	public start(frames: number, finalState: EntitySnapshot[], cb?: () => void) {
+	public start(frames: number, finalState: EngineSettingsEntity[], cb?: () => void) {
 		this.finalState = finalState
 		this.remainingFrames = frames;
 		this.cb = cb;
@@ -37,7 +37,7 @@ export class PlaybackSystem implements PlaybackSystem {
 		 * Sobald 0 erreicht ist, wird der Hard-Sync ausgelöst.
 		 */
 	ticker(ctx: IGameContext) {
-		if (ctx.state !== GameState.PLAYING) return
+		if (ctx.state !== GameState.Playing) return
 		if (this.remainingFrames > 0)
 			this.remainingFrames--;
 		else if (this.finalState) {
@@ -63,21 +63,20 @@ export class PlaybackSystem implements PlaybackSystem {
 			if (!entity) return;
 
 			const currentPos = entity.getPos();
-			const dx = Math.abs(currentPos.x - saved.x);
-			const dy = Math.abs(currentPos.y - saved.y);
+			const dx = Math.abs(currentPos.x - saved.position.x);
+			const dy = Math.abs(currentPos.y - saved.position.y);
 
 			if (dx > EPSILON || dy > EPSILON) {
-				// GameLogger.info(`Sync Pos ${saved.id}: Δ${dx.toFixed(4)}`);
-				entity.setPos({ x: saved.x, y: saved.y });
+				entity.setPos({ x: saved.position.x, y: saved.position.y });
 			}
 
 			const currentVel = entity.getVel() ? entity.getVel() : { x: 0, y: 0 };
 
-			const dvx = Math.abs(currentVel.x - saved.vx);
-			const dvy = Math.abs(currentVel.y - saved.vy);
+			const dvx = Math.abs(currentVel.x - saved.velocity.x);
+			const dvy = Math.abs(currentVel.y - saved.velocity.y);
 
 			if (dvx > EPSILON || dvy > EPSILON) {
-				entity.setVel({ x: saved.vx, y: saved.vy });
+				entity.setVel({ x: saved.velocity.x, y: saved.velocity.y });
 			}
 		});
 

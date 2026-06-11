@@ -5,7 +5,9 @@ import type { IItem } from "../item/Items.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import type { EngineSettingsEntity } from "./types.js";
-import type { Effect } from "../effects/types.js";
+import { EffectTrigger, EffectType, type Effect, type FullEffectSettings } from "../effects/types.js";
+import { MetaEffect } from "../effects/effects.js";
+import type { SettingsEntity } from "../settings/settings.js";
 
 
 /**
@@ -16,7 +18,7 @@ import type { Effect } from "../effects/types.js";
  * Alle Eigenschaften außer den Koordinaten sind optional, um maximale Flexibilität
  * beim Erstellen von Gast-Accounts oder Standard-Entities zu bieten.
  */
-export interface IPlayerType {
+interface IPlayerType {
 	/** 
 	 * Eindeutige ID des Spielers. 
 	 * Wenn nicht angegeben, generiert die Engine eine neue UUID. 
@@ -49,6 +51,7 @@ export interface IPlayerType {
 	 */
 	size?: number;
 	hoop?: AssetList;
+	effects?: FullEffectSettings[]
 }
 
 /**
@@ -75,7 +78,6 @@ export class Player implements IEntity {
 	private size: number = 1;
 	/** Individuelle Reibung (überschreibt bei Bedarf die globale Reibung). */
 	private friction: number | undefined;
-	private effect: Effect[] = []
 	private team: number[] = [];
 	private color: string;
 	private playericon: AssetList;
@@ -84,6 +86,9 @@ export class Player implements IEntity {
 	private isPhysicsEnabled: boolean = true
 	private dead: boolean = false
 	private items: IItem[] = []
+	private effectAlways: Effect[] = []
+	private effectCollision: Effect[] = []
+	private effectRound: Effect[] = []
 
 	constructor() {
 		// Standardwerte für ein leeres Objekt
@@ -114,7 +119,14 @@ export class Player implements IEntity {
 		this.setSize(player.size ?? 20)
 		this.shape = SHAPE.CIRCLE;
 		this.hoop = player.hoop ?? AssetList.pictureReifenPNG
-		this.effect.push()
+		for (const eff of player.effects ?? []) {
+			switch (eff.trigger) {
+				case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(eff)); break
+				case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(eff)); break
+				case EffectTrigger.Round: this.effectRound.push(new MetaEffect(eff)); break
+				default: console.error("TODO", eff.trigger)
+			}
+		}
 		return this;
 	}
 
@@ -132,15 +144,11 @@ export class Player implements IEntity {
 		 * Integriert die Geschwindigkeit in die Position basierend auf der vergangenen Zeit.
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
-	public tick(_deltaTime: number, _globalFriction: number) {
-		if (this.hp <= 0) {
-		}
-		// 	this.position.x = 1_000_000;
-		// 	this.position.y = 1_000_000;
-		// 	this.velocity.x = 0
-		// 	this.velocity.y = 0
-		// 	return
-		// }
+	public tick(deltaTime: number, _globalFriction: number) {
+		this.effectAlways.forEach(effect => {
+			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime })
+			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
+		})
 	}
 
 	public setId(id: UUID): void { this.id = id }
@@ -158,7 +166,7 @@ export class Player implements IEntity {
 	public setFriction(friction: number | undefined): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public addHP(hp: number): void { console.trace(this.hp, hp); this.hp += hp; }
+	public addHP(hp: number): void { this.hp += hp; }
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
@@ -166,7 +174,11 @@ export class Player implements IEntity {
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): SHAPE.CIRCLE { return this.shape }
 
-	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void { }
+	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void {
+		this.effectCollision.forEach(effect => {
+			effect.apply(this)
+		})
+	}
 	public getTeam(): number[] { return this.team }
 	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
@@ -177,6 +189,9 @@ export class Player implements IEntity {
 	public use(_item: IItem): void { }
 
 	public toSettings(): EngineSettingsEntity {
+		const sett0 = this.effectAlways.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Always, triggerValue: [] } as FullEffectSettings })
+		const sett1 = this.effectCollision.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Collision, triggerValue: [] } as FullEffectSettings })
+		const sett2 = this.effectRound.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Round, triggerValue: [] } as FullEffectSettings })
 		return {
 			id: this.getId(),
 			position: this.position,
@@ -193,6 +208,11 @@ export class Player implements IEntity {
 			shape: this.shape,
 			isPhysicsEnabled: this.isPhysicsEnabled,
 			isDead: this.dead,
+			effects: [
+				...sett0,
+				...sett1,
+				...sett2,
+			],
 		}
 	}
 	public setTeam(team: number[]) { this.team = team }
@@ -202,6 +222,39 @@ export class Player implements IEntity {
 	public AddItem(item: IItem): void { this.items.push(item) }
 	public getInventory(): IItem[] { return this.items }
 	public isDead(): boolean { return this.dead }
+	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
+	public addEffect(trigger: EffectTrigger, effect: Effect): void {
+		switch (trigger) {
+			case EffectTrigger.Always: this.effectAlways.push(effect); break
+			case EffectTrigger.Collision: this.effectCollision.push(effect); break
+			case EffectTrigger.Round: this.effectRound.push(effect); break
+			default: console.error("TODO", trigger)
+		}
+	}
+
+
+	public fromSettings(settings: SettingsEntity | EngineSettingsEntity): this {
+		this.setId(settings.id || crypto.randomUUID())
+		this.setPos({ ...settings.position })
+		this.team = settings.team ?? this.team;
+		this.setColor(settings.color ?? "red")
+		this.setPlayerIcon(settings.playericon ?? this.playericon)
+		this.setSize(settings.size ?? 20)
+		this.shape = SHAPE.CIRCLE;
+		this.hoop = settings.hoop ?? AssetList.pictureReifenPNG
+		if ("velocity" in settings) this.velocity = settings.velocity;
+		if ("effects" in settings) {
+			for (const eff of settings.effects ?? []) {
+				switch (eff.trigger) {
+					case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(eff)); break
+					case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(eff)); break
+					case EffectTrigger.Round: this.effectRound.push(new MetaEffect(eff)); break
+					default: console.error("TODO", eff.trigger)
+				}
+			}
+		}
+		return this;
+	}
 }
 
 

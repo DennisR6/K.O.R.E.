@@ -1,4 +1,5 @@
 import type { AssetList } from "../assetManager/assets/assetRegistry";
+import type { IGameContext } from "../systems/types";
 
 /**
  * Der RenderContext stellt alle Zeichenbefehle bereit.
@@ -52,7 +53,14 @@ export interface ITicker {
 	tick(deltatime: number, globalfriction: number): void;
 }
 
-/** 
+export interface IExtendedTicker {
+	preTick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+	tick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+	postTick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+}
+
+
+/* 
  * Die Leinwand der Engine.
  * Alles, was für den Spieler sichtbar sein soll, nutzt dieses Interface.
  */

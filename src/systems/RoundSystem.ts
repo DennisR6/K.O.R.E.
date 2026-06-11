@@ -1,3 +1,4 @@
+import type { UUID } from "node:crypto";
 import { GameState } from "../engine/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
@@ -8,40 +9,32 @@ import type { IGameContext, ISystem } from "./types.js";
  * Sobald eine Simulation beendet ist (`PLAYING_DONE`), wird der Zustand 
  * sofort wieder auf `YOUR_TURN` gesetzt.
  */
-export class NoRoundSystem implements ISystem {
-	ticker(ctx: IGameContext, _dt: number): void {
-		if (ctx.state !== GameState.PLAYING_DONE) return;
-		ctx.state = GameState.YOUR_TURN;
-	}
-}
+// export class NoRoundSystem implements ISystem {
+// 	ticker(ctx: IGameContext, _dt: number): void {
+// 		if (ctx.state !== GameState.TURN_DONE) return;
+// 		ctx.state = GameState.YOUR_TURN;
+// 	}
+// }
 
 /**
- * Das Standard-Rundensystem für 2-Spieler-Duelle.
+ * Das Standard-Rundensystem für X-Spieler-Duelle.
  * 
  * Es fungiert als Zustandsautomat (State Machine), der nach jedem 
  * abgeschlossenen Zug zwischen dem eigenen und dem gegnerischen Zug wechselt.
  */
 export class RoundPlayerSystem implements ISystem {
+	teams: UUID[]
 	/** Interner Flag, um den aktuellen Besitzer des Zuges zu tracken. */
-	private lastNumber: number = 0;
-	private myNumber: number = 0;
-	constructor(myNumber: number = 0) { this.myNumber = myNumber }
+	constructor(teams: UUID[]) { this.teams = teams }
 	/**
 	 * Prüft den Spielzustand und wechselt die Runde, sobald die Action vorbei ist.
 	 */
 	ticker(ctx: IGameContext, _dt: number): void {
-		this.lastNumber = ctx.currTurn
-		if (ctx.state !== GameState.PLAYING_DONE) return;
-		if (this.lastNumber == this.myNumber) {
-			// GameLogger.info(`${ctx.state} -> ${GameState.YOUR_TURN}`)
-			ctx.state = GameState.YOUR_TURN;
-		} else {
-			// GameLogger.info(`${ctx.state} -> ${GameState.OPPONENTS_TURN}`)
-			ctx.state = GameState.OPPONENTS_TURN;
-		}
-		this.lastNumber += 1
+		if (ctx.state !== GameState.ChooseTeam) return
+		ctx.currTurn = getNextNumber(ctx.currTurn, this.teams.length)
+		if (ctx.currTurn == ctx.myTeamNumber) ctx.state = GameState.Your_turn
+		else ctx.state = GameState.Opponents_turn
 	}
 }
 
-
-
+export const getNextNumber = (a: number, b: number) => (a + 1) % b
