@@ -1,7 +1,7 @@
-import { defaultPhysics } from "../physics/defaultPhysics";
-import type { IPhysics, SHAPE } from "../physics/physics";
-import { type FrictionSettings } from "../settings/settings";
-import { EffectType, type Effect, type EffectSettings } from "./types";
+import { defaultPhysics } from "../physics/defaultPhysics.js";
+import type { IPhysics, SHAPE } from "../physics/physics.js";
+import { type FrictionSettings } from "../settings/settings.js";
+import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
 export const enum EffectPhysicsValues { Friction, LinearDrag, StopThreshold }
 export class EffectPhysics implements Effect {

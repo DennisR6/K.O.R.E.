@@ -1,5 +1,5 @@
-import type { IPhysics, SHAPE, Vector2D } from "../physics/physics";
-import { EffectType, type Effect, type EffectSettings } from "./types";
+import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
+import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
 export type EffectMoveInput = { deltaTime: number } & Vector2D
 export class EffectMove implements Effect {
