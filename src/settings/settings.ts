@@ -1,13 +1,12 @@
 import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { SHAPE, Vector2D } from "../physics/physics.js";
-import { BilliardMap } from "./billiardMap.js"
 import IceMap from "./iceMap.js";
 import { EffectTrigger, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
 
-const MAPS = { BilliardMap, IceMap }
+const MAPS = { IceMap }
 MAPS;
 
 export interface GameSettings {

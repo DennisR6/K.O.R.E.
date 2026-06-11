@@ -105,6 +105,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
 	public toSettings(): MapBoundarySettingsLine {
+		//@ts-ignore
 		return { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color }
 	}
 	public getEffects(): EffectSettings[] { return [] }

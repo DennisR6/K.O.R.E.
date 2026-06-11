@@ -377,6 +377,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			allTeams: [],
 			effects: [],
 			items: [],
+			//@ts-ignore
 			players: this.entityManager.toSettings(),
 			minPlayers: this.settings?.minPlayers ?? 0,
 			maxPlayers: this.settings?.maxPlayers ?? 0,
