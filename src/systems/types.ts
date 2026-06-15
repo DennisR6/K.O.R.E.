@@ -1,4 +1,4 @@
-import type { GameState, TurnPacket } from "../engine/types.js";
+import type { GameState, IInput, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { IStructure } from "../structures/types.js";
@@ -19,7 +19,7 @@ export interface IGameContext {
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
 	// settings: GameSettings;
 	dt: number;
-	mouse: { pressed: boolean, start: Vector2D, end: Vector2D, released: boolean, now: Vector2D }
+	mouse: { turn: IInput | null }
 	worldSize: Vector2D;
 	physics: PhysicsStrategy
 	currTurn: number

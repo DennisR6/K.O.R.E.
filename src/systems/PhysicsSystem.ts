@@ -47,16 +47,16 @@ export class PhysicsSystem implements ISystem {
 	 * 
 	 * @see PhysicsStrategy für die mathematischen Details der Berechnung.
 	 */
-	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, friction: number): void {
+	ticker(ctx: IGameContext, _dt: number = this.DEFAULTFPS, _friction: number): void {
 		let totalMovement = 0;
 
 		this.resolveAllCollisions(ctx);
 
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
-			this.strategy.applyFriction(entity, dt)
+			// this.strategy.applyFriction(entity, dt)
 
-			entity.tick(dt, friction);
-			this.constrainToMap(entity, ctx);
+			// entity.tick(dt, friction);
+			// this.constrainToMap(entity, ctx);
 
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
@@ -95,6 +95,7 @@ export class PhysicsSystem implements ISystem {
 		}
 	}
 
+	//@ts-ignore
 	private constrainToMap(entity: IEntity, _ctx: IGameContext) {
 		const pos = entity.getPos();
 		const radius = entity.getBounds().x; // Angenommen Kreis-Radius

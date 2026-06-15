@@ -1,6 +1,5 @@
 import { LogEmitter } from "../emitter/InputEmitter.js";
 import { GameState, type IInputEmitter } from "../engine/types.js";
-import type { Vector2D } from "../physics/physics.js";
 import type { IGameContext, ISystem } from "./types.js";
 
 export class EmitterSystem implements ISystem {
@@ -9,53 +8,16 @@ export class EmitterSystem implements ISystem {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
-	private getLocalInput(start: Vector2D, now: Vector2D): { angle: number, power: number } | undefined {
-		const dx = now.x - start.x;
-		const dy = now.y - start.y;
-		let rawPower = Math.sqrt(dx * dx + dy * dy);
-
-		if (rawPower < 5) {
-			console.log("rawpower: ", rawPower, "is too lwo")
-			return undefined
-		}
-
-		const DISTANCE_FOR_MAX_POWER = 100;
-
-		const factor = Math.min(rawPower / DISTANCE_FOR_MAX_POWER, 1.0);
-
-		const MAX_POWER_VALUE = 10;
-		const power = factor * MAX_POWER_VALUE;
-
-		let angleRad = Math.atan2(dy, dx);
-		let angleDeg = angleRad * (180 / Math.PI);
-
-		let finalAngle = angleDeg + 180;
-
-		finalAngle = ((finalAngle % 360) + 360) % 360;
-
-		return {
-			angle: finalAngle,
-			power: power
-		};
-	}
-
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state !== GameState.Turn_done) return
-		const { start, end } = ctx.mouse
-		const p = ctx.entities.getEntityAt(start.x, start.y, 24)!
-		if (!p) {
-			console.error("Player not found")
+		if (!ctx.mouse.turn) {
+			console.log("no turn data found!")
 			return
 		}
-		console.log("start", start)
-		console.log("end", end)
-		const res = this.getLocalInput(start, end)
-		if (!res) {
-			console.error("could not calculate the Shot")
-			return
-		}
-		this.emitter.sendShot(p.getId(), res.angle, res.power)
-		ctx.state = GameState.Your_turn
+		const { actorId, angle, power } = ctx.mouse.turn
+		this.emitter.sendShot(actorId, angle, power)
+		console.log("sendShot")
+		ctx.state = GameState.Waiting_for_server
 	}
 }

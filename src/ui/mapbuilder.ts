@@ -5,31 +5,13 @@ import type { Vector2D } from "../physics/physics";
 export class Builder implements IDrawer, ITicker, IMouse {
 	position: Vector2D = { x: 0, y: 0 }
 	constructor() { }
-	handleMousePressed(mouseX: number, mouseY: number): void {
-		console.log(mouseX, mouseY)
-	}
+	handleMousePressed(): void { }
 	handleMouseReleased(_cb?: (actorId: string, angle: number, power: number) => void): void {
 	}
-	handleMouseWheel(event: WheelEvent): void {
-		console.log(event)
-	}
-	tick(deltatime: number, globalfriction: number): void {
-		console.log(deltatime, globalfriction)
-	}
-	updateMouse(mouseX: number, mouseY: number): void {
-		console.log(mouseX, mouseY)
-
-	}
+	handleMouseWheel(_event: WheelEvent): void { }
+	tick(_deltatime: number, _globalfriction: number): void { }
+	updateMouse(_mouseX: number, _mouseY: number): void { }
 	draw(ctx: RenderContext): void {
 		ctx.drawCircle(20, 20, 20)
-	}
-	getCurrentMousePosition(): Vector2D {
-		return { x: 12, y: 12 }
-	}
-	setCurrentMousePosition(pos: Vector2D): void {
-		console.log(pos)
-	}
-	getTeam(): string[] {
-		return []
 	}
 }

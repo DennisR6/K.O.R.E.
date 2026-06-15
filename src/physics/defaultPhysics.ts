@@ -339,7 +339,6 @@ export class defaultPhysics implements PhysicsStrategy {
 		};
 
 		const currentVel = entity.getVel();
-
 		entity.setVel({
 			x: currentVel.x + (force.x / mass),
 			y: currentVel.y + (force.y / mass)

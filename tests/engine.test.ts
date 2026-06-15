@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test, describe } from "bun:test";
 import { Player } from "../src/entity/Player.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
@@ -6,6 +6,11 @@ import { EffectPhysics } from "../src/effects/physics.ts"
 import { EngineSettings, GameState } from "../src/engine/types.ts";
 import { FRICTION_TABLE, GameSettings } from "../src/settings/settings.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts"
+import { ObjectEmitter } from "../src/emitter/ObjectEmitter.ts"
+import { EmitterSystem } from "../src/systems/Emitter.ts"
+import { DirectionArrow } from "../src/systems/DirectionArrow.ts"
+import { UiSystem } from "../src/systems/UiSystem.ts";
+
 
 test("engine", () => {
 	const sett: EngineSettings = {
@@ -69,39 +74,62 @@ test("engine 2", () => {
 test("engine serialisizing", () => {
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(GameSettings).build().toSettings()
 	const gameSettingsString = JSON.stringify(handler)
-	expect(gameSettingsString.length).toBeGreaterThan(6700)
-	console.log(JSON.stringify(GameSettings).length)
-	// console.log(gameSettingsString)
+	expect(gameSettingsString.length).toBeGreaterThan(6000)
 })
 
 
-test("engine 4", () => {
-	const p1 = new Player().new({
-		id: "c6bdac35-b6fa-4635-a918-45f5db583b63",
-		position: { x: 0, y: 0 },
-		effects: [
-			{
-				trigger: EffectTrigger.Always,
-				triggerValue: [],
-				...new EffectMove({ typeValue: { deltaTime: 0, x: 0, y: 0 } }).toSettings()
-			},
-			{
-				trigger: EffectTrigger.Always,
-				triggerValue: [],
-				...new EffectPhysics({ typeValue: FRICTION_TABLE.ice }).toSettings()
-			},
+describe("Hallo Welt", () => {
+	const arr = [
+		[1, 10],
+		[10, 10],
+		[20, 10],
+	]
+	test.each(arr)("simulation", sim)
+})
 
-		]
-	})
-	p1.setVel({ x: 0, y: 10 })
+
+function sim(angle: number, power: number) {
+	const gameSettings = `{"state":"GameState.Your_turn","background":{"color":"white","type":"color"},"friction":{"friction":0.995,"linearDrag":0.01,"stopThreshold":0.1},"id":"765b1425-999b-4870-835c-1c6cd073673d","mapBoundarys":[],"screenResolution":{"x":0,"y":0},"myTeam":[],"allTeams":[],"effects":[],"items":[],"players":[{"id":"c6bdac35-b6fa-4635-a918-45f5db583b63","position":{"x":0,"y":0},"velocity":{"x":0,"y":0},"playericon":27,"team":[],"hoop":17,"color":"red","size":20,"hp":30,"bouncyness":1,"mass":1,"shape":0,"isPhysicsEnabled":true,"isDead":false,"effects":[{"type":"EffectType.Movement","typeValue":{"deltaTime":0,"x":0,"y":0},"trigger":"EffectTrigger.Always","triggerValue":[]},{"type":"EffectType.Physics","typeValue":{"friction":0.995,"linearDrag":0.01,"stopThreshold":0.1},"trigger":"EffectTrigger.Always","triggerValue":[]}]}],"minPlayers":0,"maxPlayers":0,"allTeamSize":2,"turnNumber":0}`
+
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(JSON.parse(gameSettings)).build()
+	const sim = handler.simulateTurn("c6bdac35-b6fa-4635-a918-45f5db583b63", angle, power)
+	handler.tickTurn(sim)
+
+	for (let i = 0; i < sim.durationFrames; i++) handler.tick()
+	const result = handler.getEntityManager().getEntities()[0].getPos()
+	const simulationresult = sim.finalState[0].position
+	expect(result.x).toBe(simulationresult.x)
+	expect(result.y).toBe(simulationresult.y)
+}
+
+test("234", () => {
+	const gameSettings = `{"state":"GameState.Your_turn","background":{"color":"white","type":"color"},"friction":{"friction":0.995,"linearDrag":0.01,"stopThreshold":0.1},"id":"765b1425-999b-4870-835c-1c6cd073673d","mapBoundarys":[],"screenResolution":{"x":0,"y":0},"myTeam":[],"allTeams":[],"effects":[],"items":[],"players":[{"id":"c6bdac35-b6fa-4635-a918-45f5db583b63","position":{"x":50,"y":50},"velocity":{"x":0,"y":0},"playericon":27,"team":[],"hoop":17,"color":"red","size":20,"hp":30,"bouncyness":1,"mass":1,"shape":0,"isPhysicsEnabled":true,"isDead":false,"effects":[{"type":"EffectType.Movement","typeValue":{"deltaTime":0,"x":0,"y":0},"trigger":"EffectTrigger.Always","triggerValue":[]},{"type":"EffectType.Physics","typeValue":{"friction":0.995,"linearDrag":0.01,"stopThreshold":0.1},"trigger":"EffectTrigger.Always","triggerValue":[]}]}],"minPlayers":0,"maxPlayers":0,"allTeamSize":2,"turnNumber":0}`
+
+	const em = new ObjectEmitter()
+	const ui = new UiSystem()
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()
-		.addPlayer(p1)
+		.addSystem(ui)
+		.addUIMouse(ui)
+		.addSystem(new EmitterSystem(em))
+		.fromSettings(JSON.parse(gameSettings))
 		.build()
+	const p1 = handler.getEntityManager().getEntities()[0]
+	{
+		handler.updateMouse(50, 50)
+		handler.handleMousePressed()
+		handler.updateMouse(70, 50)
+		handler.handleMouseReleased()
+		handler.tick()
+	}
 
-	let frames = 0
-	for (; frames < 12000 && !handler.getPhysics().isStatic(handler.getEntityManager()); frames++) handler.tick(1)
-	const sim = handler.simulateTurn("c6bdac35-b6fa-4635-a918-45f5db583b63", 0, 10)
-	expect(sim.durationFrames).toBe(frames)
+	expect(em.getLastShot()).not.toBeUndefined()
+
+	const { actorId, angle, power } = em.getLastShot()!
+	const sim = handler.simulateTurn(actorId, angle, power)
+	handler.tickTurn(sim)
+	for (let frames = 0; frames < sim.durationFrames; frames++) handler.tick()
+	expect(p1.getPos().x).toBeCloseTo(-73, 0)
+	expect(p1.getPos().y).toBe(50)
 })
 

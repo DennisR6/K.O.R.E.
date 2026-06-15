@@ -26,7 +26,7 @@ export class MainMenu implements IMenu {
 	constructor() { }
 	private activePage: number = 0;
 	tick(_deltatime: number, _globalfriction: number): void { }
-	handleMousePressed(_mouseX: number, _mouseY: number): void { this.mouse.pressed = true; }
+	handleMousePressed(): void { this.mouse.pressed = true; }
 	handleMouseReleased(): void { this.mouse.pressed = false }
 	handleMouseWheel(_event: WheelEvent): void { }
 	updateMouse(mouseX: number, mouseY: number): void { this.mouse.x = mouseX; this.mouse.y = mouseY; }

@@ -92,7 +92,7 @@ export class Mouse implements IMouse, IDrawer {
 	/**
 	 * Wird aufgerufen, wenn eine Maustaste gedrückt wird.
 	 */
-	public handleMousePressed(_mouseX: number, _mouseY: number): undefined {
+	public handleMousePressed(): undefined {
 		// const e = this.entityManager.getEntityAt(mouseX, mouseY, 25)
 		// if (!e) return
 		//

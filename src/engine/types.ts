@@ -112,7 +112,7 @@ export type GameStateType = keyof typeof GameState;
  * Definiert die Interaktionsmöglichkeiten mit der Maus.
  */
 export interface IMouse {
-	handleMousePressed(x: number, y: number): void;
+	handleMousePressed(): void;
 	updateMouse(x: number, y: number): void;
 	handleMouseReleased(): void;
 	handleMouseWheel(event: WheelEvent): void;
@@ -157,21 +157,3 @@ export interface EngineSettings extends GameSettings {
 	players: EngineSettingsEntity[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }
-
-
-// export interface GameSettings {
-// 	id: UUID
-// 	screenResolution: SettingsScreenResolution;
-// 	players: SettingsEntity[];
-// 	mapBoundarys: MapBoundarySettings[];
-// 	background: SettingsBackground;
-// 	friction: FrictionSettings;
-// 	effects: FullEffectSettings[];
-// 	items: SettingsItem[];
-// 	myTeam: number[],
-// 	allTeams?: string[],
-// 	allTeamSize: number,
-// 	minPlayers: number,
-// 	maxPlayers: number,
-// 	turn?: number
-// }
