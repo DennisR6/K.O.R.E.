@@ -6,6 +6,11 @@ export const enum EffectType {
 	Damage = "EffectType.Damage",
 	Movement = "EffectType.Movement",
 	Multi = "EffectType.Multi",
+	ModifyMass = "EffectType.ModifyMass",
+	ModifySize = "EffectType.ModifySize",
+	Position = "EffectType.Position",
+	Velocity = "EffectType.Velocity",
+	Team = "EffectType.Team"
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",

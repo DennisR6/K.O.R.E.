@@ -56,7 +56,7 @@ function EffectMovementOverrideTest(startVel: Vector2D, input: EffectMoveInput, 
 	expect(y).toBe((startVel.y + override.y) * override.deltaTime)
 }
 
-test("effect", () => {
+test("effectPhysics", () => {
 	const effectPhysics = new EffectPhysics({ typeValue: FRICTION_TABLE.ice })
 	const p1 = new Player().new({ position: { x: 0, y: 0 } })
 	p1.addEffect(EffectTrigger.Always, effectPhysics)
