@@ -1,4 +1,5 @@
-import { EffectTrigger, EffectType, type Effect } from "../effects/types.js";
+import { MetaEffect } from "../effects/effects.js";
+import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
@@ -35,16 +36,26 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	private effects: Effect[] = []
+	private collisionEffects: Effect[] = []
+	private alwaysEffects: Effect[] = []
+	private roundEffects: Effect[] = []
 
-	// @ts-ignore
-	constructor(x: number, y: number, r: number, color: string | undefined, effects: SettingsEffect<EffectType, EffectTrigger>[]) {
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[]) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = SHAPE.CIRCLE
 		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
+		for (const eff of effects) {
+			switch (eff.trigger) {
+				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Round: this.roundEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Always: this.alwaysEffects.push(new MetaEffect(eff)); continue
+				default: console.trace("this is not implemted yet"); continue
+			}
+		}
+		this.toSettings()
 	}
 	/**
 	 * Zeichnet die Struktur. 
@@ -89,24 +100,27 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		// console.info(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
-		//@ts-ignore
-		this.effects.forEach(effect => effect.apply({ entity }))
+		this.collisionEffects.forEach(effect => effect.apply(entity))
 	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
-	public applyEffects(): void {
-		for (const eff of this.effects) { eff; }
-	}
 	public toSettings(): MapBoundarySettingsCircle {
-		// @ts-ignore
-		return { type: this.shape, x: this.position.x, y: this.position.y, r: this.r, color: this.color, effects: this.effects }
+		const effects: FullEffectSettings[] = []
+		this.alwaysEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Always, triggerValue: [], ...eff.toSettings() }))
+		this.roundEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Round, triggerValue: [], ...eff.toSettings() }))
+		this.collisionEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Collision, triggerValue: [], ...eff.toSettings() }))
+		const out = {
+			type: this.shape,
+			x: this.position.x,
+			y: this.position.y,
+			r: this.r,
+			color: this.color,
+			effects,
+		}
+		return out
 	}
-
-	// @ts-ignore
-	public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
 	public getType(): SHAPE.CIRCLE { return this.shape }
 	public getX(): number { return this.position.x }
 	public getY(): number { return this.position.y }

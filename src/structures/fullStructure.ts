@@ -1,6 +1,6 @@
 import type { EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js";
-import { getShapeName, SHAPE, type IdefaultPhysics, type IPhysics, type Vector2D } from "../physics/physics.js";
+import { SHAPE, type IdefaultPhysics, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
@@ -9,9 +9,9 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 	str: IStructure & IPhysics<SHAPE>
 	constructor(str: MapBoundarySettings) {
 		switch (str.type) {
-			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, []); break;
-			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, []); break;
-			default: this.str = new StructureRectangle(str.x, str.y, str.x + 20, str.y + 20, str.color, []); console.log(`STRUCTURE ${getShapeName(str.type)} not implemented`);
+			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects); break;
+			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects); break;
+			default: this.str = new StructureCircle(str.x, str.y, 20, str.color, []); break;
 		}
 	}
 

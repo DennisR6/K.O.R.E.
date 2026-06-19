@@ -22,9 +22,9 @@ export class GameStateManager implements ISystem {
 			case GameState.Simulating_done: break
 
 			case GameState.Playing: break
-			case GameState.Playing_done: break
+			case GameState.Playing_done: ctx.state = GameState.Waiting_for_server; break
 
-			case GameState.Waiting_for_server: ctx.state = GameState.Waiting_for_server; break
+			case GameState.Waiting_for_server: ctx.state = GameState.ChooseTeam; break
 
 			case GameState.Game_over: ctx.state = GameState.Error; break
 			case GameState.Goal_scored: ctx.state = GameState.Error; break

@@ -12,7 +12,7 @@ import type { EngineSettingsEntity } from "./types.js";
  * @implements {IDrawer} Ermöglicht das Zeichnen aller verwalteten Entities.
  * @implements {ITicker} Ermöglicht das physikalische Update aller verwalteten Entities.
  */
-export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<SettingsEntity[]> {
+export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<EngineSettingsEntity[]> {
 	/** Die Liste aller aktuell im Spiel befindlichen Objekte. */
 	private entities: IEntity[] = [];
 
@@ -119,5 +119,5 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Setti
 		// newManager.applySerializedState(data);
 		return new EntityManager(settings);
 	}
-	public toSettings(): SettingsEntity[] { return this.entities.map(player => player.toSettings()) }
+	public toSettings(): EngineSettingsEntity[] { return this.entities.map(player => player.toSettings()) }
 }

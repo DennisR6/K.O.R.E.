@@ -76,7 +76,7 @@ test("effectPhysics", () => {
 		.addPlayer(p3)
 		.build()
 
-	handler.tick()
+	handler.tick(1)
 
 	const { x, y } = p3.getVel()
 	expect(x).toBeCloseTo(-9.95, 1)

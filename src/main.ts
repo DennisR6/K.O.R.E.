@@ -1,14 +1,18 @@
 import type p5Types from "p5";
 import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
-import { GameSettings } from "./settings/settings.js";
+import { FRICTION_TABLE, GameSettings } from "./settings/settings.js";
 import { GameHandler, GameHandlerBuilder } from "./engine/Handler.js";
 import { MainMenu } from "./menu/Menu.js";
 import { AudioManager } from "./menu/AudioManager.js";
 import { DirectionArrow } from "./systems/DirectionArrow.js";
-import { CombiEmitter, LogEmitter } from "./emitter/InputEmitter.js";
 import { EmitterSystem } from "./systems/Emitter.js";
-import { ObjectEmitter } from "./emitter/ObjectEmitter.js";
+import { UiSystem } from "./systems/UiSystem.js";
+import { CombiEmitter } from "./emitter/InputEmitter.js";
+import { GameEmitter } from "./emitter/EngineEmitter.js";
+import { PhysicsSystem } from "./systems/PhysicsSystem.js";
+import { defaultPhysics } from "./physics/defaultPhysics.js";
+import { PlaybackSystem } from "./systems/PlayBackSystem.js";
 
 let usersettings = { url: "", mapbuilder: false, skipmenu: false }
 const uri = new URL(window.location.href)
@@ -17,6 +21,7 @@ for (const [key, value] of uri.searchParams) {
 	usersettings[key] = value
 }
 
+const ui = new UiSystem()
 // setUserUUUID(undefined)
 // let userid = getUserUUUID()!
 let handler: GameHandler
@@ -29,12 +34,18 @@ if (!usersettings.skipmenu) {
 	handler.addPreTickAndDraw(menu)
 } else {
 	const arrow = new DirectionArrow()
-	const em = new CombiEmitter([new LogEmitter(), new ObjectEmitter()])
-	handler = builder
+	const em = new CombiEmitter()
+	const ems = new EmitterSystem(em);
+	builder
 		.fromSettings(GameSettings)
+		.addSystem(ui)
+		.addUIMouse(ui)
 		.addSystem(arrow)
-		.addSystem(new EmitterSystem(em))
-		.build()
+		.addSystem(ems)
+		.addSystem(new PhysicsSystem(new defaultPhysics(FRICTION_TABLE.ice)))
+		.addSystem(new PlaybackSystem())
+	handler = builder.build()
+	em.addEmitter(new GameEmitter(handler))
 	handler.addPostDrawer(arrow)
 }
 startGame(handler)
@@ -57,18 +68,23 @@ function startGame(h: GameHandler) {
 			p.pop()
 		};
 
+		window.addEventListener("mousemove", (e) => {
+			//@ts-ignore
+			if (typeof defaultCanvas0 === "undefined") return
+			//@ts-ignore
+			const { left, top, right, bottom } = (defaultCanvas0 as HTMLCanvasElement).getBoundingClientRect()
+			if (e.clientX < left) return
+			if (e.clientX > right) return
+			if (e.clientY < top) return
+			if (e.clientY > bottom) return
+			h.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
+		})
+		window.addEventListener("mousedown", (_e) => h.handleMousePressed())
+		window.addEventListener("mouseup", (_e) => h.handleMouseReleased())
+
 		// Input Events
-		p.mousePressed = () => h.handleMousePressed(ctx.toWorld(p.mouseX), ctx.toWorld(p.mouseY));
-		p.mouseMoved = () => {
-			if (!ctx) return
-			h.updateMouse(ctx.toWorld(p.mouseX), ctx.toWorld(p.mouseY))
-		};
-		p.mouseReleased = () => h.handleMouseReleased();
 		p.mouseWheel = h.handleMouseWheel
-
 		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
-
-
 	};
 
 	//@ts-ignore
