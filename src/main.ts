@@ -48,6 +48,10 @@ if (!usersettings.skipmenu) {
 	em.addEmitter(new GameEmitter(handler))
 	handler.addPostDrawer(arrow)
 }
+
+// const landingengine = new GameHandlerBuilder().defaultSystems().setWorldSize(200, 200).addBackground(new BackgroundImageSystem(AssetList.arena2PNG)).build()
+// landingengine.draw = landingengine.drawWorld
+// handler.addPreDrawer(landingengine)
 startGame(handler)
 function startGame(h: GameHandler) {
 	const sketch = (p: p5Types) => {

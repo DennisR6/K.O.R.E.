@@ -1,5 +1,4 @@
 import type { RenderContext } from "../engine/RenderContext.js";
-import type { Vector2D } from "../physics/physics.js";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IMenu, IMenuPage } from "./MenuTypes.js";
 
@@ -25,13 +24,11 @@ export class MainMenu implements IMenu {
 	]
 	constructor() { }
 	private activePage: number = 0;
-	tick(_deltatime: number, _globalfriction: number): void { }
+	tick(deltatime: number, globalfriction: number): void { this.pages[this.activePage].tick(deltatime, globalfriction) }
 	handleMousePressed(): void { this.mouse.pressed = true; }
 	handleMouseReleased(): void { this.mouse.pressed = false }
 	handleMouseWheel(_event: WheelEvent): void { }
 	updateMouse(mouseX: number, mouseY: number): void { this.mouse.x = mouseX; this.mouse.y = mouseY; }
-	getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
-	setCurrentMousePosition(_pos: Vector2D): void { console.log("weitergereicht?2") }
 	draw(ctx: RenderContext): void { this.pages[this.activePage].draw(ctx) }
 }
 
@@ -44,7 +41,9 @@ export class LandingPage implements IMenuPage {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
 		ctx.setFillColor("blue")
-		if (this.timer > TimeFactorInSeconds * 5) ctx.drawText("drücke um zu starten", 200, 200, 48)
+		if (this.timer > TimeFactorInSeconds * 5) {
+			ctx.drawText("drücke um zu starten", 200, 200, 48)
+		}
 		ctx.pop()
 	}
 

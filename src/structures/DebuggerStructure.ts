@@ -4,7 +4,7 @@ import { StructureCircle } from "./structureCircle.js"
 export class DebugStructure extends StructureCircle {
 	structure: StructureCircle
 	constructor(str: StructureCircle) {
-		super(str.getPos().x, str.getPos().y, str.getBounds().x, str.getColor(), str.getEffects())
+		super(str.getPos().x, str.getPos().y, str.getBounds().x, str.getColor(), [])
 		this.structure = str;
 	}
 	public override draw(ctx: RenderContext): void {

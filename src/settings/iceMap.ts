@@ -29,12 +29,12 @@ const defaultEffects: FullEffectSettings[] = [
 	},
 	{
 		trigger: EffectTrigger.Always, triggerValue: [],
-		...new EffectPhysics({ typeValue: { ...friction } }).toSettings()
+		...new EffectPhysics({ typeValue: { ...friction } }).toSettings(),
 	},
 ]
 const deadly = {
-	trigger: EffectTrigger.Collision, triggerValue: []
-	, ...new EffectDamage({ typeValue: { damage: 100 } }).toSettings()
+	trigger: EffectTrigger.Collision, triggerValue: [],
+	...new EffectDamage({ typeValue: { damage: 100 } }).toSettings()
 }
 
 const IceMap: SettingsMap = {

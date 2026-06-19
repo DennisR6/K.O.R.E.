@@ -9,6 +9,10 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts"
 import { ObjectEmitter } from "../src/emitter/ObjectEmitter.ts"
 import { EmitterSystem } from "../src/systems/Emitter.ts"
 import { UiSystem } from "../src/systems/UiSystem.ts";
+import { EffectModifyMass } from "../src/effects/modifyMass.ts";
+import { EffectModifySize } from "../src/effects/modifySize.ts";
+import { EffectModifyPosition } from "../src/effects/modifyPosition.ts";
+import { EffectModifyTeam } from "../src/effects/modifyTeam.ts";
 
 
 test("engine", () => {
@@ -132,3 +136,61 @@ test("234", () => {
 	expect(p1.getPos().y).toBe(50)
 })
 
+describe("testing various effects", () => {
+
+
+
+	test("engine - modify mass & size (Type-Guard Check)", () => {
+		const player = new Player().new({ position: { x: 10, y: 10 } });
+
+		// 1. Teste Masse-Modifikation (setMass limitiert intern auf maximal 1 via Math.min)
+		const massEff = new EffectModifyMass({ typeValue: { mass: 0.5 } });
+		massEff.apply(player);
+		expect(player.getMass()).toBe(0.5);
+
+		// 2. Teste Größen-Modifikation via Type-Guard
+		expect(player.getSize().x).toBe(20); // Standardgröße aus Konstruktor
+		const sizeEff = new EffectModifySize({ typeValue: { size: 35 } });
+		sizeEff.apply(player);
+		expect(player.getSize().x).toBe(35); // Player-Radius wurde erfolgreich modifiziert
+	});
+
+	test("engine - modify mass & size (Type-Guard Check)", () => {
+		const player = new Player().new({ position: { x: 10, y: 10 } });
+
+		// 1. Teste Masse-Modifikation (setMass limitiert intern auf maximal 1 via Math.min)
+		const massEff = new EffectModifyMass({ typeValue: { mass: 0.5 } });
+		massEff.apply(player);
+		expect(player.getMass()).toBe(0.5);
+
+		// 2. Teste Größen-Modifikation via Type-Guard
+		expect(player.getSize().x).toBe(20); // Standardgröße aus Konstruktor
+		const sizeEff = new EffectModifySize({ typeValue: { size: 35 } });
+		sizeEff.apply(player);
+		expect(player.getSize().x).toBe(35); // Player-Radius wurde erfolgreich modifiziert
+	});
+
+	test("engine - modify position (setPos Vector2D)", () => {
+		const player = new Player().new({ position: { x: 50, y: 50 } });
+
+		// Erstelle Teleportation-Effekt zu neuen X/Y Koordinaten
+		const posEff = new EffectModifyPosition({ typeValue: { x: 500, y: 250 } });
+		posEff.apply(player);
+
+		// setPos verarbeitet das intern als Vector2D
+		expect(player.getPos().x).toBe(500);
+		expect(player.getPos().y).toBe(250);
+	});
+
+	test("engine - modify team (Array Check)", () => {
+		const player = new Player().new({ position: { x: 0, y: 0 }, team: [1] });
+		expect(player.getTeam()).toEqual([1]); // Start-Team
+
+		// Effekt zünden, um das Team auf ID [2] zu wechseln
+		const teamEff = new EffectModifyTeam({ typeValue: { team: [2] } });
+		teamEff.apply(player);
+
+		expect(player.getTeam()).toEqual([2]);
+	});
+
+})
