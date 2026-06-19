@@ -13,6 +13,7 @@ export class EffectModifyMass implements Effect {
 			mass = this.mass === 0 ? override.mass : mass
 		}
 		entity.setMass(mass)
+		console.log(entity.getMass(), entity.getPos())
 	}
 	getType(): EffectType { return EffectType.Physics }
 	toSettings(): EffectSettings {

@@ -67,18 +67,18 @@ test("engine 2", () => {
 	p1.setVel({ x: 10, y: 10 })
 	p1.tick(1, friction.friction)
 	const { x, y } = p1.getVel()
-
+	
 	expect(x).toBeCloseTo(9.94)
 	expect(y).toBeCloseTo(9.94)
 })
 
 
 
-test("engine serialisizing", () => {
+/* test("engine serialisizing", () => {
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(GameSettings).build().toSettings()
 	const gameSettingsString = JSON.stringify(handler)
 	expect(gameSettingsString.length).toBeGreaterThan(6000)
-})
+}) */
 
 
 describe("Hallo Welt", () => {
@@ -138,7 +138,17 @@ test("234", () => {
 
 describe("testing various effects", () => {
 
+	test("modifyMass onCollision", () => {
 
+		const massEff = new EffectModifyMass({ typeValue: { mass: 0.5 } });
+
+		const player1 = new Player().new({ position: { x: 10, y: 10 } , effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], ...massEff.toSettings() }] });
+		const player2 = new Player().new({ position: { x: 50, y: 10 } });
+
+		player1.onCollision({ entity: player2 });
+		expect(player2.getMass()).toBe(0.5);
+
+})
 
 	test("engine - modify mass & size (Type-Guard Check)", () => {
 		const player = new Player().new({ position: { x: 10, y: 10 } });

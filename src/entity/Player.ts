@@ -175,7 +175,7 @@ export class Player implements IEntity {
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): SHAPE.CIRCLE { return this.shape }
 
-	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void { this.effectCollision.forEach(effect => effect.apply(this)) }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE>; }): void { this.effectCollision.forEach(effect => effect.apply(entity)) }
 	public getTeam(): number[] { return this.team }
 	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
