@@ -1,4 +1,5 @@
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import { EffectDamage } from "../effects/damage.js";
 import { EffectMove } from "../effects/movement.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectTrigger, type FullEffectSettings } from "../effects/types.js";
@@ -31,6 +32,10 @@ const defaultEffects: FullEffectSettings[] = [
 		...new EffectPhysics({ typeValue: { ...friction } }).toSettings()
 	},
 ]
+const deadly = {
+	trigger: EffectTrigger.Collision, triggerValue: []
+	, ...new EffectDamage({ typeValue: { damage: 100 } }).toSettings()
+}
 
 const IceMap: SettingsMap = {
 	screenResolution: { x, y },
@@ -43,12 +48,12 @@ const IceMap: SettingsMap = {
 		{ type: SHAPE.RECTANGLE, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
 		{ type: SHAPE.RECTANGLE, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
 		{ type: SHAPE.RECTANGLE, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects] },
-		{ type: 0, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects] }
+		{ type: SHAPE.CIRCLE, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+		{ type: SHAPE.CIRCLE, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+		{ type: SHAPE.CIRCLE, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+		{ type: SHAPE.CIRCLE, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+		{ type: SHAPE.CIRCLE, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+		{ type: SHAPE.CIRCLE, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] }
 	],
 }
 

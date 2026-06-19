@@ -8,7 +8,6 @@ import { FRICTION_TABLE, GameSettings } from "../src/settings/settings.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts"
 import { ObjectEmitter } from "../src/emitter/ObjectEmitter.ts"
 import { EmitterSystem } from "../src/systems/Emitter.ts"
-import { DirectionArrow } from "../src/systems/DirectionArrow.ts"
 import { UiSystem } from "../src/systems/UiSystem.ts";
 
 
@@ -128,7 +127,7 @@ test("234", () => {
 	const { actorId, angle, power } = em.getLastShot()!
 	const sim = handler.simulateTurn(actorId, angle, power)
 	handler.tickTurn(sim)
-	for (let frames = 0; frames < sim.durationFrames; frames++) handler.tick()
+	for (let frames = 0; frames <= sim.durationFrames; frames++) handler.tick()
 	expect(p1.getPos().x).toBeCloseTo(-73, 0)
 	expect(p1.getPos().y).toBe(50)
 })

@@ -86,6 +86,7 @@ export class Player implements IEntity {
 	private isPhysicsEnabled: boolean = true
 	private dead: boolean = false
 	private items: IItem[] = []
+
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
 	private effectRound: Effect[] = []
@@ -174,18 +175,12 @@ export class Player implements IEntity {
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): SHAPE.CIRCLE { return this.shape }
 
-	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void {
-		this.effectCollision.forEach(effect => {
-			effect.apply(this)
-		})
-	}
+	public onCollision({ entity: _ }: { entity: IPhysics<SHAPE>; }): void { this.effectCollision.forEach(effect => effect.apply(this)) }
 	public getTeam(): number[] { return this.team }
 	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
-	// public AddItem(item: IItem): void { }
-	// public getInventory(): IItem[] { return [] }
 	public use(_item: IItem): void { }
 
 	public toSettings(): EngineSettingsEntity {
