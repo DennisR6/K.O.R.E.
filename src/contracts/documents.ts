@@ -1,4 +1,5 @@
 import type { TurnPacket } from "../engine/types.js";
+import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type SettingsItem } from "../settings/settings.js";
 import { createPlayerSettings } from "../entity/types.js";
@@ -52,7 +53,7 @@ export function migrateDocument<T extends object>(document: T): T & VersionedDoc
 	return { ...document, schemaVersion: version }
 }
 
-/** Validates canonical map data without assigning any hazard runtime semantics. */
+/** Validates canonical map data and the collision hazards supported by the map loader. */
 export function validateMapDocument(document: unknown): asserts document is MapDocument {
 	if (!isRecord(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION) throw new Error("Invalid map schema version")
 	if (!isRecord(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string") throw new Error("Invalid map metadata")
@@ -60,7 +61,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 	if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1) throw new Error("Invalid map physics")
 	if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards)) throw new Error("Invalid map collections")
 	if (!document.spawnRegions.every(isSpawnRegion)) throw new Error("Invalid map spawn region")
-	if (!document.hazards.every(hazard => isRecord(hazard) && hazard.schemaVersion === DOCUMENT_SCHEMA_VERSION && typeof hazard.id === "string" && typeof hazard.type === "string" && isRecord(hazard.trigger) && hazard.trigger.type === "collision" && isRecord(hazard.config))) throw new Error("Invalid map hazard")
+	if (!document.hazards.every(isMapHazard)) throw new Error("Invalid map hazard")
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null }
@@ -78,10 +79,9 @@ function isArenaGeometry(value: unknown): value is MapBoundarySettings {
 	return value.type === SHAPE.LINE && typeof value.x2 === "number" && typeof value.y2 === "number" && Number.isFinite(value.x2) && Number.isFinite(value.y2)
 }
 
-/** Converts a validated hazard-free canonical map into playable game settings. */
+/** Converts validated map geometry and supported collision hazards into playable game settings. */
 export function loadMapDocument(map: MapDocument, template: GameSettings): GameSettings {
 	validateMapDocument(map)
-	if (map.hazards.length > 0) throw new Error("Cannot load map hazards before runtime adapters exist")
 	const players = template.players.map(player => createPlayerSettings(player))
 	const playersByTeam = new Map<number, typeof players>()
 	for (const player of players) {
@@ -102,6 +102,50 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 		worldSize: { ...map.worldSize },
 		friction: { ...map.friction },
 		drift: map.drift,
-		mapBoundarys: map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),
+		mapBoundarys: [
+			...map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),
+			...map.hazards.map(hazardToBoundary),
+		],
 	}
+}
+
+type HazardZone = { x: number; y: number; r: number };
+type ForceHazardConfig = HazardZone & { angle: number; power: number };
+
+function isMapHazard(value: unknown): value is HazardDocument {
+	if (!isRecord(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord(value.trigger) || value.trigger.type !== "collision" || !isRecord(value.config)) return false
+	if (!isHazardZone(value.config)) return false
+	if (value.type === "kill-zone") return true
+	return value.type === "force" && typeof value.config.angle === "number" && Number.isFinite(value.config.angle) && value.config.angle >= 0 && value.config.angle < 360 && typeof value.config.power === "number" && Number.isFinite(value.config.power) && value.config.power > 0
+}
+
+function isHazardZone(value: Record<string, unknown>): value is Record<string, unknown> & HazardZone {
+	const { x, y, r } = value;
+	return [x, y, r].every(item => typeof item === "number" && Number.isFinite(item)) && typeof r === "number" && r > 0
+}
+
+function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
+	const zone = hazard.config as HazardZone;
+	return {
+		type: SHAPE.CIRCLE,
+		x: zone.x,
+		y: zone.y,
+		r: zone.r,
+		color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
+		effects: [hazardEffect(hazard)],
+	};
+}
+
+function hazardEffect(hazard: HazardDocument): FullEffectSettings {
+	if (hazard.type === "kill-zone") {
+		return { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } };
+	}
+	const config = hazard.config as ForceHazardConfig;
+	const radians = (config.angle * Math.PI) / 180;
+	return {
+		trigger: EffectTrigger.Collision,
+		triggerValue: [],
+		type: EffectType.ModifySetting,
+		typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } },
+	};
 }

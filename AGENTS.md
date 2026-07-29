@@ -158,8 +158,10 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   default teams/entities, active settings object, and grid arrangement.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
-- `src/settings/cueClashMap.ts` and `frostbiteArenaMap.ts`: scalable validated
-  canonical map factories with world sizes independent of render dimensions.
+- `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
+  `magmaCradleMap.ts`: scalable validated canonical map factories with world
+  sizes independent of render dimensions. Magma Cradle uses loaded force and
+  kill-zone collision hazards.
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
@@ -337,8 +339,9 @@ schema version one, while unknown versions are rejected.
 `validateGameSettings()` rejects malformed settings before an untrusted load
 boundary admits them.
 Canonical map documents carry world size, friction, drift, geometry, spawn regions,
-hazard references, and metadata. `loadMapDocument()` converts hazard-free maps
-to engine settings and rejects hazards until runtime adapters exist.
+hazard references, and metadata. `loadMapDocument()` converts force and kill-zone
+collision hazards into serializable runtime structure effects; other hazard types
+remain unsupported.
 
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must

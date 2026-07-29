@@ -169,7 +169,7 @@
   simulated shot. Expected scope: map data and test. Commit: `feat: add cue clash map`.
 - [x] Add the Frostbite Arena map with extreme drift and verify fixed-frame
   behavior. Expected scope: map data and test. Commit: `feat: add frostbite arena map`.
-- [ ] Add the Magma Cradle map with active hazard zones and verify eliminations.
+- [x] Add the Magma Cradle map with active hazard zones and verify eliminations.
   Expected scope: map data and test. Commit: `feat: add magma cradle map`.
 - [ ] Define an editor-export schema distinct from engine settings and validate
   imports before use. Expected scope: editor contract and test. Commit:

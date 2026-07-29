@@ -23,7 +23,7 @@ test("map loader applies canonical physics, geometry, and team spawns", () => {
 	expect(settings.players.map(player => player.position)).toEqual([{ x: 22, y: 22 }, { x: 152, y: 22 }]);
 });
 
-test("map loader rejects hazard references before hazard runtime mapping exists", () => {
-	expect(() => loadMapDocument({ ...map, hazards: [{ schemaVersion: 1, id: "void", type: "kill-zone", trigger: { type: "collision" }, config: {} }] }, createDefaultGameSettings(2, 1)))
-		.toThrow("Cannot load map hazards before runtime adapters exist");
+test("map loader rejects unsupported map hazards", () => {
+	expect(() => loadMapDocument({ ...map, hazards: [{ schemaVersion: 1, id: "void", type: "unknown", trigger: { type: "collision" }, config: { x: 50, y: 50, r: 10 } }] }, createDefaultGameSettings(2, 1)))
+		.toThrow("Invalid map hazard");
 });
