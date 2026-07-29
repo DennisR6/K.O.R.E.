@@ -43,6 +43,9 @@ export class ServerRuntime {
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
 				return
+			case NetworkMessageType.REMATCH:
+				this.rematch(socket)
+				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
@@ -100,6 +103,17 @@ export class ServerRuntime {
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
 			if (recipient) recipient.send(wrap(packet))
+		}
+	}
+
+	private rematch(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before rematching")
+		const result = this.games.rematch(userId)
+		if (!result.ok) return this.sendError(socket, result.error)
+		for (const user of result.record.users) {
+			const recipient = this.socketForUser(user)
+			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState }))
 		}
 	}
 

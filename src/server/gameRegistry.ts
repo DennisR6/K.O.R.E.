@@ -25,6 +25,10 @@ export type SubmitTurnResult =
 	| { ok: true; record: GameRecord; packet: TurnPacket }
 	| { ok: false; error: string };
 
+export type RematchResult =
+	| { ok: true; record: GameRecord }
+	| { ok: false; error: string };
+
 /**
  * Authoritative games are persisted after creation and every accepted turn.
  * The in-memory handler is a cache and can be rebuilt from its stored settings.
@@ -134,6 +138,19 @@ export class GameRegistry {
 			record.resolving = false
 			this.touch(record)
 		}
+	}
+
+	public rematch(userId: string): RematchResult {
+		const record = this.getForUser(userId)
+		if (!record) return { ok: false, error: "No active game for this user" }
+		if (!record.teamByUser.has(userId)) return { ok: false, error: "User does not belong to this game" }
+		record.handler.rematch()
+		record.ruleState = record.rules.initialState(0, 0)
+		record.handler.setRuleState(record.ruleState)
+		record.currentTeam = 0
+		record.turnNumber = 0
+		this.persist(record)
+		return { ok: true, record }
 	}
 
 	private load(id: string): GameRecord | undefined {

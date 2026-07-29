@@ -130,7 +130,7 @@
 - [x] Add a local rematch/reset action that rebuilds a match from its configured
   settings. Expected scope: menu or game controller and test. Commit:
   `feat: add local rematch flow`.
-- [ ] Add an authoritative rematch/reset request and broadcast its initialized
+- [x] Add an authoritative rematch/reset request and broadcast its initialized
   state to connected clients. Expected scope: wire protocol, runtime, test.
   Commit: `feat: add network rematch flow`.
 

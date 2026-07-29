@@ -12,6 +12,7 @@ export const enum NetworkMessageType {
 	WAITINGROOM = "WAITINGROOM",
 	TURN = "TURN",
 	ERROR = "ERROR",
+	REMATCH = "REMATCH",
 }
 
 export function getNetworkPacketType(input: NetworkMessageType): string {
@@ -41,6 +42,7 @@ export type UnTypedNetworkMessage =
 	NetworkTurn |
 	NetworkNewUser |
 	NetworkError
+	| NetworkRematch
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
@@ -68,5 +70,6 @@ export interface NetworkError {
 	type: NetworkMessageType.ERROR,
 	message: string
 }
+export interface NetworkRematch { type: NetworkMessageType.REMATCH }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

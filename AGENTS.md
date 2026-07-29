@@ -433,7 +433,9 @@ The network stack uses native `Bun.serve` WebSockets and an SQLite-backed match
 store. `ServerRuntime` derives the sender from the logged-in socket, validates
 a `SHOOT` request, commits it through the authoritative `GameHandler`, advances
 the turn revision, stores the compressed `handler.toSettings()` snapshot, and
-broadcasts the resulting `TURN` packet and rule state to both players. `GameHandler` objects
+broadcasts the resulting `TURN` packet and rule state to both players. An
+authoritative `REMATCH` resets the handler and broadcasts fresh per-player
+`INIT` settings. `GameHandler` objects
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
 from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.

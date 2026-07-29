@@ -128,6 +128,20 @@ test("disconnect removes a waiting user before matchmaking", () => {
 	expect(packet(second).type).toBe(NetworkMessageType.INIT)
 })
 
+test("server rematch resets authoritative state and broadcasts initialized settings", () => {
+	const { runtime, first, second } = connectMatchedRuntime()
+	const game = runtime.getRegistry().getForUser(userOne)!
+	const actorId = game.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!.getId()
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.SHOOT, actorId, angle: 0, power: 1 }))
+	runtime.message(second, JSON.stringify({ type: NetworkMessageType.REMATCH }))
+
+	expect(packet(first).type).toBe(NetworkMessageType.INIT)
+	expect(packet(second).type).toBe(NetworkMessageType.INIT)
+	expect(packet(first).settings.turnNumber).toBe(0)
+	expect(packet(first).settings.activeTeam).toBe(0)
+	expect(game.ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+});
+
 test("compressed SQLite state restores an evicted authoritative game", () => {
 	const database = new GameDatabase(":memory:")
 	const registry = new GameRegistry(database, 1)
