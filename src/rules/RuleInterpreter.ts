@@ -3,11 +3,18 @@ import { RulePhase, type GameModeSettings, type RuleState } from "./types.js";
 /** Advances a game mode's declarative turn phases without touching simulation. */
 export class RuleInterpreter {
 	private readonly phases: RulePhase[];
+	private readonly maxItemsPerTurn: number;
 
 	public constructor(mode: GameModeSettings) {
 		if (mode.phases.length === 0) throw new Error("A game mode requires at least one rule phase")
 		if (mode.phases.includes(RulePhase.Complete)) throw new Error("Complete cannot be a configured rule phase")
+		if (!Number.isSafeInteger(mode.maxItemsPerTurn) || mode.maxItemsPerTurn < 0) throw new Error("Item allowance must be a non-negative integer")
+		const hasItemPhase = mode.phases.includes(RulePhase.Item)
+		if (hasItemPhase && mode.phases[0] !== RulePhase.Item) throw new Error("Item phase must start a turn")
+		if (hasItemPhase && mode.maxItemsPerTurn === 0) throw new Error("Item phase requires a positive item allowance")
+		if (!hasItemPhase && mode.maxItemsPerTurn !== 0) throw new Error("Item allowance requires an item phase")
 		this.phases = [...mode.phases]
+		this.maxItemsPerTurn = mode.maxItemsPerTurn
 	}
 
 	public initialState(activeTeam: number = 0, turnNumber: number = 0): RuleState {
@@ -19,6 +26,13 @@ export class RuleInterpreter {
 		const phaseIndex = this.phases.indexOf(state.phase)
 		if (phaseIndex < 0) throw new Error(`Phase ${state.phase} is not configured for this game mode`)
 		return { ...state, phase: this.phases[phaseIndex + 1] ?? RulePhase.Complete }
+	}
+
+	/** Records one item use during the optional item phase. */
+	public useItem(state: RuleState): RuleState {
+		if (state.phase !== RulePhase.Item) throw new Error("Items may only be used during the item phase")
+		if (state.itemUses >= this.maxItemsPerTurn) throw new Error("Item allowance has been exhausted")
+		return { ...state, itemUses: state.itemUses + 1 }
 	}
 
 	public nextActiveTeam(activeTeam: number, teamCount: number): number {

@@ -104,7 +104,7 @@
 - [x] Generate default team/entity layouts from the configured figure counts
   rather than hard-coded map teams. Expected scope: settings builder and test.
   Commit: `feat: generate configured team layouts`.
-- [ ] Define the optional item-phase rule state and its allowed transitions.
+- [x] Define the optional item-phase rule state and its allowed transitions.
   Expected scope: rule contract and state-machine test. Commit:
   `feat: add item phase state`.
 - [ ] Define required aim, charge, and push rule states and reject skipped

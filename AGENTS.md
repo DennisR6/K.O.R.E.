@@ -97,8 +97,9 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 
 - `src/rules/types.ts`: serializable game-mode, rule-phase, and match-result
   contracts. It intentionally does not depend on `GameHandler`.
-- `src/rules/RuleInterpreter.ts`: advances only the data-defined rule-phase
-  sequence and active-team order without mutating simulation state.
+- `src/rules/RuleInterpreter.ts`: advances the data-defined rule-phase sequence
+  and active-team order without mutating simulation state. Its optional item
+  phase starts a turn and enforces its configured per-turn allowance.
 - `src/rules/defaultGameModes.ts`: transitional data-defined modes shared by
   local and authoritative turn flows.
 
