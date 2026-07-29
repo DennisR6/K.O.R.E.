@@ -180,7 +180,7 @@
 - [x] Replace unsafe editor JSON-to-DOM interpolation with safe DOM assignment
   for imported values. Expected scope: editor UI and browser test. Commit:
   `fix: safely render imported map data`.
-- [ ] Repair the editor's missing imports and undefined function references.
+- [x] Repair the editor's missing imports and undefined function references.
   Expected scope: one editor module and test. Commit: `fix: restore editor imports`.
 - [ ] Replace duplicate editor element IDs with unique identifiers and update
   their references. Expected scope: editor markup and one script. Commit:

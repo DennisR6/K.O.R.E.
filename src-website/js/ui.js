@@ -5,6 +5,12 @@ import {
 	renderPlayers,
 	restoreMapFields
 } from "./editor-map.js";
+import {
+	openItemEditor,
+	refreshItemsUI,
+	renderItemSidebar,
+	renderItemsOverview
+} from "./editor-items.js";
 
 
 // ---------------------------------------------------------

@@ -92,7 +92,7 @@ function setupAccordion() {
 //  SIDEBAR – ITEMS RENDERN
 // ---------------------------------------------------------
 
-function renderItemSidebar() {
+export function renderItemSidebar() {
     const list = document.getElementById("sidebar-item-list");
     list.replaceChildren();
 
@@ -234,7 +234,7 @@ function setupSaveButton() {
 //  ITEM ÜBERSICHT
 // ---------------------------------------------------------
 
-function renderItemsOverview() {
+export function renderItemsOverview() {
     const tbody = document.getElementById("item-table-body");
     tbody.replaceChildren();
 
@@ -256,7 +256,7 @@ function renderItemsOverview() {
     });
 }
 
-function openItemEditor(item) {
+export function openItemEditor(item) {
     showEditor();
     loadItemIntoEditor(item);
 
@@ -580,7 +580,7 @@ function createField(label, input, className = "field") {
     return field;
 }
 
-function refreshItemsUI(openFirst = false) {
+export function refreshItemsUI(openFirst = false) {
 
     // Sidebar aktualisieren
     renderItemSidebar();
@@ -593,4 +593,3 @@ function refreshItemsUI(openFirst = false) {
         openItemEditor(mapData.items[0]);
     }
 }
-
