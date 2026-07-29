@@ -45,7 +45,7 @@
 - [x] Route authoritative server turn resolution through the rule interpreter
   and preserve existing sender validation. Expected scope: registry, runtime
   test, server protocol test. Commit: `refactor: use rules for server turns`.
-- [ ] Remove duplicated gameplay ownership from engine systems after rule
+- [x] Remove duplicated gameplay ownership from engine systems after rule
   interpreter coverage proves equivalence. Expected scope: obsolete rule path,
   exports, regression test. Commit: `refactor: isolate gameplay rules`.
 

@@ -21,8 +21,20 @@ export class RuleInterpreter {
 		return { ...state, phase: this.phases[phaseIndex + 1] ?? RulePhase.Complete }
 	}
 
-	public startNextTurn(state: RuleState, activeTeam: number): RuleState {
+	public nextActiveTeam(activeTeam: number, teamCount: number): number {
+		if (!Number.isInteger(activeTeam) || !Number.isInteger(teamCount) || teamCount < 1) {
+			throw new Error("RuleInterpreter requires at least one team")
+		}
+		return (activeTeam + 1) % teamCount
+	}
+
+	public startNextTurn(state: RuleState, teamCount: number): RuleState {
 		if (state.phase !== RulePhase.Complete) throw new Error("A turn must complete before the next turn starts")
-		return { phase: this.phases[0], activeTeam, turnNumber: state.turnNumber + 1, itemUses: 0 }
+		return {
+			phase: this.phases[0],
+			activeTeam: this.nextActiveTeam(state.activeTeam, teamCount),
+			turnNumber: state.turnNumber + 1,
+			itemUses: 0,
+		}
 	}
 }

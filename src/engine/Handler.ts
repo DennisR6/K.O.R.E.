@@ -18,7 +18,6 @@ import { MetaEffect } from "../effects/effects.js";
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
-import { TurnSystem } from "../systems/TurnSystem.js";
 import type { SettingsItem } from "../settings/settings.js";
 
 /**
@@ -73,7 +72,6 @@ import type { SettingsItem } from "../settings/settings.js";
  */
 export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSettings> {
 	private teamSize: number = 0
-	private teamCount: number = 0
 	private id: UUID
 	private turns: TurnPacket[] = []
 	private settings: GameSettings | EngineSettings | undefined
@@ -351,12 +349,6 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.context.activeTeam = team
 	}
 	public getActiveTeam(): number { return this.context.activeTeam }
-	public setTeamCount(teamCount: number): void { this.teamCount = teamCount }
-	public advanceTurn(): number {
-		this.context.activeTeam = TurnSystem.nextActiveTeam(this.context.activeTeam, this.teamCount)
-		this.context.currTurn++
-		return this.context.activeTeam
-	}
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
 		this.context.structures.push(structure)
@@ -482,7 +474,6 @@ export class GameHandlerBuilder {
 
 		//add Team
 		this.engine.setMyTeam(myTeam ?? [crypto.randomUUID()])
-		this.engine.setTeamCount(gameSettings.allTeams?.length ?? 0)
 		this.engine.setTeamSize(gameSettings.allTeamSize)
 		this.engine.setItems(gameSettings.items)
 		this.engine.loadEffects(gameSettings.effects)

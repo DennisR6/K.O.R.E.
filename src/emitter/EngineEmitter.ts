@@ -16,10 +16,13 @@ export class GameEmitter implements IInputEmitter {
 	handler: GameHandler
 	private rules: RuleInterpreter
 	private ruleState: RuleState
-	constructor(handler: GameHandler, mode: GameModeSettings = currentTurnMode) {
+	private teamCount: number
+	constructor(handler: GameHandler, mode: GameModeSettings = currentTurnMode, teamCount: number = handler.getTeam().length) {
+		if (teamCount < 1) throw new Error("Local game requires at least one team")
 		this.handler = handler
 		this.rules = new RuleInterpreter(mode)
 		this.ruleState = this.rules.initialState(handler.getActiveTeam(), handler.getTurnNumber())
+		this.teamCount = teamCount
 	}
 
 	sendShot(actorId: string, angle: number, power: number): void {
@@ -29,9 +32,10 @@ export class GameEmitter implements IInputEmitter {
 		// this.handler.setState(GameState.Playing)
 		this.handler.playTurn(sim, () => {
 			this.ruleState = this.rules.advancePhase(this.ruleState)
-			const activeTeam = this.handler.advanceTurn()
-			this.ruleState = this.rules.startNextTurn(this.ruleState, activeTeam)
-			this.handler.setState(TurnSystem.stateForTeam(activeTeam, this.handler.getTeam()))
+			this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount)
+			this.handler.setActiveTeam(this.ruleState.activeTeam)
+			this.handler.setTurnNumber(this.ruleState.turnNumber)
+			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
 	}
 }

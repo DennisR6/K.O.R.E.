@@ -122,8 +122,9 @@ export class GameRegistry {
 		try {
 			const packet = record.handler.resolveTurn(input)
 			const completedState = record.rules.advancePhase(record.ruleState)
-			const activeTeam = record.handler.advanceTurn()
-			record.ruleState = record.rules.startNextTurn(completedState, activeTeam)
+			record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
+			record.handler.setActiveTeam(record.ruleState.activeTeam)
+			record.handler.setTurnNumber(record.ruleState.turnNumber)
 			record.currentTeam = record.ruleState.activeTeam
 			record.turnNumber = record.ruleState.turnNumber
 			this.persist(record)

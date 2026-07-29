@@ -1,5 +1,8 @@
 import type { UUID } from "node:crypto";
 import { GameState } from "../engine/types.js";
+import { currentTurnMode } from "../rules/defaultGameModes.js";
+import { RuleInterpreter } from "../rules/RuleInterpreter.js";
+import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 import { TurnSystem } from "./TurnSystem.js";
 
@@ -25,6 +28,7 @@ import { TurnSystem } from "./TurnSystem.js";
  */
 export class RoundPlayerSystem implements ISystem {
 	teams: UUID[]
+	private rules = new RuleInterpreter(currentTurnMode)
 	/** Interner Flag, um den aktuellen Besitzer des Zuges zu tracken. */
 	constructor(teams: UUID[]) { this.teams = teams }
 	/**
@@ -32,11 +36,12 @@ export class RoundPlayerSystem implements ISystem {
 	 */
 	ticker(ctx: IGameContext, _dt: number): void {
 		if (ctx.state !== GameState.ChooseTeam) return
-		ctx.activeTeam = TurnSystem.nextActiveTeam(ctx.activeTeam, this.teams.length)
-		ctx.currTurn++
+		const nextTurn = this.rules.startNextTurn({ phase: RulePhase.Complete, activeTeam: ctx.activeTeam, turnNumber: ctx.currTurn, itemUses: 0 }, this.teams.length)
+		ctx.activeTeam = nextTurn.activeTeam
+		ctx.currTurn = nextTurn.turnNumber
 		ctx.state = TurnSystem.stateForTeam(ctx.activeTeam, [ctx.myTeamNumber])
 	}
 }
 
-/** @deprecated Use TurnSystem.nextActiveTeam(). */
-export const getNextNumber = (a: number, b: number) => TurnSystem.nextActiveTeam(a, b)
+/** @deprecated Use RuleInterpreter.nextActiveTeam(). */
+export const getNextNumber = (a: number, b: number) => new RuleInterpreter(currentTurnMode).nextActiveTeam(a, b)

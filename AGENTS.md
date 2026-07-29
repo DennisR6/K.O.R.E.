@@ -97,7 +97,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/rules/types.ts`: serializable game-mode, rule-phase, and match-result
   contracts. It intentionally does not depend on `GameHandler`.
 - `src/rules/RuleInterpreter.ts`: advances only the data-defined rule-phase
-  sequence and does not mutate simulation state.
+  sequence and active-team order without mutating simulation state.
 - `src/rules/defaultGameModes.ts`: transitional data-defined modes shared by
   local and authoritative turn flows.
 
@@ -142,8 +142,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/systems/PlayBackSystem.ts`: counts simulated frames and hard-syncs the
   final position and velocity.
 - `src/systems/GameStateManager.ts`: incomplete state transitions.
-- `src/systems/TurnSystem.ts`: deterministic active-team progression and
-  client turn-state mapping. The server invokes it through `GameHandler`.
+- `src/systems/TurnSystem.ts`: client turn-state mapping for controlled teams.
 - `src/systems/DirectionArrow.ts`: shot-direction overlay.
 - `src/systems/RoundSystem.ts`, `WinningSystem.ts`, `BoundarySystem.ts`,
   `EffectSystem.ts`, `Simulator.ts`, and related helpers: partial, placeholder,

@@ -14,11 +14,8 @@ test("GameEmitter advances local hotseat turns through the rule interpreter", ()
 			return packet
 		},
 		playTurn: (_packet: TurnPacket, onComplete?: () => void) => onComplete?.(),
-		advanceTurn: () => {
-			activeTeam = 1
-			turnNumber++
-			return activeTeam
-		},
+		setActiveTeam: (team: number) => { activeTeam = team },
+		setTurnNumber: (turn: number) => { turnNumber = turn },
 		setState: (nextState: GameState) => { state = nextState },
 		getTeam: () => [0, 1],
 		getActiveTeam: () => activeTeam,
