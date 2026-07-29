@@ -1,7 +1,7 @@
 import type { TurnPacket } from "../engine/types.js";
 import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
-import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type SettingsItem } from "../settings/settings.js";
+import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect, type SettingsItem } from "../settings/settings.js";
 import { createPlayerSettings } from "../entity/types.js";
 
 export const DOCUMENT_SCHEMA_VERSION = 1;
@@ -53,7 +53,7 @@ export interface EditorMapDocument extends VersionedDocument {
 	mapBoundarys: EditorWall[];
 	holes: EditorHole[];
 	players: EditorPlayer[];
-	friction: number;
+	friction: FrictionSettings;
 	drift: number;
 	items: EditorItem[];
 	effects: EditorHazard[];
@@ -122,7 +122,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 /** Validates the standalone editor's versioned export without treating it as GameSettings. */
 export function validateEditorMapDocument(document: unknown): asserts document is EditorMapDocument {
 	if (!isRecord(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof document.name !== "string" || !isEditorBackground(document.background) || !isEditorScreenResolution(document.screenResolution)) throw new Error("Invalid editor map document")
-	if (!isNonNegativeFinite(document.friction) || !isNonNegativeFinite(document.drift)) throw new Error("Invalid editor map physics")
+	if (!isFriction(document.friction) || !isNonNegativeFinite(document.drift) || document.drift > 1) throw new Error("Invalid editor map physics")
 	if (!Array.isArray(document.mapBoundarys) || !Array.isArray(document.holes) || !Array.isArray(document.players) || !Array.isArray(document.items) || !Array.isArray(document.effects)) throw new Error("Invalid editor map collections")
 	if (!document.mapBoundarys.every(isEditorWall) || !document.holes.every(isEditorHole) || !document.players.every(isEditorPlayer)) throw new Error("Invalid editor map geometry")
 	if (!document.items.every(isEditorItem) || !hasUniqueIds(document.items) || !document.effects.every(isEditorHazard) || !hasUniqueIds(document.effects)) throw new Error("Invalid editor map collection entry")
@@ -203,6 +203,97 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 			...map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),
 			...map.hazards.map(hazardToBoundary),
 		],
+	}
+}
+
+/** Converts a validated standalone editor export into engine settings without merging their data models. */
+export function convertEditorMapDocument(editorMap: unknown, template: GameSettings): GameSettings {
+	validateEditorMapDocument(editorMap)
+	if (editorMap.items.length > 0) throw new Error("Editor map items are not supported")
+	if (!isDefaultEditorMode(editorMap.mode)) throw new Error("Only the default last_man_standing mode is supported")
+	if (!isDefaultEditorAi(editorMap.ai)) throw new Error("Only the default editor AI configuration is supported")
+	if (editorMap.effects.some(hazard => hazard.type === "slide_zone" || hazard.type === "sticky_zone")) throw new Error("Unsupported editor hazard type")
+
+	const worldSize = { x: editorMap.screenResolution.x, y: editorMap.screenResolution.y }
+	const spawnRegions = editorSpawnRegions(editorMap.players)
+	const arenaGeometry: MapBoundarySettings[] = [
+		...editorMap.mapBoundarys.map<MapBoundarySettingsRect>(wall => ({ type: SHAPE.RECTANGLE, x: wall.x, y: wall.y, w: wall.w, h: wall.h, color: wall.color, effects: [] })),
+		...editorMap.holes.map<MapBoundarySettingsCircle>(hole => ({ type: SHAPE.CIRCLE, x: hole.x, y: hole.y, r: hole.r, color: hole.color, effects: [] })),
+	]
+	const canonicalMap: MapDocument = {
+		schemaVersion: DOCUMENT_SCHEMA_VERSION,
+		metadata: { id: editorMap.name || "editor-map", name: editorMap.name },
+		worldSize,
+		friction: { ...editorMap.friction },
+		drift: editorMap.drift,
+		arenaGeometry,
+		spawnRegions,
+		hazards: [],
+	}
+	const settings = loadMapDocument(canonicalMap, template)
+	return {
+		...settings,
+		screenResolution: { ...worldSize },
+		mapBoundarys: [...settings.mapBoundarys, ...editorMap.effects.map(editorHazardToBoundary)],
+	}
+}
+
+const EDITOR_SPAWN_PADDING = 20;
+
+function editorSpawnRegions(players: EditorPlayer[]): MapSpawnRegion[] {
+	const pointsByTeam = new Map<number, EditorPlayer[]>()
+	for (const player of players) {
+		const points = pointsByTeam.get(player.team) ?? []
+		points.push(player)
+		pointsByTeam.set(player.team, points)
+	}
+	return [...pointsByTeam.entries()].map(([team, points]) => {
+		const xs = points.map(point => point.x)
+		const ys = points.map(point => point.y)
+		const minX = Math.min(...xs)
+		const maxX = Math.max(...xs)
+		const minY = Math.min(...ys)
+		const maxY = Math.max(...ys)
+		return {
+			team,
+			x: minX - EDITOR_SPAWN_PADDING,
+			y: minY - EDITOR_SPAWN_PADDING,
+			w: maxX - minX + EDITOR_SPAWN_PADDING * 2,
+			h: maxY - minY + EDITOR_SPAWN_PADDING * 2,
+		}
+	})
+}
+
+function isDefaultEditorMode(mode: EditorMode): boolean {
+	return mode.type === "last_man_standing" && mode.params.itemsEnabled === true && mode.params.hazardsEnabled === false && mode.params.allowTies === false
+}
+
+function isDefaultEditorAi(ai: EditorAi): boolean {
+	return ai.difficulty === "normal" && ai.aggressiveness === 50 && ai.riskTaking === 40 && ai.itemPriority === 50 && ai.hazardAwareness === 60 && ai.errorRate === 20
+}
+
+function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
+	const effect = hazard.type === "push_zone"
+		? pushZoneEffect(hazard)
+		: { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }
+	return {
+		type: SHAPE.RECTANGLE,
+		x: hazard.position.x,
+		y: hazard.position.y,
+		w: hazard.size.w,
+		h: hazard.size.h,
+		color: hazard.type === "kill_zone" ? "#d94b28" : "#f0a020",
+		effects: [effect],
+	}
+}
+
+function pushZoneEffect(hazard: EditorPushHazard): FullEffectSettings {
+	const radians = (hazard.params.direction * Math.PI) / 180
+	return {
+		trigger: EffectTrigger.Collision,
+		triggerValue: [],
+		type: EffectType.ModifySetting,
+		typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * hazard.params.force, y: Math.sin(radians) * hazard.params.force } },
 	}
 }
 

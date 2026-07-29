@@ -1,143 +1,15 @@
 {
+  "schemaVersion": 1,
   "name": "",
   "background": null,
-  "screenResolution": {
-    "x": 1600,
-    "y": 900,
-    "factor": 100
-  },
+  "screenResolution": { "x": 1600, "y": 900, "factor": 100 },
   "mapBoundarys": [],
   "holes": [],
   "players": [],
-  "friction": 1,
+  "friction": { "friction": 0.995, "linearDrag": 0.01, "stopThreshold": 0.1 },
   "drift": 0,
-  "items": [
-    {
-      "id": "item_wxrhgp",
-      "name": "",
-      "effectType": "push",
-      "trigger": "onUse",
-      "frequency": {
-        "mode": "rundenbasiert",
-        "intervalRounds": 3,
-        "killsInterval": 3,
-        "lastPlayersThreshold": 0,
-        "healthThreshold": 20,
-        "boostFactor": 5
-      },
-      "probability": 25,
-      "spawn": {
-        "type": "points",
-        "points": [],
-        "areas": []
-      },
-      "effectParams": {}
-    },
-    {
-      "id": "item_dhlbeh",
-      "name": "",
-      "effectType": "modify_mass",
-      "trigger": "onUse",
-      "frequency": {
-        "mode": "rundenbasiert",
-        "intervalRounds": 3,
-        "killsInterval": 3,
-        "lastPlayersThreshold": 0,
-        "healthThreshold": 20,
-        "boostFactor": 5
-      },
-      "probability": 25,
-      "spawn": {
-        "type": "points",
-        "points": [],
-        "areas": []
-      },
-      "effectParams": {}
-    },
-    {
-      "id": "item_gjf8x1",
-      "name": "",
-      "effectType": "swap_positions",
-      "trigger": "onUse",
-      "frequency": {
-        "mode": "rundenbasiert",
-        "intervalRounds": 3,
-        "killsInterval": 3,
-        "lastPlayersThreshold": 0,
-        "healthThreshold": 20,
-        "boostFactor": 5
-      },
-      "probability": 25,
-      "spawn": {
-        "type": "points",
-        "points": [],
-        "areas": [
-          {
-            "shape": "circle",
-            "x": 0,
-            "y": 0,
-            "radius": 100,
-            "width": 200,
-            "height": 200
-          }
-        ]
-      },
-      "effectParams": {}
-    },
-    {
-      "id": "item_35mb2j",
-      "name": "",
-      "effectType": "boost_speed",
-      "trigger": "onHit",
-      "frequency": {
-        "mode": "rundenbasiert",
-        "intervalRounds": 3,
-        "killsInterval": 3,
-        "lastPlayersThreshold": 0,
-        "healthThreshold": 20,
-        "boostFactor": 5
-      },
-      "probability": 25,
-      "spawn": {
-        "type": "points",
-        "points": [],
-        "areas": []
-      },
-      "effectParams": {}
-    }
-  ],
-  "effects": [
-    {
-      "id": "55040cde-9908-4334-9d58-ac0dedc7d32f",
-      "type": "push_zone",
-      "position": {
-        "x": 0,
-        "y": 0
-      },
-      "size": {
-        "w": 2,
-        "h": 2
-      },
-      "params": {
-        "direction": 0,
-        "force": 1
-      }
-    }
-  ],
-  "mode": {
-    "type": "last_man_standing",
-    "params": {
-      "itemsEnabled": true,
-      "hazardsEnabled": false,
-      "allowTies": false
-    }
-  },
-  "ai": {
-    "difficulty": "normal",
-    "aggressiveness": 50,
-    "riskTaking": 40,
-    "itemPriority": 50,
-    "hazardAwareness": 60,
-    "errorRate": 20
-  }
+  "items": [],
+  "effects": [],
+  "mode": { "type": "last_man_standing", "params": { "itemsEnabled": true, "hazardsEnabled": false, "allowTies": false } },
+  "ai": { "difficulty": "normal", "aggressiveness": 50, "riskTaking": 40, "itemPriority": 50, "hazardAwareness": 60, "errorRate": 20 }
 }

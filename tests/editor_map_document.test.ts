@@ -9,7 +9,7 @@ const editorMap: EditorMapDocument = {
 	mapBoundarys: [{ type: "rectangle", x: 10, y: 20, w: 100, h: 20, color: "#4da3ff" }],
 	holes: [{ type: "circle", x: 300, y: 200, r: 30, color: "#ff4444" }],
 	players: [{ x: 50, y: 60, color: "#00ff00", team: 0 }],
-	friction: 1,
+	friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
 	drift: 0,
 	items: [{
 		id: "item_push",
@@ -33,6 +33,7 @@ test("validates a versioned standalone editor map without treating it as GameSet
 test("rejects invalid editor shapes, numeric values, and collections", () => {
 	expect(() => validateEditorMapDocument({ ...editorMap, mapBoundarys: [{ ...editorMap.mapBoundarys[0], type: "circle" }] })).toThrow("Invalid editor map geometry");
 	expect(() => validateEditorMapDocument({ ...editorMap, holes: [{ ...editorMap.holes[0], r: 0 }] })).toThrow("Invalid editor map geometry");
+	expect(() => validateEditorMapDocument({ ...editorMap, friction: 1 })).toThrow("Invalid editor map physics");
 	expect(() => validateEditorMapDocument({ ...editorMap, items: {} })).toThrow("Invalid editor map collections");
 	expect(() => validateEditorMapDocument({ ...editorMap, effects: [{ ...editorMap.effects[0], params: { direction: 361, force: 1 } }] })).toThrow("Invalid editor map collection entry");
 });

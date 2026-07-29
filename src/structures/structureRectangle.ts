@@ -90,7 +90,9 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 
 	public getVel(): Vector2D { return this.vel }
 
-	public onCollision({ }: { entity: IPhysics<SHAPE> }): void { }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
+		this.collisionEffects.forEach(effect => effect.apply(entity))
+	}
 	public setVel(vel: Vector2D): void { this.vel = vel }
 
 	public setMass(mass: number): void { this.mass = mass }

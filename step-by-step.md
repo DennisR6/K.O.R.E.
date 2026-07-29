@@ -174,7 +174,7 @@
 - [x] Define an editor-export schema distinct from engine settings and validate
   imports before use. Expected scope: editor contract and test. Commit:
   `feat: validate editor map exports`.
-- [ ] Convert validated editor maps to canonical engine map settings and cover
+- [x] Convert validated editor maps to canonical engine map settings and cover
   representative shapes, spawns, and hazards. Expected scope: converter and
   test. Commit: `feat: convert editor maps to engine settings`.
 - [ ] Replace unsafe editor JSON-to-DOM interpolation with safe DOM assignment

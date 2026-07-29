@@ -6,8 +6,9 @@ export function restoreMapFields() {
     document.getElementById("map-name").value = mapData.name || "";
 
     // FRICTION
-    document.getElementById("map-friction").value = mapData.friction ?? 1.0;
-    document.getElementById("friction-value").textContent = Number(mapData.friction).toFixed(2);
+    document.getElementById("map-friction").value = mapData.friction?.friction ?? 0.995;
+    document.getElementById("map-linear-drag").value = mapData.friction?.linearDrag ?? 0.01;
+    document.getElementById("map-stop-threshold").value = mapData.friction?.stopThreshold ?? 0.1;
 
     // DRIFT
     document.getElementById("map-drift").value = mapData.drift ?? 0.0;
@@ -65,14 +66,17 @@ export function initMapEditor() {
         mapData.background = { type: "image", url: file.name };
     });
 
-    // FRICTION SLIDER
-    const frictionSlider = document.getElementById("map-friction");
-    const frictionValue = document.getElementById("friction-value");
-
-    frictionSlider.addEventListener("input", () => {
-        const val = Math.max(0, Number(frictionSlider.value));
-        frictionValue.textContent = val.toFixed(2);
-        mapData.friction = val;
+    // ENGINE FRICTION SETTINGS
+    const frictionInputs = [
+        ["map-friction", "friction"],
+        ["map-linear-drag", "linearDrag"],
+        ["map-stop-threshold", "stopThreshold"],
+    ];
+    frictionInputs.forEach(([id, key]) => {
+        const input = document.getElementById(id);
+        input.addEventListener("input", () => {
+            mapData.friction[key] = Math.max(0, Number(input.value));
+        });
     });
 
     // DRIFT SLIDER
@@ -381,7 +385,6 @@ export function renderPlayers() {
 
     container.appendChild(grid);
 }
-
 
 
 

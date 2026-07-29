@@ -31,9 +31,9 @@ Only part of that design is implemented. The current playable prototype has:
 - A separate map-editor prototype.
 
 Items, AI, winning and completed-round rules, general out-of-bounds
-elimination, touch/controller input, and a converter from editor maps to
-engine settings are not implemented end to end. Do not infer behavior from
-planning documents or checkboxes without verifying source and tests.
+elimination, and touch/controller input are not implemented end to end. Do not
+infer behavior from planning documents or checkboxes without verifying source
+and tests.
 
 ## Source Of Truth
 
@@ -358,11 +358,13 @@ in `MetaEffect` must be updated whenever a new serializable effect is added.
 both behavior and `new Player(player.toSettings()).toSettings()` round trips.
 
 The map editor's `mapData`/`public/map.json` format is not `GameSettings`:
-editor friction is a number, player and shape fields differ, and editor item/
-hazard names do not map to engine effect enums. `EditorMapDocument` and
-`validateEditorMapDocument()` define and validate its versioned import boundary,
-but no converter exists. Never pass editor JSON directly to
-`GameHandlerBuilder.fromSettings()`.
+editor players, shapes, and hazard names remain distinct even though editor
+friction uses the engine `FrictionSettings` shape. Validate it with
+`validateEditorMapDocument()` and convert it through `convertEditorMapDocument()`;
+never pass editor JSON directly to `GameHandlerBuilder.fromSettings()`. The
+converter creates padded per-team spawn regions, maps walls/holes and supported
+rectangular push/kill collision zones, preserves the engine template background,
+and rejects items, customized mode/AI, and slide/sticky zones.
 
 Numeric `AssetList` values appear in serialized settings. Regenerating the
 registry can reorder values and silently remap persisted/networked assets.
@@ -481,8 +483,8 @@ not desired design:
   Dead players no longer render, tick, collide, accept selection, or resolve a
   turn; settings snapshots preserve their dead state. Match-end input is
   blocked, but winning evaluation is not yet integrated into round progression.
-- Round effects are stored but not meaningfully executed. Rectangle collision
-  effects are parsed but `StructureRectangle.onCollision()` is empty.
+- Round effects are stored but not meaningfully executed. Circle and rectangle
+  collision effects execute, including converted editor push and kill zones.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.
 - Outer circle/rectangle containment is inferred from mixed structures; line
   segments are collision obstacles only. Leaving an inferred containment
