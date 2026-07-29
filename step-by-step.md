@@ -171,7 +171,7 @@
   behavior. Expected scope: map data and test. Commit: `feat: add frostbite arena map`.
 - [x] Add the Magma Cradle map with active hazard zones and verify eliminations.
   Expected scope: map data and test. Commit: `feat: add magma cradle map`.
-- [ ] Define an editor-export schema distinct from engine settings and validate
+- [x] Define an editor-export schema distinct from engine settings and validate
   imports before use. Expected scope: editor contract and test. Commit:
   `feat: validate editor map exports`.
 - [ ] Convert validated editor maps to canonical engine map settings and cover

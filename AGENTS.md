@@ -359,8 +359,10 @@ both behavior and `new Player(player.toSettings()).toSettings()` round trips.
 
 The map editor's `mapData`/`public/map.json` format is not `GameSettings`:
 editor friction is a number, player and shape fields differ, and editor item/
-hazard names do not map to engine effect enums. No converter or validator
-exists. Never pass editor JSON directly to `GameHandlerBuilder.fromSettings()`.
+hazard names do not map to engine effect enums. `EditorMapDocument` and
+`validateEditorMapDocument()` define and validate its versioned import boundary,
+but no converter exists. Never pass editor JSON directly to
+`GameHandlerBuilder.fromSettings()`.
 
 Numeric `AssetList` values appear in serialized settings. Regenerating the
 registry can reorder values and silently remap persisted/networked assets.
