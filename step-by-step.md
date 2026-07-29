@@ -167,7 +167,7 @@
   `feat: add delayed hazard triggers`.
 - [x] Add the Cue Clash map as validated canonical map data and verify one
   simulated shot. Expected scope: map data and test. Commit: `feat: add cue clash map`.
-- [ ] Add the Frostbite Arena map with extreme drift and verify fixed-frame
+- [x] Add the Frostbite Arena map with extreme drift and verify fixed-frame
   behavior. Expected scope: map data and test. Commit: `feat: add frostbite arena map`.
 - [ ] Add the Magma Cradle map with active hazard zones and verify eliminations.
   Expected scope: map data and test. Commit: `feat: add magma cradle map`.

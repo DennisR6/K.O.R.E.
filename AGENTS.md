@@ -158,6 +158,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   default teams/entities, active settings object, and grid arrangement.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
+- `src/settings/cueClashMap.ts` and `frostbiteArenaMap.ts`: scalable validated
+  canonical map factories with world sizes independent of render dimensions.
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
