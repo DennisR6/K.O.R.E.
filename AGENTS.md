@@ -43,7 +43,8 @@ in several areas; do not infer behavior from checked boxes.
 - `src-website/` is an independent vanilla HTML/CSS/JS map-editor prototype.
 - `public/` contains browser assets and editor example data.
 - `gdd.md` describes product intent, not guaranteed implementation.
-- `TODO.md` is planning history, not a reliable implementation inventory.
+- `TODO.md` is a reconciled planning inventory; current source and verified
+  tests remain authoritative.
 - `step-by-step.md` is the current commit-sized execution checklist. Update its
   status in the same atomic commit as each completed task.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be

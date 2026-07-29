@@ -26,7 +26,7 @@
 
 ## 1. Baseline And Architecture
 
-- [ ] Reconcile every TODO checkbox with source and tests; record the real
+- [x] Reconcile every TODO checkbox with source and tests; record the real
   status and acceptance criteria in `TODO.md`. Commit: `docs: reconcile todo status`.
 - [ ] Add a focused requirements ledger linking TODO and GDD requirements to
   checklist sections and test coverage. Commit: `docs: add requirements ledger`.
