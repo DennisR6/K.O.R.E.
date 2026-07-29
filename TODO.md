@@ -103,8 +103,8 @@ Custom Engine · p5.js · data-driven · rotation + force physics
   line response and rectangle collision effects are incomplete. Done when: all
   declared arena shapes collide and apply configured behavior.
 - [x] Impuls-Weitergabe für implementierte Kreis-Kollisionen
-- [ ] Richtungsänderung durch Normalen. Current: implemented circle collisions
-  use normals. Done when: all supported shape pairs have tested normal response.
+- [ ] Richtungsänderung durch Normalen. Current: circle and line responses use
+  normals. Done when: all supported shape pairs have tested normal response.
 
 ### Arena-Grenzen
 

@@ -139,14 +139,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	}
 
 	public checkCollisionCircleLine(circle: IPhysics<SHAPE.CIRCLE>, line: IPhysics<SHAPE.LINE>): boolean {
-		const start = line.getPos();
-		const end = line.getBounds();
-		const segment = { x: end.x - start.x, y: end.y - start.y };
-		const lengthSq = this.magSq(segment);
-		const center = circle.getPos();
-		const factor = lengthSq === 0 ? 0 : this.clamp(this.dot(this.sub(center, start), segment) / lengthSq, 0, 1);
-		const closest = this.add(start, this.mult(segment, factor));
-		return this.distSq(center, closest) <= circle.getBounds().x ** 2;
+		return this.distSq(circle.getPos(), this.closestPointOnLine(circle, line)) <= circle.getBounds().x ** 2;
 	}
 
 	public handleCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): void {
@@ -212,6 +205,28 @@ export class defaultPhysics implements PhysicsStrategy {
 
 				entityA.onCollision({ entity: entityB as IPhysics<SHAPE.CIRCLE> });
 				entityB.onCollision({ entity: entityA as IPhysics<SHAPE.CIRCLE> });
+				break;
+			}
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.LINE):
+			case (entityA.getShape() === SHAPE.LINE && entityB.getShape() === SHAPE.CIRCLE): {
+				const circle = (entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB) as IPhysics<SHAPE.CIRCLE>;
+				const line = (entityA.getShape() === SHAPE.LINE ? entityA : entityB) as IPhysics<SHAPE.LINE>;
+				const closest = this.closestPointOnLine(circle, line);
+				const position = circle.getPos();
+				const normal = this.sub(position, closest);
+				const distance = this.mag(normal);
+				const radius = circle.getBounds().x;
+				if (distance === 0 || distance > radius) break;
+				const unitNormal = this.mult(normal, 1 / distance);
+				circle.setPos(this.add(closest, this.mult(unitNormal, radius)));
+				const velocity = circle.getVel();
+				const normalVelocity = this.dot(velocity, unitNormal);
+				if (normalVelocity < 0) {
+					const restitution = Math.min(circle.getBounceFactor(), line.getBounceFactor());
+					circle.setVel(this.sub(velocity, this.mult(unitNormal, (1 + restitution) * normalVelocity)));
+				}
+				circle.onCollision({ entity: line });
+				line.onCollision({ entity: circle });
 				break;
 			}
 			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
@@ -456,6 +471,15 @@ export class defaultPhysics implements PhysicsStrategy {
 			const vel = e.getVel();
 			return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
 		});
+	}
+
+	private closestPointOnLine(circle: IPhysics<SHAPE.CIRCLE>, line: IPhysics<SHAPE.LINE>): Vector2D {
+		const start = line.getPos();
+		const end = line.getBounds();
+		const segment = { x: end.x - start.x, y: end.y - start.y };
+		const lengthSq = this.magSq(segment);
+		const factor = lengthSq === 0 ? 0 : this.clamp(this.dot(this.sub(circle.getPos(), start), segment) / lengthSq, 0, 1);
+		return this.add(start, this.mult(segment, factor));
 	}
 
 }

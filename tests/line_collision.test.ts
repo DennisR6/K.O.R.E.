@@ -25,3 +25,14 @@ test("circle-line collision detects both vertical normal directions", () => {
 	expect(physics.checkCollision(circle(1.01, 5), line)).toBe(false);
 	expect(physics.checkCollision(circle(-1.01, 5), line)).toBe(false);
 });
+
+test("circle-line collision reflects incoming normal velocity", () => {
+	const line = new StructureLine(0, 0, 10, 0, "black");
+	const player = circle(5, 0.5);
+	player.setVel({ x: 3, y: -2 });
+
+	physics.handleCollision(player, line);
+
+	expect(player.getVel()).toEqual({ x: 3, y: 2 });
+	expect(player.getPos()).toEqual({ x: 5, y: 1 });
+});

@@ -78,9 +78,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 	public getVel(): Vector2D { return this.vel }
 
-	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		console.log(`Collision: ${getShapeName(this.getShape())} + ${getShapeName(entity.getShape())}`)
-	}
+	public onCollision({ }: { entity: IPhysics<SHAPE> }): void { }
 	public setVel(vel: Vector2D): void { this.vel = vel }
 	public setMass(mass: number): void { this.mass = mass }
 	public getMass(): number { return this.mass }

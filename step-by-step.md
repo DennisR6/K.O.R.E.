@@ -74,7 +74,7 @@
 - [x] Implement line collision detection for circles and test each line normal
   direction. Expected scope: line physics helper and test. Commit:
   `feat: detect circle line collisions`.
-- [ ] Implement circle/line collision response and test deterministic bounce
+- [x] Implement circle/line collision response and test deterministic bounce
   velocity. Expected scope: collision response and test. Commit:
   `feat: resolve circle line collisions`.
 - [ ] Honor `physicsEnabled` during collision iteration and test that disabled
