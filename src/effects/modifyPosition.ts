@@ -23,11 +23,11 @@ export class EffectModifyPosition implements Effect {
         entity.setPos({ x: posX, y: posY });
     }
 
-    getType(): EffectType { return EffectType.Physics; }
+    getType(): EffectType { return EffectType.Position; }
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Physics,
+            type: EffectType.Position,
             typeValue: {
                 x: this.x,
                 y: this.y

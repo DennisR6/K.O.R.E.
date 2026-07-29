@@ -1,9 +1,8 @@
 import { type IEntity } from "./Entity.js";
-import type { SettingsEntity } from "../settings/settings.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
 import type { ISettingsSerialize } from "../engine/types.js";
-import type { EngineSettingsEntity } from "./types.js";
+import type { PlayerSettings } from "./types.js";
 
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
@@ -12,15 +11,15 @@ import type { EngineSettingsEntity } from "./types.js";
  * @implements {IDrawer} Ermöglicht das Zeichnen aller verwalteten Entities.
  * @implements {ITicker} Ermöglicht das physikalische Update aller verwalteten Entities.
  */
-export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<EngineSettingsEntity[]> {
+export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<PlayerSettings[]> {
 	/** Die Liste aller aktuell im Spiel befindlichen Objekte. */
 	private entities: IEntity[] = [];
 
 	/**
 	 * @param entities - Initiale Liste von Entities (z.B. Spieler oder Pucks).
 	 */
-	constructor(entities: SettingsEntity[] | EngineSettingsEntity[]) {
-		entities.forEach(entity => new Player().new(entity))
+	constructor(entities: PlayerSettings[] = []) {
+		this.entities = entities.map(entity => new Player(entity))
 	}
 
 	/**
@@ -72,7 +71,7 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Engin
 		 * Wichtig für Netzwerk-Übertragung oder Snapshots für den Simulator.
 		 * @returns Ein Array mit IDs, Positionen und Geschwindigkeiten.
 		 */
-	public serialize(): EngineSettingsEntity[] {
+	public serialize(): PlayerSettings[] {
 		return this.entities.map(player => player.toSettings())
 	}
 
@@ -81,13 +80,25 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Engin
 		 * Dies wird vom Simulator genutzt, um Spielzüge in einer "Parallelwelt" 
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
-	public applySerializedState(state: SettingsEntity[]) {
-		state.forEach(data => this.entities.push(new Player().new(data)));
+	public applySerializedState(state: PlayerSettings[]) {
+		this.applySettings(state)
 	}
 
-	public addPlayer(data: EngineSettingsEntity) {
-		const p = new Player().new({ ...data });
-		this.entities.push(p);
+	/** Applies an authoritative complete state while preserving existing entity references. */
+	public applySettings(state: PlayerSettings[]): void {
+		const existing = new Map(this.entities.map(entity => [entity.getId(), entity]))
+		this.entities = state.map(settings => {
+			const entity = existing.get(settings.id)
+			if (entity instanceof Player) {
+				entity.applySettings(settings)
+				return entity
+			}
+			return new Player(settings)
+		})
+	}
+
+	public addPlayer(data: PlayerSettings) {
+		this.entities.push(new Player(data));
 	}
 
 	/**
@@ -119,5 +130,5 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Engin
 		// newManager.applySerializedState(data);
 		return new EntityManager(settings);
 	}
-	public toSettings(): EngineSettingsEntity[] { return this.entities.map(player => player.toSettings()) }
+	public toSettings(): PlayerSettings[] { return this.entities.map(player => player.toSettings()) }
 }

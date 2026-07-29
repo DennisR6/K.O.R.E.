@@ -1,4 +1,5 @@
 import { Player } from "./Player.js";
+import type { PlayerSettings } from "./types.js";
 
 /**
  * Eine spezialisierte Player-Klasse für Debugging-Zwecke.
@@ -15,9 +16,8 @@ export class DebugPlayer extends Player {
 	/** Status, ob das Logging aktuell aktiv ist. */
 	private trackingActive: boolean = false;
 
-	constructor(config?: any) {
-		super();
-		if (config) this.new(config);
+	constructor(config: PlayerSettings) {
+		super(config);
 	}
 
 	/**

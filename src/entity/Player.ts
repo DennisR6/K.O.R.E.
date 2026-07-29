@@ -1,58 +1,13 @@
 import type { UUID } from "crypto";
-import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { RenderContext } from "../engine/RenderContext.js";
-import type { IItem } from "../item/Items.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
-import type { EngineSettingsEntity } from "./types.js";
+import { createPlayerSettings, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
-import type { SettingsEntity } from "../settings/settings.js";
+import type { SettingsItem } from "../settings/settings.js";
+import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 
-
-/**
- * Das Konfigurations-Interface für einen Spieler.
- * 
- * Es dient als Vorlage (Data Transfer Object), um einen Spieler mit 
- * individuellen Eigenschaften wie Teamzugehörigkeit, Farbe oder Icons zu erstellen.
- * Alle Eigenschaften außer den Koordinaten sind optional, um maximale Flexibilität
- * beim Erstellen von Gast-Accounts oder Standard-Entities zu bieten.
- */
-interface IPlayerType {
-	/** 
-	 * Eindeutige ID des Spielers. 
-	 * Wenn nicht angegeben, generiert die Engine eine neue UUID. 
-	 */
-	id?: UUID;
-
-	position: Vector2D,
-	/** 
-	 * Team-Zugehörigkeit. 
-	 * Kann genutzt werden, um Kollisionen im selben Team zu ignorieren 
-	 * oder für die Punkteberechnung.
-	 */
-	team?: number[];
-
-	/** 
-	 * Die Primärfarbe des Spielers.
-	 * Wird vom Renderer genutzt, um den Kreis oder Effekte einzufärben.
-	 */
-	color?: string;
-
-	/** 
-	 * Pfad oder Schlüssel für das Icon/Avatar.
-	 * Der P5Renderer nutzt dies, um die entsprechende Textur aus dem Cache zu laden.
-	 */
-	playericon?: AssetList;
-
-	/** 
-	 * Der physikalische Radius (Größe) des Spielers.
-	 * Standardwert ist meist 12, falls hier nichts definiert wird.
-	 */
-	size?: number;
-	hoop?: AssetList;
-	effects?: FullEffectSettings[]
-}
 
 /**
  * Die Player-Klasse ist die konkrete Umsetzung einer IEntity.
@@ -81,54 +36,50 @@ export class Player implements IEntity {
 	private team: number[] = [];
 	private color: string;
 	private playericon: AssetList;
-	private shape: SHAPE.CIRCLE
+	private shape: SHAPE.CIRCLE = SHAPE.CIRCLE
 	private hoop: AssetList
 	private isPhysicsEnabled: boolean = true
 	private dead: boolean = false
-	private items: IItem[] = []
+	private items: SettingsItem[] = []
 
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
 	private effectRound: Effect[] = []
 
-	constructor() {
-		// Standardwerte für ein leeres Objekt
-		this.id = crypto.randomUUID()
+	constructor(settings: PlayerSettings) {
+		const normalized = createPlayerSettings(settings)
+		this.id = normalized.id
 		this.position = { x: 0, y: 0 }
-		this.color = "red"
-		this.playericon = AssetList.picturePenguinPenguinIdleFrame1PNG
-		this.shape = SHAPE.CIRCLE
-		this.velocity = { x: 0, y: 0 } as Vector2D
+		this.velocity = { x: 0, y: 0 }
 		this.bouncyness = 1
-		this.friction = undefined;
-		this.size = 20;
-		this.mass = 1
-		this.hoop = AssetList.pictureReifenWEBP
+		this.color = "red"
+		this.playericon = normalized.playericon
+		this.hoop = normalized.hoop
+		this.applySettings(normalized)
 	}
 
-	/**
-		 * Initialisiert den Spieler mit echten Daten.
-		 * Berechnet die Position so, dass der Ankerpunkt in der Mitte liegt.
-		 * @param player - Die Konfigurationsdaten (IPlayer).
-		 */
-	public new(player: IPlayerType) {
-		this.setId(player.id || crypto.randomUUID())
-		this.setPos({ ...player.position })
-		this.team = player.team ?? this.team;
-		this.setColor(player.color ?? "red")
-		this.setPlayerIcon(player.playericon ?? this.playericon)
-		this.setSize(player.size ?? 20)
-		this.shape = SHAPE.CIRCLE;
-		this.hoop = player.hoop ?? AssetList.pictureReifenPNG
-		for (const eff of player.effects ?? []) {
-			switch (eff.trigger) {
-				case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(eff)); break
-				case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(eff)); break
-				case EffectTrigger.Round: this.effectRound.push(new MetaEffect(eff)); break
-				default: console.error("TODO", eff.trigger)
-			}
-		}
-		return this;
+	/** Reconciles this live entity with a complete authoritative snapshot. */
+	public applySettings(settings: PlayerSettings): void {
+		this.id = settings.id
+		this.position = { ...settings.position }
+		this.velocity = { ...settings.velocity }
+		this.hp = settings.hp
+		this.bouncyness = settings.bouncyness
+		this.mass = settings.mass
+		this.size = settings.size
+		this.friction = settings.friction
+		this.team = [...settings.team]
+		this.color = settings.color
+		this.playericon = settings.playericon
+		this.shape = settings.shape
+		this.hoop = settings.hoop
+		this.isPhysicsEnabled = settings.isPhysicsEnabled
+		this.dead = settings.isDead
+		this.items = settings.inventory.map(item => ({ ...item }))
+		this.effectAlways = []
+		this.effectCollision = []
+		this.effectRound = []
+		for (const effect of settings.effects) this.addEffect(effect.trigger, new MetaEffect(effect))
 	}
 
 	/**
@@ -181,16 +132,16 @@ export class Player implements IEntity {
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
-	public use(_item: IItem): void { }
+	public use(_item: SettingsItem): void { }
 
-	public toSettings(): EngineSettingsEntity {
+	public toSettings(): PlayerSettings {
 		const sett0 = this.effectAlways.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Always, triggerValue: [] } as FullEffectSettings })
 		const sett1 = this.effectCollision.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Collision, triggerValue: [] } as FullEffectSettings })
 		const sett2 = this.effectRound.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Round, triggerValue: [] } as FullEffectSettings })
 		return {
 			id: this.getId(),
-			position: this.position,
-			velocity: this.velocity,
+			position: { ...this.position },
+			velocity: { ...this.velocity },
 			playericon: this.playericon,
 			team: this.team,
 			hoop: this.hoop,
@@ -208,14 +159,15 @@ export class Player implements IEntity {
 				...sett1,
 				...sett2,
 			],
+			inventory: this.items.map(item => ({ ...item })),
 		}
 	}
 	public setTeam(team: number[]) { this.team = team }
 	public setHoop(asset: AssetList) { this.hoop = asset }
 	public setBouncyness(bouncyness: number) { this.bouncyness = bouncyness }
 	public setIsDead(dead: boolean) { this.dead = dead }
-	public AddItem(item: IItem): void { this.items.push(item) }
-	public getInventory(): IItem[] { return this.items }
+	public AddItem(item: SettingsItem): void { this.items.push({ ...item }) }
+	public getInventory(): SettingsItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
@@ -226,47 +178,4 @@ export class Player implements IEntity {
 			default: console.error("TODO", trigger)
 		}
 	}
-
-
-	public fromSettings(settings: SettingsEntity | EngineSettingsEntity): this {
-		this.setId(settings.id || crypto.randomUUID())
-		this.setPos({ ...settings.position })
-		this.team = settings.team ?? this.team;
-		this.setColor(settings.color ?? "red")
-		this.setPlayerIcon(settings.playericon ?? this.playericon)
-		this.setSize(settings.size ?? 20)
-		this.shape = SHAPE.CIRCLE;
-		this.hoop = settings.hoop ?? AssetList.pictureReifenPNG
-		if ("velocity" in settings) this.velocity = settings.velocity;
-		if ("effects" in settings) {
-			for (const eff of settings.effects ?? []) {
-				switch (eff.trigger) {
-					case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(eff)); break
-					case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(eff)); break
-					case EffectTrigger.Round: this.effectRound.push(new MetaEffect(eff)); break
-					default: console.error("TODO", eff.trigger)
-				}
-			}
-		}
-		return this;
-	}
-}
-
-
-export function createPlayerFromSettings(settings: EngineSettingsEntity): Player {
-	const player = new Player()
-	player.setId(settings.id)
-	player.setPos(settings.position)
-	player.setVel(settings.velocity)
-	player.setPlayerIcon(settings.playericon)
-	player.setTeam(settings.team)
-	player.setHoop(settings.hoop)
-	player.setColor(settings.color)
-	player.setSize(settings.size)
-	player.setHP(settings.hp)
-	player.setBouncyness(settings.bouncyness)
-	player.setMass(settings.mass)
-	player.setFriction(settings.friction)
-	player.setIsDead(settings.isDead)
-	return player
 }

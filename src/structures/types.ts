@@ -3,6 +3,8 @@
  */
 
 import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle } from "./structureCircle.js";
 import { StructureLine } from "./structureLine.js";
 import { StructureRectangle } from "./structureRectangle.js";
@@ -15,7 +17,8 @@ export { StructureRectangle } from "./structureRectangle.js";
 
 export interface IStructure extends
 	IDrawer,
-	ITicker
+	ITicker,
+	ISettingsSerialize<MapBoundarySettings>
 // ,IMapBoundary<EffectType, EffectTrigger>
 // ,ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger>> 
 { }

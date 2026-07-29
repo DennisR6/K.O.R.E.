@@ -1,5 +1,7 @@
-import type { IInputEmitter } from "../engine/types.js";
-import type { UUID } from "crypto";
+import { GameState, type IInputEmitter } from "../engine/types.js";
+import type { GameHandler } from "../engine/Handler.js";
+import { wrap } from "../utils/net.js";
+import { NetworkMessageType, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
 
 /**
  * Der Netzwerk-Emitter.
@@ -10,13 +12,9 @@ import type { UUID } from "crypto";
  */
 export class NetworkEmitter implements IInputEmitter {
 	socket: WebSocket
-	userid: UUID
-	gameid: UUID
 
-	constructor(socket: WebSocket, userid: UUID, gameid: UUID) {
+	constructor(socket: WebSocket) {
 		this.socket = socket
-		this.userid = userid
-		this.gameid = gameid
 	}
 
 	/**
@@ -26,7 +24,29 @@ export class NetworkEmitter implements IInputEmitter {
 	 * könnten sich ändern, sobald das Netzwerk-Protokoll finalisiert ist.
 	 */
 	sendShot(actorId: string, angle: number, power: number): void {
-		console.info("Network Emitter", actorId, angle, power)
-		// this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power, userid: this.userid, gameid: this.gameid }))
+		this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power }))
 	}
+}
+
+/** Installs the authoritative TURN receiver for a client-side handler. */
+export function installTurnReceiver(socket: WebSocket, handler: GameHandler): void {
+	socket.addEventListener("message", event => {
+		let message: UnTypedNetworkMessage
+		try {
+			message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
+		} catch {
+			console.warn("Ignoring malformed server packet")
+			return
+		}
+		if (message.type === NetworkMessageType.TURN) {
+			const turn = message as NetworkTurn
+			handler.setTurnNumber(turn.turnNumber)
+			handler.playTurn(turn.sim, () => {
+				handler.setState(handler.getTeam().includes(turn.activeTeam)
+					? GameState.Your_turn
+					: GameState.Opponents_turn)
+			})
+		}
+		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
+	})
 }

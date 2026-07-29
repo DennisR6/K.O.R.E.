@@ -1,5 +1,5 @@
 import { EntityManager } from "../entity/EntityManager.js";
-import type { EngineSettingsEntity } from "../entity/types.js";
+import type { PlayerSettings } from "../entity/types.js";
 import type { PhysicsStrategy } from "../physics/physics.js";
 import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
@@ -17,7 +17,7 @@ export interface TurnPacket {
 	/** Wie viele Frames dauert die Animation insgesamt? */
 	durationFrames: number;
 	/** Der Zustand aller Objekte NACH dem Schuss (Endpositionen). */
-	finalState: EngineSettingsEntity[];
+	finalState: PlayerSettings[];
 }
 
 
@@ -154,6 +154,6 @@ export interface ISettingsSerialize<T> {
 export interface EngineSettings extends GameSettings {
 	state: GameState
 	turnNumber: number
-	players: EngineSettingsEntity[];
+	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }

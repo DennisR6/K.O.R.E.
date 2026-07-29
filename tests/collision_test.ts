@@ -9,6 +9,7 @@ import { EffectDamage } from "../src/effects/damage.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
 import { EffectPhysics } from "../src/effects/physics.ts";
 import { Player } from "../src/entity/Player.ts";
+import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { IPhysics, SHAPE } from "../src/physics/physics.ts";
 import { IStructure } from "../src/structures/types.ts";
@@ -38,7 +39,7 @@ describe("Testing Collisions with effects", () => {
 					...new EffectDamage({ typeValue: { damage: -30 } }).toSettings()
 				},
 			]))
-			.addPlayer(new Player().new({
+			.addPlayer(new Player(createPlayerSettings({
 				position: { x: 150, y: 200 },
 				size: 20,
 				effects: [
@@ -51,7 +52,7 @@ describe("Testing Collisions with effects", () => {
 						...new EffectMove({ typeValue: { deltaTime: 0, x: 0, y: 0 } }).toSettings()
 					},
 				]
-			}))
+			})))
 			.build()
 		handler.saveSettings(handler.toSettings())
 	})
@@ -59,7 +60,7 @@ describe("Testing Collisions with effects", () => {
 	test("starting engine", () => {
 		const p1 = handler.getEntityManager().getEntities()[0]
 		const sim = handler.simulateTurn(p1.getId(), 0, 1)
-		handler.tickTurn(sim)
+		handler.playTurn(sim)
 
 		for (let i = 0; i <= sim.durationFrames; i++) handler.tick()
 

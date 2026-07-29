@@ -37,11 +37,11 @@ export class EffectModifyTeam implements Effect {
         }
     }
 
-    getType(): EffectType { return EffectType.Physics; }
+    getType(): EffectType { return EffectType.Team; }
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Physics,
+            type: EffectType.Team,
             typeValue: {
                 team: this.team
             }

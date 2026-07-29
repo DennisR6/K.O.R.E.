@@ -1,8 +1,8 @@
 import type { UUID } from "node:crypto";
-import type { SHAPE, Vector2D } from "../physics/physics";
-import type { SettingsEntity } from "../settings/settings";
-import type { AssetList } from "../assetManager/assets/assetRegistry";
-import type { FullEffectSettings } from "../effects/types";
+import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import { SHAPE, type Vector2D } from "../physics/physics.js";
+import type { FullEffectSettings } from "../effects/types.js";
+import type { SettingsItem } from "../settings/settings.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -44,7 +44,11 @@ export interface IKillable {
 	addHP(hp: number): void
 	isDead(): boolean
 }
-export interface EngineSettingsEntity extends SettingsEntity {
+/**
+ * Complete serializable state for a Player. This is the single creation and
+ * snapshot contract: `new Player(settings).toSettings()` must round-trip it.
+ */
+export interface PlayerSettings {
 	id: UUID;
 	position: Vector2D;
 	velocity: Vector2D;
@@ -61,4 +65,28 @@ export interface EngineSettingsEntity extends SettingsEntity {
 	isPhysicsEnabled: boolean
 	isDead: boolean
 	effects: FullEffectSettings[]
-}	
+	inventory: SettingsItem[]
+}
+
+/** Creates an independent, complete player snapshot with sensible defaults. */
+export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): PlayerSettings {
+	return {
+		id: overrides.id ?? crypto.randomUUID() as UUID,
+		position: { x: overrides.position?.x ?? 0, y: overrides.position?.y ?? 0 },
+		velocity: { x: overrides.velocity?.x ?? 0, y: overrides.velocity?.y ?? 0 },
+		hp: overrides.hp ?? 30,
+		bouncyness: overrides.bouncyness ?? 1,
+		mass: overrides.mass ?? 1,
+		size: overrides.size ?? 20,
+		friction: overrides.friction,
+		team: [...(overrides.team ?? [])],
+		color: overrides.color ?? "red",
+		playericon: overrides.playericon ?? AssetList.picturePenguinPenguinIdleFrame1PNG,
+		shape: SHAPE.CIRCLE,
+		hoop: overrides.hoop ?? AssetList.pictureReifenPNG,
+		isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
+		isDead: overrides.isDead ?? false,
+		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
+		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
+	};
+}

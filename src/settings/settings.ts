@@ -1,6 +1,7 @@
 import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { SHAPE, Vector2D } from "../physics/physics.js";
+import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import IceMap from "./iceMap.js";
 import { EffectTrigger, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
@@ -12,7 +13,7 @@ MAPS;
 export interface GameSettings {
 	id: UUID
 	screenResolution: SettingsScreenResolution;
-	players: SettingsEntity[];
+	players: PlayerSettings[];
 	mapBoundarys: MapBoundarySettings[];
 	background: SettingsBackground;
 	friction: FrictionSettings;
@@ -71,16 +72,6 @@ export interface MapBoundarySettingsRect extends IMapBoundarySettings {
 	color?: string;
 }
 
-export interface SettingsEntity extends IEffectable {
-	id: UUID;
-	position: Vector2D
-	size: number;
-	color?: string;
-	team: number[];
-	playericon: AssetList;
-	hoop: AssetList;
-}
-
 export interface SettingsItem {
 	id: UUID
 	type: string
@@ -133,7 +124,7 @@ const team1 = [
 	{ id: "1ea70b24-bb63-4346-ad58-dcc85f2f3bbb" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
 	{ id: "2663d694-7e93-4a1c-8fb8-9b905e3174a8" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
 	{ id: "26a4b2f4-228f-449b-babf-ad935723bc73" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePenguinPenguinIdleFrame1WEBP, team: [0], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
-]
+].map(player => createPlayerSettings(player))
 const team2 = [
 	{ id: "2ce98548-ab1e-482a-8130-fd270233cd97" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
 	{ id: "ff8e2c75-da89-4d54-b2fa-fbec418d0200" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
@@ -141,7 +132,7 @@ const team2 = [
 	{ id: "f2c7eb70-aebd-4231-ba9d-4f5fa2d547cd" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
 	{ id: "58e7ac62-98fa-4552-87d0-49689a27a484" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop, effects: defaultEffects },
 	{ id: "3f66b025-978b-4de9-8032-996440744939" as UUID, position: { x: 0, y: 0 }, playericon: AssetList.picturePolarBearPolarBearIdleFrame1WEBP, team: [1, 1], size: playerSize, hoop: defaultHoop, effects: defaultEffects }
-]
+].map(player => createPlayerSettings(player))
 
 IceMap.createPlayerStartPoints(0, team1)
 IceMap.createPlayerStartPoints(1, team2)

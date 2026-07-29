@@ -34,11 +34,11 @@ export class EffectModifySize implements Effect {
         }
     }
 
-    getType(): EffectType { return EffectType.Physics; }
+    getType(): EffectType { return EffectType.ModifySize; }
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Physics,
+            type: EffectType.ModifySize,
             typeValue: {
                 size: this.size
             }

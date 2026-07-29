@@ -1,5 +1,5 @@
 import type { GameHandler } from "../engine/Handler.js";
-import { type IInputEmitter } from "../engine/types.js";
+import { GameState, type IInputEmitter } from "../engine/types.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -16,6 +16,6 @@ export class GameEmitter implements IInputEmitter {
 		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
-		this.handler.tickTurn(sim)
+		this.handler.playTurn(sim, () => this.handler.setState(GameState.Your_turn))
 	}
 }

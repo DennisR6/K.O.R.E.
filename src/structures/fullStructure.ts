@@ -33,5 +33,6 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 	public setPos(pos: Vector2D): void { this.str.setPos(pos) }
 	public setVel(vel: Vector2D): void { this.str.setVel(vel) }
 	public getEffects(): EffectSettings[] { return [] }
+	public toSettings(): MapBoundarySettings { return this.str.toSettings() }
 	public isPhysicsObj(): this is IStructure & IPhysics<SHAPE> { return typeof (this as any).str.getShape() === 'function' }
 }

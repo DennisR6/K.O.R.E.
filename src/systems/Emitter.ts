@@ -18,6 +18,8 @@ export class EmitterSystem implements ISystem {
 		const { actorId, angle, power } = ctx.mouse.turn
 		this.emitter.sendShot(actorId, angle, power)
 		console.log("sendShot")
-		ctx.state = GameState.Waiting_for_server
+		// Network emitters are asynchronous. A local emitter may already have
+		// started playback, which must not be overwritten with a wait state.
+		if (ctx.state === GameState.Turn_done) ctx.state = GameState.Waiting_for_server
 	}
 }

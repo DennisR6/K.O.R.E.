@@ -22,11 +22,11 @@ export class EffectModifyVelocity implements Effect {
         entity.setVel({ x: velX, y: velY });
     }
 
-    getType(): EffectType { return EffectType.Physics; }
+    getType(): EffectType { return EffectType.Velocity; }
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Physics,
+            type: EffectType.Velocity,
             typeValue: {
                 x: this.x,
                 y: this.y

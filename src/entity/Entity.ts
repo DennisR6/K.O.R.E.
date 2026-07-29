@@ -2,10 +2,10 @@ import type { UUID } from "node:crypto";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IDrawer, ITicker } from "../engine/RenderContext.js";
 import type { ISettingsSerialize } from "../engine/types.js";
-import type { IItem } from "../item/Items.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
-import type { EngineSettingsEntity, IKillable } from "./types.js";
+import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect } from "../effects/types.js";
+import type { SettingsItem } from "../settings/settings.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -17,7 +17,7 @@ import type { Effect } from "../effects/types.js";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<EngineSettingsEntity> {
+export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<PlayerSettings> {
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
 	 * @returns {Vector2D} Ein Vektor mit den aktuellen x- und y-Koordinaten in Welt-Einheiten.
@@ -45,7 +45,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getEffects(): Effect[]
 }
 export interface IInventory {
-	AddItem(item: IItem): void
-	use(item: IItem): void
-	getInventory(): IItem[]
+	AddItem(item: SettingsItem): void
+	use(item: SettingsItem): void
+	getInventory(): SettingsItem[]
 }

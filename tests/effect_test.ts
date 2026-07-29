@@ -1,6 +1,7 @@
 import { EffectMove, EffectMoveInput } from "../src/effects/movement.ts"
 import { describe, expect, test } from "bun:test"
 import { Player } from "../src/entity/Player.ts"
+import { createPlayerSettings } from "../src/entity/types.ts"
 import { Vector2D } from "../src/physics/physics.ts"
 import { EffectPhysics } from "../src/effects/physics.ts"
 import { FRICTION_TABLE } from "../src/settings/settings.ts"
@@ -32,7 +33,7 @@ describe(() => {
 
 function EffectMovementTest(input: EffectMoveInput) {
 	const moveEffect = new EffectMove({ typeValue: input })
-	const p1 = new Player().new({ position: { x: 0, y: 0 } })
+	const p1 = new Player(createPlayerSettings({ position: { x: 0, y: 0 } }))
 	moveEffect.apply(p1)
 	const { x, y } = p1.getPos()
 
@@ -47,7 +48,7 @@ function EffectMovementTest(input: EffectMoveInput) {
 
 function EffectMovementOverrideTest(startVel: Vector2D, input: EffectMoveInput, override: EffectMoveInput) {
 	const moveEffect = new EffectMove({ typeValue: input })
-	const p1 = new Player().new({ position: { x: 0, y: 0 } })
+	const p1 = new Player(createPlayerSettings({ position: { x: 0, y: 0 } }))
 	p1.setVel(startVel)
 	moveEffect.apply(p1, { x: startVel.x + override.x, y: startVel.y + override.y, deltaTime: override.deltaTime })
 
@@ -58,7 +59,7 @@ function EffectMovementOverrideTest(startVel: Vector2D, input: EffectMoveInput, 
 
 test("effectPhysics", () => {
 	const effectPhysics = new EffectPhysics({ typeValue: FRICTION_TABLE.ice })
-	const p1 = new Player().new({ position: { x: 0, y: 0 } })
+	const p1 = new Player(createPlayerSettings({ position: { x: 0, y: 0 } }))
 	p1.addEffect(EffectTrigger.Always, effectPhysics)
 	p1.setVel({ x: -10, y: 10 })
 	const snapshot = JSON.stringify(p1.toSettings())
@@ -66,12 +67,12 @@ test("effectPhysics", () => {
 	expect(p1.getVel().x).toBeCloseTo(-9.95, 1)
 	expect(p1.getVel().y).toBeCloseTo(9.95, 1)
 
-	const p2 = new Player().fromSettings(JSON.parse(snapshot))
+	const p2 = new Player(JSON.parse(snapshot))
 	effectPhysics.apply(p2, { dt: 1, friction: 0.995 })
 	expect(p2.getVel().x).toBeCloseTo(-9.95, 1)
 	expect(p2.getVel().y).toBeCloseTo(9.95, 1)
 
-	const p3 = new Player().fromSettings(JSON.parse(snapshot))
+	const p3 = new Player(JSON.parse(snapshot))
 	const handler = new GameHandlerBuilder().defaultSystems()
 		.addPlayer(p3)
 		.build()

@@ -1,6 +1,6 @@
 import { GameState } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { EngineSettingsEntity } from "../entity/types.js";
+import type { PlayerSettings } from "../entity/types.js";
 import type { IGameContext } from "./types.js";
 
 /**
@@ -16,7 +16,7 @@ export class PlaybackSystem implements PlaybackSystem {
 	/** Anzahl der verbleibenden Frames, bis der Endzustand erzwungen wird. */
 	private remainingFrames = 0;
 	/** Der Zielzustand (Snapshot), an den die Entities angeglichen werden. */
-	private finalState: EngineSettingsEntity[] | undefined;
+	private finalState: PlayerSettings[] | undefined;
 	/** Ein optionaler Callback, der ausgeführt wird, wenn der Sync abgeschlossen ist. */
 	private cb: (() => void) | undefined;
 
@@ -26,7 +26,7 @@ export class PlaybackSystem implements PlaybackSystem {
 		 * @param finalState - Die exakten Ziel-Daten (Position/Velocity) am Ende.
 		 * @param cb - (Optional) Aktion nach Abschluss (z.B. UI einblenden).
 		 */
-	public start(frames: number, finalState: EngineSettingsEntity[], cb?: () => void) {
+	public start(frames: number, finalState: PlayerSettings[], cb?: () => void) {
 		this.finalState = finalState
 		this.remainingFrames = frames;
 		this.cb = cb;
@@ -56,29 +56,8 @@ export class PlaybackSystem implements PlaybackSystem {
 	private applyHardSync(entities: EntityManager) {
 		if (!this.finalState) return;
 
-		const EPSILON = 0.01;
-
-		this.finalState.forEach(saved => {
-			const entity = entities.getEntityById(saved.id);
-			if (!entity) return;
-
-			const currentPos = entity.getPos();
-			const dx = Math.abs(currentPos.x - saved.position.x);
-			const dy = Math.abs(currentPos.y - saved.position.y);
-
-			if (dx > EPSILON || dy > EPSILON) {
-				entity.setPos({ x: saved.position.x, y: saved.position.y });
-			}
-
-			const currentVel = entity.getVel() ? entity.getVel() : { x: 0, y: 0 };
-
-			const dvx = Math.abs(currentVel.x - saved.velocity.x);
-			const dvy = Math.abs(currentVel.y - saved.velocity.y);
-
-			if (dvx > EPSILON || dvy > EPSILON) {
-				entity.setVel({ x: saved.velocity.x, y: saved.velocity.y });
-			}
-		});
+		// The server snapshot owns every mutable entity field, not just movement.
+		entities.applySettings(this.finalState);
 
 		this.finalState = undefined;
 		if (this.cb) this.cb();

@@ -4,7 +4,8 @@ import { EffectMove } from "../effects/movement.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectTrigger, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
-import { arrangeInGrid, type SettingsEntity, type SettingsMap } from "./settings.js";
+import { arrangeInGrid, type SettingsMap } from "./settings.js";
+import type { PlayerSettings } from "../entity/types.js";
 
 const debug = true
 const [x, y] = [800, 450]
@@ -13,7 +14,7 @@ const debugColorStruct = debug ? "blue" : undefined
 
 
 
-function createPlayerStartPoints(team: number, players: SettingsEntity[]) {
+function createPlayerStartPoints(team: number, players: PlayerSettings[]) {
 	players.forEach(player => player.size = 12)
 	const teamNr = [
 		{ x: 120, y: 120, w: 200, h: 450 - 100 },

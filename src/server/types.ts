@@ -1,6 +1,5 @@
 import type { UUID } from "crypto"
-import type { IInput, TurnPacket } from "../engine/types.js"
-import type { GameSettings } from "../settings/settings.js"
+import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
 export const enum NetworkMessageType {
 	PING = "PING",
 	PONG = "PONG",
@@ -44,11 +43,9 @@ export type UnTypedNetworkMessage =
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
-export interface NetworkInit { type: NetworkMessageType.INIT, settings: GameSettings }
+export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings }
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
-	userid: UUID,
-	gameid: UUID
 }
 export interface NetworkLogin {
 	type: NetworkMessageType.LOGIN,
@@ -62,10 +59,12 @@ export interface NetworkWaitingRoom { type: NetworkMessageType.WAITINGROOM }
 export interface NetworkTurn {
 	type: NetworkMessageType.TURN,
 	sim: TurnPacket,
+	turnNumber: number,
+	activeTeam: number,
 }
 export interface NetworkError {
 	type: NetworkMessageType.ERROR,
 	message: string
 }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
-export interface WebSocketData { accesstoken: UUID }
+export interface WebSocketData { connectionId: UUID }

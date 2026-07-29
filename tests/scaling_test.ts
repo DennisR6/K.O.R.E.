@@ -1,5 +1,6 @@
 import test, { describe } from "node:test";
 import { Player } from "../src/entity/Player.js";
+import { createPlayerSettings } from "../src/entity/types.js";
 import { GameState } from "../src/engine/types.js";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts"
 
@@ -17,7 +18,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts"
 describe("Coordinate Transformation & Scaling", () => {
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()
-		.addPlayer(new Player().new({ id: "p1", x: 100, y: 100, size: 60 }))
+		.addPlayer(new Player(createPlayerSettings({ id: "p1", position: { x: 100, y: 100 }, size: 60 })))
 		.build()
 		.start()
 
