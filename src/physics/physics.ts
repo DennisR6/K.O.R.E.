@@ -75,6 +75,7 @@ export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
 
 	/** Spezialprüfung: Kollision zwischen einem Kreis und einem Rechteck. */
 	checkCollisionCircleRect(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean;
+	checkCollisionCircleLine(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.LINE>): boolean;
 
 	/** Löst die Kollision auf (schubst Objekte auseinander, damit sie nicht ineinander stecken). */
 	handleCollision(entityA: IPhysics<any>, entityB: IPhysics<any>): void;

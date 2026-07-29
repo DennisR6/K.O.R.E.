@@ -71,7 +71,7 @@
 - [x] Correct rectangle/rectangle collision dispatch and add separated,
   overlapping, and edge-contact tests. Expected scope: physics dispatch and
   test. Commit: `fix: correct rectangle collision dispatch`.
-- [ ] Implement line collision detection for circles and test each line normal
+- [x] Implement line collision detection for circles and test each line normal
   direction. Expected scope: line physics helper and test. Commit:
   `feat: detect circle line collisions`.
 - [ ] Implement circle/line collision response and test deterministic bounce

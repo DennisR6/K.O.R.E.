@@ -6,12 +6,10 @@ import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
 
 /**
- * Repräsentiert ein statisches, rechteckiges Hindernis (z.B. eine Bande oder Mauer).
- * 
- * Auch wenn der Name "Line" vermutet lässt, definiert dieses Objekt physikalisch
- * ein Rechteck über Startpunkt (x, y) sowie Breite und Höhe (x2, y2).
+ * Repräsentiert ein statisches Liniensegment (z.B. eine Bande oder Mauer).
+ * Die Start- und Endpunkte sind absolute Weltkoordinaten.
  * @implements {IStructure} Basis-Interface für Hindernisse.
- * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
+ * @implements {IPhysics<SHAPE.LINE>} Notwendig für die Kreis-Linien-Kollisionslogik.
  */
 export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISettingsSerialize<MapBoundarySettingsLine> {
 	/** Koordinaten der Linie. */
@@ -37,10 +35,10 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	private friction: number | undefined
 
 	/**
-		 * @param x - Start X (Top-Left).
-		 * @param y - Start Y (Top-Left).
-		 * @param x2 - Breite des Hindernisses.
-		 * @param y2 - Höhe des Hindernisses.
+	 * @param x - Start X.
+	 * @param y - Start Y.
+	 * @param x2 - End X.
+	 * @param y2 - End Y.
 		 * @param color - Farbe der Wand.
 		 */
 	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = []) {
@@ -70,14 +68,12 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public getBounceFactor(): number { return this.bounce }
 
 	/**
-		 * Gibt die Dimensionen für die Kollisionsabfrage zurück.
-		 * @returns {width, height} Breite und Höhe des Objekts.
+	 * Gibt den absoluten Endpunkt für die Kollisionsabfrage zurück.
 		 */
 	public getBounds(): Vector2D { return { x: this.w, y: this.h } }
 
 	/**
-		 * Gibt den Ankerpunkt zurück. 
-		 * Bei Rechtecken ist dies im Gegensatz zu Kreisen meist die obere linke Ecke.
+	 * Gibt den Startpunkt zurück.
 		 */
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 	public getVel(): Vector2D { return this.vel }

@@ -101,6 +101,10 @@ export class defaultPhysics implements PhysicsStrategy {
 				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
 			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.LINE:
+				return this.checkCollisionCircleLine(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.LINE>)
+			case entityA.getShape() == SHAPE.LINE && entityB.getShape() == SHAPE.CIRCLE:
+				return this.checkCollisionCircleLine(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.LINE>)
 			default:
 				console.log(`Collision not implemented for ${getShapeName(entityA.getShape())} ${getShapeName(entityB.getShape())}`)
 		}
@@ -132,6 +136,17 @@ export class defaultPhysics implements PhysicsStrategy {
 		};
 		const d2 = this.distSq(entityA.getPos(), closest);
 		return d2 <= (entityA.getBounds().x * entityA.getBounds().x);
+	}
+
+	public checkCollisionCircleLine(circle: IPhysics<SHAPE.CIRCLE>, line: IPhysics<SHAPE.LINE>): boolean {
+		const start = line.getPos();
+		const end = line.getBounds();
+		const segment = { x: end.x - start.x, y: end.y - start.y };
+		const lengthSq = this.magSq(segment);
+		const center = circle.getPos();
+		const factor = lengthSq === 0 ? 0 : this.clamp(this.dot(this.sub(center, start), segment) / lengthSq, 0, 1);
+		const closest = this.add(start, this.mult(segment, factor));
+		return this.distSq(center, closest) <= circle.getBounds().x ** 2;
 	}
 
 	public handleCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): void {

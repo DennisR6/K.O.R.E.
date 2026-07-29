@@ -99,8 +99,8 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 ### Kollisionen
 
 - [x] Figur <-> Figur
-- [ ] Figur <-> Arena. Current: circle and rectangle collisions work; line
-  support and rectangle collision effects are incomplete. Done when: all
+- [ ] Figur <-> Arena. Current: circle, rectangle, and line detection work;
+  line response and rectangle collision effects are incomplete. Done when: all
   declared arena shapes collide and apply configured behavior.
 - [x] Impuls-Weitergabe für implementierte Kreis-Kollisionen
 - [ ] Richtungsänderung durch Normalen. Current: implemented circle collisions
