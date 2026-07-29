@@ -18,7 +18,8 @@ elimination, data-driven maps/items, AI, multiplayer, replays, and modding.
 Only part of that design is implemented. The current playable prototype has:
 
 - A custom TypeScript engine rendered with p5.js.
-- An 800 x 450 ice map with six penguins and six polar bears.
+- An 800 x 450 ice map with a configurable two-sided penguin/polar-bear layout
+  (six figures per side by default).
 - Drag-to-shoot mouse input (100 world units maps to power 10).
 - Circle/circle and circle/rectangle collision handling.
 - Per-entity movement, friction, and serializable effects.
@@ -320,8 +321,8 @@ The canonical engine map/game model is `GameSettings` in
 - `drift`: finite `[0, 1]` per-tick, speed-preserving steering blend toward each
   player's rotation; it does not apply at or below the physics stop threshold
 - `playerCount` and `figuresPerPlayer`: positive integer match-layout settings;
-  they serialize with engine snapshots, while default layout generation remains
-  a separate step
+  they serialize with engine snapshots. `createDefaultGameSettings()` generates
+  the two-sided ice-map layout from them.
 - handler `effects`, `items`, teams, and player-count metadata
 
 `EngineSettings` adds game state, turn number, active team, and runtime entity

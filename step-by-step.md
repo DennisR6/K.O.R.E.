@@ -101,7 +101,7 @@
 - [x] Add a serializable settings field for player count and figures per player
   so 1 player with X figures versus 1 player with X figures is configurable.
   Expected scope: settings types and test. Commit: `feat: configure team figure counts`.
-- [ ] Generate default team/entity layouts from the configured figure counts
+- [x] Generate default team/entity layouts from the configured figure counts
   rather than hard-coded map teams. Expected scope: settings builder and test.
   Commit: `feat: generate configured team layouts`.
 - [ ] Define the optional item-phase rule state and its allowed transitions.
