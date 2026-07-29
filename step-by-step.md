@@ -154,7 +154,7 @@
 - [x] Implement the data-defined force hazard and test a fixed impulse at a
   configured trigger. Expected scope: hazard implementation and test. Commit:
   `feat: add force hazards`.
-- [ ] Implement the data-defined rotation hazard and test its serialized state
+- [x] Implement the data-defined rotation hazard and test its serialized state
   change. Expected scope: hazard implementation and test. Commit:
   `feat: add rotation hazards`.
 - [ ] Implement the data-defined kill-zone hazard using shared death handling.
