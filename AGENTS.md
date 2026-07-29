@@ -22,14 +22,17 @@ Only part of that design is implemented. The current playable prototype has:
 - Drag-to-shoot mouse input (100 world units maps to power 10).
 - Circle/circle and circle/rectangle collision handling.
 - Per-entity movement, friction, and serializable effects.
-- Local turn simulation followed by playback and a final hard sync.
-- An SQLite-backed authoritative Bun HTTP/WebSocket server and a separate
-  map-editor prototype.
+- Local hotseat turns, shared active-team progression, simulation playback,
+  and a final hard sync.
+- An SQLite-backed authoritative Bun HTTP/WebSocket server with persistent
+  matchmaking, reconnect restoration, and browser network startup.
+- Death-circle effects, dead-player exclusion, and a working local-play menu.
+- A separate map-editor prototype.
 
-Items, AI, winning/elimination, completed round rules, persistent matchmaking,
-browser network startup, touch/controller input, and a converter from editor
-maps to engine settings are not implemented end to end. `TODO.md` overstates
-completion in several areas; do not infer behavior from checked boxes.
+Items, AI, winning and completed-round rules, general out-of-bounds
+elimination, touch/controller input, and a converter from editor maps to
+engine settings are not implemented end to end. `TODO.md` overstates completion
+in several areas; do not infer behavior from checked boxes.
 
 ## Source Of Truth
 
@@ -41,6 +44,8 @@ completion in several areas; do not infer behavior from checked boxes.
 - `public/` contains browser assets and editor example data.
 - `gdd.md` describes product intent, not guaranteed implementation.
 - `TODO.md` is planning history, not a reliable implementation inventory.
+- `step-by-step.md` is the current commit-sized execution checklist. Update its
+  status in the same atomic commit as each completed task.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be
   stale and may contain files that no longer have source counterparts.
 - `docs/` is tracked generated TypeDoc output. It is stale and references old
@@ -53,6 +58,9 @@ completion in several areas; do not infer behavior from checked boxes.
 Always inspect `git status` before editing. The worktree may contain unrelated
 human or agent changes. Preserve them and never clean, reset, or rewrite files
 outside the requested scope.
+
+After every change, check whether this guide still reflects the implementation
+and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 
 ## Repository Map
 
@@ -71,7 +79,8 @@ outside the requested scope.
 
 - `src/engine/Handler.ts`: central orchestration. `GameHandler` owns context,
   entities, systems, structures, effects, input forwarding, simulation,
-  playback, and serialization. `GameHandlerBuilder` constructs handlers.
+  playback, active-team/turn progression, and serialization.
+  `GameHandlerBuilder` constructs handlers.
 - `src/engine/types.ts`: game states, input, turn packets, engine snapshots,
   mouse contracts, and settings serialization contracts.
 - `src/engine/RenderContext.ts`: renderer abstraction.
@@ -115,11 +124,14 @@ outside the requested scope.
 - `src/systems/PhysicsSystem.ts`: entity/entity and entity/structure collision
   iteration; movement and friction are currently entity effects, not this
   system.
-- `src/systems/UiSystem.ts`: converts mouse drag into actor, angle, and power.
+- `src/systems/UiSystem.ts`: converts mouse drag into actor, angle, and power;
+  only permits selection by the active team.
 - `src/systems/Emitter.ts`: sends completed input through an `IInputEmitter`.
 - `src/systems/PlayBackSystem.ts`: counts simulated frames and hard-syncs the
   final position and velocity.
 - `src/systems/GameStateManager.ts`: incomplete state transitions.
+- `src/systems/TurnSystem.ts`: deterministic active-team progression and
+  client turn-state mapping. The server invokes it through `GameHandler`.
 - `src/systems/DirectionArrow.ts`: shot-direction overlay.
 - `src/systems/RoundSystem.ts`, `WinningSystem.ts`, `BoundarySystem.ts`,
   `EffectSystem.ts`, `Simulator.ts`, and related helpers: partial, placeholder,
@@ -155,14 +167,15 @@ outside the requested scope.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
   `EngineSettings` snapshots and maintains player-to-game membership rows.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
-  input checks, simulation commits, and lazy SQLite restoration.
+  input checks, simulation commits, persistence, and lazy SQLite restoration.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
   matchmaking, input dispatch, and broadcasts.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
   used by the active server runtime.
-- `src/emitter/EngineEmitter.ts`: local input path, simulating and playing a
-  shot immediately.
-- `src/emitter/NetworkEmitter.ts`: incomplete; shots are not sent.
+- `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
+  and advances the active team after a shot.
+- `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
+  authoritative `TURN` playback and active-team updates.
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
   emitter composition, test capture, and replay-oriented helpers.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
@@ -238,7 +251,7 @@ then installs the same UI systems with `NetworkEmitter`.
 
 `GameHandlerBuilder.fromSettings()` installs the background, teams, players,
 wrapped map structures, handler effects, items, and map friction. It restores
-engine state and turn number when given `EngineSettings`.
+engine state, turn number, and active team when given `EngineSettings`.
 
 ### Per-frame update order
 
@@ -259,7 +272,8 @@ friction itself.
 ### Input, simulation, and playback
 
 1. `UiSystem` stores mouse-down and mouse-up world positions.
-2. On a `Your_turn` tick it selects the entity under the initial click.
+2. On a `Your_turn` tick it selects an active-team entity under the initial
+   click.
 3. Drag distance maps to power 0-10; direction is opposite the drag vector.
 4. It writes `ctx.mouse.turn` and changes state to `Turn_done`.
 5. `EmitterSystem` sends the shot and changes state to `Waiting_for_server`.
@@ -270,6 +284,11 @@ friction itself.
    count.
 9. `PlaybackSystem` hard-syncs positions and velocities to the simulated final
    state.
+
+`GameHandler.advanceTurn()` owns deterministic active-team progression and
+increments the turn number. Local hotseat calls it after playback begins; the
+server calls it only after accepting and resolving an authoritative shot, then
+broadcasts the resulting active team to clients.
 
 System order and fixed frame counts are part of the current determinism model.
 Physics or effect changes need deterministic regression tests.
@@ -286,7 +305,8 @@ The canonical engine map/game model is `GameSettings` in
 - `friction: { friction, linearDrag, stopThreshold }`
 - handler `effects`, `items`, teams, and player-count metadata
 
-`EngineSettings` adds game state, turn number, and runtime entity snapshots.
+`EngineSettings` adds game state, turn number, active team, and runtime entity
+snapshots. Persisted game snapshots must preserve both turn fields.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 
@@ -360,6 +380,7 @@ For changes in these areas, explicitly cover:
 - Settings and effect round trips.
 - A first shot using real map structures.
 - State transitions and system order.
+- Active-team progression, snapshot restoration, and client turn-state mapping.
 - Menu event delegation.
 - Editor-to-engine conversion if one is introduced.
 - Network packet validation and disconnect/matchmaking cleanup.
@@ -410,8 +431,6 @@ Be careful when running `bun run start`:
 Verify these before building on the affected code; they are current behavior,
 not desired design:
 
-- `MainMenu` does not delegate mouse events to its active page, so the default
-  landing page cannot advance normally.
 - `Player.setMass()` clamps values above one but does not reject zero or
   negative mass.
 - Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
