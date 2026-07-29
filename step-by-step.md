@@ -151,7 +151,7 @@
 - [x] Define a hazard registry contract and serialized hazard trigger shape.
   Expected scope: hazard types and registry test. Commit:
   `feat: define hazard registry`.
-- [ ] Implement the data-defined force hazard and test a fixed impulse at a
+- [x] Implement the data-defined force hazard and test a fixed impulse at a
   configured trigger. Expected scope: hazard implementation and test. Commit:
   `feat: add force hazards`.
 - [ ] Implement the data-defined rotation hazard and test its serialized state
