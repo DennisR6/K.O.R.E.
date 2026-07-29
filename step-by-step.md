@@ -51,7 +51,7 @@
 
 ## 2. Deterministic Physics And Arena Safety
 
-- [ ] Add snapshot-based tests for a single rotation/force impulse through the
+- [x] Add snapshot-based tests for a single rotation/force impulse through the
   real map physics loop. Expected scope: physics test fixture and assertions.
   Commit: `test: cover deterministic shot simulation`.
 - [ ] Represent figure rotation and optional angular velocity in serializable
