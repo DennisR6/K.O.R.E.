@@ -148,7 +148,7 @@
 - [x] Add a validated map loader that converts canonical map data into
   `GameSettings` structures. Expected scope: loader and test. Commit:
   `feat: load validated maps`.
-- [ ] Define a hazard registry contract and serialized hazard trigger shape.
+- [x] Define a hazard registry contract and serialized hazard trigger shape.
   Expected scope: hazard types and registry test. Commit:
   `feat: define hazard registry`.
 - [ ] Implement the data-defined force hazard and test a fixed impulse at a

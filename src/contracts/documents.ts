@@ -9,7 +9,10 @@ export interface VersionedDocument {
 	schemaVersion: number;
 }
 
-export type HazardDocument = VersionedDocument & { id: string; type: string };
+export interface HazardTrigger {
+	type: "collision";
+}
+export type HazardDocument = VersionedDocument & { id: string; type: string; trigger: HazardTrigger; config: Record<string, unknown> };
 export type AiDocument = VersionedDocument & { id: string; difficulty: string };
 export type ReplayDocument = VersionedDocument & { initialSettings: GameSettings; turns: TurnPacket[] };
 export type GameDocument = GameSettings;
@@ -55,7 +58,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 	if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1) throw new Error("Invalid map physics")
 	if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards)) throw new Error("Invalid map collections")
 	if (!document.spawnRegions.every(isSpawnRegion)) throw new Error("Invalid map spawn region")
-	if (!document.hazards.every(hazard => isRecord(hazard) && hazard.schemaVersion === DOCUMENT_SCHEMA_VERSION && typeof hazard.id === "string" && typeof hazard.type === "string")) throw new Error("Invalid map hazard")
+	if (!document.hazards.every(hazard => isRecord(hazard) && hazard.schemaVersion === DOCUMENT_SCHEMA_VERSION && typeof hazard.id === "string" && typeof hazard.type === "string" && isRecord(hazard.trigger) && hazard.trigger.type === "collision" && isRecord(hazard.config))) throw new Error("Invalid map hazard")
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null }
@@ -75,7 +78,7 @@ function isArenaGeometry(value: unknown): value is MapBoundarySettings {
 /** Converts a validated hazard-free canonical map into playable game settings. */
 export function loadMapDocument(map: MapDocument, template: GameSettings): GameSettings {
 	validateMapDocument(map)
-	if (map.hazards.length > 0) throw new Error("Cannot load map hazards before the hazard registry exists")
+	if (map.hazards.length > 0) throw new Error("Cannot load map hazards before runtime adapters exist")
 	const players = template.players.map(player => createPlayerSettings(player))
 	const playersByTeam = new Map<number, typeof players>()
 	for (const player of players) {

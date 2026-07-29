@@ -336,7 +336,7 @@ schema version one, while unknown versions are rejected.
 boundary admits them.
 Canonical map documents carry friction, drift, geometry, spawn regions,
 hazard references, and metadata. `loadMapDocument()` converts hazard-free maps
-to engine settings and rejects hazards until the registry exists.
+to engine settings and rejects hazards until runtime adapters exist.
 
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must

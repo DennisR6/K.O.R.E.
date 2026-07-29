@@ -9,7 +9,7 @@ const map: MapDocument = {
 	drift: 0,
 	arenaGeometry: [{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 100, h: 100, effects: [] }],
 	spawnRegions: [{ team: 0, x: 10, y: 10, w: 20, h: 20 }],
-	hazards: [{ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: "void", type: "kill-zone" }],
+	hazards: [{ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: "void", type: "kill-zone", trigger: { type: "collision" }, config: {} }],
 };
 
 test("canonical map schema includes physics, geometry, spawns, hazards, and metadata", () => {

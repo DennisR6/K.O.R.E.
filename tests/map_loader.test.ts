@@ -23,6 +23,6 @@ test("map loader applies canonical physics, geometry, and team spawns", () => {
 });
 
 test("map loader rejects hazard references before hazard runtime mapping exists", () => {
-	expect(() => loadMapDocument({ ...map, hazards: [{ schemaVersion: 1, id: "void", type: "kill-zone" }] }, createDefaultGameSettings(2, 1)))
-		.toThrow("Cannot load map hazards before the hazard registry exists");
+	expect(() => loadMapDocument({ ...map, hazards: [{ schemaVersion: 1, id: "void", type: "kill-zone", trigger: { type: "collision" }, config: {} }] }, createDefaultGameSettings(2, 1)))
+		.toThrow("Cannot load map hazards before runtime adapters exist");
 });
