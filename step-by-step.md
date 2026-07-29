@@ -83,7 +83,7 @@
 - [x] Align circle drawing dimensions with collision dimensions and add a
   renderer-contract test where practical. Expected scope: structure drawing and
   test. Commit: `fix: align circle rendering and collision`.
-- [ ] Add a generic map-boundary containment API for circle, rectangle, and
+- [x] Add a generic map-boundary containment API for circle, rectangle, and
   line arenas. Expected scope: structure contracts and geometry tests. Commit:
   `feat: add arena containment checks`.
 - [ ] Mark entities dead when they leave configured arena boundaries and test

@@ -456,7 +456,9 @@ not desired design:
 - Round effects are stored but not meaningfully executed. Rectangle collision
   effects are parsed but `StructureRectangle.onCollision()` is empty.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.
-- Map bounds, out-of-bounds death, and winning behavior are absent or disabled.
+- Outer circle/rectangle containment is inferred from mixed structures; line
+  segments are collision obstacles only. Out-of-bounds death and winning
+  behavior are absent or disabled.
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
 - The editor references missing imports/functions, has duplicate element IDs,

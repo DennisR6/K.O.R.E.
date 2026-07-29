@@ -108,8 +108,8 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 
 ### Arena-Grenzen
 
-- [ ] Out-of-Bounds-Erkennung. Current: no generic arena containment check.
-  Done when: every arena shape can determine whether an entity is outside.
+- [x] Out-of-Bounds-Erkennung. Outer circle/rectangle structures are inferred
+  from mixed map geometry and contain full player circles; lines are obstacles.
 - [ ] Death-Event. Current: configured death circles kill on collision. Done
   when: leaving any configured arena boundary immediately eliminates the entity.
 
