@@ -47,6 +47,8 @@ test("Player settings round-trip all mutable state", () => {
 	const settings = createPlayerSettings({
 		position: { x: 12, y: 34 },
 		velocity: { x: 5, y: -6 },
+		rotation: 90,
+		angularVelocity: 1.5,
 		hp: 7,
 		mass: 0.5,
 		size: 17,

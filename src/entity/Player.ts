@@ -25,6 +25,8 @@ export class Player implements IEntity {
 	private position: Vector2D;
 	/** Aktuelle Bewegungsrichtung und Geschwindigkeit. */
 	private velocity: Vector2D;
+	private rotation: number = 0;
+	private angularVelocity: number = 0;
 	/** Bestimmt, wie stark das Objekt bei Kollisionen abprallt (0 bis 1). */
 	private bouncyness: number;
 	/** Trägheit des Objekts bei Kollisionen. */
@@ -63,6 +65,8 @@ export class Player implements IEntity {
 		this.id = settings.id
 		this.position = { ...settings.position }
 		this.velocity = { ...settings.velocity }
+		this.rotation = settings.rotation
+		this.angularVelocity = settings.angularVelocity
 		this.hp = settings.hp
 		this.bouncyness = settings.bouncyness
 		this.mass = settings.mass
@@ -110,6 +114,10 @@ export class Player implements IEntity {
 	public getMass(): number { return this.mass }
 	public setVel(v: { x: number, y: number }) { this.velocity.x = v.x; this.velocity.y = v.y; }
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
+	public setRotation(rotation: number): void { this.rotation = rotation }
+	public getRotation(): number { return this.rotation }
+	public setAngularVelocity(angularVelocity: number): void { this.angularVelocity = angularVelocity }
+	public getAngularVelocity(): number { return this.angularVelocity }
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
@@ -194,6 +202,8 @@ export class Player implements IEntity {
 			id: this.getId(),
 			position: { ...this.position },
 			velocity: { ...this.velocity },
+			rotation: this.rotation,
+			angularVelocity: this.angularVelocity,
 			playericon: this.playericon,
 			team: this.team,
 			hoop: this.hoop,

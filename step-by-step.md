@@ -54,7 +54,7 @@
 - [x] Add snapshot-based tests for a single rotation/force impulse through the
   real map physics loop. Expected scope: physics test fixture and assertions.
   Commit: `test: cover deterministic shot simulation`.
-- [ ] Represent figure rotation and optional angular velocity in serializable
+- [x] Represent figure rotation and optional angular velocity in serializable
   player settings without breaking existing snapshots. Expected scope: player
   contract, serializer, round-trip test. Commit: `feat: serialize figure rotation`.
 - [ ] Derive shot direction from rotation through one shared vector helper and

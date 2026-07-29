@@ -52,6 +52,8 @@ export interface PlayerSettings {
 	id: UUID;
 	position: Vector2D;
 	velocity: Vector2D;
+	rotation: number;
+	angularVelocity: number;
 	hp: number;
 	bouncyness: number;
 	mass: number;
@@ -74,6 +76,8 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		id: overrides.id ?? crypto.randomUUID() as UUID,
 		position: { x: overrides.position?.x ?? 0, y: overrides.position?.y ?? 0 },
 		velocity: { x: overrides.velocity?.x ?? 0, y: overrides.velocity?.y ?? 0 },
+		rotation: overrides.rotation ?? 0,
+		angularVelocity: overrides.angularVelocity ?? 0,
 		hp: overrides.hp ?? 30,
 		bouncyness: overrides.bouncyness ?? 1,
 		mass: overrides.mass ?? 1,
