@@ -57,7 +57,7 @@
 - [x] Represent figure rotation and optional angular velocity in serializable
   player settings without breaking existing snapshots. Expected scope: player
   contract, serializer, round-trip test. Commit: `feat: serialize figure rotation`.
-- [ ] Derive shot direction from rotation through one shared vector helper and
+- [x] Derive shot direction from rotation through one shared vector helper and
   test cardinal directions. Expected scope: physics helper and test. Commit:
   `refactor: share rotation direction conversion`.
 - [ ] Add map-configured drift settings to the canonical settings contract and

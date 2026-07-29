@@ -1,6 +1,6 @@
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { getShapeName, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
+import { forwardVectorFromRotation, getShapeName, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -331,12 +331,8 @@ export class defaultPhysics implements PhysicsStrategy {
 		const mass = entity.getMass();
 		if (mass === Infinity) return;
 
-		const radians = (angle * Math.PI) / 180;
-
-		const force = {
-			x: Math.cos(radians) * power,
-			y: Math.sin(radians) * power
-		};
+		const direction = forwardVectorFromRotation(angle);
+		const force = this.mult(direction, power);
 
 		const currentVel = entity.getVel();
 		entity.setVel({
@@ -389,12 +385,8 @@ export class defaultPhysics implements PhysicsStrategy {
 		angle: number,
 		power: number
 	): Vector2D {
-		const radians = (angle * Math.PI) / 180;
-
-		let vx = Math.cos(radians) * power;
-		let vy = Math.sin(radians) * power;
-
-		return this.calculateStop(startPos, { x: vx, y: vy });
+		const direction = forwardVectorFromRotation(angle);
+		return this.calculateStop(startPos, this.mult(direction, power));
 	}
 
 	/**

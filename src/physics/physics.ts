@@ -16,6 +16,12 @@ export interface Vector2D {
 	y: number;
 }
 
+/** Returns the unit forward vector for a clockwise screen-space rotation in degrees. */
+export function forwardVectorFromRotation(rotation: number): Vector2D {
+	const radians = (rotation * Math.PI) / 180;
+	return { x: Math.cos(radians), y: Math.sin(radians) };
+}
+
 /**
  * Das mathematische Gehirn der Engine.
  * 
@@ -152,4 +158,3 @@ export function getShapeName(input: SHAPE): string {
 		default: return "TODO"
 	}
 }
-

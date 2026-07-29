@@ -58,12 +58,13 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 ### Figure Physics Model
 
 - [x] Figure-State: Position (`Vec2`) und Velocity (`Vec2`)
-- [ ] Rotation (float). Current: no player rotation field. Done when: player
-  settings, runtime state, and snapshots round-trip rotation.
-- [ ] Angular Velocity (optional). Current: no angular state. Done when:
+- [x] Rotation (float). Player settings, runtime state, and snapshots round-trip
+  rotation.
+- [ ] Angular Velocity (optional). Current: snapshots serialize angular velocity,
+  but runtime does not update it. Done when:
   optional angular velocity has deterministic update and serialization rules.
-- [ ] Forward-Vektor aus Rotation berechnen. Current: shots use supplied angles.
-  Done when: one tested helper derives the vector from player rotation.
+- [x] Forward-Vektor aus Rotation berechnen. The tested shared helper derives a
+  forward vector from a rotation and physics uses it for shot direction.
 
 ### Stoß-Mechanik
 
