@@ -83,7 +83,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 
 - `src/engine/Handler.ts`: central orchestration. `GameHandler` owns context,
   entities, systems, structures, effects, input forwarding, simulation,
-  playback, active-team/turn progression, and serialization.
+  playback, active-team/turn progression, serialization, and local rematch.
   `GameHandlerBuilder` constructs handlers.
 - `src/engine/types.ts`: game states, input, turn packets, engine snapshots,
   mouse contracts, and settings serialization contracts.

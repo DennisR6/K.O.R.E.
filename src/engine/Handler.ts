@@ -78,6 +78,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private id: UUID
 	private turns: TurnPacket[] = []
 	private settings: GameSettings | EngineSettings | undefined
+	private initialSettings: GameSettings | undefined
 	private context: IGameContext;
 	private systems: ISystem[] = [];
 	private entityManager: EntityManager;
@@ -372,6 +373,26 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
 	public setMatchResult(result: MatchResult | undefined): void { this.matchResult = result && { ...result } }
+	/** Restores the configured local match without replacing installed UI systems. */
+	public rematch(): this {
+		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
+		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
+		this.entityManager.applySettings(settings.players)
+		this.context.structures = settings.mapBoundarys.map(boundary => new FullStructure(boundary))
+		this.setPhysics(new defaultPhysics(settings.friction))
+		this.setWorldSize(settings.screenResolution)
+		this.setMyTeam(settings.myTeam)
+		this.setTeamSize(settings.allTeamSize)
+		this.setItems(settings.items)
+		this.loadEffects(settings.effects)
+		this.setTurnNumber(0)
+		this.setActiveTeam(0)
+		this.setRuleState({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		this.setMatchResult(undefined)
+		this.saveSettings(settings)
+		this.setState(GameState.Your_turn)
+		return this
+	}
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
@@ -384,6 +405,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setTickRate(tickRate: number) { this.dt = tickRate } public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
 	public setCurrentMousePosition(_pos: Vector2D): void { }
 	public saveSettings(settings: GameSettings | EngineSettings) { this.settings = settings }
+	public setInitialSettings(settings: GameSettings): void { this.initialSettings = JSON.parse(JSON.stringify(settings)) as GameSettings }
 	public getSettings(): GameSettings | EngineSettings | undefined { return this.settings }
 	public exportGame(): { logs: TurnPacket[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
 	public addLog(log: any) { this.logs.push(log) }
@@ -499,6 +521,8 @@ export class GameHandlerBuilder {
 		const figuresPerPlayer = gameSettings.figuresPerPlayer ?? Math.max(1, Math.floor(gameSettings.players.length / playerCount))
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
+		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
 		this.engine.setWorldSize(screenResolution)

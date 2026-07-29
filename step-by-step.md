@@ -127,7 +127,7 @@
   `feat: serialize match results`.
 - [x] Stop new turn input after a completed match and show a final-state UI
   indicator. Expected scope: UI and state test. Commit: `feat: block input after match end`.
-- [ ] Add a local rematch/reset action that rebuilds a match from its configured
+- [x] Add a local rematch/reset action that rebuilds a match from its configured
   settings. Expected scope: menu or game controller and test. Commit:
   `feat: add local rematch flow`.
 - [ ] Add an authoritative rematch/reset request and broadcast its initialized
