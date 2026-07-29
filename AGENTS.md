@@ -457,8 +457,8 @@ not desired design:
   effects are parsed but `StructureRectangle.onCollision()` is empty.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.
 - Outer circle/rectangle containment is inferred from mixed structures; line
-  segments are collision obstacles only. Out-of-bounds death and winning
-  behavior are absent or disabled.
+  segments are collision obstacles only. Leaving an inferred containment
+  boundary kills a player; winning behavior remains absent.
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
 - The editor references missing imports/functions, has duplicate element IDs,

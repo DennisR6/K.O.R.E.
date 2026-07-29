@@ -86,7 +86,7 @@
 - [x] Add a generic map-boundary containment API for circle, rectangle, and
   line arenas. Expected scope: structure contracts and geometry tests. Commit:
   `feat: add arena containment checks`.
-- [ ] Mark entities dead when they leave configured arena boundaries and test
+- [x] Mark entities dead when they leave configured arena boundaries and test
   deterministic death timing. Expected scope: boundary system and test. Commit:
   `feat: eliminate out of bounds entities`.
 - [ ] Ensure dead entities are excluded from movement, collisions, selection,

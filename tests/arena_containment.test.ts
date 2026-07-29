@@ -28,3 +28,7 @@ test("outer-boundary heuristic ignores line obstacles and inner structures", () 
 	const line = new StructureLine(0, 0, 100, 0, "black");
 	expect(getOuterContainmentBoundaries([outer, inner, line])).toEqual([outer]);
 });
+
+test("a lone collision obstacle is not inferred as containment", () => {
+	expect(getOuterContainmentBoundaries([new StructureCircle(50, 50, 5, undefined, [])])).toEqual([]);
+});

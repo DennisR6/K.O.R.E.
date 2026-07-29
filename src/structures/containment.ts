@@ -8,7 +8,8 @@ export function getOuterContainmentBoundaries(structures: MapStructure[]): Conta
 	return structures.filter((candidate): candidate is ContainmentBoundary => {
 		if (candidate.getShape() === SHAPE.LINE) return false;
 		const boundary = candidate as ContainmentBoundary;
-		return structures.every(structure => structure === candidate || structure.getShape() === SHAPE.LINE || containsPoint(boundary, structure.getPos()));
+		const enclosedStructures = structures.filter(structure => structure !== candidate && structure.getShape() !== SHAPE.LINE);
+		return enclosedStructures.length > 0 && enclosedStructures.every(structure => containsPoint(boundary, structure.getPos()));
 	});
 }
 

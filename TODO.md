@@ -110,8 +110,9 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 
 - [x] Out-of-Bounds-Erkennung. Outer circle/rectangle structures are inferred
   from mixed map geometry and contain full player circles; lines are obstacles.
-- [ ] Death-Event. Current: configured death circles kill on collision. Done
-  when: leaving any configured arena boundary immediately eliminates the entity.
+- [x] Death-Event. Leaving inferred outer circle/rectangle containment geometry
+  eliminates an entity on that tick; configured death circles still kill on
+  collision.
 
 ---
 

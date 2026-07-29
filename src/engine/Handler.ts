@@ -18,6 +18,7 @@ import { MetaEffect } from "../effects/effects.js";
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
+import { BoundarySystem } from "../systems/BoundarySystem.js";
 import type { SettingsItem } from "../settings/settings.js";
 
 /**
@@ -460,6 +461,7 @@ export class GameHandlerBuilder {
 			.addPhysics(physics)
 			.addSystem(new PlaybackSystem())
 			.addSystem(new PhysicsSystem(physics))
+			.addSystem(new BoundarySystem())
 			.addSystem(new GameStateManager())
 		return this
 	}

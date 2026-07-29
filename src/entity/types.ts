@@ -42,6 +42,7 @@ export interface IKillable {
 	setHP(hp: number): void;
 	getHP(): number;
 	addHP(hp: number): void
+	setIsDead(dead: boolean): void
 	isDead(): boolean
 }
 /**
