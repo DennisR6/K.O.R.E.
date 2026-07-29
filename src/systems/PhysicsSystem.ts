@@ -89,6 +89,7 @@ export class PhysicsSystem implements ISystem {
 
 			for (let j = 0; j < structures.length; j++) {
 				const structureB = structures[j] as Structure<SHAPE>;
+				if (!structureB.physicsEnabled()) continue
 				if (this.strategy.checkCollision(entityA, structureB)) {
 					this.strategy.handleCollision(entityA, structureB);
 				}

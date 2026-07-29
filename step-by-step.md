@@ -77,7 +77,7 @@
 - [x] Implement circle/line collision response and test deterministic bounce
   velocity. Expected scope: collision response and test. Commit:
   `feat: resolve circle line collisions`.
-- [ ] Honor `physicsEnabled` during collision iteration and test that disabled
+- [x] Honor `physicsEnabled` during collision iteration and test that disabled
   entities and structures do not alter velocity. Expected scope: system and
   test. Commit: `fix: respect physics enabled flags`.
 - [ ] Align circle drawing dimensions with collision dimensions and add a
