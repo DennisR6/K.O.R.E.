@@ -31,8 +31,8 @@ Only part of that design is implemented. The current playable prototype has:
 
 Items, AI, winning and completed-round rules, general out-of-bounds
 elimination, touch/controller input, and a converter from editor maps to
-engine settings are not implemented end to end. `TODO.md` overstates completion
-in several areas; do not infer behavior from checked boxes.
+engine settings are not implemented end to end. Do not infer behavior from
+planning documents or checkboxes without verifying source and tests.
 
 ## Source Of Truth
 
@@ -45,6 +45,8 @@ in several areas; do not infer behavior from checked boxes.
 - `gdd.md` describes product intent, not guaranteed implementation.
 - `TODO.md` is a reconciled planning inventory; current source and verified
   tests remain authoritative.
+- `requirements.md` maps TODO/GDD requirements to implementation checklist
+  sections and the test evidence required for completion.
 - `step-by-step.md` is the current commit-sized execution checklist. Update its
   status in the same atomic commit as each completed task.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be

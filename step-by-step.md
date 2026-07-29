@@ -28,7 +28,7 @@
 
 - [x] Reconcile every TODO checkbox with source and tests; record the real
   status and acceptance criteria in `TODO.md`. Commit: `docs: reconcile todo status`.
-- [ ] Add a focused requirements ledger linking TODO and GDD requirements to
+- [x] Add a focused requirements ledger linking TODO and GDD requirements to
   checklist sections and test coverage. Commit: `docs: add requirements ledger`.
 - [ ] Add a deterministic seeded random-number contract and unit tests for
   repeatable sequences. Expected scope: one utility and one test. Commit:
