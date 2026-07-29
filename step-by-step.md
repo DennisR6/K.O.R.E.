@@ -185,7 +185,7 @@
 - [x] Replace duplicate editor element IDs with unique identifiers and update
   their references. Expected scope: editor markup and one script. Commit:
   `fix: use unique editor element ids`.
-- [ ] Implement the editor temporary-save action with validated map data.
+- [x] Implement the editor temporary-save action with validated map data.
   Expected scope: editor save module and test. Commit: `feat: save temporary editor maps`.
 - [ ] Replace the editor's hard-coded preview address with configurable current
   origin behavior. Expected scope: preview module and test. Commit:

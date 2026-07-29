@@ -78,6 +78,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   and matchmaking loop.
 - `src/start.ts`: disabled/commented network-client prototype.
 - `src-website/index.html`: standalone map-editor page.
+- `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
+  storage and in-place restore for the editor's shared `mapData` object.
 
 ### Engine and gameplay source
 
@@ -492,8 +494,9 @@ not desired design:
   integrated into completed-match flow.
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
-- The editor has no temporary-save handler and a hard-coded preview at
-  `localhost:5173` despite no active Vite workflow.
+- The editor stores one validated temporary draft in browser `localStorage` and
+  restores it on startup; its preview remains hard-coded at `localhost:5173`
+  despite no active Vite workflow.
 - Imported editor map values are rendered with DOM construction, `textContent`,
   and control `.value` assignments; do not reintroduce template interpolation
   for untrusted map data.
