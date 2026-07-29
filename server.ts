@@ -1,8 +1,11 @@
 import { ServerRuntime, type ServerSocket } from "./src/server/runtime.ts";
+import { GameDatabase } from "./src/server/db.ts";
+import { GameRegistry } from "./src/server/gameRegistry.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
-const runtime = new ServerRuntime();
+const database = new GameDatabase(process.env.GAME_DB_PATH ?? "./data/kore.db");
+const runtime = new ServerRuntime(new GameRegistry(database));
 
 Bun.serve<WebSocketData>({
 	port: PORT,

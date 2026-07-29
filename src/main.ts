@@ -15,11 +15,11 @@ import { getUserUUUID, setUserUUUID } from "./utils/id.js";
 import { wrap } from "./utils/net.js";
 import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNewUser, type UnTypedNetworkMessage } from "./server/types.js";
 
-let usersettings = { url: "", mapbuilder: false, skipmenu: false }
 const uri = new URL(window.location.href)
-for (const [key, value] of uri.searchParams) {
-	//@ts-ignore
-	usersettings[key] = value
+const usersettings = {
+	url: uri.searchParams.get("url") ?? "",
+	mapbuilder: uri.searchParams.has("mapbuilder"),
+	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
 }
 
 const ui = new UiSystem()

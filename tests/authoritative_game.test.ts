@@ -8,6 +8,8 @@ import { createPlayerSettings, type PlayerSettings } from "../src/entity/types.t
 import { Player } from "../src/entity/Player.ts";
 import { GameSettings } from "../src/settings/settings.ts";
 import { ServerRuntime, type ServerSocket } from "../src/server/runtime.ts";
+import { GameDatabase } from "../src/server/db.ts";
+import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { NetworkMessageType, type WebSocketData } from "../src/server/types.ts";
 
 const userOne = "11111111-1111-4111-8111-111111111111";
@@ -118,6 +120,53 @@ test("disconnect removes a waiting user before matchmaking", () => {
 	expect(runtime.getRegistry().getForUser(userOne)).toBeUndefined()
 	expect(packet(first).type).toBe(NetworkMessageType.INIT)
 	expect(packet(second).type).toBe(NetworkMessageType.INIT)
+})
+
+test("compressed SQLite state restores an evicted authoritative game", () => {
+	const database = new GameDatabase(":memory:")
+	const registry = new GameRegistry(database, 1)
+	const record = registry.create(GameSettings, [userOne, userTwo])
+	registry.connectUser(userOne)
+	registry.connectUser(userTwo)
+	const actorId = record.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!.getId()
+	const result = registry.submitTurn(userOne, { actorId, angle: 0, power: 1 })
+	expect(result.ok).toBe(true)
+	if (!result.ok) throw new Error(result.error)
+	const expectedState = result.packet.finalState
+	expect(database.getCompressedSnapshotSize(record.id)).toBeGreaterThan(0)
+
+	registry.evictInactive(Date.now() + 2)
+	expect(registry.isCached(record.id)).toBe(false)
+
+	const restored = registry.getForUser(userTwo)!
+	expect(restored.turnNumber).toBe(1)
+	expect(restored.currentTeam).toBe(1)
+	expect(restored.handler.getEntityManager().serialize()).toEqual(expectedState)
+	database.close()
+})
+
+test("a reconnect restores the stored game instead of entering matchmaking", () => {
+	const database = new GameDatabase(":memory:")
+	const registry = new GameRegistry(database)
+	const runtime = new ServerRuntime(registry)
+	const first = new FakeSocket({ connectionId: "55555555-5555-4555-8555-555555555555" })
+	const second = new FakeSocket({ connectionId: "66666666-6666-4666-8666-666666666666" })
+	runtime.open(first)
+	runtime.open(second)
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne }))
+	runtime.message(second, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userTwo }))
+	runtime.matchmakeOnce()
+	const gameId = registry.getForUser(userOne)!.id
+	runtime.close(first)
+	runtime.close(second)
+	expect(registry.isCached(gameId)).toBe(false)
+
+	const reconnect = new FakeSocket({ connectionId: "77777777-7777-4777-8777-777777777777" })
+	runtime.open(reconnect)
+	runtime.message(reconnect, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne }))
+	expect(packet(reconnect).type).toBe(NetworkMessageType.INIT)
+	expect(packet(reconnect).settings.id).toBe(gameId)
+	database.close()
 })
 
 test("NetworkEmitter sends only shot input and TURN fully reconciles the local entity", () => {

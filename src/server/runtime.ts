@@ -28,6 +28,7 @@ export class ServerRuntime {
 		if (userId) {
 			if (this.connectionByUser.get(userId) === connectionId) this.connectionByUser.delete(userId)
 			this.waitingUsers = this.waitingUsers.filter(user => user !== userId)
+			this.games.disconnectUser(userId)
 		}
 	}
 
@@ -51,10 +52,12 @@ export class ServerRuntime {
 	}
 
 	public matchmakeOnce(): void {
+		this.games.evictInactive()
 		while (this.waitingUsers.length >= 2) {
 			const users = this.waitingUsers.splice(0, 2)
 			const record = this.games.create(GameSettings, users)
 			for (const user of users) {
+				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
 				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user) }))
 			}
@@ -73,7 +76,12 @@ export class ServerRuntime {
 		this.userByConnection.set(connectionId, userId)
 		this.connectionByUser.set(userId, connectionId)
 		if (requestedUserId === undefined) socket.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: userId as NetworkNewUser["userid"] }))
-		if (!this.waitingUsers.includes(userId) && !this.games.getForUser(userId)) this.waitingUsers.push(userId)
+		const record = this.games.connectUser(userId)
+		if (record) {
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId) }))
+			return
+		}
+		if (!this.waitingUsers.includes(userId)) this.waitingUsers.push(userId)
 		socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
 	}
 

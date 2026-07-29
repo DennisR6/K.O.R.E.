@@ -23,7 +23,7 @@ Only part of that design is implemented. The current playable prototype has:
 - Circle/circle and circle/rectangle collision handling.
 - Per-entity movement, friction, and serializable effects.
 - Local turn simulation followed by playback and a final hard sync.
-- An in-memory authoritative Bun HTTP/WebSocket server and a separate
+- An SQLite-backed authoritative Bun HTTP/WebSocket server and a separate
   map-editor prototype.
 
 Items, AI, winning/elimination, completed round rules, persistent matchmaking,
@@ -152,10 +152,10 @@ outside the requested scope.
 
 - `src/server/types.ts`: JSON wire protocol and packet types.
 - `src/server/server.ts`: login helpers.
-- `src/server/db.ts`: SQLite migration and in-memory socket maps; initializes a
-  database as an import side effect.
-- `src/server/gameRegistry.ts`: in-memory authoritative match state, turn
-  ownership, input checks, and simulation commits.
+- `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
+  `EngineSettings` snapshots and maintains player-to-game membership rows.
+- `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
+  input checks, simulation commits, and lazy SQLite restoration.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
   matchmaking, input dispatch, and broadcasts.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
@@ -381,26 +381,27 @@ the registry diff carefully, and test serialized asset values.
 
 ## Server And Networking Safety
 
-The network stack uses native `Bun.serve` WebSockets and in-memory match state.
-`ServerRuntime` derives the sender from the logged-in socket, validates a
-`SHOOT` request, commits it through the authoritative `GameHandler`, advances
-the turn revision, and broadcasts the resulting `TURN` packet to both players.
-The browser network bootstrap remains disabled, but `NetworkEmitter.sendShot()`
-and `installTurnReceiver()` implement the wire-side client behavior.
+The network stack uses native `Bun.serve` WebSockets and an SQLite-backed match
+store. `ServerRuntime` derives the sender from the logged-in socket, validates
+a `SHOOT` request, commits it through the authoritative `GameHandler`, advances
+the turn revision, stores the compressed `handler.toSettings()` snapshot, and
+broadcasts the resulting `TURN` packet to both players. `GameHandler` objects
+are an evictable cache: the final disconnect removes them immediately and idle
+handlers are removed after one minute; the next turn/reconnect restores them
+from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
 
 Do not trust values from a `SHOOT` packet. `GameRegistry` must continue to
 validate finite angle/power ranges, actor ownership/activity, game membership,
 and turn ownership before resolving a turn. Keep the registry/runtime testable
-without importing `src/server/db.ts`, which has a SQLite import side effect.
+by injecting `new GameDatabase(":memory:")`.
 
 Be careful when running `bun run start`:
 
 - The static handler serves only `index.html`, `public/`, and `dist/`; continue
   to keep secrets out of this repository and do not broaden that allowlist
   casually.
-- Importing `src/server/db.ts` calls `DB.init("../../db.sql")`. The active
-  runtime avoids that module, but a future server change that imports it would
-  create/open a SQLite file outside the repository, and `*.sql` is not ignored.
+- The production server writes `./data/kore.db` by default. `*.db` is ignored;
+  do not commit database files. Set `GAME_DB_PATH` for another durable path.
 
 ## Known High-Impact Limitations
 

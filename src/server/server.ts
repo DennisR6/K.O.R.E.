@@ -1,4 +1,3 @@
-import { type USERID } from "./db.js";
 import type { UUID } from "crypto";
 
 
@@ -9,9 +8,9 @@ export function loginUser(userid: UUID | undefined): boolean {
 	// if (!res) return false
 	return true
 }
-export function loginUserFailed(): USERID {
+export function loginUserFailed(): UUID {
 	const newUserid = crypto.randomUUID()
 	console.log("creating new User", newUserid)
 	// addNewUser(newUserid); // TODO: Needs verification
-	return newUserid as USERID
+	return newUserid as UUID
 }
