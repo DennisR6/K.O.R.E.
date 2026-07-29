@@ -1,6 +1,7 @@
 import type { TurnPacket } from "../engine/types.js";
 import { SHAPE } from "../physics/physics.js";
-import type { GameSettings, FrictionSettings, MapBoundarySettings, SettingsItem } from "../settings/settings.js";
+import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type SettingsItem } from "../settings/settings.js";
+import { createPlayerSettings } from "../entity/types.js";
 
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -69,4 +70,31 @@ function isArenaGeometry(value: unknown): value is MapBoundarySettings {
 	if (value.type === SHAPE.CIRCLE) return typeof value.r === "number" && value.r > 0
 	if (value.type === SHAPE.RECTANGLE) return typeof value.w === "number" && typeof value.h === "number" && value.w > 0 && value.h > 0
 	return value.type === SHAPE.LINE && typeof value.x2 === "number" && typeof value.y2 === "number" && Number.isFinite(value.x2) && Number.isFinite(value.y2)
+}
+
+/** Converts a validated hazard-free canonical map into playable game settings. */
+export function loadMapDocument(map: MapDocument, template: GameSettings): GameSettings {
+	validateMapDocument(map)
+	if (map.hazards.length > 0) throw new Error("Cannot load map hazards before the hazard registry exists")
+	const players = template.players.map(player => createPlayerSettings(player))
+	const playersByTeam = new Map<number, typeof players>()
+	for (const player of players) {
+		const team = player.team[0]
+		if (team === undefined) throw new Error("Map loading requires each player to have a team")
+		const teamPlayers = playersByTeam.get(team) ?? []
+		teamPlayers.push(player)
+		playersByTeam.set(team, teamPlayers)
+	}
+	for (const [team, teamPlayers] of playersByTeam) {
+		const region = map.spawnRegions.find(spawn => spawn.team === team)
+		if (!region) throw new Error(`Map has no spawn region for team ${team}`)
+		arrangeInGrid(teamPlayers, region)
+	}
+	return {
+		...template,
+		players,
+		friction: { ...map.friction },
+		drift: map.drift,
+		mapBoundarys: map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),
+	}
 }

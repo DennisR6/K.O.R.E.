@@ -145,7 +145,7 @@
 - [x] Define a strict map schema with friction, drift, arena geometry, spawn
   regions, hazards, and metadata. Expected scope: map types and test. Commit:
   `feat: define map schema`.
-- [ ] Add a validated map loader that converts canonical map data into
+- [x] Add a validated map loader that converts canonical map data into
   `GameSettings` structures. Expected scope: loader and test. Commit:
   `feat: load validated maps`.
 - [ ] Define a hazard registry contract and serialized hazard trigger shape.
