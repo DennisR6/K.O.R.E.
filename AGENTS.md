@@ -468,7 +468,8 @@ not desired design:
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.
 - Outer circle/rectangle containment is inferred from mixed structures; line
   segments are collision obstacles only. Leaving an inferred containment
-  boundary kills a player; winning behavior remains absent.
+  boundary kills a player; a last-team-standing evaluator exists but is not yet
+  integrated into completed-match flow.
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
 - The editor references missing imports/functions, has duplicate element IDs,

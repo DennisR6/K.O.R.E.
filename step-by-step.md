@@ -119,7 +119,7 @@
 - [x] Expose authoritative rule phase in `INIT` and `TURN` packets and apply it
   on clients. Expected scope: server types, emitter, protocol test. Commit:
   `feat: synchronize rule phase`.
-- [ ] Add a configurable last-man-standing win evaluator for teams with any
+- [x] Add a configurable last-man-standing win evaluator for teams with any
   configured number of figures. Expected scope: winning system and test.
   Commit: `feat: evaluate last man standing`.
 - [ ] Add a serializable match-complete result containing winner, reason, and
