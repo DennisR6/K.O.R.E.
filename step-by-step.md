@@ -68,7 +68,7 @@
   `feat: apply map drift steering`.
 - [x] Reject zero and negative player mass at the player settings boundary.
   Expected scope: player validation and test. Commit: `fix: validate player mass`.
-- [ ] Correct rectangle/rectangle collision dispatch and add separated,
+- [x] Correct rectangle/rectangle collision dispatch and add separated,
   overlapping, and edge-contact tests. Expected scope: physics dispatch and
   test. Commit: `fix: correct rectangle collision dispatch`.
 - [ ] Implement line collision detection for circles and test each line normal

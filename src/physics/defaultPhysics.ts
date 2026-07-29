@@ -98,11 +98,9 @@ export class defaultPhysics implements PhysicsStrategy {
 			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.CIRCLE:
 				return this.checkCollisionCircles(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.CIRCLE>)
 			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
-				return this.checkCollisionCircleRect(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.RECTANGLE>);
+				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
 			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
 				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
-			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
-				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
 			default:
 				console.log(`Collision not implemented for ${getShapeName(entityA.getShape())} ${getShapeName(entityB.getShape())}`)
 		}

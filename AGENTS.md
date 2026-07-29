@@ -456,8 +456,6 @@ not desired design:
 - Round effects are stored but not meaningfully executed. Rectangle collision
   effects are parsed but `StructureRectangle.onCollision()` is empty.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.
-- Rectangle/rectangle dispatch in `defaultPhysics.checkCollision()` has a
-  duplicated, unreachable branch and an incorrect earlier branch.
 - Line collisions, physics-enabled filtering, map bounds, out-of-bounds death,
   and winning behavior are absent or disabled.
 - Circle drawing geometry does not match collision geometry.
