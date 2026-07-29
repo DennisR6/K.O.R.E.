@@ -330,8 +330,8 @@ The canonical engine map/game model is `GameSettings` in
 - handler `effects`, `items`, teams, and player-count metadata
 
 `EngineSettings` adds game state, turn number, active team, serialized rule
-state, and runtime entity snapshots. Persisted game snapshots must preserve all
-turn and rule-progress fields.
+state, match result, and runtime entity snapshots. Persisted game snapshots must
+preserve all turn and rule-progress fields.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 

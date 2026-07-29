@@ -21,6 +21,7 @@ import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import type { SettingsItem } from "../settings/settings.js";
 import { RulePhase, type RuleState } from "../rules/types.js";
+import type { MatchResult } from "../rules/types.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -94,6 +95,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectCollision: Effect[] = []
 	private items: SettingsItem[] = []
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
+	private matchResult: MatchResult | undefined
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -362,6 +364,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.context.activeTeam = ruleState.activeTeam
 		this.context.currTurn = ruleState.turnNumber
 	}
+	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
+	public setMatchResult(result: MatchResult | undefined): void { this.matchResult = result && { ...result } }
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
@@ -412,6 +416,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
+			matchResult: this.getMatchResult(),
 		}
 		this.saveSettings(settings)
 		return settings
@@ -513,6 +518,7 @@ export class GameHandlerBuilder {
 			this.engine.setTurnNumber(gameSettings.turnNumber)
 			this.engine.setActiveTeam(gameSettings.activeTeam ?? 0)
 			this.engine.setRuleState(gameSettings.ruleState ?? { phase: RulePhase.Physics, activeTeam: gameSettings.activeTeam ?? 0, turnNumber: gameSettings.turnNumber, itemUses: 0 })
+			this.engine.setMatchResult(gameSettings.matchResult)
 		}
 
 		return this

@@ -122,7 +122,7 @@
 - [x] Add a configurable last-man-standing win evaluator for teams with any
   configured number of figures. Expected scope: winning system and test.
   Commit: `feat: evaluate last man standing`.
-- [ ] Add a serializable match-complete result containing winner, reason, and
+- [x] Add a serializable match-complete result containing winner, reason, and
   final turn. Expected scope: rule contracts and test. Commit:
   `feat: serialize match results`.
 - [ ] Stop new turn input after a completed match and show a final-state UI
