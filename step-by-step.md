@@ -33,7 +33,7 @@
 - [x] Add a deterministic seeded random-number contract and unit tests for
   repeatable sequences. Expected scope: one utility and one test. Commit:
   `feat: add deterministic random source`.
-- [ ] Define serializable game-mode, rule-phase, and match-result contracts
+- [x] Define serializable game-mode, rule-phase, and match-result contracts
   independent of `GameHandler`. Expected scope: new rule types and tests.
   Commit: `feat: define game rule contracts`.
 - [ ] Add a data-driven rule interpreter that advances rule phases without

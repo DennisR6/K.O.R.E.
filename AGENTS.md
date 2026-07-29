@@ -92,6 +92,11 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/engine/gameOptions.ts`: older game-option types; not the active settings
   model.
 
+### Game rules
+
+- `src/rules/types.ts`: serializable game-mode, rule-phase, and match-result
+  contracts. It intentionally does not depend on `GameHandler`.
+
 ### Entities, effects, and items
 
 - `src/entity/Player.ts`: the runtime puck/figure. Construct it with a complete
