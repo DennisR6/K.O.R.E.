@@ -21,7 +21,7 @@ export class GameEmitter implements IInputEmitter {
 		if (teamCount < 1) throw new Error("Local game requires at least one team")
 		this.handler = handler
 		this.rules = new RuleInterpreter(mode)
-		this.ruleState = this.rules.initialState(handler.getActiveTeam(), handler.getTurnNumber())
+		this.ruleState = handler.getRuleState()
 		this.teamCount = teamCount
 	}
 
@@ -35,6 +35,7 @@ export class GameEmitter implements IInputEmitter {
 			this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount)
 			this.handler.setActiveTeam(this.ruleState.activeTeam)
 			this.handler.setTurnNumber(this.ruleState.turnNumber)
+			this.handler.setRuleState(this.ruleState)
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
 	}

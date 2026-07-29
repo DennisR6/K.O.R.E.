@@ -113,7 +113,7 @@
 - [x] Define the no-input physics phase and block input until playback and
   simulation settle. Expected scope: UI/system guard and test. Commit:
   `feat: lock input during physics phase`.
-- [ ] Persist and restore rule phase, active team, turn number, and pending
+- [x] Persist and restore rule phase, active team, turn number, and pending
   per-turn data in engine snapshots. Expected scope: snapshot types and test.
   Commit: `feat: persist round rule state`.
 - [ ] Expose authoritative rule phase in `INIT` and `TURN` packets and apply it

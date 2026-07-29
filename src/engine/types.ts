@@ -3,6 +3,7 @@ import type { PlayerSettings } from "../entity/types.js";
 import type { PhysicsStrategy } from "../physics/physics.js";
 import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
+import type { RuleState } from "../rules/types.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -155,6 +156,7 @@ export interface EngineSettings extends GameSettings {
 	state: GameState
 	turnNumber: number
 	activeTeam: number
+	ruleState: RuleState
 	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }

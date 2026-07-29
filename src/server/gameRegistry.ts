@@ -125,6 +125,7 @@ export class GameRegistry {
 			record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
 			record.handler.setActiveTeam(record.ruleState.activeTeam)
 			record.handler.setTurnNumber(record.ruleState.turnNumber)
+			record.handler.setRuleState(record.ruleState)
 			record.currentTeam = record.ruleState.activeTeam
 			record.turnNumber = record.ruleState.turnNumber
 			this.persist(record)
@@ -141,7 +142,7 @@ export class GameRegistry {
 		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(stored.settings).build()
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState)
 		this.games.set(id, record)
 		return record
 	}
@@ -153,6 +154,7 @@ export class GameRegistry {
 		currentTeam: number,
 		turnNumber: number,
 		lastAccess: number = Date.now(),
+		ruleState?: RuleState,
 	): GameRecord {
 		const rules = new RuleInterpreter(currentTurnMode)
 		return {
@@ -163,7 +165,7 @@ export class GameRegistry {
 			currentTeam,
 			turnNumber,
 			rules,
-			ruleState: rules.initialState(currentTeam, turnNumber),
+			ruleState: ruleState ?? rules.initialState(currentTeam, turnNumber),
 			resolving: false,
 			lastAccess,
 			connectedUsers: new Set(),

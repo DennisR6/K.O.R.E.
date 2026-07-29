@@ -14,6 +14,7 @@ import { EffectModifyMass } from "../src/effects/modifyMass.ts";
 import { EffectModifySize } from "../src/effects/modifySize.ts";
 import { EffectModifyPosition } from "../src/effects/modifyPosition.ts";
 import { EffectModifyTeam } from "../src/effects/modifyTeam.ts";
+import { RulePhase } from "../src/rules/types.ts";
 
 
 test("engine", () => {
@@ -25,7 +26,7 @@ test("engine", () => {
 		mapBoundarys: [], screenResolution: { x: 0, y: 0 },
 		myTeam: [], allTeams: [], effects: [], items: [],
 		players: [new Player(createPlayerSettings({ position: { x: 20, y: 20 }, effects: [] })).toSettings()],
-		minPlayers: 0, maxPlayers: 2, allTeamSize: 2, turnNumber: 0
+		minPlayers: 0, maxPlayers: 2, allTeamSize: 2, playerCount: 1, figuresPerPlayer: 1, turnNumber: 0, activeTeam: 0, ruleState: { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	}
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()

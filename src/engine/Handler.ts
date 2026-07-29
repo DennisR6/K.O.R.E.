@@ -20,6 +20,7 @@ import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import type { SettingsItem } from "../settings/settings.js";
+import { RulePhase, type RuleState } from "../rules/types.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -92,6 +93,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectRound: Effect[] = []
 	private effectCollision: Effect[] = []
 	private items: SettingsItem[] = []
+	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -347,11 +349,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getState(): GameState { return this.context.state }
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
-	public setTurnNumber(turnNumber: number): void { this.context.currTurn = turnNumber }
+	public setTurnNumber(turnNumber: number): void { this.context.currTurn = turnNumber; this.ruleState.turnNumber = turnNumber }
 	public getTurnNumber(): number { return this.context.currTurn }
 	public setActiveTeam(team: number): void {
 		if (!Number.isInteger(team) || team < 0) throw new Error("Active team must be a non-negative integer")
 		this.context.activeTeam = team
+		this.ruleState.activeTeam = team
+	}
+	public getRuleState(): RuleState { return { ...this.ruleState } }
+	public setRuleState(ruleState: RuleState): void {
+		this.ruleState = { ...ruleState }
+		this.context.activeTeam = ruleState.activeTeam
+		this.context.currTurn = ruleState.turnNumber
 	}
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
@@ -402,6 +411,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
+			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 		}
 		this.saveSettings(settings)
 		return settings
@@ -502,6 +512,7 @@ export class GameHandlerBuilder {
 			this.state = gameSettings.state
 			this.engine.setTurnNumber(gameSettings.turnNumber)
 			this.engine.setActiveTeam(gameSettings.activeTeam ?? 0)
+			this.engine.setRuleState(gameSettings.ruleState ?? { phase: RulePhase.Physics, activeTeam: gameSettings.activeTeam ?? 0, turnNumber: gameSettings.turnNumber, itemUses: 0 })
 		}
 
 		return this

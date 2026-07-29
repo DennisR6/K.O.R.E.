@@ -329,8 +329,9 @@ The canonical engine map/game model is `GameSettings` in
   the two-sided ice-map layout from them.
 - handler `effects`, `items`, teams, and player-count metadata
 
-`EngineSettings` adds game state, turn number, active team, and runtime entity
-snapshots. Persisted game snapshots must preserve both turn fields.
+`EngineSettings` adds game state, turn number, active team, serialized rule
+state, and runtime entity snapshots. Persisted game snapshots must preserve all
+turn and rule-progress fields.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import type { GameHandler } from "../src/engine/Handler.ts";
 import { GameState, type TurnPacket } from "../src/engine/types.ts";
+import { RulePhase } from "../src/rules/types.ts";
 
 test("GameEmitter advances local hotseat turns through the rule interpreter", () => {
 	let activeTeam = 0
@@ -20,6 +21,8 @@ test("GameEmitter advances local hotseat turns through the rule interpreter", ()
 		getTeam: () => [0, 1],
 		getActiveTeam: () => activeTeam,
 		getTurnNumber: () => turnNumber,
+		getRuleState: () => ({ phase: RulePhase.Physics, activeTeam, turnNumber, itemUses: 0 }),
+		setRuleState: () => { },
 	} as unknown as GameHandler
 
 	new GameEmitter(handler).sendShot("actor", 90, 5)
