@@ -329,6 +329,10 @@ The canonical engine map/game model is `GameSettings` in
   the two-sided ice-map layout from them.
 - handler `effects`, `items`, teams, and player-count metadata
 
+Versioned game/map/item/hazard/AI/replay document contracts live in
+`src/contracts/documents.ts`; legacy documents without a version migrate to
+schema version one, while unknown versions are rejected.
+
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.

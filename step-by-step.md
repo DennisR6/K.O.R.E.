@@ -136,7 +136,7 @@
 
 ## 4. Data Contracts, Mods, And Maps
 
-- [ ] Add schema version fields to game, map, item, hazard, AI, and replay
+- [x] Add schema version fields to game, map, item, hazard, AI, and replay
   documents. Expected scope: type contracts and migration test. Commit:
   `feat: version serialized game documents`.
 - [ ] Define a strict game-settings validator that rejects malformed numeric,

@@ -11,6 +11,7 @@ const MAPS = { IceMap }
 MAPS;
 
 export interface GameSettings {
+	schemaVersion: number;
 	id: UUID
 	screenResolution: SettingsScreenResolution;
 	players: PlayerSettings[];
@@ -76,6 +77,7 @@ export interface MapBoundarySettingsRect extends IMapBoundarySettings {
 }
 
 export interface SettingsItem {
+	schemaVersion: number
 	id: UUID
 	type: string
 }
@@ -113,7 +115,7 @@ export const FRICTION_TABLE = {
 	sand: { friction: 0.4, linearDrag: 5.0, stopThreshold: 2.0 }
 } as const
 
-export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings[], background: SettingsBackground, drift: number }
+export type SettingsMap = { schemaVersion: number, screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings[], background: SettingsBackground, drift: number }
 
 const playerSize = 14
 const defaultHoop = AssetList.pictureReifenWEBP

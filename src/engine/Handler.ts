@@ -424,6 +424,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.effectCollision.forEach(eff => effects.push({ trigger: EffectTrigger.Collision, triggerValue: [], ...eff.toSettings() }))
 
 		const settings: EngineSettings = {
+			schemaVersion: this.settings?.schemaVersion ?? 1,
 			state: this.getState(),
 			background: this.settings?.background ?? { color: "white", type: "color" },
 			friction: this.getPhysics().toSettings(),
