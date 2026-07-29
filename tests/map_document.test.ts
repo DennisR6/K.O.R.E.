@@ -5,6 +5,7 @@ import { SHAPE } from "../src/physics/physics.ts";
 const map: MapDocument = {
 	schemaVersion: DOCUMENT_SCHEMA_VERSION,
 	metadata: { id: "ice", name: "Ice Arena" },
+	worldSize: { x: 100, y: 100 },
 	friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
 	drift: 0,
 	arenaGeometry: [{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 100, h: 100, effects: [] }],

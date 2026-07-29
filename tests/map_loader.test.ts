@@ -6,6 +6,7 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 const map: MapDocument = {
 	schemaVersion: DOCUMENT_SCHEMA_VERSION,
 	metadata: { id: "test", name: "Test" },
+	worldSize: { x: 200, y: 100 },
 	friction: { friction: 0.9, linearDrag: 0.2, stopThreshold: 0.3 },
 	drift: 0.25,
 	arenaGeometry: [{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 200, h: 100, effects: [] }],

@@ -41,6 +41,7 @@ const deadly = {
 const IceMap: SettingsMap = {
 	schemaVersion: 1,
 	screenResolution: { x, y },
+	worldSize: { x, y },
 	background: { type: "image", url: AssetList.slipStirkeMapIceJPG },
 	drift: 0,
 	mapBoundarys: [

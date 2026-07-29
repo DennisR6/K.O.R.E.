@@ -334,7 +334,7 @@ Versioned game/map/item/hazard/AI/replay document contracts live in
 schema version one, while unknown versions are rejected.
 `validateGameSettings()` rejects malformed settings before an untrusted load
 boundary admits them.
-Canonical map documents carry friction, drift, geometry, spawn regions,
+Canonical map documents carry world size, friction, drift, geometry, spawn regions,
 hazard references, and metadata. `loadMapDocument()` converts hazard-free maps
 to engine settings and rejects hazards until runtime adapters exist.
 

@@ -36,6 +36,7 @@ export interface MapSpawnRegion {
 /** Canonical data-only map document; loading it into engine settings is separate. */
 export interface MapDocument extends VersionedDocument {
 	metadata: MapMetadata;
+	worldSize: { x: number; y: number };
 	friction: FrictionSettings;
 	drift: number;
 	arenaGeometry: MapBoundarySettings[];
@@ -55,6 +56,7 @@ export function migrateDocument<T extends object>(document: T): T & VersionedDoc
 export function validateMapDocument(document: unknown): asserts document is MapDocument {
 	if (!isRecord(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION) throw new Error("Invalid map schema version")
 	if (!isRecord(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string") throw new Error("Invalid map metadata")
+	if (!isVector(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0) throw new Error("Invalid map world size")
 	if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1) throw new Error("Invalid map physics")
 	if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards)) throw new Error("Invalid map collections")
 	if (!document.spawnRegions.every(isSpawnRegion)) throw new Error("Invalid map spawn region")
@@ -62,6 +64,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null }
+function isVector(value: unknown): value is { x: number; y: number } { return isRecord(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y) }
 function isFriction(value: unknown): value is FrictionSettings {
 	return isRecord(value) && [value.friction, value.linearDrag, value.stopThreshold].every(item => typeof item === "number" && Number.isFinite(item))
 }
@@ -96,6 +99,7 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 	return {
 		...template,
 		players,
+		worldSize: { ...map.worldSize },
 		friction: { ...map.friction },
 		drift: map.drift,
 		mapBoundarys: map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),

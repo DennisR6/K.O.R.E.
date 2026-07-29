@@ -431,7 +431,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			drift: this.settings?.drift ?? DEFAULT_DRIFT,
 			id: this.getGameId(),
 			mapBoundarys: this.context.structures.map(str => str.toSettings()),
-			screenResolution: { ...this.context.worldSize },
+			screenResolution: this.settings?.screenResolution ?? { ...this.context.worldSize },
+			worldSize: { ...this.context.worldSize },
 			myTeam: [...this.team],
 			allTeams: this.settings?.allTeams ? [...this.settings.allTeams] : [],
 			effects,
@@ -524,9 +525,9 @@ export class GameHandlerBuilder {
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
 		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
-		const { screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
+		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
-		this.engine.setWorldSize(screenResolution)
+		this.engine.setWorldSize(worldSize)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
 
 		// Adding Background
@@ -554,7 +555,7 @@ export class GameHandlerBuilder {
 
 		return this
 			.addBackground(backgroundSettings)
-			.setWorldSize(screenResolution.x, screenResolution.y)
+			.setWorldSize(worldSize.x, worldSize.y)
 	}
 
 	public setWorldSize(x: number, y: number): this { this.engine.setWorldSize({ x, y }); return this }

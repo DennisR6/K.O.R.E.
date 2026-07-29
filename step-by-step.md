@@ -165,7 +165,7 @@
 - [x] Implement delayed hazard triggers with deterministic scheduling and
   snapshot restoration. Expected scope: scheduler and test. Commit:
   `feat: add delayed hazard triggers`.
-- [ ] Add the Cue Clash map as validated canonical map data and verify one
+- [x] Add the Cue Clash map as validated canonical map data and verify one
   simulated shot. Expected scope: map data and test. Commit: `feat: add cue clash map`.
 - [ ] Add the Frostbite Arena map with extreme drift and verify fixed-frame
   behavior. Expected scope: map data and test. Commit: `feat: add frostbite arena map`.
