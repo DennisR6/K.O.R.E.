@@ -159,7 +159,7 @@
   `feat: add rotation hazards`.
 - [x] Implement the data-defined kill-zone hazard using shared death handling.
   Expected scope: hazard implementation and test. Commit: `feat: add kill zone hazards`.
-- [ ] Implement a data-defined slow-zone hazard and test friction or speed
+- [x] Implement a data-defined slow-zone hazard and test friction or speed
   modification lifetime. Expected scope: hazard implementation and test.
   Commit: `feat: add slow zone hazards`.
 - [ ] Implement delayed hazard triggers with deterministic scheduling and
