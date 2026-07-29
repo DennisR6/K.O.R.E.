@@ -1,5 +1,6 @@
 import type { UUID } from "crypto"
 import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
+import type { RuleState } from "../rules/types.js"
 export const enum NetworkMessageType {
 	PING = "PING",
 	PONG = "PONG",
@@ -43,7 +44,7 @@ export type UnTypedNetworkMessage =
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
-export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings }
+export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState }
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
 }
@@ -61,6 +62,7 @@ export interface NetworkTurn {
 	sim: TurnPacket,
 	turnNumber: number,
 	activeTeam: number,
+	ruleState: RuleState,
 }
 export interface NetworkError {
 	type: NetworkMessageType.ERROR,

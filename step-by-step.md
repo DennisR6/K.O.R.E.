@@ -116,7 +116,7 @@
 - [x] Persist and restore rule phase, active team, turn number, and pending
   per-turn data in engine snapshots. Expected scope: snapshot types and test.
   Commit: `feat: persist round rule state`.
-- [ ] Expose authoritative rule phase in `INIT` and `TURN` packets and apply it
+- [x] Expose authoritative rule phase in `INIT` and `TURN` packets and apply it
   on clients. Expected scope: server types, emitter, protocol test. Commit:
   `feat: synchronize rule phase`.
 - [ ] Add a configurable last-man-standing win evaluator for teams with any

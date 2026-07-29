@@ -41,8 +41,7 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		}
 		if (message.type === NetworkMessageType.TURN) {
 			const turn = message as NetworkTurn
-			handler.setTurnNumber(turn.turnNumber)
-			handler.setActiveTeam(turn.activeTeam)
+			handler.setRuleState(turn.ruleState)
 			handler.playTurn(turn.sim, () => {
 				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 		})

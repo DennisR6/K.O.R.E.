@@ -40,6 +40,7 @@ function connectMatchedRuntime(): { runtime: ServerRuntime; first: FakeSocket; s
 	runtime.matchmakeOnce()
 	expect(packet(first).settings.state).toBe(GameState.Your_turn)
 	expect(packet(second).settings.state).toBe(GameState.Opponents_turn)
+	expect(packet(first).ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 	return { runtime, first, second }
 }
 
@@ -81,6 +82,7 @@ test("server accepts only the active user's valid actor and broadcasts one autho
 	expect(firstTurn.type).toBe(NetworkMessageType.TURN)
 	expect(firstTurn.turnNumber).toBe(1)
 	expect(firstTurn.activeTeam).toBe(1)
+	expect(firstTurn.ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 })
 	expect(game.handler.getEntityManager().serialize()).toEqual(firstTurn.sim.finalState)
 	expect(game.ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 })
 
@@ -195,9 +197,11 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 		inventory: [{ id: "item", type: "test" }],
 	})
 	const turn: TurnPacket = { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState: [finalState] }
-	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sim: turn, turnNumber: 3, activeTeam: 1 }))
+	const ruleState = { phase: RulePhase.Physics, activeTeam: 1, turnNumber: 3, itemUses: 0 }
+	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sim: turn, turnNumber: 3, activeTeam: 1, ruleState }))
 	handler.tick()
 	expect(handler.getState()).toBe(GameState.Opponents_turn)
 	expect(handler.getEntityManager().getEntities()[0].toSettings()).toEqual(finalState)
 	expect(handler.getContext().currTurn).toBe(3)
+	expect(handler.getRuleState()).toEqual(ruleState)
 })

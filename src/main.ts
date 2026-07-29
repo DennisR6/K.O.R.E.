@@ -76,7 +76,8 @@ function startNetworkGame(serverUrl: string) {
 		}
 		if (message.type !== NetworkMessageType.INIT || started) return
 		started = true
-		const settings = (message as NetworkInit).settings
+		const init = message as NetworkInit
+		const settings = init.settings
 		const ui = new UiSystem()
 		const arrow = new DirectionArrow(ui)
 		handler = new GameHandlerBuilder()
@@ -87,6 +88,7 @@ function startNetworkGame(serverUrl: string) {
 			.addSystem(arrow)
 			.addSystem(new EmitterSystem(new NetworkEmitter(socket)))
 			.build()
+		handler.setRuleState(init.ruleState)
 		handler.addPostDrawer(arrow)
 		installTurnReceiver(socket, handler)
 		startGame(handler)

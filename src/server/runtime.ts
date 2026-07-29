@@ -59,7 +59,7 @@ export class ServerRuntime {
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
-				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user) }))
+				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState }))
 			}
 		}
 	}
@@ -78,7 +78,7 @@ export class ServerRuntime {
 		if (requestedUserId === undefined) socket.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: userId as NetworkNewUser["userid"] }))
 		const record = this.games.connectUser(userId)
 		if (record) {
-			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId) }))
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState }))
 			return
 		}
 		if (!this.waitingUsers.includes(userId)) this.waitingUsers.push(userId)
@@ -95,6 +95,7 @@ export class ServerRuntime {
 			sim: result.packet,
 			turnNumber: result.record.turnNumber,
 			activeTeam: result.record.currentTeam,
+			ruleState: result.record.ruleState,
 		}
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
