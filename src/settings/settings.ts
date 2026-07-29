@@ -17,6 +17,7 @@ export interface GameSettings {
 	mapBoundarys: MapBoundarySettings[];
 	background: SettingsBackground;
 	friction: FrictionSettings;
+	drift: number;
 	effects: FullEffectSettings[];
 	items: SettingsItem[];
 	myTeam: number[],
@@ -83,6 +84,13 @@ export interface FrictionSettings {
 	stopThreshold: number;
 }
 
+export const DEFAULT_DRIFT = 0;
+
+/** Ensures map drift steers toward a figure's rotation without reversing it. */
+export function validateDrift(drift: number): void {
+	if (!Number.isFinite(drift) || drift < 0) throw new Error("Map drift must be a finite non-negative number");
+}
+
 export const FRICTION_TABLE = {
 	ice: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
 	tiles: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 },
@@ -96,7 +104,7 @@ export const FRICTION_TABLE = {
 	sand: { friction: 0.4, linearDrag: 5.0, stopThreshold: 2.0 }
 } as const
 
-export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings[], background: SettingsBackground }
+export type SettingsMap = { screenResolution: SettingsScreenResolution, mapBoundarys: MapBoundarySettings[], background: SettingsBackground, drift: number }
 
 const playerSize = 14
 const defaultHoop = AssetList.pictureReifenWEBP

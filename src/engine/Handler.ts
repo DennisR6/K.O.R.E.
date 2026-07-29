@@ -6,7 +6,7 @@ import { GameState, getEngineStateName } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
-import { GameSettings, type FrictionSettings } from "../settings/settings.js"
+import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift } from "../settings/settings.js"
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
@@ -381,6 +381,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			state: this.getState(),
 			background: this.settings?.background ?? { color: "white", type: "color" },
 			friction: this.getPhysics().toSettings(),
+			drift: this.settings?.drift ?? DEFAULT_DRIFT,
 			id: this.getGameId(),
 			mapBoundarys: this.context.structures.map(str => str.toSettings()),
 			screenResolution: { ...this.context.worldSize },
@@ -463,7 +464,9 @@ export class GameHandlerBuilder {
 	}
 
 	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
-		this.engine.saveSettings(gameSettings)
+		const drift = gameSettings.drift ?? DEFAULT_DRIFT
+		validateDrift(drift)
+		this.engine.saveSettings({ ...gameSettings, drift })
 		const { screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
 		this.engine.setWorldSize(screenResolution)

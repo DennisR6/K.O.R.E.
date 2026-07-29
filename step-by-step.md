@@ -60,7 +60,7 @@
 - [x] Derive shot direction from rotation through one shared vector helper and
   test cardinal directions. Expected scope: physics helper and test. Commit:
   `refactor: share rotation direction conversion`.
-- [ ] Add map-configured drift settings to the canonical settings contract and
+- [x] Add map-configured drift settings to the canonical settings contract and
   validate their finite ranges. Expected scope: settings types and test.
   Commit: `feat: define map drift settings`.
 - [ ] Apply deterministic drift steering during movement and add fixed-frame
