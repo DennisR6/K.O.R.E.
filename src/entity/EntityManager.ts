@@ -55,6 +55,7 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Playe
 	 */
 	public getEntityAt(x: number, y: number, padding: number = 0): IEntity | undefined {
 		return this.entities.find(e => {
+			if (e.isDead()) return false
 			const dist = Math.hypot(e.getPos().x - x, e.getPos().y - y);
 			return dist < (e.getBounds().x + padding);
 		});

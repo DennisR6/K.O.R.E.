@@ -36,7 +36,7 @@ describe("Testing Collisions with effects", () => {
 				},
 				{
 					trigger: EffectTrigger.Collision, triggerValue: [],
-					...new EffectDamage({ typeValue: { damage: -30 } }).toSettings()
+					...new EffectDamage({ typeValue: { damage: 30 } }).toSettings()
 				},
 			]))
 			.addPlayer(new Player(createPlayerSettings({
@@ -65,7 +65,6 @@ describe("Testing Collisions with effects", () => {
 		for (let i = 0; i <= sim.durationFrames; i++) handler.tick()
 
 		expect(p1.getHP()).toBe(0)
-		expect(p1.getPos().x).toBeCloseTo(133, 0)
-		expect(p1.getPos().y).toBe(200)
+		expect(p1.isDead()).toBe(true)
 	})
 })

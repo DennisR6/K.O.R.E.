@@ -292,6 +292,8 @@ entity state.
 
 Effects serialize as `{ type, typeValue, trigger, triggerValue }`. The factory
 in `MetaEffect` must be updated whenever a new serializable effect is added.
+`EffectModifySetting` provides constrained serializable `set`, `add`, and
+`remove` mutations for allowlisted player settings such as `hp` and `dead`.
 `PlayerSettings` is the canonical complete entity snapshot; use
 `createPlayerSettings()` to create defaults, then `new Player(settings)`. Test
 both behavior and `new Player(player.toSettings()).toSettings()` round trips.
@@ -412,10 +414,10 @@ not desired design:
   landing page cannot advance normally.
 - `Player.setMass()` clamps values above one but does not reject zero or
   negative mass.
-- `EffectDamage` adds its value to HP: negative values damage, positive values
-  heal. The ice map's `damage: 100` collision effect therefore heals.
-- Reaching zero HP does not mark an entity dead; elimination and winning
-  systems are not active.
+- Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
+  player dead. Death circles use `EffectModifySetting` to set `dead: true`.
+  Dead players no longer render, tick, collide, or accept selection; winning
+  and completed round rules are still not active.
 - Round effects are stored but not meaningfully executed. Rectangle collision
   effects are parsed but `StructureRectangle.onCollision()` is empty.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.

@@ -5,6 +5,7 @@ import type { IMenu, IMenuPage } from "./MenuTypes.js";
 
 const TimeFactorInSeconds = 60
 const MaxTimerSeconds = 10
+const playButton = { x: 270, y: 300, w: 260, h: 58 }
 
 
 export const enum Pages {
@@ -77,12 +78,21 @@ export class MainMenuPage implements IMenuPage {
 	draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
-		ctx.setFillColor("blue")
-		if (this.timer > TimeFactorInSeconds * 5) ctx.drawText("drücke um zu starten", 200, 200, 48)
+		ctx.setFillColor("#102a43")
+		ctx.drawRect(playButton.x, playButton.y, playButton.w, playButton.h)
+		ctx.setFillColor("white")
+		ctx.drawText("Play Local Game", playButton.x + 28, playButton.y + 38, 28)
 		ctx.pop()
 	}
 
-	handleMousePressed(): void { }
+	handleMousePressed(): void {
+		const { x, y } = this.mouse
+		if (x < playButton.x || x > playButton.x + playButton.w || y < playButton.y || y > playButton.y + playButton.h) return
+		const url = new URL(window.location.href)
+		url.searchParams.set("skipmenu", "1")
+		url.searchParams.delete("url")
+		window.location.assign(url.toString())
+	}
 	handleMouseReleased(): void { }
 	handleMouseWheel(_event: WheelEvent): void { }
 

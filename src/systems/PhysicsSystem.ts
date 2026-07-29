@@ -53,6 +53,7 @@ export class PhysicsSystem implements ISystem {
 		this.resolveAllCollisions(ctx);
 
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
+			if (entity.isDead() || !entity.physicsEnabled()) return
 			// this.strategy.applyFriction(entity, dt)
 
 			// entity.tick(dt, friction);
@@ -74,7 +75,7 @@ export class PhysicsSystem implements ISystem {
 	 */
 	private resolveAllCollisions(ctx: IGameContext) {
 		const { entities, structures } = ctx;
-		const enitityArr = entities.getEntities()
+		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
 
 		for (let i = 0; i < enitityArr.length; i++) {
 			const entityA = enitityArr[i];

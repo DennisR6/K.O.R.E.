@@ -1,8 +1,8 @@
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
-import { EffectDamage } from "../effects/damage.js";
+import { EffectModifySetting } from "../effects/modifySetting.js";
 import { EffectMove } from "../effects/movement.js";
 import { EffectPhysics } from "../effects/physics.js";
-import { EffectTrigger, type FullEffectSettings } from "../effects/types.js";
+import { EffectTrigger, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type SettingsMap } from "./settings.js";
 import type { PlayerSettings } from "../entity/types.js";
@@ -35,7 +35,7 @@ const defaultEffects: FullEffectSettings[] = [
 ]
 const deadly = {
 	trigger: EffectTrigger.Collision, triggerValue: [],
-	...new EffectDamage({ typeValue: { damage: 100 } }).toSettings()
+	...new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }).toSettings()
 }
 
 const IceMap: SettingsMap = {

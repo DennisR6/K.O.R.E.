@@ -5,6 +5,7 @@ import { EffectModifyPosition } from "./modifyPosition.js";
 import { EffectModifySize } from "./modifySize.js";
 import { EffectModifyTeam } from "./modifyTeam.js";
 import { EffectModifyVelocity } from "./modifyVelocity.js";
+import { EffectModifySetting } from "./modifySetting.js";
 import { EffectMove } from "./movement.js";
 import { EffectPhysics } from "./physics.js";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
@@ -22,6 +23,7 @@ export class MetaEffect implements Effect {
 			case EffectType.ModifySize: this.eff = new EffectModifySize(effect); return
 			case EffectType.Team: this.eff = new EffectModifyTeam(effect); return
 			case EffectType.Velocity: this.eff = new EffectModifyVelocity(effect); return
+			case EffectType.ModifySetting: this.eff = new EffectModifySetting(effect); return
 			default: {
 				this.eff = new EffectMove(effect)
 				console.trace("This item is not Implemented yet.", effect); return

@@ -10,7 +10,8 @@ export const enum EffectType {
 	ModifySize = "EffectType.ModifySize",
 	Position = "EffectType.Position",
 	Velocity = "EffectType.Velocity",
-	Team = "EffectType.Team"
+	Team = "EffectType.Team",
+	ModifySetting = "EffectType.ModifySetting"
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
@@ -25,6 +26,19 @@ export interface FullEffectSettings extends EffectSettings {
 export interface EffectSettings {
 	type: EffectType,
 	typeValue: any,
+}
+export const enum SettingOperation {
+	Set = "set",
+	Add = "add",
+	Remove = "remove",
+}
+
+export type PlayerSettingKey = "hp" | "mass" | "size" | "friction" | "position" | "velocity" | "team" | "dead" | "physicsEnabled";
+export type SettingValue = number | boolean | number[] | { x: number, y: number } | undefined;
+export interface ModifySettingValue {
+	operation: SettingOperation;
+	key: PlayerSettingKey;
+	value: SettingValue;
 }
 export interface Effect extends ISettingsSerialize<EffectSettings> {
 	getType(): EffectType,

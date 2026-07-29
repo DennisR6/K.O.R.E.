@@ -3,7 +3,7 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, type PlayerSettings } from "./types.js";
-import { EffectTrigger, EffectType, type Effect, type FullEffectSettings } from "../effects/types.js";
+import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
 import type { SettingsItem } from "../settings/settings.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
@@ -87,7 +87,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		// if (this.hp <= 0) return
+		if (this.dead) return
 		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
@@ -97,6 +97,7 @@ export class Player implements IEntity {
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
 	public tick(deltaTime: number, _globalFriction: number) {
+		if (this.dead || !this.isPhysicsEnabled) return
 		this.effectAlways.forEach(effect => {
 			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime })
 			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
@@ -134,6 +135,57 @@ export class Player implements IEntity {
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public use(_item: SettingsItem): void { }
 
+	/** Applies an allowlisted setting exactly, including serializable state changes. */
+	public setSetting(key: PlayerSettingKey, value: SettingValue): void {
+		switch (key) {
+			case "hp": if (typeof value === "number") this.setHPAndDeath(value); break
+			case "mass": if (typeof value === "number") this.setMass(value); break
+			case "size": if (typeof value === "number") this.setSize(value); break
+			case "friction": if (typeof value === "number" || value === undefined) this.setFriction(value); break
+			case "position": if (isVector(value)) this.setPos(value); break
+			case "velocity": if (isVector(value)) this.setVel(value); break
+			case "team": if (Array.isArray(value) && value.every(Number.isFinite)) this.setTeam([...value]); break
+			case "dead": if (typeof value === "boolean") this.setIsDead(value); break
+			case "physicsEnabled": if (typeof value === "boolean") this.setPhysicsEnabled(value); break
+		}
+	}
+
+	/** Adds a numeric/vector setting or appends team IDs. */
+	public addSetting(key: PlayerSettingKey, value: SettingValue): void {
+		if (typeof value === "number") {
+			switch (key) {
+				case "hp": this.setHPAndDeath(this.hp + value); return
+				case "mass": this.setMass(this.mass + value); return
+				case "size": this.setSize(this.size + value); return
+				case "friction": this.setFriction((this.friction ?? 0) + value); return
+			}
+		}
+		if (isVector(value)) {
+			if (key === "position") this.setPos({ x: this.position.x + value.x, y: this.position.y + value.y })
+			if (key === "velocity") this.setVel({ x: this.velocity.x + value.x, y: this.velocity.y + value.y })
+		}
+		if (key === "team" && Array.isArray(value) && value.every(Number.isFinite)) this.team = [...new Set([...this.team, ...value])]
+	}
+
+	/** Removes numeric/vector values, team IDs, or clears boolean settings. */
+	public removeSetting(key: PlayerSettingKey, value: SettingValue): void {
+		if (typeof value === "number") {
+			switch (key) {
+				case "hp": this.setHPAndDeath(this.hp - value); return
+				case "mass": this.setMass(this.mass - value); return
+				case "size": this.setSize(this.size - value); return
+				case "friction": this.setFriction((this.friction ?? 0) - value); return
+			}
+		}
+		if (isVector(value)) {
+			if (key === "position") this.setPos({ x: this.position.x - value.x, y: this.position.y - value.y })
+			if (key === "velocity") this.setVel({ x: this.velocity.x - value.x, y: this.velocity.y - value.y })
+		}
+		if (key === "team" && Array.isArray(value) && value.every(Number.isFinite)) this.team = this.team.filter(team => !value.includes(team))
+		if (key === "dead") this.setIsDead(false)
+		if (key === "physicsEnabled") this.setPhysicsEnabled(false)
+	}
+
 	public toSettings(): PlayerSettings {
 		const sett0 = this.effectAlways.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Always, triggerValue: [] } as FullEffectSettings })
 		const sett1 = this.effectCollision.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Collision, triggerValue: [] } as FullEffectSettings })
@@ -165,7 +217,10 @@ export class Player implements IEntity {
 	public setTeam(team: number[]) { this.team = team }
 	public setHoop(asset: AssetList) { this.hoop = asset }
 	public setBouncyness(bouncyness: number) { this.bouncyness = bouncyness }
-	public setIsDead(dead: boolean) { this.dead = dead }
+	public setIsDead(dead: boolean) {
+		this.dead = dead
+		if (dead) this.setVel({ x: 0, y: 0 })
+	}
 	public AddItem(item: SettingsItem): void { this.items.push({ ...item }) }
 	public getInventory(): SettingsItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
@@ -178,4 +233,14 @@ export class Player implements IEntity {
 			default: console.error("TODO", trigger)
 		}
 	}
+
+	private setHPAndDeath(hp: number): void {
+		this.hp = hp
+		if (hp <= 0) this.setIsDead(true)
+	}
+}
+
+function isVector(value: SettingValue): value is Vector2D {
+	return typeof value === "object" && value !== null && "x" in value && "y" in value &&
+		typeof value.x === "number" && typeof value.y === "number"
 }
