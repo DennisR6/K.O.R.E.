@@ -121,6 +121,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/effects/effects.ts`: `MetaEffect`, the serialized-type factory.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
+- `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
+  use-limit schemas with create helpers and validation functions.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; item gameplay is not active.

@@ -1,7 +1,7 @@
 import type { TurnPacket } from "../engine/types.js";
 import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
-import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect, type SettingsItem } from "../settings/settings.js";
+import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
 import { createPlayerSettings } from "../entity/types.js";
 
 export const DOCUMENT_SCHEMA_VERSION = 1;
@@ -17,7 +17,6 @@ export type HazardDocument = VersionedDocument & { id: string; type: string; tri
 export type AiDocument = VersionedDocument & { id: string; difficulty: string };
 export type ReplayDocument = VersionedDocument & { initialSettings: GameSettings; turns: TurnPacket[] };
 export type GameDocument = GameSettings;
-export type ItemDocument = SettingsItem;
 
 export interface MapMetadata {
 	id: string;

@@ -193,7 +193,7 @@
 
 ## 5. Item Framework And Official Items
 
-- [ ] Define versioned item, inventory, pickup, target, duration, and use-limit
+- [x] Define versioned item, inventory, pickup, target, duration, and use-limit
   schemas. Expected scope: item types and validation test. Commit:
   `feat: define item data schema`.
 - [ ] Add a strict item validator with an effect-type whitelist and no executable
