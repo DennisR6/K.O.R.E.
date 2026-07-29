@@ -260,6 +260,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	public drawUI(renderer: RenderContext) {
 		renderer.setFillColor("black")
+		if (this.context.state === GameState.Game_over) {
+			const result = this.getMatchResult()
+			const message = result?.winnerTeam === null ? "Match draw" : `Team ${result?.winnerTeam ?? "?"} wins`
+			renderer.drawText(message, renderer.WORLD_SIZE_X / 2 - 80, renderer.WORLD_SIZE_Y / 2, 24)
+			return
+		}
 		// renderer.drawText(getEngineStateName(this.context.state), renderer.WORLD_SIZE_X / 2, renderer.WORLD_SIZE_Y / 2, 32)
 		if (this.context.state != GameState.Your_turn && this.context.state != GameState.Opponents_turn) return
 	}

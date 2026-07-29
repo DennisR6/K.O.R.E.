@@ -79,3 +79,18 @@ test("simulation and playback phases reject pointer input", () => {
 		expect(ui.end).toBeNull()
 	}
 })
+
+test("a completed match remains terminal and rejects pointer input", () => {
+	const ui = new UiSystem()
+	const emitter = new ObjectEmitter()
+	const handler = new GameHandlerBuilder().defaultSystems().addSystem(ui).addUIMouse(ui).addSystem(new EmitterSystem(emitter)).build()
+
+	handler.setState(GameState.Game_over)
+	handler.updateMouse(100, 100)
+	handler.handleMousePressed()
+	handler.handleMouseReleased()
+	handler.tick()
+
+	expect(handler.getState()).toBe(GameState.Game_over)
+	expect(emitter.getLastShot()).toBeUndefined()
+});

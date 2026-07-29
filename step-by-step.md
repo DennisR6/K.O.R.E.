@@ -125,7 +125,7 @@
 - [x] Add a serializable match-complete result containing winner, reason, and
   final turn. Expected scope: rule contracts and test. Commit:
   `feat: serialize match results`.
-- [ ] Stop new turn input after a completed match and show a final-state UI
+- [x] Stop new turn input after a completed match and show a final-state UI
   indicator. Expected scope: UI and state test. Commit: `feat: block input after match end`.
 - [ ] Add a local rematch/reset action that rebuilds a match from its configured
   settings. Expected scope: menu or game controller and test. Commit:
