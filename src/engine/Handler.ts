@@ -266,6 +266,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 * die man "ziehen" kann.
 	 */
 	public handleMousePressed() {
+		if (this.context.state !== GameState.Your_turn) return
 		this.mouseHandler?.handleMousePressed()
 	}
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
@@ -278,6 +279,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
 	public handleMouseReleased() {
+		if (this.context.state !== GameState.Your_turn) return
 		this.mouseHandler?.handleMouseReleased()
 	}
 

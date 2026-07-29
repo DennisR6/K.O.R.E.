@@ -110,7 +110,7 @@
 - [x] Define required aim, charge, and push rule states and reject skipped
   transitions. Expected scope: rule interpreter and test. Commit:
   `feat: enforce shot phase transitions`.
-- [ ] Define the no-input physics phase and block input until playback and
+- [x] Define the no-input physics phase and block input until playback and
   simulation settle. Expected scope: UI/system guard and test. Commit:
   `feat: lock input during physics phase`.
 - [ ] Persist and restore rule phase, active team, turn number, and pending

@@ -290,8 +290,9 @@ friction itself.
 ### Input, simulation, and playback
 
 1. `UiSystem` stores mouse-down and mouse-up world positions.
-2. On a `Your_turn` tick it selects an active-team entity under the initial
-   click.
+2. Only while in `Your_turn`, it accepts pointer events and selects an
+   active-team entity under the initial click; simulation and playback reject
+   new input.
 3. Drag distance maps to power 0-10; direction is opposite the drag vector.
 4. It writes `ctx.mouse.turn` and changes state to `Turn_done`.
 5. `EmitterSystem` sends the shot and changes state to `Waiting_for_server`.
