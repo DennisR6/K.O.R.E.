@@ -42,7 +42,7 @@
 - [x] Route local turn progression through the rule interpreter while retaining
   the current active-team behavior. Expected scope: emitter, handler adapter,
   regression test. Commit: `refactor: use rules for local turns`.
-- [ ] Route authoritative server turn resolution through the rule interpreter
+- [x] Route authoritative server turn resolution through the rule interpreter
   and preserve existing sender validation. Expected scope: registry, runtime
   test, server protocol test. Commit: `refactor: use rules for server turns`.
 - [ ] Remove duplicated gameplay ownership from engine systems after rule

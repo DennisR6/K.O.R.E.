@@ -98,6 +98,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   contracts. It intentionally does not depend on `GameHandler`.
 - `src/rules/RuleInterpreter.ts`: advances only the data-defined rule-phase
   sequence and does not mutate simulation state.
+- `src/rules/defaultGameModes.ts`: transitional data-defined modes shared by
+  local and authoritative turn flows.
 
 ### Entities, effects, and items
 
@@ -177,7 +179,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
   `EngineSettings` snapshots and maintains player-to-game membership rows.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
-  input checks, simulation commits, persistence, and lazy SQLite restoration.
+  input checks, simulation commits, rule progression, persistence, and lazy
+  SQLite restoration.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
   matchmaking, input dispatch, and broadcasts.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not

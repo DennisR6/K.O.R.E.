@@ -1,15 +1,9 @@
 import type { GameHandler } from "../engine/Handler.js";
 import { type IInputEmitter } from "../engine/types.js";
+import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
-import { RulePhase, WinCondition, type GameModeSettings, type RuleState } from "../rules/types.js";
+import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
-
-const localMode: GameModeSettings = {
-	id: "local-hotseat",
-	phases: [RulePhase.Physics],
-	maxItemsPerTurn: 0,
-	winCondition: WinCondition.LastTeamStanding,
-}
 
 /**
  * Der "Local Player" Emitter.
@@ -22,7 +16,7 @@ export class GameEmitter implements IInputEmitter {
 	handler: GameHandler
 	private rules: RuleInterpreter
 	private ruleState: RuleState
-	constructor(handler: GameHandler, mode: GameModeSettings = localMode) {
+	constructor(handler: GameHandler, mode: GameModeSettings = currentTurnMode) {
 		this.handler = handler
 		this.rules = new RuleInterpreter(mode)
 		this.ruleState = this.rules.initialState(handler.getActiveTeam(), handler.getTurnNumber())

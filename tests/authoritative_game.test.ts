@@ -6,6 +6,7 @@ import { NetworkEmitter, installTurnReceiver } from "../src/emitter/NetworkEmitt
 import { GameState, type TurnPacket } from "../src/engine/types.ts";
 import { createPlayerSettings, type PlayerSettings } from "../src/entity/types.ts";
 import { Player } from "../src/entity/Player.ts";
+import { RulePhase } from "../src/rules/types.ts";
 import { GameSettings } from "../src/settings/settings.ts";
 import { ServerRuntime, type ServerSocket } from "../src/server/runtime.ts";
 import { GameDatabase } from "../src/server/db.ts";
@@ -79,6 +80,7 @@ test("server accepts only the active user's valid actor and broadcasts one autho
 	expect(firstTurn.turnNumber).toBe(1)
 	expect(firstTurn.activeTeam).toBe(1)
 	expect(game.handler.getEntityManager().serialize()).toEqual(firstTurn.sim.finalState)
+	expect(game.ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 })
 
 	runtime.message(first, JSON.stringify({ type: NetworkMessageType.SHOOT, actorId, angle: 0, power: 1 }))
 	expect(packet(first)).toEqual({ type: NetworkMessageType.ERROR, message: "It is not your turn" })

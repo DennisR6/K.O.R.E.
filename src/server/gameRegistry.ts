@@ -1,5 +1,8 @@
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
 import { type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
+import { currentTurnMode } from "../rules/defaultGameModes.js";
+import { RuleInterpreter } from "../rules/RuleInterpreter.js";
+import { RulePhase, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import type { GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
@@ -11,6 +14,8 @@ export type GameRecord = {
 	teamByUser: Map<string, number>;
 	currentTeam: number;
 	turnNumber: number;
+	rules: RuleInterpreter;
+	ruleState: RuleState;
 	resolving: boolean;
 	lastAccess: number;
 	connectedUsers: Set<string>;
@@ -106,6 +111,7 @@ export class GameRegistry {
 		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
 		const team = record.teamByUser.get(userId)
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
+		if (record.ruleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
 		if (!isValidInput(input)) return { ok: false, error: "Invalid shot input" }
 
 		const actor = record.handler.getEntityManager().getEntityById(input.actorId)
@@ -115,8 +121,11 @@ export class GameRegistry {
 		record.resolving = true
 		try {
 			const packet = record.handler.resolveTurn(input)
-			record.currentTeam = record.handler.advanceTurn()
-			record.turnNumber = record.handler.getTurnNumber()
+			const completedState = record.rules.advancePhase(record.ruleState)
+			const activeTeam = record.handler.advanceTurn()
+			record.ruleState = record.rules.startNextTurn(completedState, activeTeam)
+			record.currentTeam = record.ruleState.activeTeam
+			record.turnNumber = record.ruleState.turnNumber
 			this.persist(record)
 			return { ok: true, record, packet }
 		} finally {
@@ -144,6 +153,7 @@ export class GameRegistry {
 		turnNumber: number,
 		lastAccess: number = Date.now(),
 	): GameRecord {
+		const rules = new RuleInterpreter(currentTurnMode)
 		return {
 			id,
 			handler,
@@ -151,6 +161,8 @@ export class GameRegistry {
 			teamByUser: new Map(users.map((user, team) => [user, team])),
 			currentTeam,
 			turnNumber,
+			rules,
+			ruleState: rules.initialState(currentTeam, turnNumber),
 			resolving: false,
 			lastAccess,
 			connectedUsers: new Set(),
