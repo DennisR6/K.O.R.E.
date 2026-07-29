@@ -98,7 +98,7 @@
 
 ## 3. Match Rules And Round Lifecycle
 
-- [ ] Add a serializable settings field for player count and figures per player
+- [x] Add a serializable settings field for player count and figures per player
   so 1 player with X figures versus 1 player with X figures is configurable.
   Expected scope: settings types and test. Commit: `feat: configure team figure counts`.
 - [ ] Generate default team/entity layouts from the configured figure counts

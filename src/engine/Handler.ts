@@ -6,7 +6,7 @@ import { GameState, getEngineStateName } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
-import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift } from "../settings/settings.js"
+import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../settings/settings.js"
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
@@ -396,6 +396,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			minPlayers: this.settings?.minPlayers ?? 0,
 			maxPlayers: this.settings?.maxPlayers ?? 0,
 			allTeamSize: this.teamSize,
+			playerCount: this.settings?.playerCount ?? 1,
+			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 		}
@@ -470,7 +472,10 @@ export class GameHandlerBuilder {
 	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
 		const drift = gameSettings.drift ?? DEFAULT_DRIFT
 		validateDrift(drift)
-		this.engine.saveSettings({ ...gameSettings, drift })
+		const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1)
+		const figuresPerPlayer = gameSettings.figuresPerPlayer ?? Math.max(1, Math.floor(gameSettings.players.length / playerCount))
+		validateFigureCounts(playerCount, figuresPerPlayer)
+		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
 		const { screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
 		this.engine.setWorldSize(screenResolution)

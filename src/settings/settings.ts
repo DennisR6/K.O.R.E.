@@ -23,6 +23,8 @@ export interface GameSettings {
 	myTeam: number[],
 	allTeams?: string[],
 	allTeamSize: number,
+	playerCount: number,
+	figuresPerPlayer: number,
 	minPlayers: number,
 	maxPlayers: number,
 	turn?: number
@@ -89,6 +91,13 @@ export const DEFAULT_DRIFT = 0;
 /** Ensures map drift is a per-tick direction blend. */
 export function validateDrift(drift: number): void {
 	if (!Number.isFinite(drift) || drift < 0 || drift > 1) throw new Error("Map drift must be a finite number between 0 and 1");
+}
+
+/** Ensures match layout settings describe at least one whole player and figure. */
+export function validateFigureCounts(playerCount: number, figuresPerPlayer: number): void {
+	if (!Number.isSafeInteger(playerCount) || playerCount < 1 || !Number.isSafeInteger(figuresPerPlayer) || figuresPerPlayer < 1) {
+		throw new Error("Player count and figures per player must be positive integers");
+	}
 }
 
 export const FRICTION_TABLE = {
@@ -159,6 +168,8 @@ export const GameSettings: GameSettings = {
 	maxPlayers: 2,
 	allTeams: ["1bafa3d2-b0e3-4e66-8c4f-e8da14278123", "5935f4b2-b3bd-4792-a356-fdf74f20ca2e"],
 	allTeamSize: 2,
+	playerCount: 2,
+	figuresPerPlayer: 6,
 	myTeam: [],
 	...IceMap.IceMap,
 }

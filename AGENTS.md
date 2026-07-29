@@ -319,6 +319,9 @@ The canonical engine map/game model is `GameSettings` in
 - `friction: { friction, linearDrag, stopThreshold }`
 - `drift`: finite `[0, 1]` per-tick, speed-preserving steering blend toward each
   player's rotation; it does not apply at or below the physics stop threshold
+- `playerCount` and `figuresPerPlayer`: positive integer match-layout settings;
+  they serialize with engine snapshots, while default layout generation remains
+  a separate step
 - handler `effects`, `items`, teams, and player-count metadata
 
 `EngineSettings` adds game state, turn number, active team, and runtime entity
