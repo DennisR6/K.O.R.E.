@@ -162,7 +162,7 @@
 - [x] Implement a data-defined slow-zone hazard and test friction or speed
   modification lifetime. Expected scope: hazard implementation and test.
   Commit: `feat: add slow zone hazards`.
-- [ ] Implement delayed hazard triggers with deterministic scheduling and
+- [x] Implement delayed hazard triggers with deterministic scheduling and
   snapshot restoration. Expected scope: scheduler and test. Commit:
   `feat: add delayed hazard triggers`.
 - [ ] Add the Cue Clash map as validated canonical map data and verify one
