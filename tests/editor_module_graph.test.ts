@@ -33,7 +33,7 @@ test("editor ESM graph exposes item UI helpers and mode state binding", async ()
 	});
 	Object.defineProperty(globalThis, "window", {
 		configurable: true,
-		value: { addEventListener() {} },
+		value: { addEventListener() {}, location: { origin: "http://editor.test" } },
 	});
 
 	try {

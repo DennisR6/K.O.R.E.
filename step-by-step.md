@@ -187,7 +187,7 @@
   `fix: use unique editor element ids`.
 - [x] Implement the editor temporary-save action with validated map data.
   Expected scope: editor save module and test. Commit: `feat: save temporary editor maps`.
-- [ ] Replace the editor's hard-coded preview address with configurable current
+- [x] Replace the editor's hard-coded preview address with configurable current
   origin behavior. Expected scope: preview module and test. Commit:
   `fix: configure editor preview address`.
 

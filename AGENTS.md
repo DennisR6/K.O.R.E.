@@ -495,8 +495,8 @@ not desired design:
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
 - The editor stores one validated temporary draft in browser `localStorage` and
-  restores it on startup; its preview remains hard-coded at `localhost:5173`
-  despite no active Vite workflow.
+  restores it on startup; its embedded and popup previews use the current
+  browser origin.
 - Imported editor map values are rendered with DOM construction, `textContent`,
   and control `.value` assignments; do not reintroduce template interpolation
   for untrusted map data.

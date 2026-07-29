@@ -7,13 +7,16 @@ import { initHazardsEditor } from "./editor-hazards.js";
 import { initModesEditor } from "./editor-modes.js";
 import { initAIEditor } from "./editor-ai.js";
 import { restoreEditorDraft, saveEditorDraft } from "./editor-draft.js";
+import { getPreviewUrl, PREVIEW_POPUP_FEATURES, PREVIEW_POPUP_NAME } from "./preview.js";
 
+const previewUrl = getPreviewUrl(window.location.origin);
+document.getElementById("preview-frame").src = previewUrl;
 document.getElementById("btn-preview-popup").addEventListener("click", () => {
-    const popup = window.open(
-        "http://localhost:5173/",
-        "previewPopup",
-        "width=1920,height=1080"
-    );
+	const popup = window.open(
+		previewUrl,
+		PREVIEW_POPUP_NAME,
+		PREVIEW_POPUP_FEATURES
+	);
 
     if (popup) popup.focus();
 });
