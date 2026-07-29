@@ -92,7 +92,7 @@
 - [x] Ensure dead entities are excluded from movement, collisions, selection,
   turn eligibility, and serialization round trips. Expected scope: entity
   manager or player path plus test. Commit: `fix: consistently exclude dead entities`.
-- [ ] Add a complete fixed-seed physics regression fixture containing movement,
+- [x] Add a complete fixed-seed physics regression fixture containing movement,
   friction, drift, collision, and boundary death. Expected scope: one test
   fixture and assertions. Commit: `test: add full deterministic physics fixture`.
 
