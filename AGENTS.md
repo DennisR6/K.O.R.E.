@@ -182,6 +182,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
   emitter composition, test capture, and replay-oriented helpers.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
+- `src/utils/random.ts`: deterministic pseudo-random source for replayable
+  gameplay decisions.
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
 - `src/utils/ErrorHandling.ts`: error utility.
 - `src/utils/log.ts`: commented logger prototype.

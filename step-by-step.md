@@ -30,7 +30,7 @@
   status and acceptance criteria in `TODO.md`. Commit: `docs: reconcile todo status`.
 - [x] Add a focused requirements ledger linking TODO and GDD requirements to
   checklist sections and test coverage. Commit: `docs: add requirements ledger`.
-- [ ] Add a deterministic seeded random-number contract and unit tests for
+- [x] Add a deterministic seeded random-number contract and unit tests for
   repeatable sequences. Expected scope: one utility and one test. Commit:
   `feat: add deterministic random source`.
 - [ ] Define serializable game-mode, rule-phase, and match-result contracts
