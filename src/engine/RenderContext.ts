@@ -50,7 +50,7 @@ export interface ITicker {
 	 * @param deltatime - Die Zeitdifferenz seit dem letzten Takt (wichtig für flüssige Bewegung).
 	 * @param globalfriction - Die Reibung, die aktuell auf alle Objekte im Takt wirkt.
 	 */
-	tick(deltatime: number, globalfriction: number): void;
+	tick(deltatime: number, globalfriction: number, drift?: number, stopThreshold?: number): void;
 }
 
 export interface IExtendedTicker {
@@ -71,5 +71,4 @@ export interface IDrawer {
 	 */
 	draw(ctx: RenderContext): void;
 }
-
 

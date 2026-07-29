@@ -211,7 +211,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public tick(dt: number = this.dt) {
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		for (const e of this.entityManager.getEntities()) { this.effectAlways.forEach(eff => { eff.apply(e) }) }
-		for (const e of this.entityManager.getEntities()) { e.tick(dt, this.physicsStrategy.getFriction()) }
+		const drift = this.settings?.drift ?? DEFAULT_DRIFT
+		for (const e of this.entityManager.getEntities()) { e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold()) }
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));

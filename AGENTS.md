@@ -317,7 +317,8 @@ The canonical engine map/game model is `GameSettings` in
 - `mapBoundarys`: numeric circle/line/rectangle shape settings
 - `background`: color or numeric `AssetList` image
 - `friction: { friction, linearDrag, stopThreshold }`
-- `drift`: finite non-negative map steering factor (currently serialized only)
+- `drift`: finite `[0, 1]` per-tick, speed-preserving steering blend toward each
+  player's rotation; it does not apply at or below the physics stop threshold
 - handler `effects`, `items`, teams, and player-count metadata
 
 `EngineSettings` adds game state, turn number, active team, and runtime entity

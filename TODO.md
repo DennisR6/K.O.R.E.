@@ -85,10 +85,10 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 
 ### Drift-System
 
-- [x] Drift-Faktor (Map). Canonical map settings serialize a finite,
-  non-negative drift factor; runtime steering remains pending.
-- [ ] Lenkung: Velocity tendiert zur Forward-Richtung. Done when: movement uses
-  the map drift setting with fixed-frame deterministic tests.
+- [x] Drift-Faktor (Map). Canonical map settings serialize a finite `[0, 1]`
+  drift factor.
+- [x] Lenkung: Velocity uses a speed-preserving per-tick map-drift blend toward
+  the forward direction, with fixed-frame deterministic tests.
 - [ ] Extreme Drift für Eis-Maps. Done when: Frostbite map data exercises the
   same runtime drift implementation.
 
@@ -184,8 +184,7 @@ serialization, and behavior tests exist.
   shapes but no strict JSON schema. Done when: versioned canonical maps validate
   friction, drift, arena geometry, spawns, hazards, and metadata.
 - [x] Reibung-Feld in den Runtime-Settings
-- [ ] Drift-Feld und Runtime-Verhalten. Current: canonical settings validate and
-  serialize the field, but movement does not yet apply it.
+- [x] Drift-Feld und Runtime-Verhalten
 - [ ] Arena-Form. Current: circles and rectangles work; lines are incomplete.
   Done when: all declared shapes load and collide end-to-end.
 

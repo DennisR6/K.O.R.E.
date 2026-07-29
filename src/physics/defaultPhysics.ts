@@ -344,6 +344,7 @@ export class defaultPhysics implements PhysicsStrategy {
 	public getFriction(): number {
 		return this.friction
 	}
+	public getStopThreshold(): number { return this.stopThreshold }
 
 	public applyFriction(entity: IPhysics<SHAPE>, dt: number): void {
 		let { x: vx, y: vy } = entity.getVel();

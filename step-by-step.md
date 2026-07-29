@@ -63,7 +63,7 @@
 - [x] Add map-configured drift settings to the canonical settings contract and
   validate their finite ranges. Expected scope: settings types and test.
   Commit: `feat: define map drift settings`.
-- [ ] Apply deterministic drift steering during movement and add fixed-frame
+- [x] Apply deterministic drift steering during movement and add fixed-frame
   regression coverage. Expected scope: movement effect and test. Commit:
   `feat: apply map drift steering`.
 - [ ] Reject zero and negative player mass at the player settings boundary.

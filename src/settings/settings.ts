@@ -86,9 +86,9 @@ export interface FrictionSettings {
 
 export const DEFAULT_DRIFT = 0;
 
-/** Ensures map drift steers toward a figure's rotation without reversing it. */
+/** Ensures map drift is a per-tick direction blend. */
 export function validateDrift(drift: number): void {
-	if (!Number.isFinite(drift) || drift < 0) throw new Error("Map drift must be a finite non-negative number");
+	if (!Number.isFinite(drift) || drift < 0 || drift > 1) throw new Error("Map drift must be a finite number between 0 and 1");
 }
 
 export const FRICTION_TABLE = {

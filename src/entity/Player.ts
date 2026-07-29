@@ -100,10 +100,10 @@ export class Player implements IEntity {
 		 * Integriert die Geschwindigkeit in die Position basierend auf der vergangenen Zeit.
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
-	public tick(deltaTime: number, _globalFriction: number) {
+	public tick(deltaTime: number, _globalFriction: number, drift: number = 0, stopThreshold: number = 0) {
 		if (this.dead || !this.isPhysicsEnabled) return
 		this.effectAlways.forEach(effect => {
-			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime })
+			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime, drift, rotation: this.rotation, stopThreshold })
 			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
 		})
 	}

@@ -81,6 +81,7 @@ export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
 
 	/** Gibt den aktuellen Reibungswert zurück. */
 	getFriction(): number;
+	getStopThreshold(): number;
 
 	/** Gibt einem Objekt einen Stoß in eine bestimmte Richtung mit einer gewissen Kraft. */
 	applyImpulse(entity: IPhysics<any>, angle: number, power: number): void;
