@@ -66,7 +66,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 		ctx.push()
 		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
-		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
+		ctx.drawCircle(x, y, this.r);
 		ctx.pop()
 	}
 
@@ -125,4 +125,3 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public getX(): number { return this.position.x }
 	public getY(): number { return this.position.y }
 }
-

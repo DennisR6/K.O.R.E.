@@ -80,7 +80,7 @@
 - [x] Honor `physicsEnabled` during collision iteration and test that disabled
   entities and structures do not alter velocity. Expected scope: system and
   test. Commit: `fix: respect physics enabled flags`.
-- [ ] Align circle drawing dimensions with collision dimensions and add a
+- [x] Align circle drawing dimensions with collision dimensions and add a
   renderer-contract test where practical. Expected scope: structure drawing and
   test. Commit: `fix: align circle rendering and collision`.
 - [ ] Add a generic map-boundary containment API for circle, rectangle, and
