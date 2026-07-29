@@ -10,9 +10,16 @@ export class RuleInterpreter {
 		if (mode.phases.includes(RulePhase.Complete)) throw new Error("Complete cannot be a configured rule phase")
 		if (!Number.isSafeInteger(mode.maxItemsPerTurn) || mode.maxItemsPerTurn < 0) throw new Error("Item allowance must be a non-negative integer")
 		const hasItemPhase = mode.phases.includes(RulePhase.Item)
+		if (mode.phases.filter(phase => phase === RulePhase.Item).length > 1) throw new Error("Item phase may occur only once")
 		if (hasItemPhase && mode.phases[0] !== RulePhase.Item) throw new Error("Item phase must start a turn")
 		if (hasItemPhase && mode.maxItemsPerTurn === 0) throw new Error("Item phase requires a positive item allowance")
 		if (!hasItemPhase && mode.maxItemsPerTurn !== 0) throw new Error("Item allowance requires an item phase")
+		const shotPhases = mode.phases.filter(phase => phase !== RulePhase.Item)
+		const requiredShotPhases = [RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics]
+		const isLegacyPhysicsOnly = shotPhases.length === 1 && shotPhases[0] === RulePhase.Physics
+		if (!isLegacyPhysicsOnly && (shotPhases.length !== requiredShotPhases.length || !requiredShotPhases.every((phase, index) => shotPhases[index] === phase))) {
+			throw new Error("Staged shots must use aim, charge, push, then physics phases")
+		}
 		this.phases = [...mode.phases]
 		this.maxItemsPerTurn = mode.maxItemsPerTurn
 	}

@@ -31,11 +31,19 @@ test("RuleInterpreter advances configured phases without changing turn state", (
 })
 
 test("RuleInterpreter supports modes that omit the optional item phase", () => {
-	const rules = new RuleInterpreter({ ...standardMode, phases: [RulePhase.Aim, RulePhase.Push, RulePhase.Physics], maxItemsPerTurn: 0 })
+	const rules = new RuleInterpreter({ ...standardMode, phases: [RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics], maxItemsPerTurn: 0 })
 	expect(rules.initialState().phase).toBe(RulePhase.Aim)
 	expect(() => new RuleInterpreter({ ...standardMode, phases: [] })).toThrow("at least one rule phase")
 	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Complete] })).toThrow("Complete cannot")
 	expect(() => new RuleInterpreter({ ...standardMode, maxItemsPerTurn: 0 })).toThrow("positive item allowance")
 	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Physics], maxItemsPerTurn: 1 })).toThrow("requires an item phase")
 	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Aim, RulePhase.Item] })).toThrow("must start a turn")
+	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Item, RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics] })).toThrow("may occur only once")
+})
+
+test("RuleInterpreter rejects skipped or reordered staged shot phases", () => {
+	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Aim, RulePhase.Push, RulePhase.Physics], maxItemsPerTurn: 0 }))
+		.toThrow("Staged shots must use aim, charge, push, then physics phases")
+	expect(() => new RuleInterpreter({ ...standardMode, phases: [RulePhase.Charge, RulePhase.Aim, RulePhase.Push, RulePhase.Physics], maxItemsPerTurn: 0 }))
+		.toThrow("Staged shots must use aim, charge, push, then physics phases")
 })

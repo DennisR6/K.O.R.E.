@@ -99,7 +99,9 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   contracts. It intentionally does not depend on `GameHandler`.
 - `src/rules/RuleInterpreter.ts`: advances the data-defined rule-phase sequence
   and active-team order without mutating simulation state. Its optional item
-  phase starts a turn and enforces its configured per-turn allowance.
+  phase starts a turn and enforces its configured per-turn allowance. Staged
+  modes require `aim`, `charge`, `push`, then `physics`; the live combined-input
+  mode remains physics-only.
 - `src/rules/defaultGameModes.ts`: transitional data-defined modes shared by
   local and authoritative turn flows.
 

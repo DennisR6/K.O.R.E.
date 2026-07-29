@@ -107,7 +107,7 @@
 - [x] Define the optional item-phase rule state and its allowed transitions.
   Expected scope: rule contract and state-machine test. Commit:
   `feat: add item phase state`.
-- [ ] Define required aim, charge, and push rule states and reject skipped
+- [x] Define required aim, charge, and push rule states and reject skipped
   transitions. Expected scope: rule interpreter and test. Commit:
   `feat: enforce shot phase transitions`.
 - [ ] Define the no-input physics phase and block input until playback and
