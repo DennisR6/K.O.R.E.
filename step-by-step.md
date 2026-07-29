@@ -177,7 +177,7 @@
 - [x] Convert validated editor maps to canonical engine map settings and cover
   representative shapes, spawns, and hazards. Expected scope: converter and
   test. Commit: `feat: convert editor maps to engine settings`.
-- [ ] Replace unsafe editor JSON-to-DOM interpolation with safe DOM assignment
+- [x] Replace unsafe editor JSON-to-DOM interpolation with safe DOM assignment
   for imported values. Expected scope: editor UI and browser test. Commit:
   `fix: safely render imported map data`.
 - [ ] Repair the editor's missing imports and undefined function references.

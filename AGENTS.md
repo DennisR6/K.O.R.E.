@@ -495,8 +495,9 @@ not desired design:
 - The editor references missing imports/functions, has duplicate element IDs,
   no temporary-save handler, no schema validation, and a hard-coded preview at
   `localhost:5173` despite no active Vite workflow.
-- Imported editor JSON is interpolated into DOM in places; treat it as
-  untrusted input.
+- Imported editor map values are rendered with DOM construction, `textContent`,
+  and control `.value` assignments; do not reintroduce template interpolation
+  for untrusted map data.
 
 ## Change Checklist
 

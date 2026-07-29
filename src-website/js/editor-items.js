@@ -3,6 +3,7 @@
 // ---------------------------------------------------------
 
 import { mapData } from "./state.js";
+import { createElement } from "./dom.js";
 
 
 // ---------------------------------------------------------
@@ -93,7 +94,7 @@ function setupAccordion() {
 
 function renderItemSidebar() {
     const list = document.getElementById("sidebar-item-list");
-    list.innerHTML = "";
+    list.replaceChildren();
 
     const sorted = [...mapData.items].sort((a, b) =>
         (a.name || "").localeCompare(b.name || "")
@@ -235,18 +236,17 @@ function setupSaveButton() {
 
 function renderItemsOverview() {
     const tbody = document.getElementById("item-table-body");
-    tbody.innerHTML = "";
+    tbody.replaceChildren();
 
     mapData.items.forEach(item => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${item.name || "(Unbenannt)"}</td>
-            <td>${item.effectType}</td>
-            <td>${item.trigger}</td>
-            <td>${item.spawn.type}</td>
-            <td>${item.probability}%</td>
-        `;
+        const tr = createElement("tr");
+        tr.append(
+            createElement("td", { text: item.name || "(Unbenannt)" }),
+            createElement("td", { text: item.effectType }),
+            createElement("td", { text: item.trigger }),
+            createElement("td", { text: item.spawn.type }),
+            createElement("td", { text: `${item.probability}%` })
+        );
 
         tr.addEventListener("click", () => {
             openItemEditor(item);
@@ -260,7 +260,8 @@ function openItemEditor(item) {
     showEditor();
     loadItemIntoEditor(item);
 
-    const li = document.querySelector(`#sidebar-item-list li[data-id="${item.id}"]`);
+    const li = [...document.querySelectorAll("#sidebar-item-list li")]
+        .find(candidate => candidate.dataset.id === item.id);
     if (li) selectSidebarItem(li);
 }
 
@@ -285,29 +286,21 @@ function getCurrentItem() {
 
 function renderSpawnPoints(points) {
     const list = document.getElementById("spawnpoint-list");
-    list.innerHTML = "";
+    list.replaceChildren();
 
     points.forEach((p, index) => {
-        const li = document.createElement("li");
+        const li = createElement("li");
+        const grid = createElement("div", { className: "editor-grid" });
+        const x = createNumberField("X", "sp-x", p.x);
+        const y = createNumberField("Y", "sp-y", p.y);
+        const remove = createElement("button", { className: "small-btn btn-delete-point", text: "Löschen" });
+        grid.append(x.field, y.field, remove);
+        li.appendChild(grid);
 
-        li.innerHTML = `
-            <div class="editor-grid">
-                <div class="field">
-                    <label>X</label>
-                    <input type="number" class="sp-x" value="${p.x}">
-                </div>
-                <div class="field">
-                    <label>Y</label>
-                    <input type="number" class="sp-y" value="${p.y}">
-                </div>
-                <button class="small-btn btn-delete-point">Löschen</button>
-            </div>
-        `;
+        x.input.addEventListener("input", e => p.x = Number(e.target.value));
+        y.input.addEventListener("input", e => p.y = Number(e.target.value));
 
-        li.querySelector(".sp-x").addEventListener("input", e => p.x = Number(e.target.value));
-        li.querySelector(".sp-y").addEventListener("input", e => p.y = Number(e.target.value));
-
-        li.querySelector(".btn-delete-point").addEventListener("click", () => {
+        remove.addEventListener("click", () => {
             points.splice(index, 1);
             renderSpawnPoints(points);
         });
@@ -324,60 +317,45 @@ function renderSpawnPoints(points) {
 
 function renderSpawnAreas(areas) {
     const container = document.getElementById("area-list");
-    container.innerHTML = "";
+    container.replaceChildren();
 
     areas.forEach((area, index) => {
-        const block = document.createElement("div");
-        block.classList.add("area-block");
+        const block = createElement("div", { className: "area-block" });
+        const header = createElement("div", { className: "area-header", text: `Bereich ${index + 1}` });
+        const content = createElement("div", { className: "area-content active" });
+        const grid = createElement("div", { className: "editor-grid" });
+        const shape = createElement("select", { className: "area-shape", value: area.shape });
+        shape.append(
+            createElement("option", { value: "circle", text: "Circle" }),
+            createElement("option", { value: "rect", text: "Rect" })
+        );
+        shape.value = area.shape;
+        const shapeField = createField("Shape", shape);
+        const x = createNumberField("X", "area-x", area.x);
+        const y = createNumberField("Y", "area-y", area.y);
+        const radius = createNumberField("Radius", "area-radius", area.radius || 100, "field field-radius");
+        const width = createNumberField("Width", "area-width", area.width || 200, "field field-width");
+        const height = createNumberField("Height", "area-height", area.height || 200, "field field-height");
+        radius.field.style.display = area.shape === "circle" ? "" : "none";
+        width.field.style.display = area.shape === "rect" ? "" : "none";
+        height.field.style.display = area.shape === "rect" ? "" : "none";
+        const remove = createElement("button", { className: "small-btn btn-delete-area", text: "Bereich löschen" });
+        grid.append(shapeField, x.field, y.field, radius.field, width.field, height.field);
+        content.append(grid, remove);
+        block.append(header, content);
 
-        block.innerHTML = `
-            <div class="area-header">Bereich ${index + 1}</div>
-            <div class="area-content active">
-                <div class="editor-grid">
-                    <div class="field">
-                        <label>Shape</label>
-                        <select class="area-shape">
-                            <option value="circle" ${area.shape === "circle" ? "selected" : ""}>Circle</option>
-                            <option value="rect" ${area.shape === "rect" ? "selected" : ""}>Rect</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label>X</label>
-                        <input type="number" class="area-x" value="${area.x}">
-                    </div>
-                    <div class="field">
-                        <label>Y</label>
-                        <input type="number" class="area-y" value="${area.y}">
-                    </div>
-                    <div class="field field-radius" style="${area.shape === "circle" ? "" : "display:none;"}">
-                        <label>Radius</label>
-                        <input type="number" class="area-radius" value="${area.radius || 100}">
-                    </div>
-                    <div class="field field-width" style="${area.shape === "rect" ? "" : "display:none;"}">
-                        <label>Width</label>
-                        <input type="number" class="area-width" value="${area.width || 200}">
-                    </div>
-                    <div class="field field-height" style="${area.shape === "rect" ? "" : "display:none;"}">
-                        <label>Height</label>
-                        <input type="number" class="area-height" value="${area.height || 200}">
-                    </div>
-                </div>
-                <button class="small-btn btn-delete-area">Bereich löschen</button>
-            </div>
-        `;
-
-        block.querySelector(".area-shape").addEventListener("change", e => {
+        shape.addEventListener("change", e => {
             area.shape = e.target.value;
             renderSpawnAreas(areas);
         });
 
-        block.querySelector(".area-x").addEventListener("input", e => area.x = Number(e.target.value));
-        block.querySelector(".area-y").addEventListener("input", e => area.y = Number(e.target.value));
-        block.querySelector(".area-radius").addEventListener("input", e => area.radius = Number(e.target.value));
-        block.querySelector(".area-width").addEventListener("input", e => area.width = Number(e.target.value));
-        block.querySelector(".area-height").addEventListener("input", e => area.height = Number(e.target.value));
+        x.input.addEventListener("input", e => area.x = Number(e.target.value));
+        y.input.addEventListener("input", e => area.y = Number(e.target.value));
+        radius.input.addEventListener("input", e => area.radius = Number(e.target.value));
+        width.input.addEventListener("input", e => area.width = Number(e.target.value));
+        height.input.addEventListener("input", e => area.height = Number(e.target.value));
 
-        block.querySelector(".btn-delete-area").addEventListener("click", () => {
+        remove.addEventListener("click", () => {
             areas.splice(index, 1);
             renderSpawnAreas(areas);
         });
@@ -579,21 +557,27 @@ function setupEffectParams() {
 function renderEffectParams() {
     const effect = document.getElementById("item-effect-type").value;
     const container = document.getElementById("effect-params");
-    container.innerHTML = "";
+    container.replaceChildren();
 
     const params = EFFECT_PARAMS[effect] || [];
 
     params.forEach(p => {
-        const div = document.createElement("div");
-        div.classList.add("field");
-
-        div.innerHTML = `
-            <label>${p.label}</label>
-            <input type="${p.type}" id="effect-param-${p.id}" value="${p.default}">
-        `;
+        const input = createElement("input", { type: p.type, id: `effect-param-${p.id}`, value: p.default });
+        const div = createField(p.label, input);
 
         container.appendChild(div);
     });
+}
+
+function createNumberField(label, className, value, fieldClassName = "field") {
+    const input = createElement("input", { className, type: "number", value });
+    return { field: createField(label, input, fieldClassName), input };
+}
+
+function createField(label, input, className = "field") {
+    const field = createElement("div", { className });
+    field.append(createElement("label", { text: label }), input);
+    return field;
 }
 
 function refreshItemsUI(openFirst = false) {
@@ -609,5 +593,4 @@ function refreshItemsUI(openFirst = false) {
         openItemEditor(mapData.items[0]);
     }
 }
-
 
