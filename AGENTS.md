@@ -492,9 +492,8 @@ not desired design:
   integrated into completed-match flow.
 - The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
   browser-created `defaultCanvas0` global.
-- The editor has duplicate element IDs, no temporary-save handler, no schema
-  validation, and a hard-coded preview at `localhost:5173` despite no active
-  Vite workflow.
+- The editor has no temporary-save handler and a hard-coded preview at
+  `localhost:5173` despite no active Vite workflow.
 - Imported editor map values are rendered with DOM construction, `textContent`,
   and control `.value` assignments; do not reintroduce template interpolation
   for untrusted map data.

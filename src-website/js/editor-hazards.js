@@ -3,7 +3,8 @@
 export function initHazardsEditor(mapData) {
 
     const listEl = document.getElementById("hazard-list");
-    const addBtn = document.getElementById("btn-add-hazard");
+    const sidebarAddBtn = document.getElementById("btn-add-hazard-sidebar");
+    const editorAddBtn = document.getElementById("btn-add-hazard-editor");
     const deleteBtn = document.getElementById("btn-delete-hazard");
 
     const typeSelect = document.getElementById("hazard-type");
@@ -219,7 +220,7 @@ export function initHazardsEditor(mapData) {
         }
     }
 
-    addBtn.addEventListener("click", () => {
+    function addHazard() {
         saveCurrentHazard();
 
         const newHaz = createDefaultHazard();
@@ -228,7 +229,10 @@ export function initHazardsEditor(mapData) {
 
         renderList();
         loadSelectedHazard();
-    });
+    }
+
+    sidebarAddBtn.addEventListener("click", addHazard);
+    editorAddBtn.addEventListener("click", addHazard);
 
     deleteBtn.addEventListener("click", () => {
         if (selectedIndex < 0) return;

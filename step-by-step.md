@@ -182,7 +182,7 @@
   `fix: safely render imported map data`.
 - [x] Repair the editor's missing imports and undefined function references.
   Expected scope: one editor module and test. Commit: `fix: restore editor imports`.
-- [ ] Replace duplicate editor element IDs with unique identifiers and update
+- [x] Replace duplicate editor element IDs with unique identifiers and update
   their references. Expected scope: editor markup and one script. Commit:
   `fix: use unique editor element ids`.
 - [ ] Implement the editor temporary-save action with validated map data.
