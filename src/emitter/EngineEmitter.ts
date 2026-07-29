@@ -1,6 +1,15 @@
 import type { GameHandler } from "../engine/Handler.js";
 import { type IInputEmitter } from "../engine/types.js";
+import { RuleInterpreter } from "../rules/RuleInterpreter.js";
+import { RulePhase, WinCondition, type GameModeSettings, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
+
+const localMode: GameModeSettings = {
+	id: "local-hotseat",
+	phases: [RulePhase.Physics],
+	maxItemsPerTurn: 0,
+	winCondition: WinCondition.LastTeamStanding,
+}
 
 /**
  * Der "Local Player" Emitter.
@@ -11,14 +20,23 @@ import { TurnSystem } from "../systems/TurnSystem.js";
  */
 export class GameEmitter implements IInputEmitter {
 	handler: GameHandler
-	constructor(handler: GameHandler) { this.handler = handler }
+	private rules: RuleInterpreter
+	private ruleState: RuleState
+	constructor(handler: GameHandler, mode: GameModeSettings = localMode) {
+		this.handler = handler
+		this.rules = new RuleInterpreter(mode)
+		this.ruleState = this.rules.initialState(handler.getActiveTeam(), handler.getTurnNumber())
+	}
 
 	sendShot(actorId: string, angle: number, power: number): void {
+		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
 		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
 		this.handler.playTurn(sim, () => {
+			this.ruleState = this.rules.advancePhase(this.ruleState)
 			const activeTeam = this.handler.advanceTurn()
+			this.ruleState = this.rules.startNextTurn(this.ruleState, activeTeam)
 			this.handler.setState(TurnSystem.stateForTeam(activeTeam, this.handler.getTeam()))
 		})
 	}

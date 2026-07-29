@@ -183,7 +183,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
   used by the active server runtime.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
-  and advances the active team after a shot.
+  advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
   authoritative `TURN` playback and active-team updates.
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:

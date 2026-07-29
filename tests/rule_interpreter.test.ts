@@ -22,6 +22,8 @@ test("RuleInterpreter advances configured phases without changing turn state", (
 	}
 
 	expect(rules.advancePhase(state)).toBe(state)
+	expect(rules.startNextTurn(state, 0)).toEqual({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 5, itemUses: 0 })
+	expect(() => rules.startNextTurn(rules.initialState(), 1)).toThrow("must complete")
 })
 
 test("RuleInterpreter supports modes that omit the optional item phase", () => {

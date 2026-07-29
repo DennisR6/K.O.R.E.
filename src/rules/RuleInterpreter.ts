@@ -20,4 +20,9 @@ export class RuleInterpreter {
 		if (phaseIndex < 0) throw new Error(`Phase ${state.phase} is not configured for this game mode`)
 		return { ...state, phase: this.phases[phaseIndex + 1] ?? RulePhase.Complete }
 	}
+
+	public startNextTurn(state: RuleState, activeTeam: number): RuleState {
+		if (state.phase !== RulePhase.Complete) throw new Error("A turn must complete before the next turn starts")
+		return { phase: this.phases[0], activeTeam, turnNumber: state.turnNumber + 1, itemUses: 0 }
+	}
 }

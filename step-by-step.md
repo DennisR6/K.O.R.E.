@@ -39,7 +39,7 @@
 - [x] Add a data-driven rule interpreter that advances rule phases without
   changing physics behavior. Expected scope: interpreter, rule types, tests.
   Commit: `feat: add rule phase interpreter`.
-- [ ] Route local turn progression through the rule interpreter while retaining
+- [x] Route local turn progression through the rule interpreter while retaining
   the current active-team behavior. Expected scope: emitter, handler adapter,
   regression test. Commit: `refactor: use rules for local turns`.
 - [ ] Route authoritative server turn resolution through the rule interpreter
