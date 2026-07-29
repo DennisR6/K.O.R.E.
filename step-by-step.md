@@ -157,7 +157,7 @@
 - [x] Implement the data-defined rotation hazard and test its serialized state
   change. Expected scope: hazard implementation and test. Commit:
   `feat: add rotation hazards`.
-- [ ] Implement the data-defined kill-zone hazard using shared death handling.
+- [x] Implement the data-defined kill-zone hazard using shared death handling.
   Expected scope: hazard implementation and test. Commit: `feat: add kill zone hazards`.
 - [ ] Implement a data-defined slow-zone hazard and test friction or speed
   modification lifetime. Expected scope: hazard implementation and test.
