@@ -70,8 +70,14 @@ export interface PlayerSettings {
 	inventory: SettingsItem[]
 }
 
+export function validatePlayerMass(mass: number): void {
+	if (!Number.isFinite(mass) || mass <= 0) throw new Error("Player mass must be a finite positive number");
+}
+
 /** Creates an independent, complete player snapshot with sensible defaults. */
 export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): PlayerSettings {
+	const mass = overrides.mass ?? 1;
+	validatePlayerMass(mass);
 	return {
 		id: overrides.id ?? crypto.randomUUID() as UUID,
 		position: { x: overrides.position?.x ?? 0, y: overrides.position?.y ?? 0 },
@@ -80,7 +86,7 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		angularVelocity: overrides.angularVelocity ?? 0,
 		hp: overrides.hp ?? 30,
 		bouncyness: overrides.bouncyness ?? 1,
-		mass: overrides.mass ?? 1,
+		mass,
 		size: overrides.size ?? 20,
 		friction: overrides.friction,
 		team: [...(overrides.team ?? [])],

@@ -447,8 +447,8 @@ Be careful when running `bun run start`:
 Verify these before building on the affected code; they are current behavior,
 not desired design:
 
-- `Player.setMass()` clamps values above one but does not reject zero or
-  negative mass.
+- `Player.setMass()` clamps values above one and rejects non-finite or
+  non-positive mass.
 - Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
   player dead. Death circles use `EffectModifySetting` to set `dead: true`.
   Dead players no longer render, tick, collide, or accept selection; winning

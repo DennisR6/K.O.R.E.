@@ -2,7 +2,7 @@ import type { UUID } from "crypto";
 import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
-import { createPlayerSettings, type PlayerSettings } from "./types.js";
+import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
 import type { SettingsItem } from "../settings/settings.js";
@@ -69,7 +69,7 @@ export class Player implements IEntity {
 		this.angularVelocity = settings.angularVelocity
 		this.hp = settings.hp
 		this.bouncyness = settings.bouncyness
-		this.mass = settings.mass
+		this.setMass(settings.mass)
 		this.size = settings.size
 		this.friction = settings.friction
 		this.team = [...settings.team]
@@ -110,7 +110,10 @@ export class Player implements IEntity {
 
 	public setId(id: UUID): void { this.id = id }
 	public getId(): UUID { return this.id }
-	public setMass(inertia: number): void { this.mass = Math.min(inertia, 1) }
+	public setMass(inertia: number): void {
+		validatePlayerMass(inertia)
+		this.mass = Math.min(inertia, 1)
+	}
 	public getMass(): number { return this.mass }
 	public setVel(v: { x: number, y: number }) { this.velocity.x = v.x; this.velocity.y = v.y; }
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }

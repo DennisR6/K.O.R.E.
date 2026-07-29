@@ -66,7 +66,7 @@
 - [x] Apply deterministic drift steering during movement and add fixed-frame
   regression coverage. Expected scope: movement effect and test. Commit:
   `feat: apply map drift steering`.
-- [ ] Reject zero and negative player mass at the player settings boundary.
+- [x] Reject zero and negative player mass at the player settings boundary.
   Expected scope: player validation and test. Commit: `fix: validate player mass`.
 - [ ] Correct rectangle/rectangle collision dispatch and add separated,
   overlapping, and edge-contact tests. Expected scope: physics dispatch and
