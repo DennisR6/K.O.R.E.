@@ -6,6 +6,7 @@ import type { IGameContext, ISystem } from "./types.js";
 export interface IUiSystem extends ISystem, IDrawer, IMouse { }
 
 export class UiSystem implements IUiSystem {
+	private static readonly MIN_DRAG_DISTANCE = 8
 	start: Vector2D | null = null
 	end: Vector2D | null = null
 	currentMouse: Vector2D = { x: 0, y: 0 }
@@ -16,8 +17,7 @@ export class UiSystem implements IUiSystem {
 		const dy = now.y - start.y;
 		let rawPower = Math.sqrt(dx * dx + dy * dy);
 
-		if (rawPower < 1) {
-			console.trace("rawpower: ", rawPower, "is too low", dx, dy)
+		if (rawPower < UiSystem.MIN_DRAG_DISTANCE) {
 			return undefined
 		}
 
@@ -42,23 +42,25 @@ export class UiSystem implements IUiSystem {
 	}
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
-		if (ctx.state !== GameState.Your_turn) return
+		if (ctx.state !== GameState.Your_turn) {
+			this.clearInput()
+			return
+		}
 		if (!this.start) return
 		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y)
-		if (!actor) {
-			this.start = null
+		if (!actor || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
+			this.clearInput()
 			return
 		}
 		if (!this.end) return
 		const e = this.getLocalInput(this.start, this.end)
 		if (!e) {
-			console.log("no input calculated")
+			this.clearInput()
 			return
 		}
 		ctx.mouse.turn = { ...e, actorId: actor.getId() }
 		ctx.state = GameState.Turn_done
-		this.start = null
-		this.end = null
+		this.clearInput()
 	}
 	draw(_ctx: RenderContext): void { }
 
@@ -72,12 +74,17 @@ export class UiSystem implements IUiSystem {
 	}
 
 	handleMouseReleased(): void {
-		if (this.end) return
+		if (!this.start || this.end) return
 		this.end = { ...this.currentMouse }
 	}
 
 	updateMouse(x: number, y: number): void {
 		const pos = { x, y }
 		this.currentMouse = { ...pos }
+	}
+
+	private clearInput(): void {
+		this.start = null
+		this.end = null
 	}
 }

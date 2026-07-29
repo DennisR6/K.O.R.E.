@@ -37,11 +37,12 @@ if (!usersettings.skipmenu) {
 	} else if (usersettings.url && usersettings.url !== "local") {
 	startNetworkGame(usersettings.url)
 } else {
-	const arrow = new DirectionArrow()
+	const arrow = new DirectionArrow(ui)
 	const em = new CombiEmitter()
 	const ems = new EmitterSystem(em);
 	builder
 		.fromSettings(GameSettings)
+		.setPlayerTeam([0, 1])
 		.addSystem(ui)
 		.addUIMouse(ui)
 		.addSystem(arrow)
@@ -77,7 +78,7 @@ function startNetworkGame(serverUrl: string) {
 		started = true
 		const settings = (message as NetworkInit).settings
 		const ui = new UiSystem()
-		const arrow = new DirectionArrow()
+		const arrow = new DirectionArrow(ui)
 		handler = new GameHandlerBuilder()
 			.defaultSystems()
 			.fromSettings(settings)

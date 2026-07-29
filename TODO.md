@@ -72,7 +72,7 @@ Custom Engine · p5.js · Datengetrieben · Rotation + Force Physik
 
 ### Arena-Grenzen
 - [x] Out-of-Bounds-Erkennung
-- [ ] Death-Event
+- [x] Death-Event
 
 ---
 

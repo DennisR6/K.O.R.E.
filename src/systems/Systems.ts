@@ -32,4 +32,5 @@ export { PlaybackSystem } from "./PlayBackSystem.js";
  * Wer ist dran? Wann beginnt eine neue Runde? Wer hat gewonnen?
  */
 export { RoundPlayerSystem } from "./RoundSystem.js";
+export { TurnSystem } from "./TurnSystem.js";
 export { Simulator } from "./Simulator.js"

@@ -1,6 +1,7 @@
 import type { UUID } from "node:crypto";
 import { GameState } from "../engine/types.js";
 import type { IGameContext, ISystem } from "./types.js";
+import { TurnSystem } from "./TurnSystem.js";
 
 /**
  * Ein minimalistisches Rundensystem ohne Spielerwechsel.
@@ -31,10 +32,11 @@ export class RoundPlayerSystem implements ISystem {
 	 */
 	ticker(ctx: IGameContext, _dt: number): void {
 		if (ctx.state !== GameState.ChooseTeam) return
-		ctx.currTurn = getNextNumber(ctx.currTurn, this.teams.length)
-		if (ctx.currTurn == ctx.myTeamNumber) ctx.state = GameState.Your_turn
-		else ctx.state = GameState.Opponents_turn
+		ctx.activeTeam = TurnSystem.nextActiveTeam(ctx.activeTeam, this.teams.length)
+		ctx.currTurn++
+		ctx.state = TurnSystem.stateForTeam(ctx.activeTeam, [ctx.myTeamNumber])
 	}
 }
 
-export const getNextNumber = (a: number, b: number) => (a + 1) % b
+/** @deprecated Use TurnSystem.nextActiveTeam(). */
+export const getNextNumber = (a: number, b: number) => TurnSystem.nextActiveTeam(a, b)

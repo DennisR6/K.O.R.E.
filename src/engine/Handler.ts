@@ -18,6 +18,7 @@ import { MetaEffect } from "../effects/effects.js";
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
+import { TurnSystem } from "../systems/TurnSystem.js";
 import type { SettingsItem } from "../settings/settings.js";
 
 /**
@@ -72,6 +73,7 @@ import type { SettingsItem } from "../settings/settings.js";
  */
 export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSettings> {
 	private teamSize: number = 0
+	private teamCount: number = 0
 	private id: UUID
 	private turns: TurnPacket[] = []
 	private settings: GameSettings | EngineSettings | undefined
@@ -112,6 +114,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			mouse: { turn: null },
 			physics: new defaultPhysics(),
 			currTurn: 0,
+			activeTeam: 0,
 			myTeamNumber: 0,
 		}
 		this.entityManager = em;
@@ -342,6 +345,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void { this.context.currTurn = turnNumber }
+	public getTurnNumber(): number { return this.context.currTurn }
+	public setActiveTeam(team: number): void {
+		if (!Number.isInteger(team) || team < 0) throw new Error("Active team must be a non-negative integer")
+		this.context.activeTeam = team
+	}
+	public getActiveTeam(): number { return this.context.activeTeam }
+	public setTeamCount(teamCount: number): void { this.teamCount = teamCount }
+	public advanceTurn(): number {
+		this.context.activeTeam = TurnSystem.nextActiveTeam(this.context.activeTeam, this.teamCount)
+		this.context.currTurn++
+		return this.context.activeTeam
+	}
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
 		this.context.structures.push(structure)
@@ -385,7 +400,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			minPlayers: this.settings?.minPlayers ?? 0,
 			maxPlayers: this.settings?.maxPlayers ?? 0,
 			allTeamSize: this.teamSize,
-			turnNumber: this.getContext().currTurn
+			turnNumber: this.getContext().currTurn,
+			activeTeam: this.getActiveTeam(),
 		}
 		this.saveSettings(settings)
 		return settings
@@ -393,7 +409,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getTeam(): number[] { return this.team }
 	public setId(id: UUID) { this.id = id }
 	public getId(): string { return this.id }
-	public setMyTeam(team: number[]) { this.team = team }
+	public setMyTeam(team: number[]) {
+		this.team = team
+		this.context.myTeamNumber = team[0] ?? 0
+	}
 	public addEffectEveryTick(effect: Effect): void { this.effectAlways.push(effect) }
 	public addEffectEveryRound(effect: Effect): void { this.effectRound.push(effect) }
 	public addEffectEveryCollision(effect: Effect): void { this.effectCollision.push(effect) }
@@ -433,7 +452,11 @@ export class GameHandlerBuilder {
 	public addPlayer(player: IEntity): this { this.engine.getEntityManager().addEntity(player); return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>): this { if (structure) this.engine.addStructure(structure); return this }
 	public addBackground(background: IBackground): this { this.engine.addPreTickAndDraw(background); return this }
-	public setPlayerTeam(teams: number[]): this { teams.forEach(team => this.myTeam.push(team)); return this }
+	public setPlayerTeam(teams: number[]): this {
+		teams.forEach(team => this.myTeam.push(team))
+		this.engine.setMyTeam(this.myTeam)
+		return this
+	}
 	public setOpponentTeam(teams: number[]): this { teams.forEach(team => this.enemyTeam.push(team)); return this }
 	public addPhysics(physics: PhysicsStrategy) { this.engine.setPhysics(physics); return this }
 	public defaultSystems(friction?: FrictionSettings): this {
@@ -459,6 +482,7 @@ export class GameHandlerBuilder {
 
 		//add Team
 		this.engine.setMyTeam(myTeam ?? [crypto.randomUUID()])
+		this.engine.setTeamCount(gameSettings.allTeams?.length ?? 0)
 		this.engine.setTeamSize(gameSettings.allTeamSize)
 		this.engine.setItems(gameSettings.items)
 		this.engine.loadEffects(gameSettings.effects)
@@ -472,6 +496,7 @@ export class GameHandlerBuilder {
 		if ("state" in gameSettings) {
 			this.state = gameSettings.state
 			this.engine.setTurnNumber(gameSettings.turnNumber)
+			this.engine.setActiveTeam(gameSettings.activeTeam ?? 0)
 		}
 
 		return this

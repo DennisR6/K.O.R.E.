@@ -1,5 +1,6 @@
-import { GameState, type IInputEmitter } from "../engine/types.js";
+import { type IInputEmitter } from "../engine/types.js";
 import type { GameHandler } from "../engine/Handler.js";
+import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
 
@@ -41,11 +42,10 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		if (message.type === NetworkMessageType.TURN) {
 			const turn = message as NetworkTurn
 			handler.setTurnNumber(turn.turnNumber)
+			handler.setActiveTeam(turn.activeTeam)
 			handler.playTurn(turn.sim, () => {
-				handler.setState(handler.getTeam().includes(turn.activeTeam)
-					? GameState.Your_turn
-					: GameState.Opponents_turn)
-			})
+				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
+		})
 		}
 		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
 	})

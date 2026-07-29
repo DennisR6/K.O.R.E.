@@ -1,5 +1,6 @@
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
-import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
+import { type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
+import { TurnSystem } from "../systems/TurnSystem.js";
 import type { GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
 
@@ -93,8 +94,9 @@ export class GameRegistry {
 			...settings,
 			myTeam: [team],
 			allTeams: [...record.users],
-			turnNumber: record.turnNumber,
-			state: team === record.currentTeam ? GameState.Your_turn : GameState.Opponents_turn,
+			turnNumber: record.handler.getTurnNumber(),
+			activeTeam: record.handler.getActiveTeam(),
+			state: TurnSystem.stateForTeam(record.handler.getActiveTeam(), [team]),
 		}
 	}
 
@@ -103,7 +105,7 @@ export class GameRegistry {
 		if (!record) return { ok: false, error: "No active game for this user" }
 		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
 		const team = record.teamByUser.get(userId)
-		if (team === undefined || team !== record.currentTeam) return { ok: false, error: "It is not your turn" }
+		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
 		if (!isValidInput(input)) return { ok: false, error: "Invalid shot input" }
 
 		const actor = record.handler.getEntityManager().getEntityById(input.actorId)
@@ -113,9 +115,8 @@ export class GameRegistry {
 		record.resolving = true
 		try {
 			const packet = record.handler.resolveTurn(input)
-			record.turnNumber++
-			record.currentTeam = (record.currentTeam + 1) % record.users.length
-			record.handler.setTurnNumber(record.turnNumber)
+			record.currentTeam = record.handler.advanceTurn()
+			record.turnNumber = record.handler.getTurnNumber()
 			this.persist(record)
 			return { ok: true, record, packet }
 		} finally {
@@ -128,6 +129,8 @@ export class GameRegistry {
 		const stored = this.database.loadGame(id)
 		if (!stored) return undefined
 		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(stored.settings).build()
+		handler.setActiveTeam(stored.currentTeam)
+		handler.setTurnNumber(stored.turnNumber)
 		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber)
 		this.games.set(id, record)
 		return record

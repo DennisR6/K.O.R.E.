@@ -154,6 +154,7 @@ export interface ISettingsSerialize<T> {
 export interface EngineSettings extends GameSettings {
 	state: GameState
 	turnNumber: number
+	activeTeam: number
 	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }
