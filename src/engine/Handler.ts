@@ -154,6 +154,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public resolveTurn({ actorId, angle, power }: IInput): TurnPacket {
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`);
+		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
 		this.physicsStrategy.applyImpulse(actor, angle, power);
 		let frames = 0;
 		for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++) this.tick()

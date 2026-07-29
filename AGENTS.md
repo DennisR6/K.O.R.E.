@@ -451,8 +451,9 @@ not desired design:
   non-positive mass.
 - Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
   player dead. Death circles use `EffectModifySetting` to set `dead: true`.
-  Dead players no longer render, tick, collide, or accept selection; winning
-  and completed round rules are still not active.
+  Dead players no longer render, tick, collide, accept selection, or resolve a
+  turn; settings snapshots preserve their dead state. Winning and completed
+  round rules are still not active.
 - Round effects are stored but not meaningfully executed. Rectangle collision
   effects are parsed but `StructureRectangle.onCollision()` is empty.
 - `EffectType.Multi` currently falls back to movement, not a true multi-effect.

@@ -112,7 +112,8 @@ Custom Engine · p5.js · data-driven · rotation + force physics
   from mixed map geometry and contain full player circles; lines are obstacles.
 - [x] Death-Event. Leaving inferred outer circle/rectangle containment geometry
   eliminates an entity on that tick; configured death circles still kill on
-  collision.
+  collision. Dead entities do not move, collide, render, or accept selection
+  and cannot resolve a turn.
 
 ---
 

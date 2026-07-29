@@ -89,7 +89,7 @@
 - [x] Mark entities dead when they leave configured arena boundaries and test
   deterministic death timing. Expected scope: boundary system and test. Commit:
   `feat: eliminate out of bounds entities`.
-- [ ] Ensure dead entities are excluded from movement, collisions, selection,
+- [x] Ensure dead entities are excluded from movement, collisions, selection,
   turn eligibility, and serialization round trips. Expected scope: entity
   manager or player path plus test. Commit: `fix: consistently exclude dead entities`.
 - [ ] Add a complete fixed-seed physics regression fixture containing movement,
