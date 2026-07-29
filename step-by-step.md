@@ -139,7 +139,7 @@
 - [x] Add schema version fields to game, map, item, hazard, AI, and replay
   documents. Expected scope: type contracts and migration test. Commit:
   `feat: version serialized game documents`.
-- [ ] Define a strict game-settings validator that rejects malformed numeric,
+- [x] Define a strict game-settings validator that rejects malformed numeric,
   team, structure, and effect data. Expected scope: validator and test. Commit:
   `feat: validate game settings`.
 - [ ] Define a strict map schema with friction, drift, arena geometry, spawn

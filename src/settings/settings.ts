@@ -1,9 +1,9 @@
 import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
-import type { SHAPE, Vector2D } from "../physics/physics.js";
+import { SHAPE, type Vector2D } from "../physics/physics.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import IceMap from "./iceMap.js";
-import { EffectTrigger, type FullEffectSettings, type IEffectable } from "../effects/types.js";
+import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
 
@@ -100,6 +100,35 @@ export function validateFigureCounts(playerCount: number, figuresPerPlayer: numb
 	if (!Number.isSafeInteger(playerCount) || playerCount < 1 || !Number.isSafeInteger(figuresPerPlayer) || figuresPerPlayer < 1) {
 		throw new Error("Player count and figures per player must be positive integers");
 	}
+}
+
+/** Rejects malformed external game settings before they enter the runtime. */
+export function validateGameSettings(settings: unknown): asserts settings is GameSettings {
+	if (!isRecord(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string") throw new Error("Invalid game settings document")
+	if (!isVector(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0) throw new Error("Invalid screen resolution")
+	if (!isRecord(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite)) throw new Error("Invalid friction settings")
+	validateDrift(settings.drift)
+	validateFigureCounts(settings.playerCount, settings.figuresPerPlayer)
+	if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam)) throw new Error("Invalid team settings")
+	if (!Array.isArray(settings.players) || !settings.players.every(player => isRecord(player) && isVector(player.position) && isVector(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect))) throw new Error("Invalid player settings")
+	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
+	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
+	if (!Array.isArray(settings.items) || !settings.items.every(item => isRecord(item) && item.schemaVersion === 1 && typeof item.id === "string" && typeof item.type === "string")) throw new Error("Invalid item settings")
+}
+
+function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }
+function isVector(value: unknown): value is Vector2D { return isRecord(value) && Number.isFinite(value.x) && Number.isFinite(value.y) }
+function isTeam(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 }
+function isEffect(value: unknown): value is FullEffectSettings {
+	const types = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting]
+	const triggers = [EffectTrigger.Always, EffectTrigger.Collision, EffectTrigger.Round]
+	return isRecord(value) && types.includes(value.type) && triggers.includes(value.trigger)
+}
+function isBoundary(value: unknown): value is MapBoundarySettings {
+	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
+	if (value.type === SHAPE.CIRCLE) return Number.isFinite(value.r) && value.r > 0
+	if (value.type === SHAPE.RECTANGLE) return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0
+	return value.type === SHAPE.LINE && Number.isFinite(value.x2) && Number.isFinite(value.y2)
 }
 
 export const FRICTION_TABLE = {
