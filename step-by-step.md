@@ -358,7 +358,7 @@
 
 ## 8. Persistence, Sharing, And Replays
 
-- [ ] **Task [8.1]: Define Local Save Slots**
+- [x] **Task [8.1]: Define Local Save Slots**
   - **Goal:** Define a versioned local save-slot record containing validated game settings and match snapshot.
   - **Target Files:** `src/persistence/saveSlots.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/save_slots.test.ts`

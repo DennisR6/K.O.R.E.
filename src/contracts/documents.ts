@@ -16,6 +16,7 @@ export interface HazardTrigger {
 export type HazardDocument = VersionedDocument & { id: string; type: string; trigger: HazardTrigger; config: Record<string, unknown> };
 export type AiDocument = VersionedDocument & { id: string; difficulty: string };
 export type ReplayDocument = VersionedDocument & { initialSettings: GameSettings; turns: TurnPacket[] };
+export type SaveSlotDocument = VersionedDocument & { id: string; name: string; timestamp: number; settings: GameSettings; snapshot: Record<string, unknown> };
 export type GameDocument = GameSettings;
 
 export interface MapMetadata {
