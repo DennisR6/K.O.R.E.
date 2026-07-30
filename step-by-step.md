@@ -212,7 +212,7 @@
   `feat: add deterministic item draws`.
 - [x] Implement map item pickups and validate active-team ownership. Expected
   scope: pickup system and test. Commit: `feat: collect map item pickups`.
-- [ ] Implement item target validation for entity, position, and zone targets.
+- [x] Implement item target validation for entity, position, and zone targets.
   Expected scope: target validator and test. Commit: `feat: validate item targets`.
 - [ ] Implement authoritative item-use packets and reject use outside the item
   phase or by the wrong team. Expected scope: server protocol and test. Commit:

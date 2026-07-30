@@ -133,6 +133,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   per-turn/per-game inventory consumption; player snapshots preserve counters.
 - `src/item/MapPickupSystem.ts`: grants configured map pickups to active-team
   entities inside their rectangular regions and preserves collected-turn state.
+- `src/item/target.ts`: validates declarative self, entity, position, and zone
+  targets against ownership, activity, range, and world bounds.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; item gameplay is not active.
