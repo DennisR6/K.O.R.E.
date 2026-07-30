@@ -427,7 +427,7 @@
   - **Test File:** `tests/tauri_config.test.ts`
   - **Allowed Context:** `package.json`, `server.ts`
   - **Commit:** `build: add tauri desktop shell`
-- [ ] **Task [9.2]: Document Desktop Build**
+- [x] **Task [9.2]: Document Desktop Build**
   - **Goal:** Verify desktop packaging reads no development-only paths and document the release build procedure.
   - **Target Files:** `docs/desktop-release.md`, `package.json`
   - **Test File:** `tests/desktop_packaging.test.ts`
