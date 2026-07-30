@@ -285,7 +285,7 @@
   - **Test File:** `tests/controller_input.test.ts`
   - **Allowed Context:** `src/input/actions.ts`, `src/engine/types.ts`
   - **Commit:** `feat: add controller input`
-- [ ] **Task [6.4]: Touch Input Bindings**
+- [x] **Task [6.4]: Touch Input Bindings**
   - **Goal:** Add touch drag-and-hold bindings through the action abstraction.
   - **Target Files:** `src/input/touch.ts`, `src/systems/UiSystem.ts`
   - **Test File:** `tests/touch_input.test.ts`
