@@ -277,7 +277,7 @@
   Expected scope: UI system and test. Commit: `feat: separate aim and charge input`.
 - [x] Add explicit item-phase UI with available items, valid targets, and skip
   behavior. Expected scope: UI system and browser test. Commit: `feat: add item phase interface`.
-- [ ] Add clear active-team, rule-phase, turn number, force, and selected-item
+- [x] Add clear active-team, rule-phase, turn number, force, and selected-item
   indicators. Expected scope: drawing system and test. Commit: `feat: show match state indicators`.
 - [ ] Add controller stick/trigger bindings through the action abstraction.
   Expected scope: controller adapter and test. Commit: `feat: add controller input`.
