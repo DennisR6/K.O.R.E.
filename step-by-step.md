@@ -229,7 +229,7 @@
   angular updates. Expected scope: effect and test. Commit: `feat: add torque effect`.
 - [x] Add the serializable `spawnTrigger` effect primitive and test snapshot
   restoration. Expected scope: effect and test. Commit: `feat: add spawn trigger effect`.
-- [ ] Add the serializable delayed-effect primitive and test fixed-tick timing.
+- [x] Add the serializable delayed-effect primitive and test fixed-tick timing.
   Expected scope: scheduler effect and test. Commit: `feat: add delayed effect`.
 - [ ] Add the serializable shield effect primitive and test damage/collision
   interaction. Expected scope: effect and test. Commit: `feat: add shield effect`.

@@ -20,6 +20,7 @@ export const enum ItemEffectType {
 	LockRotation = "lockRotation",
 	ApplyTorque = "applyTorque",
 	SpawnTrigger = "spawnTrigger",
+	DelayedEffect = "delayedEffect",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
