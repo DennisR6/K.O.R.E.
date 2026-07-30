@@ -445,7 +445,7 @@
   - **Test File:** `tests/mobile_offline.test.ts`
   - **Allowed Context:** `src/main.ts`
   - **Commit:** `test: cover mobile offline flow`
-- [ ] **Task [9.5]: Configure Discord Integration**
+- [x] **Task [9.5]: Configure Discord Integration**
   - **Goal:** Define environment-configured Discord integration settings with no client credentials committed.
   - **Target Files:** `src/discord/config.ts`, `src/discord/types.ts`
   - **Test File:** `tests/discord_config.test.ts`
