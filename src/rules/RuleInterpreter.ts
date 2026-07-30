@@ -1,4 +1,4 @@
-import { RulePhase, type GameModeSettings, type RuleState } from "./types.js";
+import { RulePhase, validateItemEconomySettings, type GameModeSettings, type RuleState } from "./types.js";
 
 /** Advances a game mode's declarative turn phases without touching simulation. */
 export class RuleInterpreter {
@@ -14,6 +14,7 @@ export class RuleInterpreter {
 		if (hasItemPhase && mode.phases[0] !== RulePhase.Item) throw new Error("Item phase must start a turn")
 		if (hasItemPhase && mode.maxItemsPerTurn === 0) throw new Error("Item phase requires a positive item allowance")
 		if (!hasItemPhase && mode.maxItemsPerTurn !== 0) throw new Error("Item allowance requires an item phase")
+		validateItemEconomySettings(mode.itemEconomy)
 		const shotPhases = mode.phases.filter(phase => phase !== RulePhase.Item)
 		const requiredShotPhases = [RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics]
 		const isLegacyPhysicsOnly = shotPhases.length === 1 && shotPhases[0] === RulePhase.Physics

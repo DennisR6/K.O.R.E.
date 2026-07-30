@@ -105,7 +105,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   modes require `aim`, `charge`, `push`, then `physics`; the live combined-input
   mode remains physics-only.
 - `src/rules/defaultGameModes.ts`: transitional data-defined modes shared by
-  local and authoritative turn flows.
+  local and authoritative turn flows. Modes include serializable item-economy
+  settings for fixed loadouts, map pickups, and seeded draw pools.
 
 ### Entities, effects, and items
 
@@ -360,6 +361,9 @@ remain unsupported.
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.
+`GameModeSettings` can carry an `ItemEconomySettings` contract for fixed
+per-team loadouts, declared map pickups, and deterministic seeded draw pools;
+the selected optional mode is preserved in engine snapshots.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 

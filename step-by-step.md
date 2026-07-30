@@ -202,7 +202,7 @@
 - [x] Add an item loader that registers built-in and local mod items through the
   same validation path. Expected scope: loader and test. Commit:
   `feat: load declarative items`.
-- [ ] Add per-mode item-economy settings supporting fixed loadouts, map pickups,
+- [x] Add per-mode item-economy settings supporting fixed loadouts, map pickups,
   and seeded random draws. Expected scope: settings contract and test. Commit:
   `feat: configure item economy`.
 - [ ] Implement fixed loadout initialization and use consumption. Expected

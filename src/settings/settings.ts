@@ -6,6 +6,8 @@ import IceMap from "./iceMap.js";
 import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
+import { currentTurnMode } from "../rules/defaultGameModes.js";
+import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -27,6 +29,8 @@ export interface GameSettings {
 	allTeamSize: number,
 	playerCount: number,
 	figuresPerPlayer: number,
+	/** Optional to keep persisted settings from before game modes loadable. */
+	gameMode?: GameModeSettings,
 	minPlayers: number,
 	maxPlayers: number,
 	turn?: number
@@ -115,6 +119,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
 	if (!Array.isArray(settings.items) || !settings.items.every(item => isRecord(item) && item.schemaVersion === 1 && typeof item.id === "string" && typeof item.type === "string")) throw new Error("Invalid item settings")
+	if (settings.gameMode !== undefined) validateItemEconomySettings(settings.gameMode.itemEconomy)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }
@@ -192,6 +197,7 @@ export function createDefaultGameSettings(playerCount: number = 2, figuresPerPla
 		allTeamSize: 2,
 		playerCount,
 		figuresPerPlayer,
+		gameMode: currentTurnMode,
 		myTeam: [],
 		...IceMap.IceMap,
 	}

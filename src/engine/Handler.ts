@@ -20,7 +20,7 @@ import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import type { SettingsItem } from "../settings/settings.js";
-import { RulePhase, type RuleState } from "../rules/types.js";
+import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
 
 /**
@@ -443,6 +443,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			allTeamSize: this.teamSize,
 			playerCount: this.settings?.playerCount ?? 1,
 			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
+			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
@@ -522,6 +523,7 @@ export class GameHandlerBuilder {
 		const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1)
 		const figuresPerPlayer = gameSettings.figuresPerPlayer ?? Math.max(1, Math.floor(gameSettings.players.length / playerCount))
 		validateFigureCounts(playerCount, figuresPerPlayer)
+		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
 		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)

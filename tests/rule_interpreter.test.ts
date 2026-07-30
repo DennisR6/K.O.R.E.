@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test";
 import { RuleInterpreter } from "../src/rules/RuleInterpreter.ts";
-import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
+import { DEFAULT_ITEM_ECONOMY, RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
 
 const standardMode: GameModeSettings = {
 	id: "standard",
 	phases: [RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics],
 	maxItemsPerTurn: 1,
 	winCondition: WinCondition.LastTeamStanding,
+	itemEconomy: DEFAULT_ITEM_ECONOMY,
 }
 
 test("RuleInterpreter advances configured phases without changing turn state", () => {
