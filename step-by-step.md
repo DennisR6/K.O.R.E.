@@ -304,7 +304,7 @@
   - **Test File:** `tests/scaling_layout.test.ts`
   - **Allowed Context:** `src/engine/RenderContext.ts`, `src/engine/drawingEngine.ts`
   - **Commit:** `feat: scale interface for desktop`
-- [ ] **Task [6.7]: Stabilize Canvas Input Handlers**
+- [x] **Task [6.7]: Stabilize Canvas Input Handlers**
   - **Goal:** Fix p5 wheel handler binding and remove dependence on the browser-created `defaultCanvas0` global.
   - **Target Files:** `src/main.ts`, `src/systems/UiSystem.ts`
   - **Test File:** `tests/canvas_input.test.ts`

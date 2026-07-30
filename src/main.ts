@@ -105,7 +105,14 @@ function startGame(h: GameHandler) {
 			p.createCanvas(adapted.width, adapted.height);
 			ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
-			ctx.mouseWheel(handler.handleMouseWheel)
+			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
+			if (canvasEl) {
+				canvasEl.addEventListener("wheel", (e) => {
+					if (h.handleMouseWheel) {
+						h.handleMouseWheel(e);
+					}
+				});
+			}
 		};
 
 		p.draw = () => {
@@ -117,21 +124,27 @@ function startGame(h: GameHandler) {
 		};
 
 		window.addEventListener("mousemove", (e) => {
-			//@ts-ignore
-			if (typeof defaultCanvas0 === "undefined") return
-			//@ts-ignore
-			const { left, top, right, bottom } = (defaultCanvas0 as HTMLCanvasElement).getBoundingClientRect()
-			if (e.clientX < left) return
-			if (e.clientX > right) return
-			if (e.clientY < top) return
-			if (e.clientY > bottom) return
+			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
+			if (!canvasEl) return
+			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
+			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
 			h.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 		})
-		window.addEventListener("mousedown", (_e) => h.handleMousePressed())
-		window.addEventListener("mouseup", (_e) => h.handleMouseReleased())
+		window.addEventListener("mousedown", (e) => {
+			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
+			if (!canvasEl) return
+			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
+			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
+			h.handleMousePressed()
+		})
+		window.addEventListener("mouseup", (e) => {
+			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
+			if (!canvasEl) return
+			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
+			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
+			h.handleMouseReleased()
+		})
 
-		// Input Events
-		p.mouseWheel = h.handleMouseWheel
 		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 	};
 
