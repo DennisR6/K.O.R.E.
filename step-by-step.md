@@ -271,7 +271,7 @@
 
 ## 6. Input, UI, And Accessibility
 
-- [ ] Define configurable action bindings for aim, charge, push, and item use.
+- [x] Define configurable action bindings for aim, charge, push, and item use.
   Expected scope: input contracts and test. Commit: `feat: define configurable actions`.
 - [ ] Separate aim rotation selection from power charging in the UI input model.
   Expected scope: UI system and test. Commit: `feat: separate aim and charge input`.
