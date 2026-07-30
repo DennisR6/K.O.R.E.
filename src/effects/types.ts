@@ -28,6 +28,7 @@ export const enum ItemEffectType {
 	GhostMode = "ghostMode",
 	Magnet = "magnet",
 	SelectionLock = "selectionLock",
+	AimVariance = "aimVariance",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",

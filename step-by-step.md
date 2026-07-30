@@ -263,7 +263,7 @@
 - [x] Add the Jaegermeister-Elixier item data and behavior that prevents an
   opponent figure from being selected for its duration. Expected scope: item
   JSON and behavior test. Commit: `feat: add selection lock item`.
-- [ ] Add the Vodka-Zero item data and seeded deterministic aim variance.
+- [x] Add the Vodka-Zero item data and seeded deterministic aim variance.
   Expected scope: item JSON and replay test. Commit: `feat: add deterministic aim variance item`.
 - [ ] Add item stacking, conflict, cleanup, serialization, and replay regression
   tests for mixed effect combinations. Expected scope: focused integration test.

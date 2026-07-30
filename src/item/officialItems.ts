@@ -6,6 +6,7 @@ import { EffectTemporaryWall } from "../effects/temporaryWall.js";
 import { EffectFreeze } from "../effects/freeze.js";
 import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
+import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -27,6 +28,7 @@ export const FREEZE_SHOT_SPEED_FACTOR = 0.25;
 export const FREEZE_SHOT_DURATION_TURNS = 2;
 export const SWITCH_RANGE = 300;
 export const JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
+export const VODKA_ZERO_MAX_VARIANCE_DEGREES = 10;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -159,6 +161,19 @@ export const jaegermeisterElixierItem: ItemDocument = {
 	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
 };
 
+export const vodkaZeroItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "vodka-zero",
+	name: "Vodka-Zero",
+	description: "Adds seeded deterministic aim variance to shots.",
+	type: "offensive",
+	effects: [{ type: "aimVariance", value: { maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES } }],
+	targetType: "self",
+	duration: { type: "instant", value: 0 },
+	useLimit: { perTurn: 1, perGame: 2 },
+	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -171,6 +186,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("freeze");
 	validator.registerEffectType("swapPosition");
 	validator.registerEffectType("selectionLock");
+	validator.registerEffectType("aimVariance");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
@@ -182,6 +198,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(freezeShotItem);
 	loader.registerBuiltIn(switchItem);
 	loader.registerBuiltIn(jaegermeisterElixierItem);
+	loader.registerBuiltIn(vodkaZeroItem);
 	return loader;
 }
 
@@ -222,6 +239,10 @@ export function createFreezeShot(): EffectFreeze {
 
 export function createSelectionLock(): EffectSelectionLock {
 	return new EffectSelectionLock({ typeValue: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } });
+}
+
+export function createVodkaZero(seed: number = 42): EffectAimVariance {
+	return new EffectAimVariance({ typeValue: { maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES, seed } });
 }
 
 export function applySwitch(first: PositionTargetState, second: PositionTargetState): [ { x: number; y: number }, { x: number; y: number } ] {
