@@ -210,7 +210,7 @@
 - [x] Implement deterministic seeded item draws and serialize draw state for
   replay and reconnect. Expected scope: draw system and test. Commit:
   `feat: add deterministic item draws`.
-- [ ] Implement map item pickups and validate active-team ownership. Expected
+- [x] Implement map item pickups and validate active-team ownership. Expected
   scope: pickup system and test. Commit: `feat: collect map item pickups`.
 - [ ] Implement item target validation for entity, position, and zone targets.
   Expected scope: target validator and test. Commit: `feat: validate item targets`.

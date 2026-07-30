@@ -5,6 +5,7 @@ import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
 import type { RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
+import type { ItemPickupState } from "../item/types.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -159,6 +160,7 @@ export interface EngineSettings extends GameSettings {
 	activeTeam: number
 	ruleState: RuleState
 	itemDrawState?: ItemDrawState
+	itemPickupState?: ItemPickupState
 	matchResult?: MatchResult
 	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];

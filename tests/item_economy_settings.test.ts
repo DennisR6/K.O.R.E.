@@ -14,7 +14,7 @@ const economy: ItemEconomySettings = {
 test("item economy serializes fixed loadouts, pickups, and seeded draws in game snapshots", () => {
 	const settings = {
 		...createDefaultGameSettings(),
-		items: [createItemDocument({ id: "anker" }), createItemDocument({ id: "dash" }), createItemDocument({ id: "freeze" })],
+		items: [createItemDocument({ id: "anker" }), createItemDocument({ id: "magnet" }), createItemDocument({ id: "dash" }), createItemDocument({ id: "freeze" })],
 		gameMode: { ...currentTurnMode, itemEconomy: economy },
 	};
 	validateGameSettings(settings);

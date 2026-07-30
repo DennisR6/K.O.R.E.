@@ -51,6 +51,12 @@ export interface ItemPickup {
 	maxPickupsPerTurn?: number;
 }
 
+/** Serializable progress for configured map pickups in the current turn. */
+export interface ItemPickupState {
+	turnNumber: number;
+	pickups: { collected: number; occupants: string[] }[];
+}
+
 export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemDocument {
 	return {
 		schemaVersion: 1,
@@ -137,4 +143,17 @@ export function validateItemPickup(pickup: unknown): asserts pickup is ItemPicku
 	if (region.w <= 0 || region.h <= 0) throw new Error("Item pickup spawnRegion w and h must be positive");
 	if (!VALID_ACTIVATION_TYPES.includes(p.activationType as string)) throw new Error("Item pickup must have a valid activation type");
 	if (p.maxPickupsPerTurn !== undefined && (typeof p.maxPickupsPerTurn !== "number" || !Number.isSafeInteger(p.maxPickupsPerTurn) || p.maxPickupsPerTurn < 0)) throw new Error("Item pickup maxPickupsPerTurn must be a non-negative integer");
+}
+
+export function validateItemPickupState(state: unknown, pickupCount: number): asserts state is ItemPickupState {
+	if (typeof state !== "object" || state === null) throw new Error("Item pickup state must be a non-null object");
+	const value = state as Record<string, unknown>;
+	if (typeof value.turnNumber !== "number" || !Number.isSafeInteger(value.turnNumber) || value.turnNumber < 0) throw new Error("Item pickup state must have a non-negative turn number");
+	if (!Array.isArray(value.pickups) || value.pickups.length !== pickupCount) throw new Error("Item pickup state must match configured pickups");
+	for (const pickup of value.pickups) {
+		if (typeof pickup !== "object" || pickup === null) throw new Error("Item pickup state must contain pickup entries");
+		const entry = pickup as Record<string, unknown>;
+		if (typeof entry.collected !== "number" || !Number.isSafeInteger(entry.collected) || entry.collected < 0) throw new Error("Item pickup state must have non-negative collection counts");
+		if (!Array.isArray(entry.occupants) || !entry.occupants.every(id => typeof id === "string") || new Set(entry.occupants).size !== entry.occupants.length) throw new Error("Item pickup state must have unique occupant IDs");
+	}
 }

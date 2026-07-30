@@ -22,7 +22,8 @@ import { BoundarySystem } from "../systems/BoundarySystem.js";
 import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
-import { validateItemDocument, type ItemDocument } from "../item/types.js";
+import { MapPickupSystem } from "../item/MapPickupSystem.js";
+import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 
 /**
@@ -98,6 +99,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectCollision: Effect[] = []
 	private items: ItemDocument[] = []
 	private itemDrawRandom: SeededRandom | undefined
+	private mapPickupSystem = new MapPickupSystem()
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	/**
@@ -224,6 +226,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const drift = this.settings?.drift ?? DEFAULT_DRIFT
 		for (const e of this.entityManager.getEntities()) { e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold()) }
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
+		this.mapPickupSystem.ticker(this.context, dt, this.physicsStrategy.getFriction())
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 	}
@@ -401,6 +404,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.setItems(settings.items)
 		this.loadEffects(settings.effects)
 		this.initializeItemDraws()
+		this.resetMapItemPickups()
 		this.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
@@ -463,6 +467,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 			matchResult: this.getMatchResult(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
+			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
 		}
 		this.saveSettings(settings)
 		return settings
@@ -482,6 +487,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		items.forEach(validateItemDocument)
 		this.items = structuredClone(items)
 	}
+	public configureMapItemPickups(pickups: ItemPickup[]): void { this.mapPickupSystem.configure(pickups, this.items) }
+	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
+	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
 	/** Consumes a declared item without applying its effects or validating targets. */
 	public useItem(actorId: string, itemId: string): void {
 		const actor = this.entityManager.getEntityById(actorId)
@@ -599,7 +607,7 @@ export class GameHandlerBuilder {
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
-		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
@@ -613,6 +621,7 @@ export class GameHandlerBuilder {
 		this.engine.setMyTeam(myTeam ?? [crypto.randomUUID()])
 		this.engine.setTeamSize(gameSettings.allTeamSize)
 		this.engine.setItems(gameSettings.items)
+		this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? [])
 		this.engine.loadEffects(gameSettings.effects)
 
 		// Player
@@ -634,6 +643,7 @@ export class GameHandlerBuilder {
 			this.engine.setActiveTeam(ruleState.activeTeam)
 			this.engine.setMatchResult(gameSettings.matchResult)
 			this.engine.restoreItemDraws(gameSettings.itemDrawState)
+			this.engine.restoreMapItemPickups(gameSettings.itemPickupState)
 		}
 
 		return this
