@@ -205,7 +205,7 @@
 - [x] Add per-mode item-economy settings supporting fixed loadouts, map pickups,
   and seeded random draws. Expected scope: settings contract and test. Commit:
   `feat: configure item economy`.
-- [ ] Implement fixed loadout initialization and use consumption. Expected
+- [x] Implement fixed loadout initialization and use consumption. Expected
   scope: inventory system and test. Commit: `feat: initialize fixed item loadouts`.
 - [ ] Implement deterministic seeded item draws and serialize draw state for
   replay and reconnect. Expected scope: draw system and test. Commit:

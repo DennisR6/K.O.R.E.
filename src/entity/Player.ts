@@ -5,7 +5,8 @@ import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
-import type { SettingsItem } from "../settings/settings.js";
+import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
+import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 
 
@@ -42,7 +43,7 @@ export class Player implements IEntity {
 	private hoop: AssetList
 	private isPhysicsEnabled: boolean = true
 	private dead: boolean = false
-	private items: SettingsItem[] = []
+	private items: InventoryItem[] = []
 
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
@@ -144,7 +145,7 @@ export class Player implements IEntity {
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
-	public use(_item: SettingsItem): void { }
+	public use(item: ItemDocument): void { consumeInventoryItem(this.items, item) }
 
 	/** Applies an allowlisted setting exactly, including serializable state changes. */
 	public setSetting(key: PlayerSettingKey, value: SettingValue): void {
@@ -234,8 +235,10 @@ export class Player implements IEntity {
 		this.dead = dead
 		if (dead) this.setVel({ x: 0, y: 0 })
 	}
-	public AddItem(item: SettingsItem): void { this.items.push({ ...item }) }
-	public getInventory(): SettingsItem[] { return this.items.map(item => ({ ...item })) }
+	public AddItem(item: InventoryItem): void { this.items.push({ ...item }) }
+	public setInventory(items: InventoryItem[]): void { this.items = items.map(item => ({ ...item })) }
+	public resetItemUses(): void { resetInventoryTurnUses(this.items) }
+	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {

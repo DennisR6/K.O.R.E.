@@ -5,7 +5,7 @@ import type { ISettingsSerialize } from "../engine/types.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
 import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect } from "../effects/types.js";
-import type { SettingsItem } from "../settings/settings.js";
+import type { InventoryItem, ItemDocument } from "../item/types.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -45,7 +45,9 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getEffects(): Effect[]
 }
 export interface IInventory {
-	AddItem(item: SettingsItem): void
-	use(item: SettingsItem): void
-	getInventory(): SettingsItem[]
+	AddItem(item: InventoryItem): void
+	setInventory(items: InventoryItem[]): void
+	use(item: ItemDocument): void
+	resetItemUses(): void
+	getInventory(): InventoryItem[]
 }

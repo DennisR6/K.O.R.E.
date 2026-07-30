@@ -57,7 +57,7 @@ test("Player settings round-trip all mutable state", () => {
 		team: [2],
 		isPhysicsEnabled: false,
 		isDead: true,
-		inventory: [{ id: "anchor", type: "anchor" }],
+		inventory: [{ itemId: "anchor", remainingUses: 1, usesThisTurn: 0 }],
 		effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], ...new EffectModifyMass({ typeValue: { mass: 0.25 } }).toSettings() }],
 	})
 	expect(new Player(settings).toSettings()).toEqual(settings)
@@ -208,7 +208,7 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 		team: [1],
 		isDead: true,
 		isPhysicsEnabled: false,
-		inventory: [{ id: "item", type: "test" }],
+		inventory: [{ itemId: "item", remainingUses: 1, usesThisTurn: 0 }],
 	})
 	const turn: TurnPacket = { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState: [finalState] }
 	const ruleState = { phase: RulePhase.Physics, activeTeam: 1, turnNumber: 3, itemUses: 0 }

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { currentTurnMode } from "../src/rules/defaultGameModes.ts";
 import { validateItemEconomySettings, type ItemEconomySettings } from "../src/rules/types.ts";
+import { createItemDocument } from "../src/item/types.ts";
 import { createDefaultGameSettings, validateGameSettings } from "../src/settings/settings.ts";
 
 const economy: ItemEconomySettings = {
@@ -11,7 +12,11 @@ const economy: ItemEconomySettings = {
 };
 
 test("item economy serializes fixed loadouts, pickups, and seeded draws in game snapshots", () => {
-	const settings = { ...createDefaultGameSettings(), gameMode: { ...currentTurnMode, itemEconomy: economy } };
+	const settings = {
+		...createDefaultGameSettings(),
+		items: [createItemDocument({ id: "anker" })],
+		gameMode: { ...currentTurnMode, itemEconomy: economy },
+	};
 	validateGameSettings(settings);
 	const snapshot = JSON.parse(JSON.stringify(new GameHandlerBuilder().defaultSystems().fromSettings(settings).build().toSettings()));
 	expect(snapshot.gameMode.itemEconomy).toEqual(economy);

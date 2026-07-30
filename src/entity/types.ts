@@ -2,7 +2,7 @@ import type { UUID } from "node:crypto";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import { SHAPE, type Vector2D } from "../physics/physics.js";
 import type { FullEffectSettings } from "../effects/types.js";
-import type { SettingsItem } from "../settings/settings.js";
+import type { InventoryItem } from "../item/types.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -68,7 +68,7 @@ export interface PlayerSettings {
 	isPhysicsEnabled: boolean
 	isDead: boolean
 	effects: FullEffectSettings[]
-	inventory: SettingsItem[]
+	inventory: InventoryItem[]
 }
 
 export function validatePlayerMass(mass: number): void {

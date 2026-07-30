@@ -19,9 +19,10 @@ import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
-import type { SettingsItem } from "../settings/settings.js";
 import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
+import { createFixedLoadoutInventory } from "../item/inventory.js";
+import { validateItemDocument, type ItemDocument } from "../item/types.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -94,7 +95,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectAlways: Effect[] = []
 	private effectRound: Effect[] = []
 	private effectCollision: Effect[] = []
-	private items: SettingsItem[] = []
+	private items: ItemDocument[] = []
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	/**
@@ -358,7 +359,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getState(): GameState { return this.context.state }
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
-	public setTurnNumber(turnNumber: number): void { this.context.currTurn = turnNumber; this.ruleState.turnNumber = turnNumber }
+	public setTurnNumber(turnNumber: number): void {
+		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => entity.resetItemUses())
+		this.context.currTurn = turnNumber
+		this.ruleState.turnNumber = turnNumber
+	}
 	public getTurnNumber(): number { return this.context.currTurn }
 	public setActiveTeam(team: number): void {
 		if (!Number.isInteger(team) || team < 0) throw new Error("Active team must be a non-negative integer")
@@ -378,6 +383,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
 		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
 		this.entityManager.applySettings(settings.players)
+		this.initializeFixedLoadouts()
 		this.context.structures = settings.mapBoundarys.map(boundary => new FullStructure(boundary))
 		this.setPhysics(new defaultPhysics(settings.friction))
 		this.setWorldSize(settings.screenResolution)
@@ -463,7 +469,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public addEffectEveryRound(effect: Effect): void { this.effectRound.push(effect) }
 	public addEffectEveryCollision(effect: Effect): void { this.effectCollision.push(effect) }
 	public setTeamSize(size: number): void { this.teamSize = size }
-	public setItems(items: SettingsItem[]): void { this.items = items.map(item => ({ ...item })) }
+	public setItems(items: ItemDocument[]): void {
+		items.forEach(validateItemDocument)
+		this.items = structuredClone(items)
+	}
+	/** Consumes a declared item without applying its effects or validating targets. */
+	public useItem(actorId: string, itemId: string): void {
+		const actor = this.entityManager.getEntityById(actorId)
+		if (!actor) throw new Error(`Actor ${actorId} not found`)
+		const item = this.items.find(candidate => candidate.id === itemId)
+		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
+		actor.use(item)
+	}
 	public loadEffects(effects: FullEffectSettings[]): void {
 		this.effectAlways = []
 		this.effectRound = []
@@ -473,6 +490,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(effect)); break
 				case EffectTrigger.Round: this.effectRound.push(new MetaEffect(effect)); break
 				case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(effect)); break
+			}
+		}
+	}
+	public initializeFixedLoadouts(): void {
+		const loadouts = this.settings?.gameMode?.itemEconomy.fixedLoadouts ?? []
+		for (const loadout of loadouts) {
+			const inventory = createFixedLoadoutInventory(loadout, this.items)
+			for (const entity of this.entityManager.getEntities()) {
+				if (entity.getTeam().includes(loadout.team)) entity.setInventory(inventory)
 			}
 		}
 	}
@@ -543,15 +569,17 @@ export class GameHandlerBuilder {
 
 		// Player
 		players.forEach((player) => this.addPlayer(new Player(player)))
+		if (!("state" in gameSettings)) this.engine.initializeFixedLoadouts()
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
 
 		if ("state" in gameSettings) {
 			this.state = gameSettings.state
-			this.engine.setTurnNumber(gameSettings.turnNumber)
-			this.engine.setActiveTeam(gameSettings.activeTeam ?? 0)
-			this.engine.setRuleState(gameSettings.ruleState ?? { phase: RulePhase.Physics, activeTeam: gameSettings.activeTeam ?? 0, turnNumber: gameSettings.turnNumber, itemUses: 0 })
+			const ruleState = gameSettings.ruleState ?? { phase: RulePhase.Physics, activeTeam: gameSettings.activeTeam ?? 0, turnNumber: gameSettings.turnNumber, itemUses: 0 }
+			this.engine.setRuleState(ruleState)
+			this.engine.setTurnNumber(ruleState.turnNumber)
+			this.engine.setActiveTeam(ruleState.activeTeam)
 			this.engine.setMatchResult(gameSettings.matchResult)
 		}
 

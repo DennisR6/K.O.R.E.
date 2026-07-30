@@ -8,6 +8,7 @@ import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
+import { validateItemDocument, type ItemDocument } from "../item/types.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -23,7 +24,7 @@ export interface GameSettings {
 	friction: FrictionSettings;
 	drift: number;
 	effects: FullEffectSettings[];
-	items: SettingsItem[];
+	items: ItemDocument[];
 	myTeam: number[],
 	allTeams?: string[],
 	allTeamSize: number,
@@ -81,12 +82,6 @@ export interface MapBoundarySettingsRect extends IMapBoundarySettings {
 	color?: string;
 }
 
-export interface SettingsItem {
-	schemaVersion: number
-	id: UUID
-	type: string
-}
-
 export interface FrictionSettings {
 	friction: number;
 	linearDrag: number;
@@ -118,7 +113,8 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.players) || !settings.players.every(player => isRecord(player) && isVector(player.position) && isVector(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect))) throw new Error("Invalid player settings")
 	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
-	if (!Array.isArray(settings.items) || !settings.items.every(item => isRecord(item) && item.schemaVersion === 1 && typeof item.id === "string" && typeof item.type === "string")) throw new Error("Invalid item settings")
+	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
+	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
 	if (settings.gameMode !== undefined) validateItemEconomySettings(settings.gameMode.itemEconomy)
 }
 
