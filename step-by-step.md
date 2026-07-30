@@ -388,7 +388,7 @@
   - **Test File:** `tests/shared_settings.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
   - **Commit:** `feat: share validated game settings`
-- [ ] **Task [8.6]: Define Replay Format**
+- [x] **Task [8.6]: Define Replay Format**
   - **Goal:** Define a replay document containing initial settings, deterministic seed, accepted actions, and format version.
   - **Target Files:** `src/replay/types.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/replay_format.test.ts`
