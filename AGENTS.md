@@ -122,6 +122,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/effects/effects.ts`: `MetaEffect`, the serialized-type factory.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
+- `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
+  item actions, with deterministic stacking.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an

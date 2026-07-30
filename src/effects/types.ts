@@ -13,6 +13,10 @@ export const enum EffectType {
 	Team = "EffectType.Team",
 	ModifySetting = "EffectType.ModifySetting"
 }
+/** Data-addressable effects that modify an item action before it is applied. */
+export const enum ItemEffectType {
+	ModifyForce = "modifyForce",
+}
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
 	Collision = "EffectTrigger.Collision",
@@ -26,6 +30,14 @@ export interface FullEffectSettings extends EffectSettings {
 export interface EffectSettings {
 	type: EffectType,
 	typeValue: any,
+}
+export interface ForceInput {
+	angle: number;
+	power: number;
+}
+export interface ItemEffectSettings {
+	type: ItemEffectType;
+	typeValue: Record<string, number>;
 }
 export const enum SettingOperation {
 	Set = "set",

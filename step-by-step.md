@@ -219,7 +219,7 @@
   `feat: authorize item use`.
 - [x] Implement local item-use emission and authoritative client state updates.
   Expected scope: emitter/UI adapter and test. Commit: `feat: synchronize item use`.
-- [ ] Add the serializable `modifyForce` effect primitive and test stacking.
+- [x] Add the serializable `modifyForce` effect primitive and test stacking.
   Expected scope: effect and test. Commit: `feat: add modify force effect`.
 - [ ] Add the serializable `modifyRotation` effect primitive and test angle
   normalization. Expected scope: effect and test. Commit: `feat: add modify rotation effect`.
