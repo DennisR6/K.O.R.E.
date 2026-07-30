@@ -275,7 +275,7 @@
   Expected scope: input contracts and test. Commit: `feat: define configurable actions`.
 - [x] Separate aim rotation selection from power charging in the UI input model.
   Expected scope: UI system and test. Commit: `feat: separate aim and charge input`.
-- [ ] Add explicit item-phase UI with available items, valid targets, and skip
+- [x] Add explicit item-phase UI with available items, valid targets, and skip
   behavior. Expected scope: UI system and browser test. Commit: `feat: add item phase interface`.
 - [ ] Add clear active-team, rule-phase, turn number, force, and selected-item
   indicators. Expected scope: drawing system and test. Commit: `feat: show match state indicators`.
