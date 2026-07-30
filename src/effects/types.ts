@@ -17,6 +17,7 @@ export const enum EffectType {
 export const enum ItemEffectType {
 	ModifyForce = "modifyForce",
 	ModifyRotation = "modifyRotation",
+	LockRotation = "lockRotation",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",

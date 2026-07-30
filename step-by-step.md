@@ -223,7 +223,7 @@
   Expected scope: effect and test. Commit: `feat: add modify force effect`.
 - [x] Add the serializable `modifyRotation` effect primitive and test angle
   normalization. Expected scope: effect and test. Commit: `feat: add modify rotation effect`.
-- [ ] Add the serializable `lockRotation` effect primitive and test expiration.
+- [x] Add the serializable `lockRotation` effect primitive and test expiration.
   Expected scope: effect and test. Commit: `feat: add lock rotation effect`.
 - [ ] Add the serializable `applyTorque` effect primitive and test deterministic
   angular updates. Expected scope: effect and test. Commit: `feat: add torque effect`.
