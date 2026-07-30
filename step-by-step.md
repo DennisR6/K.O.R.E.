@@ -376,7 +376,7 @@
   - **Test File:** `tests/restore_matches.test.ts`
   - **Allowed Context:** `src/persistence/storage.ts`, `src/settings/settings.ts`
   - **Commit:** `feat: restore local matches`
-- [ ] **Task [8.4]: Version Game Settings Exports**
+- [x] **Task [8.4]: Version Game Settings Exports**
   - **Goal:** Define a portable `toSettings()` export envelope with schema version and validation metadata.
   - **Target Files:** `src/persistence/export.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/settings_export.test.ts`
