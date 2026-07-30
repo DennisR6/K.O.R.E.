@@ -279,117 +279,237 @@
   behavior. Expected scope: UI system and browser test. Commit: `feat: add item phase interface`.
 - [x] Add clear active-team, rule-phase, turn number, force, and selected-item
   indicators. Expected scope: drawing system and test. Commit: `feat: show match state indicators`.
-- [ ] Add controller stick/trigger bindings through the action abstraction.
-  Expected scope: controller adapter and test. Commit: `feat: add controller input`.
-- [ ] Add touch drag-and-hold bindings through the action abstraction. Expected
-  scope: touch adapter and browser test. Commit: `feat: add touch input`.
-- [ ] Add responsive mobile layout rules with large touch targets and verify a
-  small viewport browser path. Expected scope: UI styling and test. Commit:
-  `feat: adapt interface for mobile`.
-- [ ] Add desktop and Steam Deck layout scaling for compact and large displays.
-  Expected scope: renderer layout and test. Commit: `feat: scale interface for desktop`.
-- [ ] Fix p5 wheel handler binding and remove dependence on the browser-created
-  `defaultCanvas0` global. Expected scope: main input setup and browser test.
-  Commit: `fix: stabilize canvas input handlers`.
+- [ ] **Task [6.3]: Controller Input Bindings**
+  - **Goal:** Add controller stick/trigger bindings through the action abstraction.
+  - **Target Files:** `src/input/controller.ts`, `src/input/actions.ts`
+  - **Test File:** `tests/controller_input.test.ts`
+  - **Allowed Context:** `src/input/actions.ts`, `src/engine/types.ts`
+  - **Commit:** `feat: add controller input`
+- [ ] **Task [6.4]: Touch Input Bindings**
+  - **Goal:** Add touch drag-and-hold bindings through the action abstraction.
+  - **Target Files:** `src/input/touch.ts`, `src/systems/UiSystem.ts`
+  - **Test File:** `tests/touch_input.test.ts`
+  - **Allowed Context:** `src/input/actions.ts`, `src/systems/UiSystem.ts`
+  - **Commit:** `feat: add touch input`
+- [ ] **Task [6.5]: Mobile Layout Adaptation**
+  - **Goal:** Add responsive mobile layout rules with large touch targets and verify a small viewport browser path.
+  - **Target Files:** `src/ui/layout.ts`, `src/main.ts`
+  - **Test File:** `tests/mobile_layout.test.ts`
+  - **Allowed Context:** `src/engine/RenderContext.ts`, `src/main.ts`
+  - **Commit:** `feat: adapt interface for mobile`
+- [ ] **Task [6.6]: Desktop And Steam Deck Layout Scaling**
+  - **Goal:** Add desktop and Steam Deck layout scaling for compact and large displays.
+  - **Target Files:** `src/ui/layout.ts`, `src/engine/drawingEngine.ts`
+  - **Test File:** `tests/scaling_layout.test.ts`
+  - **Allowed Context:** `src/engine/RenderContext.ts`, `src/engine/drawingEngine.ts`
+  - **Commit:** `feat: scale interface for desktop`
+- [ ] **Task [6.7]: Stabilize Canvas Input Handlers**
+  - **Goal:** Fix p5 wheel handler binding and remove dependence on the browser-created `defaultCanvas0` global.
+  - **Target Files:** `src/main.ts`, `src/systems/UiSystem.ts`
+  - **Test File:** `tests/canvas_input.test.ts`
+  - **Allowed Context:** `src/main.ts`, `src/systems/UiSystem.ts`
+  - **Commit:** `fix: stabilize canvas input handlers`
 
 ## 7. AI And Play Modes
 
-- [ ] Define serializable AI configuration including seed, difficulty, and
-  decision limits. Expected scope: AI types and test. Commit: `feat: define ai settings`.
-- [ ] Add a shared AI turn-emitter interface that submits the same validated
-  input as a human player. Expected scope: AI adapter and test. Commit:
-  `feat: add ai turn interface`.
-- [ ] Implement and test deterministic easy AI random angle and force choices.
-  Expected scope: easy strategy and test. Commit: `feat: add deterministic easy ai`.
-- [ ] Implement medium AI target-angle heuristics with collision and
-  out-of-bounds risk penalties. Expected scope: strategy and test. Commit:
-  `feat: add heuristic medium ai`.
-- [ ] Implement hard AI bounded angle/force simulation search with a fixed
-  deterministic evaluation budget. Expected scope: strategy and test. Commit:
-  `feat: add simulation hard ai`.
-- [ ] Add 1-player-versus-AI game-mode settings and initialize the AI team from
-  those settings. Expected scope: mode setup and test. Commit: `feat: add versus ai mode`.
-- [ ] Run AI through the authoritative turn path and add a complete simulated
-  match regression test. Expected scope: registry or rule adapter and test.
-  Commit: `test: cover authoritative ai match`.
+- [ ] **Task [7.1]: Define AI Settings**
+  - **Goal:** Define serializable AI configuration including seed, difficulty, and decision limits.
+  - **Target Files:** `src/ai/types.ts`, `src/settings/settings.ts`
+  - **Test File:** `tests/ai_settings.test.ts`
+  - **Allowed Context:** `src/settings/settings.ts`, `src/engine/types.ts`
+  - **Commit:** `feat: define ai settings`
+- [ ] **Task [7.2]: AI Turn Emitter Interface**
+  - **Goal:** Add a shared AI turn-emitter interface that submits the same validated input as a human player.
+  - **Target Files:** `src/ai/aiEmitter.ts`, `src/emitter/Emitter.ts`
+  - **Test File:** `tests/ai_emitter.test.ts`
+  - **Allowed Context:** `src/emitter/Emitter.ts`, `src/ai/types.ts`
+  - **Commit:** `feat: add ai turn interface`
+- [ ] **Task [7.3]: Deterministic Easy AI**
+  - **Goal:** Implement and test deterministic easy AI random angle and force choices.
+  - **Target Files:** `src/ai/easyAi.ts`, `src/ai/types.ts`
+  - **Test File:** `tests/easy_ai.test.ts`
+  - **Allowed Context:** `src/utils/random.ts`, `src/ai/types.ts`
+  - **Commit:** `feat: add deterministic easy ai`
+- [ ] **Task [7.4]: Heuristic Medium AI**
+  - **Goal:** Implement medium AI target-angle heuristics with collision and out-of-bounds risk penalties.
+  - **Target Files:** `src/ai/mediumAi.ts`, `src/ai/types.ts`
+  - **Test File:** `tests/medium_ai.test.ts`
+  - **Allowed Context:** `src/physics/physics.ts`, `src/ai/types.ts`
+  - **Commit:** `feat: add heuristic medium ai`
+- [ ] **Task [7.5]: Simulation Hard AI**
+  - **Goal:** Implement hard AI bounded angle/force simulation search with a fixed deterministic evaluation budget.
+  - **Target Files:** `src/ai/hardAi.ts`, `src/ai/types.ts`
+  - **Test File:** `tests/hard_ai.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/ai/types.ts`
+  - **Commit:** `feat: add simulation hard ai`
+- [ ] **Task [7.6]: Versus AI Game Mode**
+  - **Goal:** Add 1-player-versus-AI game-mode settings and initialize the AI team from those settings.
+  - **Target Files:** `src/settings/settings.ts`, `src/engine/Handler.ts`
+  - **Test File:** `tests/versus_ai.test.ts`
+  - **Allowed Context:** `src/settings/settings.ts`, `src/engine/Handler.ts`
+  - **Commit:** `feat: add versus ai mode`
+- [ ] **Task [7.7]: Authoritative AI Match Coverage**
+  - **Goal:** Run AI through the authoritative turn path and add a complete simulated match regression test.
+  - **Target Files:** `src/server/gameRegistry.ts`, `src/ai/aiEmitter.ts`
+  - **Test File:** `tests/authoritative_ai.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/ai/aiEmitter.ts`
+  - **Commit:** `test: cover authoritative ai match`
 
 ## 8. Persistence, Sharing, And Replays
 
-- [ ] Define a versioned local save-slot record containing validated game
-  settings and match snapshot. Expected scope: save types and test. Commit:
-  `feat: define local save slots`.
-- [ ] Implement local save-slot creation and listing without exposing database
-  files to static HTTP routes. Expected scope: storage adapter and test. Commit:
-  `feat: save local matches`.
-- [ ] Implement local save-slot restoration through the same settings validator
-  used by networking. Expected scope: loader and test. Commit: `feat: restore local matches`.
-- [ ] Define a portable `toSettings()` export envelope with schema version and
-  validation metadata. Expected scope: export helper and test. Commit:
-  `feat: version game settings exports`.
-- [ ] Add an authoritative create-or-join path that accepts only validated,
-  allowed settings exports and distributes them in `INIT`. Expected scope:
-  registry/runtime and test. Commit: `feat: share validated game settings`.
-- [ ] Define a replay document containing initial settings, deterministic seed,
-  accepted actions, and format version. Expected scope: replay types and test.
-  Commit: `feat: define replay format`.
-- [ ] Record accepted local actions into replay data and test export/replay
-  equality. Expected scope: local emitter and test. Commit: `feat: record local replays`.
-- [ ] Record accepted authoritative actions into replay data and persist it with
-  the match. Expected scope: registry/database and test. Commit:
-  `feat: record network replays`.
-- [ ] Implement replay playback from initial settings without live input and
-  test final snapshots. Expected scope: replay player and test. Commit:
-  `feat: play deterministic replays`.
-- [ ] Add a replay viewer entry point and a malformed/incompatible replay error
-  state. Expected scope: menu/UI and browser test. Commit: `feat: add replay viewer`.
+- [ ] **Task [8.1]: Define Local Save Slots**
+  - **Goal:** Define a versioned local save-slot record containing validated game settings and match snapshot.
+  - **Target Files:** `src/persistence/saveSlots.ts`, `src/contracts/documents.ts`
+  - **Test File:** `tests/save_slots.test.ts`
+  - **Allowed Context:** `src/contracts/documents.ts`, `src/settings/settings.ts`
+  - **Commit:** `feat: define local save slots`
+- [ ] **Task [8.2]: Local Match Storage**
+  - **Goal:** Implement local save-slot creation and listing without exposing database files to static HTTP routes.
+  - **Target Files:** `src/persistence/storage.ts`, `server.ts`
+  - **Test File:** `tests/local_storage.test.ts`
+  - **Allowed Context:** `src/persistence/saveSlots.ts`, `server.ts`
+  - **Commit:** `feat: save local matches`
+- [ ] **Task [8.3]: Local Match Restoration**
+  - **Goal:** Implement local save-slot restoration through the same settings validator used by networking.
+  - **Target Files:** `src/persistence/storage.ts`, `src/settings/settings.ts`
+  - **Test File:** `tests/restore_matches.test.ts`
+  - **Allowed Context:** `src/persistence/storage.ts`, `src/settings/settings.ts`
+  - **Commit:** `feat: restore local matches`
+- [ ] **Task [8.4]: Version Game Settings Exports**
+  - **Goal:** Define a portable `toSettings()` export envelope with schema version and validation metadata.
+  - **Target Files:** `src/persistence/export.ts`, `src/contracts/documents.ts`
+  - **Test File:** `tests/settings_export.test.ts`
+  - **Allowed Context:** `src/contracts/documents.ts`, `src/engine/Handler.ts`
+  - **Commit:** `feat: version game settings exports`
+- [ ] **Task [8.5]: Share Validated Game Settings**
+  - **Goal:** Add an authoritative create-or-join path that accepts only validated, allowed settings exports and distributes them in `INIT`.
+  - **Target Files:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
+  - **Test File:** `tests/shared_settings.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
+  - **Commit:** `feat: share validated game settings`
+- [ ] **Task [8.6]: Define Replay Format**
+  - **Goal:** Define a replay document containing initial settings, deterministic seed, accepted actions, and format version.
+  - **Target Files:** `src/replay/types.ts`, `src/contracts/documents.ts`
+  - **Test File:** `tests/replay_format.test.ts`
+  - **Allowed Context:** `src/contracts/documents.ts`, `src/engine/types.ts`
+  - **Commit:** `feat: define replay format`
+- [ ] **Task [8.7]: Record Local Replays**
+  - **Goal:** Record accepted local actions into replay data and test export/replay equality.
+  - **Target Files:** `src/replay/recorder.ts`, `src/emitter/EngineEmitter.ts`
+  - **Test File:** `tests/local_replays.test.ts`
+  - **Allowed Context:** `src/replay/types.ts`, `src/emitter/EngineEmitter.ts`
+  - **Commit:** `feat: record local replays`
+- [ ] **Task [8.8]: Record Network Replays**
+  - **Goal:** Record accepted authoritative actions into replay data and persist it with the match.
+  - **Target Files:** `src/replay/recorder.ts`, `src/server/gameRegistry.ts`
+  - **Test File:** `tests/network_replays.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/replay/recorder.ts`
+  - **Commit:** `feat: record network replays`
+- [ ] **Task [8.9]: Play Deterministic Replays**
+  - **Goal:** Implement replay playback from initial settings without live input and test final snapshots.
+  - **Target Files:** `src/replay/player.ts`, `src/replay/types.ts`
+  - **Test File:** `tests/deterministic_replay.test.ts`
+  - **Allowed Context:** `src/replay/types.ts`, `src/engine/Handler.ts`
+  - **Commit:** `feat: play deterministic replays`
+- [ ] **Task [8.10]: Replay Viewer**
+  - **Goal:** Add a replay viewer entry point and a malformed/incompatible replay error state.
+  - **Target Files:** `src/menu/replayViewer.ts`, `src/main.ts`
+  - **Test File:** `tests/replay_viewer.test.ts`
+  - **Allowed Context:** `src/menu/Menu.ts`, `src/replay/player.ts`
+  - **Commit:** `feat: add replay viewer`
 
 ## 9. Desktop, Mobile, And Discord
 
-- [ ] Add Tauri project configuration and a minimal desktop launch command that
-  serves the existing built browser application. Expected scope: Tauri config
-  and package scripts. Commit: `build: add tauri desktop shell`.
-- [ ] Verify desktop packaging reads no development-only paths and document the
-  release build procedure. Expected scope: package config and documentation.
-  Commit: `docs: document desktop build`.
-- [ ] Add web-app manifest, icons, and service-worker caching for offline mobile
-  launch. Expected scope: public assets and registration code. Commit:
-  `feat: add offline mobile web shell`.
-- [ ] Verify offline startup, reconnect recovery, and touch controls on a mobile
-  viewport; add a browser smoke test. Expected scope: test and minor fixes.
-  Commit: `test: cover mobile offline flow`.
-- [ ] Define environment-configured Discord integration settings with no client
-  credentials committed. Expected scope: config types and test. Commit:
-  `feat: configure discord integration`.
-- [ ] Add Discord Rich Presence states for menu, match, map, and active turn
-  behind the configured integration. Expected scope: adapter and mock test.
-  Commit: `feat: report discord match presence`.
-- [ ] Add Discord join/invite payload handling that validates game identifiers
-  before connecting. Expected scope: adapter and test. Commit:
-  `feat: support discord game invites`.
-- [ ] Document required Discord application configuration and verify disabled
-  integration is a no-op. Expected scope: documentation and test. Commit:
-  `docs: document discord configuration`.
+- [ ] **Task [9.1]: Tauri Desktop Shell**
+  - **Goal:** Add Tauri project configuration and a minimal desktop launch command that serves the existing built browser application.
+  - **Target Files:** `src-tauri/tauri.conf.json`, `package.json`
+  - **Test File:** `tests/tauri_config.test.ts`
+  - **Allowed Context:** `package.json`, `server.ts`
+  - **Commit:** `build: add tauri desktop shell`
+- [ ] **Task [9.2]: Document Desktop Build**
+  - **Goal:** Verify desktop packaging reads no development-only paths and document the release build procedure.
+  - **Target Files:** `docs/desktop-release.md`, `package.json`
+  - **Test File:** `tests/desktop_packaging.test.ts`
+  - **Allowed Context:** `package.json`
+  - **Commit:** `docs: document desktop build`
+- [ ] **Task [9.3]: Offline Mobile Web Shell**
+  - **Goal:** Add web-app manifest, icons, and service-worker caching for offline mobile launch.
+  - **Target Files:** `public/manifest.json`, `public/sw.js`
+  - **Test File:** `tests/mobile_manifest.test.ts`
+  - **Allowed Context:** `index.html`, `public/`
+  - **Commit:** `feat: add offline mobile web shell`
+- [ ] **Task [9.4]: Cover Mobile Offline Flow**
+  - **Goal:** Verify offline startup, reconnect recovery, and touch controls on a mobile viewport; add a browser smoke test.
+  - **Target Files:** `src/main.ts`, `public/sw.js`
+  - **Test File:** `tests/mobile_offline.test.ts`
+  - **Allowed Context:** `src/main.ts`
+  - **Commit:** `test: cover mobile offline flow`
+- [ ] **Task [9.5]: Configure Discord Integration**
+  - **Goal:** Define environment-configured Discord integration settings with no client credentials committed.
+  - **Target Files:** `src/discord/config.ts`, `src/discord/types.ts`
+  - **Test File:** `tests/discord_config.test.ts`
+  - **Allowed Context:** `src/discord/types.ts`
+  - **Commit:** `feat: configure discord integration`
+- [ ] **Task [9.6]: Report Discord Match Presence**
+  - **Goal:** Add Discord Rich Presence states for menu, match, map, and active turn behind the configured integration.
+  - **Target Files:** `src/discord/presence.ts`, `src/discord/config.ts`
+  - **Test File:** `tests/discord_presence.test.ts`
+  - **Allowed Context:** `src/discord/config.ts`, `src/engine/Handler.ts`
+  - **Commit:** `feat: report discord match presence`
+- [ ] **Task [9.7]: Support Discord Game Invites**
+  - **Goal:** Add Discord join/invite payload handling that validates game identifiers before connecting.
+  - **Target Files:** `src/discord/invites.ts`, `src/server/runtime.ts`
+  - **Test File:** `tests/discord_invites.test.ts`
+  - **Allowed Context:** `src/server/runtime.ts`, `src/discord/config.ts`
+  - **Commit:** `feat: support discord game invites`
+- [ ] **Task [9.8]: Document Discord Configuration**
+  - **Goal:** Document required Discord application configuration and verify disabled integration is a no-op.
+  - **Target Files:** `docs/discord-setup.md`, `src/discord/presence.ts`
+  - **Test File:** `tests/discord_noop.test.ts`
+  - **Allowed Context:** `src/discord/presence.ts`
+  - **Commit:** `docs: document discord configuration`
 
 ## 10. Final Hardening And Release Readiness
 
-- [ ] Add end-to-end coverage for a local match with items, hazards, elimination,
-  result, reset, and replay. Expected scope: integration test. Commit:
-  `test: cover complete local match`.
-- [ ] Add end-to-end coverage for a network match with item authority,
-  disconnect/reconnect, result, and replay persistence. Expected scope:
-  runtime test. Commit: `test: cover complete network match`.
-- [ ] Add malformed schema, invalid packet, and unauthorized action fuzz-style
-  regression cases. Expected scope: validator/runtime tests. Commit:
-  `test: harden untrusted game inputs`.
-- [ ] Audit every game-data boundary to ensure external content cannot execute
-  code or bypass the effect whitelist. Expected scope: validator changes and
-  security tests. Commit: `fix: harden declarative mod loading`.
-- [ ] Remove obsolete commented prototypes and duplicate paths only after their
-  replacement coverage is complete. Expected scope: one focused removal set and
-  test updates. Commit: `refactor: remove obsolete game prototypes`.
-- [ ] Update `AGENTS.md`, `TODO.md`, GDD implementation notes, and this checklist
-  to reflect the completed feature set. Expected scope: documentation only.
-  Commit: `docs: document completed game systems`.
-- [ ] Run clean-install, unit, typecheck, browser-build, server, desktop, and
-  mobile smoke checks; record exact results in release documentation. Expected
-  scope: release checklist/documentation. Commit: `docs: record release verification`.
+- [ ] **Task [10.1]: Cover Complete Local Match**
+  - **Goal:** Add end-to-end coverage for a local match with items, hazards, elimination, result, reset, and replay.
+  - **Target Files:** `tests/e2e_local_match.test.ts`, `src/engine/Handler.ts`
+  - **Test File:** `tests/e2e_local_match.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/item/officialItems.ts`
+  - **Commit:** `test: cover complete local match`
+- [ ] **Task [10.2]: Cover Complete Network Match**
+  - **Goal:** Add end-to-end coverage for a network match with item authority, disconnect/reconnect, result, and replay persistence.
+  - **Target Files:** `tests/e2e_network_match.test.ts`, `src/server/gameRegistry.ts`
+  - **Test File:** `tests/e2e_network_match.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
+  - **Commit:** `test: cover complete network match`
+- [ ] **Task [10.3]: Harden Untrusted Game Inputs**
+  - **Goal:** Add malformed schema, invalid packet, and unauthorized action fuzz-style regression cases.
+  - **Target Files:** `tests/input_fuzz.test.ts`, `src/server/gameRegistry.ts`
+  - **Test File:** `tests/input_fuzz.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/item/validate.ts`
+  - **Commit:** `test: harden untrusted game inputs`
+- [ ] **Task [10.4]: Harden Declarative Mod Loading**
+  - **Goal:** Audit every game-data boundary to ensure external content cannot execute code or bypass the effect whitelist.
+  - **Target Files:** `src/item/validate.ts`, `src/contracts/documents.ts`
+  - **Test File:** `tests/mod_security.test.ts`
+  - **Allowed Context:** `src/item/validate.ts`, `src/contracts/documents.ts`
+  - **Commit:** `fix: harden declarative mod loading`
+- [ ] **Task [10.5]: Remove Obsolete Game Prototypes**
+  - **Goal:** Remove obsolete commented prototypes and duplicate paths only after their replacement coverage is complete.
+  - **Target Files:** `src/start.ts`, `src/ui/Mouse.ts`
+  - **Test File:** `tests/cleanup.test.ts`
+  - **Allowed Context:** `src/main.ts`, `src/start.ts`
+  - **Commit:** `refactor: remove obsolete game prototypes`
+- [ ] **Task [10.6]: Document Completed Game Systems**
+  - **Goal:** Update `AGENTS.md`, `TODO.md`, GDD implementation notes, and this checklist to reflect the completed feature set.
+  - **Target Files:** `AGENTS.md`, `TODO.md`
+  - **Test File:** `tests/documentation.test.ts`
+  - **Allowed Context:** `AGENTS.md`, `TODO.md`
+  - **Commit:** `docs: document completed game systems`
+- [ ] **Task [10.7]: Record Release Verification**
+  - **Goal:** Run clean-install, unit, typecheck, browser-build, server, desktop, and mobile smoke checks; record exact results in release documentation.
+  - **Target Files:** `docs/release-verification.md`, `package.json`
+  - **Test File:** `tests/release_smoke.test.ts`
+  - **Allowed Context:** `package.json`
+  - **Commit:** `docs: record release verification`
