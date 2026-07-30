@@ -233,7 +233,7 @@
   Expected scope: scheduler effect and test. Commit: `feat: add delayed effect`.
 - [x] Add the serializable shield effect primitive and test damage/collision
   interaction. Expected scope: effect and test. Commit: `feat: add shield effect`.
-- [ ] Add the serializable freeze effect primitive and test movement reduction
+- [x] Add the serializable freeze effect primitive and test movement reduction
   and expiration. Expected scope: effect and test. Commit: `feat: add freeze effect`.
 - [ ] Add a reusable teleport/swap effect primitive and test invalid target
   rejection. Expected scope: effect and test. Commit: `feat: add swap position effect`.

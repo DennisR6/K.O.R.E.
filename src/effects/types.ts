@@ -22,6 +22,7 @@ export const enum ItemEffectType {
 	SpawnTrigger = "spawnTrigger",
 	DelayedEffect = "delayedEffect",
 	Shield = "shield",
+	Freeze = "freeze",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",

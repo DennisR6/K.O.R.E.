@@ -136,6 +136,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   primitive with snapshot-safe countdown state.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
+- `src/effects/freeze.ts`: serializable movement-reduction effect with turn
+  expiration and snapshot-safe state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
