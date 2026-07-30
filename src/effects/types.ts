@@ -18,6 +18,7 @@ export const enum ItemEffectType {
 	ModifyForce = "modifyForce",
 	ModifyRotation = "modifyRotation",
 	LockRotation = "lockRotation",
+	ApplyTorque = "applyTorque",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
@@ -36,6 +37,10 @@ export interface EffectSettings {
 export interface ForceInput {
 	angle: number;
 	power: number;
+}
+export interface AngularState {
+	rotation: number;
+	angularVelocity: number;
 }
 export interface ItemEffectSettings {
 	type: ItemEffectType;
