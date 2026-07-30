@@ -370,7 +370,7 @@
   - **Test File:** `tests/local_storage.test.ts`
   - **Allowed Context:** `src/persistence/saveSlots.ts`, `server.ts`
   - **Commit:** `feat: save local matches`
-- [ ] **Task [8.3]: Local Match Restoration**
+- [x] **Task [8.3]: Local Match Restoration**
   - **Goal:** Implement local save-slot restoration through the same settings validator used by networking.
   - **Target Files:** `src/persistence/storage.ts`, `src/settings/settings.ts`
   - **Test File:** `tests/restore_matches.test.ts`
