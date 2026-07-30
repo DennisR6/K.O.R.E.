@@ -400,7 +400,7 @@
   - **Test File:** `tests/local_replays.test.ts`
   - **Allowed Context:** `src/replay/types.ts`, `src/emitter/EngineEmitter.ts`
   - **Commit:** `feat: record local replays`
-- [ ] **Task [8.8]: Record Network Replays**
+- [x] **Task [8.8]: Record Network Replays**
   - **Goal:** Record accepted authoritative actions into replay data and persist it with the match.
   - **Target Files:** `src/replay/recorder.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/network_replays.test.ts`

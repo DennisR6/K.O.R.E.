@@ -6,6 +6,8 @@ import { RulePhase, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
+import { ReplayRecorder } from "../replay/recorder.js";
+import type { ReplayDocument } from "../replay/types.js";
 
 export type GameRecord = {
 	id: string;
@@ -19,6 +21,7 @@ export type GameRecord = {
 	resolving: boolean;
 	lastAccess: number;
 	connectedUsers: Set<string>;
+	recorder: ReplayRecorder;
 };
 
 export type SubmitTurnResult =
@@ -100,6 +103,11 @@ export class GameRegistry {
 	public isCached(gameId: string): boolean { return this.games.has(gameId) }
 	public getDatabase(): GameDatabase { return this.database }
 
+	public getReplay(gameId: string): ReplayDocument | undefined {
+		const record = this.get(gameId)
+		return record ? record.recorder.getReplay() : undefined
+	}
+
 	public settingsForUser(record: GameRecord, userId: string): EngineSettings {
 		const team = record.teamByUser.get(userId)
 		if (team === undefined) throw new Error("User does not belong to this game")
@@ -129,6 +137,7 @@ export class GameRegistry {
 
 		record.resolving = true
 		try {
+			record.recorder.recordShoot(input.actorId, input.angle, input.power)
 			const packet = record.handler.resolveTurn(input)
 			const completedState = record.rules.advancePhase(record.ruleState)
 			record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
@@ -156,6 +165,7 @@ export class GameRegistry {
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
 
 		try {
+			record.recorder.recordItemUse(actorId, itemId, target)
 			const nextRuleState = record.rules.useItem(record.ruleState)
 			record.handler.useItem(actorId, itemId, target)
 			record.ruleState = nextRuleState
@@ -204,6 +214,7 @@ export class GameRegistry {
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
+		const recorder = new ReplayRecorder(handler.toSettings())
 		return {
 			id,
 			handler,
@@ -216,6 +227,7 @@ export class GameRegistry {
 			resolving: false,
 			lastAccess,
 			connectedUsers: new Set(),
+			recorder,
 		}
 	}
 
