@@ -19,6 +19,7 @@ export const enum ItemEffectType {
 	ModifyRotation = "modifyRotation",
 	LockRotation = "lockRotation",
 	ApplyTorque = "applyTorque",
+	SpawnTrigger = "spawnTrigger",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
@@ -44,7 +45,7 @@ export interface AngularState {
 }
 export interface ItemEffectSettings {
 	type: ItemEffectType;
-	typeValue: Record<string, number>;
+	typeValue: Record<string, unknown>;
 }
 export const enum SettingOperation {
 	Set = "set",

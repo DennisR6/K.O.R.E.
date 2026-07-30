@@ -130,6 +130,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   snapshot-safe expiration state.
 - `src/effects/applyTorque.ts`: serializable additive angular update primitive
   with deterministic rotation normalization.
+- `src/effects/spawnTrigger.ts`: serializable turn-counted trigger primitive
+  with snapshot restoration state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
