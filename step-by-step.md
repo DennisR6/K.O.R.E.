@@ -239,7 +239,7 @@
   rejection. Expected scope: effect and test. Commit: `feat: add swap position effect`.
 - [x] Add a reusable temporary-wall effect primitive and test structure cleanup.
   Expected scope: effect and test. Commit: `feat: add temporary wall effect`.
-- [ ] Add the Anker item data and behavior for configurable knockback reduction.
+- [x] Add the Anker item data and behavior for configurable knockback reduction.
   Expected scope: item JSON and behavior test. Commit: `feat: add anker item`.
 - [ ] Add the Durchlaessigkeit item data and behavior for temporary ghost-mode
   collision filtering. Expected scope: item JSON and behavior test. Commit:

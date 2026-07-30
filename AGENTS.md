@@ -155,6 +155,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   entities inside their rectangular regions and preserves collected-turn state.
 - `src/item/target.ts`: validates declarative self, entity, position, and zone
   targets against ownership, activity, range, and world bounds.
+- `src/item/officialItems.ts`: built-in declarative item catalog and Anker
+  behavior using the validated item/effect pipeline.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; item gameplay is not active.
