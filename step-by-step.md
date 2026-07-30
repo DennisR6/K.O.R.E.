@@ -4,6 +4,7 @@
 
 - `[ ]` means planned and not started.
 - `[v]` means actively being worked on. Keep exactly one task at this state.
+- `[-]` means its stale at the moment and can safely be skipped
 - `[x]` means complete, verified, and committed.
 - Before starting a task, inspect `git status`, read the named code and tests,
   and preserve unrelated worktree changes.
@@ -312,43 +313,43 @@
 
 ## 7. AI And Play Modes
 
-- [ ] **Task [7.1]: Define AI Settings**
+- [-] **Task [7.1]: Define AI Settings**
   - **Goal:** Define serializable AI configuration including seed, difficulty, and decision limits.
   - **Target Files:** `src/ai/types.ts`, `src/settings/settings.ts`
   - **Test File:** `tests/ai_settings.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/types.ts`
   - **Commit:** `feat: define ai settings`
-- [ ] **Task [7.2]: AI Turn Emitter Interface**
+- [-] **Task [7.2]: AI Turn Emitter Interface**
   - **Goal:** Add a shared AI turn-emitter interface that submits the same validated input as a human player.
   - **Target Files:** `src/ai/aiEmitter.ts`, `src/emitter/Emitter.ts`
   - **Test File:** `tests/ai_emitter.test.ts`
   - **Allowed Context:** `src/emitter/Emitter.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add ai turn interface`
-- [ ] **Task [7.3]: Deterministic Easy AI**
+- [-] **Task [7.3]: Deterministic Easy AI**
   - **Goal:** Implement and test deterministic easy AI random angle and force choices.
   - **Target Files:** `src/ai/easyAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/easy_ai.test.ts`
   - **Allowed Context:** `src/utils/random.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add deterministic easy ai`
-- [ ] **Task [7.4]: Heuristic Medium AI**
+- [-] **Task [7.4]: Heuristic Medium AI**
   - **Goal:** Implement medium AI target-angle heuristics with collision and out-of-bounds risk penalties.
   - **Target Files:** `src/ai/mediumAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/medium_ai.test.ts`
   - **Allowed Context:** `src/physics/physics.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add heuristic medium ai`
-- [ ] **Task [7.5]: Simulation Hard AI**
+- [-] **Task [7.5]: Simulation Hard AI**
   - **Goal:** Implement hard AI bounded angle/force simulation search with a fixed deterministic evaluation budget.
   - **Target Files:** `src/ai/hardAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/hard_ai.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add simulation hard ai`
-- [ ] **Task [7.6]: Versus AI Game Mode**
+- [-] **Task [7.6]: Versus AI Game Mode**
   - **Goal:** Add 1-player-versus-AI game-mode settings and initialize the AI team from those settings.
   - **Target Files:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/versus_ai.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: add versus ai mode`
-- [ ] **Task [7.7]: Authoritative AI Match Coverage**
+- [-] **Task [7.7]: Authoritative AI Match Coverage**
   - **Goal:** Run AI through the authoritative turn path and add a complete simulated match regression test.
   - **Target Files:** `src/server/gameRegistry.ts`, `src/ai/aiEmitter.ts`
   - **Test File:** `tests/authoritative_ai.test.ts`
@@ -471,43 +472,43 @@
 
 ## 10. Final Hardening And Release Readiness
 
-- [ ] **Task [10.1]: Cover Complete Local Match**
+- [-] **Task [10.1]: Cover Complete Local Match**
   - **Goal:** Add end-to-end coverage for a local match with items, hazards, elimination, result, reset, and replay.
   - **Target Files:** `tests/e2e_local_match.test.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/e2e_local_match.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/item/officialItems.ts`
   - **Commit:** `test: cover complete local match`
-- [ ] **Task [10.2]: Cover Complete Network Match**
+- [-] **Task [10.2]: Cover Complete Network Match**
   - **Goal:** Add end-to-end coverage for a network match with item authority, disconnect/reconnect, result, and replay persistence.
   - **Target Files:** `tests/e2e_network_match.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/e2e_network_match.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
   - **Commit:** `test: cover complete network match`
-- [ ] **Task [10.3]: Harden Untrusted Game Inputs**
+- [-] **Task [10.3]: Harden Untrusted Game Inputs**
   - **Goal:** Add malformed schema, invalid packet, and unauthorized action fuzz-style regression cases.
   - **Target Files:** `tests/input_fuzz.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/input_fuzz.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/item/validate.ts`
   - **Commit:** `test: harden untrusted game inputs`
-- [ ] **Task [10.4]: Harden Declarative Mod Loading**
+- [-] **Task [10.4]: Harden Declarative Mod Loading**
   - **Goal:** Audit every game-data boundary to ensure external content cannot execute code or bypass the effect whitelist.
   - **Target Files:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/mod_security.test.ts`
   - **Allowed Context:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Commit:** `fix: harden declarative mod loading`
-- [ ] **Task [10.5]: Remove Obsolete Game Prototypes**
+- [-] **Task [10.5]: Remove Obsolete Game Prototypes**
   - **Goal:** Remove obsolete commented prototypes and duplicate paths only after their replacement coverage is complete.
   - **Target Files:** `src/start.ts`, `src/ui/Mouse.ts`
   - **Test File:** `tests/cleanup.test.ts`
   - **Allowed Context:** `src/main.ts`, `src/start.ts`
   - **Commit:** `refactor: remove obsolete game prototypes`
-- [ ] **Task [10.6]: Document Completed Game Systems**
+- [-] **Task [10.6]: Document Completed Game Systems**
   - **Goal:** Update `AGENTS.md`, `TODO.md`, GDD implementation notes, and this checklist to reflect the completed feature set.
   - **Target Files:** `AGENTS.md`, `TODO.md`
   - **Test File:** `tests/documentation.test.ts`
   - **Allowed Context:** `AGENTS.md`, `TODO.md`
   - **Commit:** `docs: document completed game systems`
-- [ ] **Task [10.7]: Record Release Verification**
+- [-] **Task [10.7]: Record Release Verification**
   - **Goal:** Run clean-install, unit, typecheck, browser-build, server, desktop, and mobile smoke checks; record exact results in release documentation.
   - **Target Files:** `docs/release-verification.md`, `package.json`
   - **Test File:** `tests/release_smoke.test.ts`
