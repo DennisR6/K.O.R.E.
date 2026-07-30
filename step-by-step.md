@@ -241,7 +241,7 @@
   Expected scope: effect and test. Commit: `feat: add temporary wall effect`.
 - [x] Add the Anker item data and behavior for configurable knockback reduction.
   Expected scope: item JSON and behavior test. Commit: `feat: add anker item`.
-- [ ] Add the Durchlaessigkeit item data and behavior for temporary ghost-mode
+- [x] Add the Durchlaessigkeit item data and behavior for temporary ghost-mode
   collision filtering. Expected scope: item JSON and behavior test. Commit:
   `feat: add ghost mode item`.
 - [ ] Add the Magnet item data and behavior for configurable attraction or

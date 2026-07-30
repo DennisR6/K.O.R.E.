@@ -5,6 +5,7 @@ import { ItemValidator } from "./validate.js";
 import type { ItemDocument } from "./types.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
+export const GHOST_MODE_DURATION_TURNS = 2;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -20,12 +21,27 @@ export const ankerItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
 };
 
+export const durchlaessigkeitItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "durchlaessigkeit",
+	name: "Durchlässigkeit",
+	description: "Ignores entity and structure collisions for a short duration.",
+	type: "defensive",
+	effects: [{ type: "ghostMode", value: { durationTurns: GHOST_MODE_DURATION_TURNS } }],
+	targetType: "self",
+	duration: { type: "turns", value: GHOST_MODE_DURATION_TURNS },
+	useLimit: { perTurn: 1, perGame: 1 },
+	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
 	validator.registerEffectType("modifyForce");
+	validator.registerEffectType("ghostMode");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
+	loader.registerBuiltIn(durchlaessigkeitItem);
 	return loader;
 }
 
