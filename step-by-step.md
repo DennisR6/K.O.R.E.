@@ -451,7 +451,7 @@
   - **Test File:** `tests/discord_config.test.ts`
   - **Allowed Context:** `src/discord/types.ts`
   - **Commit:** `feat: configure discord integration`
-- [ ] **Task [9.6]: Report Discord Match Presence**
+- [x] **Task [9.6]: Report Discord Match Presence**
   - **Goal:** Add Discord Rich Presence states for menu, match, map, and active turn behind the configured integration.
   - **Target Files:** `src/discord/presence.ts`, `src/discord/config.ts`
   - **Test File:** `tests/discord_presence.test.ts`
