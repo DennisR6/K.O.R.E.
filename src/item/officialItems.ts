@@ -11,6 +11,7 @@ export const GHOST_MODE_DURATION_TURNS = 2;
 export const MAGNET_RANGE = 200;
 export const MAGNET_FORCE = 2;
 export const FALLTUER_RADIUS = 25;
+export const POWER_DASH_FACTOR = 1.5;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -65,6 +66,19 @@ export const falltuerItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 };
 
+export const powerDashItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "power-dash",
+	name: "Power-Dash",
+	description: "Boosts the next applied force by a configured multiplier.",
+	type: "offensive",
+	effects: [{ type: "modifyForce", value: { factor: POWER_DASH_FACTOR } }],
+	targetType: "self",
+	duration: { type: "instant", value: 0 },
+	useLimit: { perTurn: 1, perGame: 2 },
+	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -77,12 +91,17 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(durchlaessigkeitItem);
 	loader.registerBuiltIn(magnetItem);
 	loader.registerBuiltIn(falltuerItem);
+	loader.registerBuiltIn(powerDashItem);
 	return loader;
 }
 
 /** Applies Anker's deterministic force reduction to one force value. */
 export function applyAnkerForce(force: ForceInput): ForceInput {
 	return new EffectModifyForce({ typeValue: { factor: ANKER_FORCE_FACTOR } }).applyToForce(force);
+}
+
+export function applyPowerDashForce(force: ForceInput): ForceInput {
+	return new EffectModifyForce({ typeValue: { factor: POWER_DASH_FACTOR } }).applyToForce(force);
 }
 
 export function applyMagnetForce(velocity: { x: number; y: number }, source: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {

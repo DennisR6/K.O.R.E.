@@ -248,7 +248,7 @@
   repulsion. Expected scope: item JSON and behavior test. Commit: `feat: add magnet item`.
 - [x] Add the Falltuer item data and behavior that spawns a kill-zone trigger.
   Expected scope: item JSON and behavior test. Commit: `feat: add trapdoor item`.
-- [ ] Add the Power-Dash item data and behavior for configured force or friction
+- [x] Add the Power-Dash item data and behavior for configured force or friction
   modification. Expected scope: item JSON and behavior test. Commit:
   `feat: add power dash item`.
 - [ ] Add the Verzoegerte-Mine item data and behavior for delayed force
