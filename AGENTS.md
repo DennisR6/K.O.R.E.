@@ -126,6 +126,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
   explicitly registered effect-name whitelist, allows only JSON data in effect
   values, and rejects executable fields and unknown schema fields.
+- `src/item/loader.ts`: stores built-in and local-mod item documents through the
+  same validator, prevents duplicate IDs, and returns defensive copies.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; item gameplay is not active.
@@ -348,6 +350,8 @@ boundary admits them.
 `ItemValidator` in `src/item/validate.ts` adds the item-load security boundary:
 callers must register each supported declarative effect name before validation;
 the validator rejects unknown fields, executable keys, and non-JSON effect data.
+`ItemLoader` uses that same validator for built-in and local-mod documents, so
+neither source can bypass the declarative item boundary.
 Canonical map documents carry world size, friction, drift, geometry, spawn regions,
 hazard references, and metadata. `loadMapDocument()` converts force and kill-zone
 collision hazards into serializable runtime structure effects; other hazard types

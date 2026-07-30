@@ -199,7 +199,7 @@
 - [x] Add a strict item validator with an effect-type whitelist and no executable
   script fields. Expected scope: validator and rejection tests. Commit:
   `feat: validate declarative items`.
-- [ ] Add an item loader that registers built-in and local mod items through the
+- [x] Add an item loader that registers built-in and local mod items through the
   same validation path. Expected scope: loader and test. Commit:
   `feat: load declarative items`.
 - [ ] Add per-mode item-economy settings supporting fixed loadouts, map pickups,
