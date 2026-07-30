@@ -1,4 +1,5 @@
 import { type IInputEmitter } from "../engine/types.js";
+import type { ItemTarget } from "../item/target.js";
 
 /**
  * Die "Steckerleiste" für Inputs.
@@ -24,6 +25,10 @@ export class CombiEmitter implements IInputEmitter {
 		this.emitters.forEach(e => e.sendShot(actorId, angle, power));
 	}
 
+	sendItemUse = (actorId: string, itemId: string, target: ItemTarget): void => {
+		this.emitters.forEach(emitter => emitter.sendItemUse?.(actorId, itemId, target));
+	}
+
 	/** Fügt zur Laufzeit einen weiteren Emitter hinzu. */
 	addEmitter(...emitter: IInputEmitter[]) {
 		for (const em of emitter) {
@@ -42,5 +47,9 @@ export class LogEmitter implements IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number) {
 		// Strukturiertes Logging über das Engine-Tool
 		console.debug("Log Emitter", { actorId, angle, power })
+	}
+
+	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
+		console.log("sendItemUse", JSON.stringify({ actorId, itemId, target }));
 	}
 }

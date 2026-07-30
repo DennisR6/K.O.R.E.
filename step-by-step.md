@@ -217,7 +217,7 @@
 - [x] Implement authoritative item-use packets and reject use outside the item
   phase or by the wrong team. Expected scope: server protocol and test. Commit:
   `feat: authorize item use`.
-- [ ] Implement local item-use emission and authoritative client state updates.
+- [x] Implement local item-use emission and authoritative client state updates.
   Expected scope: emitter/UI adapter and test. Commit: `feat: synchronize item use`.
 - [ ] Add the serializable `modifyForce` effect primitive and test stacking.
   Expected scope: effect and test. Commit: `feat: add modify force effect`.

@@ -211,7 +211,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
   advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
-  authoritative `TURN` playback and active-team updates.
+  authoritative `TURN` playback, `ITEM_USED` inventory snapshots, and active-team updates.
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
   emitter composition, test capture, and replay-oriented helpers.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.

@@ -4,6 +4,7 @@ import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
+import type { ItemTarget } from "../item/target.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -43,5 +44,13 @@ export class GameEmitter implements IInputEmitter {
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
+	}
+
+	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
+		if (this.ruleState.phase !== RulePhase.Item) throw new Error("Local item use is not in the item phase")
+		this.handler.useItem(actorId, itemId, target)
+		this.ruleState = this.rules.useItem(this.ruleState)
+		this.handler.setRuleState(this.ruleState)
+		this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 	}
 }

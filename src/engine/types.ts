@@ -5,6 +5,7 @@ import { GameSettings } from "../settings/settings.js";
 import type { IGameContext, ISystem } from "../systems/types.js";
 import type { RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
+import type { ItemTarget } from "../item/target.js";
 import type { ItemPickupState } from "../item/types.js";
 
 /**
@@ -30,6 +31,7 @@ export interface TurnPacket {
  */
 export interface IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number): void;
+	sendItemUse?(actorId: string, itemId: string, target: ItemTarget): void;
 }
 
 /**

@@ -3,6 +3,8 @@ import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
+import type { NetworkItemUsed, NetworkUseItem } from "../server/types.js";
+import type { ItemTarget } from "../item/target.js";
 
 /**
  * Der Netzwerk-Emitter.
@@ -27,6 +29,10 @@ export class NetworkEmitter implements IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number): void {
 		this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power }))
 	}
+
+	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
+		this.socket.send(wrap<NetworkUseItem>({ type: NetworkMessageType.USE_ITEM, actorId, itemId, target }))
+	}
 }
 
 /** Installs the authoritative TURN receiver for a client-side handler. */
@@ -45,6 +51,12 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			handler.playTurn(turn.sim, () => {
 				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 		})
+		}
+		if (message.type === NetworkMessageType.ITEM_USED) {
+			const itemUse = message as NetworkItemUsed
+			handler.getEntityManager().applySettings(itemUse.players)
+			handler.setRuleState(itemUse.ruleState)
+			handler.setState(TurnSystem.stateForTeam(itemUse.ruleState.activeTeam, handler.getTeam()))
 		}
 		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
 	})
