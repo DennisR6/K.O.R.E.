@@ -412,7 +412,7 @@
   - **Test File:** `tests/deterministic_replay.test.ts`
   - **Allowed Context:** `src/replay/types.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: play deterministic replays`
-- [ ] **Task [8.10]: Replay Viewer**
+- [x] **Task [8.10]: Replay Viewer**
   - **Goal:** Add a replay viewer entry point and a malformed/incompatible replay error state.
   - **Target Files:** `src/menu/replayViewer.ts`, `src/main.ts`
   - **Test File:** `tests/replay_viewer.test.ts`

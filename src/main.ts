@@ -15,12 +15,14 @@ import { getUserUUUID, setUserUUUID } from "./utils/id.js";
 import { wrap } from "./utils/net.js";
 import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNewUser, type UnTypedNetworkMessage } from "./server/types.js";
 import { adaptCanvasSizeForViewport } from "./ui/layout.js";
+import { ReplayViewer } from "./menu/replayViewer.js";
 
 const uri = new URL(window.location.href)
 const usersettings = {
 	url: uri.searchParams.get("url") ?? "",
 	mapbuilder: uri.searchParams.has("mapbuilder"),
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
+	replay: uri.searchParams.has("replay"),
 }
 
 const ui = new UiSystem()
@@ -79,7 +81,11 @@ function startNetworkGame(serverUrl: string) {
 		started = true
 		const init = message as NetworkInit
 		const settings = init.settings
-		const ui = new UiSystem()
+const ui = new UiSystem()
+if (usersettings.replay) {
+	const viewer = new ReplayViewer();
+	(window as any).replayViewer = viewer;
+}
 		const arrow = new DirectionArrow(ui)
 		handler = new GameHandlerBuilder()
 			.defaultSystems()
