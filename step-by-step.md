@@ -260,7 +260,7 @@
   scope: item JSON and behavior test. Commit: `feat: add freeze shot item`.
 - [x] Add the Switch item data and behavior for validated figure-position swaps.
   Expected scope: item JSON and behavior test. Commit: `feat: add switch item`.
-- [ ] Add the Jaegermeister-Elixier item data and behavior that prevents an
+- [x] Add the Jaegermeister-Elixier item data and behavior that prevents an
   opponent figure from being selected for its duration. Expected scope: item
   JSON and behavior test. Commit: `feat: add selection lock item`.
 - [ ] Add the Vodka-Zero item data and seeded deterministic aim variance.

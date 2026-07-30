@@ -5,6 +5,7 @@ import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectTemporaryWall } from "../effects/temporaryWall.js";
 import { EffectFreeze } from "../effects/freeze.js";
 import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
+import { EffectSelectionLock } from "../effects/selectionLock.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -25,6 +26,7 @@ export const MINI_WALL_DURATION_TURNS = 3;
 export const FREEZE_SHOT_SPEED_FACTOR = 0.25;
 export const FREEZE_SHOT_DURATION_TURNS = 2;
 export const SWITCH_RANGE = 300;
+export const JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -144,6 +146,19 @@ export const switchItem: ItemDocument = {
 	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: false, maxRange: SWITCH_RANGE },
 };
 
+export const jaegermeisterElixierItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "jaegermeister-elixier",
+	name: "Jägermeister-Elixier",
+	description: "Prevents an opponent figure from being selected for its duration.",
+	type: "debuff",
+	effects: [{ type: "selectionLock", value: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } }],
+	targetType: "entity",
+	duration: { type: "turns", value: JAEGERMEISTER_ELIXIER_DURATION_TURNS },
+	useLimit: { perTurn: 1, perGame: 1 },
+	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -155,6 +170,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("temporaryWall");
 	validator.registerEffectType("freeze");
 	validator.registerEffectType("swapPosition");
+	validator.registerEffectType("selectionLock");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
@@ -165,6 +181,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(miniWallItem);
 	loader.registerBuiltIn(freezeShotItem);
 	loader.registerBuiltIn(switchItem);
+	loader.registerBuiltIn(jaegermeisterElixierItem);
 	return loader;
 }
 
@@ -201,6 +218,10 @@ export function createMiniWall(position: { x: number; y: number }, wallId: strin
 
 export function createFreezeShot(): EffectFreeze {
 	return new EffectFreeze({ typeValue: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } });
+}
+
+export function createSelectionLock(): EffectSelectionLock {
+	return new EffectSelectionLock({ typeValue: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } });
 }
 
 export function applySwitch(first: PositionTargetState, second: PositionTargetState): [ { x: number; y: number }, { x: number; y: number } ] {

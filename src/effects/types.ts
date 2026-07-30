@@ -27,6 +27,7 @@ export const enum ItemEffectType {
 	TemporaryWall = "temporaryWall",
 	GhostMode = "ghostMode",
 	Magnet = "magnet",
+	SelectionLock = "selectionLock",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
