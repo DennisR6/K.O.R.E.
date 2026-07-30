@@ -16,6 +16,7 @@ export const enum EffectType {
 /** Data-addressable effects that modify an item action before it is applied. */
 export const enum ItemEffectType {
 	ModifyForce = "modifyForce",
+	ModifyRotation = "modifyRotation",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",

@@ -124,6 +124,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   size/team/velocity modifiers.
 - `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
   item actions, with deterministic stacking.
+- `src/effects/modifyRotation.ts`: serializable additive rotation modifier for
+  item actions, with deterministic angle normalization.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
