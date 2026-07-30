@@ -254,7 +254,7 @@
 - [x] Add the Verzoegerte-Mine item data and behavior for delayed force
   explosion. Expected scope: item JSON and behavior test. Commit:
   `feat: add delayed mine item`.
-- [ ] Add the Mini-Wall item data and behavior for a temporary portable wall.
+- [x] Add the Mini-Wall item data and behavior for a temporary portable wall.
   Expected scope: item JSON and behavior test. Commit: `feat: add mini wall item`.
 - [ ] Add the Freeze-Shot item data and behavior for temporary slowing. Expected
   scope: item JSON and behavior test. Commit: `feat: add freeze shot item`.

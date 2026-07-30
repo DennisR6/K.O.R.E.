@@ -2,6 +2,7 @@ import { EffectModifyForce } from "../effects/modifyForce.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
+import { EffectTemporaryWall } from "../effects/temporaryWall.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -16,6 +17,9 @@ export const POWER_DASH_FACTOR = 1.5;
 export const DELAYED_MINE_DELAY_TICKS = 3;
 export const DELAYED_MINE_RADIUS = 60;
 export const DELAYED_MINE_FORCE = 4;
+export const MINI_WALL_WIDTH = 80;
+export const MINI_WALL_HEIGHT = 10;
+export const MINI_WALL_DURATION_TURNS = 3;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -96,6 +100,19 @@ export const verzoegerteMineItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 };
 
+export const miniWallItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "mini-wall",
+	name: "Mini-Wall",
+	description: "Spawns a temporary portable wall at a selected position.",
+	type: "defensive",
+	effects: [{ type: "temporaryWall", value: { wallId: "mini-wall", x: 0, y: 0, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }],
+	targetType: "position",
+	duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
+	useLimit: { perTurn: 1, perGame: 1 },
+	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -104,6 +121,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("magnet");
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("delayedEffect");
+	validator.registerEffectType("temporaryWall");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
@@ -111,6 +129,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(falltuerItem);
 	loader.registerBuiltIn(powerDashItem);
 	loader.registerBuiltIn(verzoegerteMineItem);
+	loader.registerBuiltIn(miniWallItem);
 	return loader;
 }
 
@@ -139,6 +158,10 @@ export function createVerzoegerteMine(center: { x: number; y: number }, delayTic
 export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {
 	if (!mine.trigger.hasFired()) return { ...velocity };
 	return mine.force.applyToVelocity(velocity, mine.center, target);
+}
+
+export function createMiniWall(position: { x: number; y: number }, wallId: string = "mini-wall"): EffectTemporaryWall {
+	return new EffectTemporaryWall({ typeValue: { wallId, x: position.x, y: position.y, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } });
 }
 
 export function applyMagnetForce(velocity: { x: number; y: number }, source: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {
