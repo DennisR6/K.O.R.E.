@@ -10,7 +10,8 @@
 		"serve": "live-server",
 		"build": "tsc",
 		"test": "bun test",
-		"createAssets": "bun run scripts/createAssetPack.ts"
+		"createAssets": "bun run scripts/createAssetPack.ts",
+		"desktop": "tauri dev"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

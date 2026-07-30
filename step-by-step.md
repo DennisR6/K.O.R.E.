@@ -421,7 +421,7 @@
 
 ## 9. Desktop, Mobile, And Discord
 
-- [ ] **Task [9.1]: Tauri Desktop Shell**
+- [x] **Task [9.1]: Tauri Desktop Shell**
   - **Goal:** Add Tauri project configuration and a minimal desktop launch command that serves the existing built browser application.
   - **Target Files:** `src-tauri/tauri.conf.json`, `package.json`
   - **Test File:** `tests/tauri_config.test.ts`

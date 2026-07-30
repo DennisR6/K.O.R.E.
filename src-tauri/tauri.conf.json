@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/toolchains/cli/schema/tauri.schema.json",
+  "package": {
+    "productName": "Slipstrike",
+    "version": "0.0.1"
+  },
+  "build": {
+    "distDir": "../",
+    "devPath": "http://localhost:3000"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "category": "Game",
+      "copyright": "",
+      "deb": {
+        "dependencies": []
+      },
+      "externalBin": [],
+      "icon": [],
+      "identifier": "com.slipstrike.kore",
+      "resources": [],
+      "shortDescription": "",
+      "targets": ["all"]
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "title": "KORE - Slipstrike",
+        "width": 800,
+        "height": 450,
+        "resizable": true
+      }
+    ]
+  }
+}
