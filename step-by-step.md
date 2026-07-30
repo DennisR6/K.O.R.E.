@@ -406,7 +406,7 @@
   - **Test File:** `tests/network_replays.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/replay/recorder.ts`
   - **Commit:** `feat: record network replays`
-- [ ] **Task [8.9]: Play Deterministic Replays**
+- [x] **Task [8.9]: Play Deterministic Replays**
   - **Goal:** Implement replay playback from initial settings without live input and test final snapshots.
   - **Target Files:** `src/replay/player.ts`, `src/replay/types.ts`
   - **Test File:** `tests/deterministic_replay.test.ts`
