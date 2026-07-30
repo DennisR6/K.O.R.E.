@@ -1,7 +1,7 @@
 import { GameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
-import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -42,6 +42,9 @@ export class ServerRuntime {
 				return
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
+				return
+			case NetworkMessageType.USE_ITEM:
+				this.useItem(socket, message)
 				return
 			case NetworkMessageType.REMATCH:
 				this.rematch(socket)
@@ -99,6 +102,25 @@ export class ServerRuntime {
 			turnNumber: result.record.turnNumber,
 			activeTeam: result.record.currentTeam,
 			ruleState: result.record.ruleState,
+		}
+		for (const user of result.record.users) {
+			const recipient = this.socketForUser(user)
+			if (recipient) recipient.send(wrap(packet))
+		}
+	}
+
+	private useItem(socket: ServerSocket, message: NetworkUseItem): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before using items")
+		const result = this.games.submitItemUse(userId, message.actorId, message.itemId, message.target)
+		if (!result.ok) return this.sendError(socket, result.error)
+		const packet: NetworkItemUsed = {
+			type: NetworkMessageType.ITEM_USED,
+			actorId: message.actorId,
+			itemId: message.itemId,
+			target: message.target,
+			ruleState: result.record.ruleState,
+			players: result.record.handler.toSettings().players,
 		}
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)

@@ -359,6 +359,9 @@ callers must register each supported declarative effect name before validation;
 the validator rejects unknown fields, executable keys, and non-JSON effect data.
 `ItemLoader` uses that same validator for built-in and local-mod documents, so
 neither source can bypass the declarative item boundary.
+`ServerRuntime` accepts `USE_ITEM` only through `GameRegistry`, which requires
+the item phase, active-team ownership, valid targets, and available inventory;
+accepted uses broadcast `ITEM_USED` with rule state and player snapshots.
 Canonical map documents carry world size, friction, drift, geometry, spawn regions,
 hazard references, and metadata. `loadMapDocument()` converts force and kill-zone
 collision hazards into serializable runtime structure effects; other hazard types

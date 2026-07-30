@@ -29,6 +29,10 @@ export type RematchResult =
 	| { ok: true; record: GameRecord }
 	| { ok: false; error: string };
 
+export type SubmitItemUseResult =
+	| { ok: true; record: GameRecord }
+	| { ok: false; error: string };
+
 /**
  * Authoritative games are persisted after creation and every accepted turn.
  * The in-memory handler is a cache and can be rebuilt from its stored settings.
@@ -138,6 +142,32 @@ export class GameRegistry {
 		}
 	}
 
+	public submitItemUse(userId: string, actorId: string, itemId: string, target: unknown): SubmitItemUseResult {
+		const record = this.getForUser(userId)
+		if (!record) return { ok: false, error: "No active game for this user" }
+		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
+		const team = record.teamByUser.get(userId)
+		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
+		if (record.ruleState.phase !== RulePhase.Item) return { ok: false, error: "Items may only be used during the item phase" }
+
+		const actor = record.handler.getEntityManager().getEntityById(actorId)
+		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
+		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
+
+		try {
+			const nextRuleState = record.rules.useItem(record.ruleState)
+			record.handler.useItem(actorId, itemId, target)
+			record.ruleState = nextRuleState
+			record.handler.setRuleState(nextRuleState)
+			record.currentTeam = nextRuleState.activeTeam
+			record.turnNumber = nextRuleState.turnNumber
+			this.persist(record)
+			return { ok: true, record }
+		} catch (error) {
+			return { ok: false, error: error instanceof Error ? error.message : "Invalid item use" }
+		}
+	}
+
 	public rematch(userId: string): RematchResult {
 		const record = this.getForUser(userId)
 		if (!record) return { ok: false, error: "No active game for this user" }
@@ -171,7 +201,8 @@ export class GameRegistry {
 		lastAccess: number = Date.now(),
 		ruleState?: RuleState,
 	): GameRecord {
-		const rules = new RuleInterpreter(currentTurnMode)
+		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
+		const rules = new RuleInterpreter(mode)
 		return {
 			id,
 			handler,

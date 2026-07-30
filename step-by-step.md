@@ -214,7 +214,7 @@
   scope: pickup system and test. Commit: `feat: collect map item pickups`.
 - [x] Implement item target validation for entity, position, and zone targets.
   Expected scope: target validator and test. Commit: `feat: validate item targets`.
-- [ ] Implement authoritative item-use packets and reject use outside the item
+- [x] Implement authoritative item-use packets and reject use outside the item
   phase or by the wrong team. Expected scope: server protocol and test. Commit:
   `feat: authorize item use`.
 - [ ] Implement local item-use emission and authoritative client state updates.

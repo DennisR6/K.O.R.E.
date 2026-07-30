@@ -1,6 +1,7 @@
 import type { UUID } from "crypto"
 import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
 import type { RuleState } from "../rules/types.js"
+import type { ItemTarget } from "../item/target.js"
 export const enum NetworkMessageType {
 	PING = "PING",
 	PONG = "PONG",
@@ -13,6 +14,8 @@ export const enum NetworkMessageType {
 	TURN = "TURN",
 	ERROR = "ERROR",
 	REMATCH = "REMATCH",
+	USE_ITEM = "USE_ITEM",
+	ITEM_USED = "ITEM_USED",
 }
 
 export function getNetworkPacketType(input: NetworkMessageType): string {
@@ -27,6 +30,8 @@ export function getNetworkPacketType(input: NetworkMessageType): string {
 		case NetworkMessageType.TURN: return "Turn"
 		case NetworkMessageType.ERROR: return "Error"
 		case NetworkMessageType.NEWUSER: return "New User"
+		case NetworkMessageType.USE_ITEM: return "Use Item"
+		case NetworkMessageType.ITEM_USED: return "Item Used"
 		default: return `NetworkMessageType: ${input}`
 	}
 
@@ -43,6 +48,8 @@ export type UnTypedNetworkMessage =
 	NetworkNewUser |
 	NetworkError
 	| NetworkRematch
+	| NetworkUseItem
+	| NetworkItemUsed
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
@@ -71,5 +78,19 @@ export interface NetworkError {
 	message: string
 }
 export interface NetworkRematch { type: NetworkMessageType.REMATCH }
+export interface NetworkUseItem {
+	type: NetworkMessageType.USE_ITEM,
+	actorId: string,
+	itemId: string,
+	target: ItemTarget,
+}
+export interface NetworkItemUsed {
+	type: NetworkMessageType.ITEM_USED,
+	actorId: string,
+	itemId: string,
+	target: ItemTarget,
+	ruleState: RuleState,
+	players: EngineSettings["players"],
+}
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

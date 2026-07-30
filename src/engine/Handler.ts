@@ -25,6 +25,7 @@ import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inve
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
+import { validateItemTarget } from "../item/target.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -491,11 +492,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
 	/** Consumes a declared item without applying its effects or validating targets. */
-	public useItem(actorId: string, itemId: string): void {
+	public useItem(actorId: string, itemId: string, target: unknown = { type: "self" }): void {
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
+		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
 		actor.use(item)
 	}
 	public loadEffects(effects: FullEffectSettings[]): void {
@@ -629,7 +631,7 @@ export class GameHandlerBuilder {
 		if (!("state" in gameSettings)) {
 			this.engine.initializeFixedLoadouts()
 			this.engine.initializeItemDraws()
-			this.engine.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+			this.engine.startTurn({ phase: gameSettings.gameMode?.phases[0] ?? RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 		}
 
 		// Structures
