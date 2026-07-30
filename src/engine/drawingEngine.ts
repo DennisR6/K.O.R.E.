@@ -2,6 +2,7 @@ import type p5Types from "p5";
 import type { RenderContext } from "./RenderContext.js";
 import { assetManager } from "../assetManager/loader.js";
 import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
+import { calculateDesktopLayout } from "../ui/layout.js";
 /**
  * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
  * 
@@ -156,15 +157,8 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.mouseWheel = func
 	}
 	resizeCanvas(x: number, y: number): void {
-		const maxWidth = x * 0.9;
-		const maxHeight = y * 0.9;
-
-		// Berechne die Skalierungsfaktoren für beide Dimensionen
-		const scaleX = maxWidth / this.WORLD_SIZE_X;
-		const scaleY = maxHeight / this.WORLD_SIZE_Y;
-
-		// Wähle den kleineren Faktor, damit alles in das Fenster passt (Contain-Prinzip)
-		const finalScale = Math.min(scaleX, scaleY);
+		const layout = calculateDesktopLayout(x, y, this.WORLD_SIZE_X, this.WORLD_SIZE_Y);
+		const finalScale = layout.scaleFactor;
 
 		// Setze die Skalierung
 		this.setScaleFactor(finalScale);

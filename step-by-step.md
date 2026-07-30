@@ -298,7 +298,7 @@
   - **Test File:** `tests/mobile_layout.test.ts`
   - **Allowed Context:** `src/engine/RenderContext.ts`, `src/main.ts`
   - **Commit:** `feat: adapt interface for mobile`
-- [ ] **Task [6.6]: Desktop And Steam Deck Layout Scaling**
+- [x] **Task [6.6]: Desktop And Steam Deck Layout Scaling**
   - **Goal:** Add desktop and Steam Deck layout scaling for compact and large displays.
   - **Target Files:** `src/ui/layout.ts`, `src/engine/drawingEngine.ts`
   - **Test File:** `tests/scaling_layout.test.ts`
