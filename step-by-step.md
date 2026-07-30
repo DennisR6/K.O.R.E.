@@ -246,7 +246,7 @@
   `feat: add ghost mode item`.
 - [x] Add the Magnet item data and behavior for configurable attraction or
   repulsion. Expected scope: item JSON and behavior test. Commit: `feat: add magnet item`.
-- [ ] Add the Falltuer item data and behavior that spawns a kill-zone trigger.
+- [x] Add the Falltuer item data and behavior that spawns a kill-zone trigger.
   Expected scope: item JSON and behavior test. Commit: `feat: add trapdoor item`.
 - [ ] Add the Power-Dash item data and behavior for configured force or friction
   modification. Expected scope: item JSON and behavior test. Commit:
