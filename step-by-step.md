@@ -265,7 +265,7 @@
   JSON and behavior test. Commit: `feat: add selection lock item`.
 - [x] Add the Vodka-Zero item data and seeded deterministic aim variance.
   Expected scope: item JSON and replay test. Commit: `feat: add deterministic aim variance item`.
-- [ ] Add item stacking, conflict, cleanup, serialization, and replay regression
+- [x] Add item stacking, conflict, cleanup, serialization, and replay regression
   tests for mixed effect combinations. Expected scope: focused integration test.
   Commit: `test: cover item effect interactions`.
 
