@@ -251,7 +251,7 @@
 - [x] Add the Power-Dash item data and behavior for configured force or friction
   modification. Expected scope: item JSON and behavior test. Commit:
   `feat: add power dash item`.
-- [ ] Add the Verzoegerte-Mine item data and behavior for delayed force
+- [x] Add the Verzoegerte-Mine item data and behavior for delayed force
   explosion. Expected scope: item JSON and behavior test. Commit:
   `feat: add delayed mine item`.
 - [ ] Add the Mini-Wall item data and behavior for a temporary portable wall.

@@ -1,6 +1,7 @@
 import { EffectModifyForce } from "../effects/modifyForce.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
+import { EffectDelayed } from "../effects/delayedEffect.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -12,6 +13,9 @@ export const MAGNET_RANGE = 200;
 export const MAGNET_FORCE = 2;
 export const FALLTUER_RADIUS = 25;
 export const POWER_DASH_FACTOR = 1.5;
+export const DELAYED_MINE_DELAY_TICKS = 3;
+export const DELAYED_MINE_RADIUS = 60;
+export const DELAYED_MINE_FORCE = 4;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -79,6 +83,19 @@ export const powerDashItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
 };
 
+export const verzoegerteMineItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "verzoegerte-mine",
+	name: "Verzögerte Mine",
+	description: "Creates a delayed repelling force explosion at a selected position.",
+	type: "trap",
+	effects: [{ type: "delayedEffect", value: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks: DELAYED_MINE_DELAY_TICKS } }],
+	targetType: "position",
+	duration: { type: "turns", value: 1 },
+	useLimit: { perTurn: 1, perGame: 1 },
+	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -86,12 +103,14 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("ghostMode");
 	validator.registerEffectType("magnet");
 	validator.registerEffectType("spawnTrigger");
+	validator.registerEffectType("delayedEffect");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
 	loader.registerBuiltIn(magnetItem);
 	loader.registerBuiltIn(falltuerItem);
 	loader.registerBuiltIn(powerDashItem);
+	loader.registerBuiltIn(verzoegerteMineItem);
 	return loader;
 }
 
@@ -102,6 +121,24 @@ export function applyAnkerForce(force: ForceInput): ForceInput {
 
 export function applyPowerDashForce(force: ForceInput): ForceInput {
 	return new EffectModifyForce({ typeValue: { factor: POWER_DASH_FACTOR } }).applyToForce(force);
+}
+
+export interface VerzoegerteMine {
+	center: { x: number; y: number };
+	radius: number;
+	trigger: EffectDelayed;
+	force: EffectMagnet;
+}
+
+export function createVerzoegerteMine(center: { x: number; y: number }, delayTicks: number = DELAYED_MINE_DELAY_TICKS): VerzoegerteMine {
+	if (!Number.isFinite(center.x) || !Number.isFinite(center.y)) throw new Error("Verzögerte Mine position must be finite");
+	const trigger = new EffectDelayed({ typeValue: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks } });
+	return { center: { ...center }, radius: DELAYED_MINE_RADIUS, trigger, force: new EffectMagnet({ typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } }) };
+}
+
+export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {
+	if (!mine.trigger.hasFired()) return { ...velocity };
+	return mine.force.applyToVelocity(velocity, mine.center, target);
 }
 
 export function applyMagnetForce(velocity: { x: number; y: number }, source: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {
