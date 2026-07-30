@@ -196,7 +196,7 @@
 - [x] Define versioned item, inventory, pickup, target, duration, and use-limit
   schemas. Expected scope: item types and validation test. Commit:
   `feat: define item data schema`.
-- [ ] Add a strict item validator with an effect-type whitelist and no executable
+- [x] Add a strict item validator with an effect-type whitelist and no executable
   script fields. Expected scope: validator and rejection tests. Commit:
   `feat: validate declarative items`.
 - [ ] Add an item loader that registers built-in and local mod items through the

@@ -122,7 +122,10 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
-  use-limit schemas with create helpers and validation functions.
+  use-limit schemas with create helpers and structural validation functions.
+- `src/item/validate.ts`: strict declarative item validator. It requires an
+  explicitly registered effect-name whitelist, allows only JSON data in effect
+  values, and rejects executable fields and unknown schema fields.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; item gameplay is not active.
@@ -342,6 +345,9 @@ Versioned game/map/item/hazard/AI/replay document contracts live in
 schema version one, while unknown versions are rejected.
 `validateGameSettings()` rejects malformed settings before an untrusted load
 boundary admits them.
+`ItemValidator` in `src/item/validate.ts` adds the item-load security boundary:
+callers must register each supported declarative effect name before validation;
+the validator rejects unknown fields, executable keys, and non-JSON effect data.
 Canonical map documents carry world size, friction, drift, geometry, spawn regions,
 hazard references, and metadata. `loadMapDocument()` converts force and kill-zone
 collision hazards into serializable runtime structure effects; other hazard types
