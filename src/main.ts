@@ -175,3 +175,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('click', () => { window.game.audio.start() }, { once: true });
+
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+	window.addEventListener("load", () => {
+		navigator.serviceWorker.register("./sw.js").catch(() => {});
+	});
+}

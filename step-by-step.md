@@ -439,7 +439,7 @@
   - **Test File:** `tests/mobile_manifest.test.ts`
   - **Allowed Context:** `index.html`, `public/`
   - **Commit:** `feat: add offline mobile web shell`
-- [ ] **Task [9.4]: Cover Mobile Offline Flow**
+- [x] **Task [9.4]: Cover Mobile Offline Flow**
   - **Goal:** Verify offline startup, reconnect recovery, and touch controls on a mobile viewport; add a browser smoke test.
   - **Target Files:** `src/main.ts`, `public/sw.js`
   - **Test File:** `tests/mobile_offline.test.ts`
