@@ -42,6 +42,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getColor(): string;
 	getTeam(): number[];
 	setTeam(team: number[]): void
+	setRotation(rotation: number): void
 	getEffects(): Effect[]
 }
 export interface IInventory {

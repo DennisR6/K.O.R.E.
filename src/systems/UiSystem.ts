@@ -10,6 +10,10 @@ export class UiSystem implements IUiSystem {
 	start: Vector2D | null = null
 	end: Vector2D | null = null
 	currentMouse: Vector2D = { x: 0, y: 0 }
+	aimAngle: number | null = null
+	chargePower: number | null = null
+	selectedActorId: string | null = null
+
 	constructor() { }
 
 	private getLocalInput(start: Vector2D, now: Vector2D): { angle: number, power: number } | undefined {
@@ -41,11 +45,35 @@ export class UiSystem implements IUiSystem {
 		};
 	}
 
+	public setAimAngle(actorId: string, angle: number): void {
+		this.selectedActorId = actorId;
+		this.aimAngle = ((angle % 360) + 360) % 360;
+	}
+
+	public setChargePower(power: number): void {
+		if (!Number.isFinite(power) || power < 0) throw new Error("Power must be a non-negative finite number");
+		this.chargePower = Math.min(power, 10);
+	}
+
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state !== GameState.Your_turn) {
 			this.clearInput()
+			this.clearAimAndCharge()
 			return
 		}
+
+		if (this.aimAngle !== null && this.chargePower !== null && this.selectedActorId !== null) {
+			const actor = ctx.entities.getEntityById(this.selectedActorId);
+			if (actor && !actor.isDead() && (actor.getTeam().length === 0 || actor.getTeam().includes(ctx.activeTeam))) {
+				actor.setRotation(this.aimAngle);
+				ctx.mouse.turn = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
+				ctx.state = GameState.Turn_done;
+				this.clearAimAndCharge();
+				this.clearInput();
+				return;
+			}
+		}
+
 		if (!this.start) return
 		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y)
 		if (!actor || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
@@ -58,6 +86,7 @@ export class UiSystem implements IUiSystem {
 			this.clearInput()
 			return
 		}
+		actor.setRotation(e.angle);
 		ctx.mouse.turn = { ...e, actorId: actor.getId() }
 		ctx.state = GameState.Turn_done
 		this.clearInput()
@@ -86,5 +115,11 @@ export class UiSystem implements IUiSystem {
 	private clearInput(): void {
 		this.start = null
 		this.end = null
+	}
+
+	private clearAimAndCharge(): void {
+		this.aimAngle = null;
+		this.chargePower = null;
+		this.selectedActorId = null;
 	}
 }
