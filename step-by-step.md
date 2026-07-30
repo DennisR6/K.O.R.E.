@@ -463,7 +463,7 @@
   - **Test File:** `tests/discord_invites.test.ts`
   - **Allowed Context:** `src/server/runtime.ts`, `src/discord/config.ts`
   - **Commit:** `feat: support discord game invites`
-- [ ] **Task [9.8]: Document Discord Configuration**
+- [x] **Task [9.8]: Document Discord Configuration**
   - **Goal:** Document required Discord application configuration and verify disabled integration is a no-op.
   - **Target Files:** `docs/discord-setup.md`, `src/discord/presence.ts`
   - **Test File:** `tests/discord_noop.test.ts`
