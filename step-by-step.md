@@ -457,7 +457,7 @@
   - **Test File:** `tests/discord_presence.test.ts`
   - **Allowed Context:** `src/discord/config.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: report discord match presence`
-- [ ] **Task [9.7]: Support Discord Game Invites**
+- [x] **Task [9.7]: Support Discord Game Invites**
   - **Goal:** Add Discord join/invite payload handling that validates game identifiers before connecting.
   - **Target Files:** `src/discord/invites.ts`, `src/server/runtime.ts`
   - **Test File:** `tests/discord_invites.test.ts`

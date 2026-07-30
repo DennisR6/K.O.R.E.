@@ -1,6 +1,7 @@
 import { GameSettings, validateGameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
+import { parseDiscordInvite } from "../discord/invites.js";
 import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -55,6 +56,9 @@ export class ServerRuntime {
 			case "CREATE_GAME" as unknown as NetworkMessageType:
 				this.createCustomGame(socket, (message as any).settings)
 				return
+			case "DISCORD_JOIN" as unknown as NetworkMessageType:
+				this.handleDiscordJoin(socket, (message as any).payload)
+				return
 			default:
 				this.sendError(socket, "Unsupported network packet")
 		}
@@ -94,6 +98,22 @@ export class ServerRuntime {
 			}
 		} catch (error) {
 			this.sendError(socket, error instanceof Error ? error.message : "Invalid custom game settings")
+		}
+	}
+
+	private handleDiscordJoin(socket: ServerSocket, payload: unknown): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before joining via invite")
+		try {
+			const invite = parseDiscordInvite(payload)
+			const record = this.games.get(invite.gameId)
+			if (!record) {
+				return this.sendError(socket, "Game not found or expired")
+			}
+			this.games.connectUser(userId)
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState }))
+		} catch (error) {
+			this.sendError(socket, error instanceof Error ? error.message : "Invalid invite payload")
 		}
 	}
 
