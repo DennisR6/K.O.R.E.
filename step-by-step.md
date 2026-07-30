@@ -433,7 +433,7 @@
   - **Test File:** `tests/desktop_packaging.test.ts`
   - **Allowed Context:** `package.json`
   - **Commit:** `docs: document desktop build`
-- [ ] **Task [9.3]: Offline Mobile Web Shell**
+- [x] **Task [9.3]: Offline Mobile Web Shell**
   - **Goal:** Add web-app manifest, icons, and service-worker caching for offline mobile launch.
   - **Target Files:** `public/manifest.json`, `public/sw.js`
   - **Test File:** `tests/mobile_manifest.test.ts`
