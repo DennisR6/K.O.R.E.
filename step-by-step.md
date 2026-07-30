@@ -235,7 +235,7 @@
   interaction. Expected scope: effect and test. Commit: `feat: add shield effect`.
 - [x] Add the serializable freeze effect primitive and test movement reduction
   and expiration. Expected scope: effect and test. Commit: `feat: add freeze effect`.
-- [ ] Add a reusable teleport/swap effect primitive and test invalid target
+- [x] Add a reusable teleport/swap effect primitive and test invalid target
   rejection. Expected scope: effect and test. Commit: `feat: add swap position effect`.
 - [ ] Add a reusable temporary-wall effect primitive and test structure cleanup.
   Expected scope: effect and test. Commit: `feat: add temporary wall effect`.
