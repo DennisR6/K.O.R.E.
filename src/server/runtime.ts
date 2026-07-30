@@ -1,4 +1,4 @@
-import { GameSettings } from "../settings/settings.js";
+import { GameSettings, validateGameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
@@ -52,6 +52,9 @@ export class ServerRuntime {
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
+			case "CREATE_GAME" as unknown as NetworkMessageType:
+				this.createCustomGame(socket, (message as any).settings)
+				return
 			default:
 				this.sendError(socket, "Unsupported network packet")
 		}
@@ -71,6 +74,28 @@ export class ServerRuntime {
 	}
 
 	public getRegistry(): GameRegistry { return this.games }
+
+	private createCustomGame(socket: ServerSocket, rawSettings: unknown): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before creating a game")
+		try {
+			validateGameSettings(rawSettings)
+			if (!this.waitingUsers.includes(userId)) this.waitingUsers.push(userId)
+			if (this.waitingUsers.length >= 2) {
+				const users = this.waitingUsers.splice(0, 2)
+				const record = this.games.create(rawSettings, users)
+				for (const user of users) {
+					this.games.connectUser(user)
+					const s = this.socketForUser(user)
+					if (s) s.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState }))
+				}
+			} else {
+				socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
+			}
+		} catch (error) {
+			this.sendError(socket, error instanceof Error ? error.message : "Invalid custom game settings")
+		}
+	}
 
 	private login(socket: ServerSocket, requestedUserId: unknown): void {
 		const userId = typeof requestedUserId === "string" && requestedUserId.length > 0

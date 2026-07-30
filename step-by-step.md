@@ -382,7 +382,7 @@
   - **Test File:** `tests/settings_export.test.ts`
   - **Allowed Context:** `src/contracts/documents.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: version game settings exports`
-- [ ] **Task [8.5]: Share Validated Game Settings**
+- [x] **Task [8.5]: Share Validated Game Settings**
   - **Goal:** Add an authoritative create-or-join path that accepts only validated, allowed settings exports and distributes them in `INIT`.
   - **Target Files:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
   - **Test File:** `tests/shared_settings.test.ts`

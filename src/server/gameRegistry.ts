@@ -4,7 +4,7 @@ import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
-import type { GameSettings } from "../settings/settings.js";
+import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
 
 export type GameRecord = {
@@ -47,6 +47,7 @@ export class GameRegistry {
 
 	public create(settings: GameSettings, users: string[]): GameRecord {
 		if (users.length < 2) throw new Error("A game requires at least two users")
+		validateGameSettings(settings)
 		const id = crypto.randomUUID()
 		const gameSettings: GameSettings = {
 			...JSON.parse(JSON.stringify(settings)),
