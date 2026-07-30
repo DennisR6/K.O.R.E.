@@ -13,6 +13,7 @@ Bun.serve<WebSocketData>({
 		if (server.upgrade(req, { data: { connectionId: crypto.randomUUID() } })) return;
 
 		const url = new URL(req.url);
+		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {
 			return new Response(Bun.file(`.${url.pathname}`));

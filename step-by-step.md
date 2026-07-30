@@ -364,7 +364,7 @@
   - **Test File:** `tests/save_slots.test.ts`
   - **Allowed Context:** `src/contracts/documents.ts`, `src/settings/settings.ts`
   - **Commit:** `feat: define local save slots`
-- [ ] **Task [8.2]: Local Match Storage**
+- [x] **Task [8.2]: Local Match Storage**
   - **Goal:** Implement local save-slot creation and listing without exposing database files to static HTTP routes.
   - **Target Files:** `src/persistence/storage.ts`, `server.ts`
   - **Test File:** `tests/local_storage.test.ts`
