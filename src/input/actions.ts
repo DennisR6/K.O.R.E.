@@ -20,10 +20,10 @@ export function createDefaultActionBindings(): GameActionBindings {
 	return {
 		schemaVersion: 1,
 		bindings: {
-			[GameAction.Aim]: { keys: ["ArrowLeft", "ArrowRight", "KeyA", "KeyD"], mouseButtons: [0] },
-			[GameAction.Charge]: { keys: ["Space", "ArrowUp", "KeyW"] },
-			[GameAction.Push]: { keys: ["Enter", "KeyP"] },
-			[GameAction.ItemUse]: { keys: ["KeyI", "Digit1"] },
+			[GameAction.Aim]: { keys: ["ArrowLeft", "ArrowRight", "KeyA", "KeyD"], mouseButtons: [0], gamepadButtons: [14, 15] },
+			[GameAction.Charge]: { keys: ["Space", "ArrowUp", "KeyW"], gamepadButtons: [0] },
+			[GameAction.Push]: { keys: ["Enter", "KeyP"], gamepadButtons: [1] },
+			[GameAction.ItemUse]: { keys: ["KeyI", "Digit1"], gamepadButtons: [2] },
 		},
 	};
 }

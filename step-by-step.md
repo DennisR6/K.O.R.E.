@@ -279,7 +279,7 @@
   behavior. Expected scope: UI system and browser test. Commit: `feat: add item phase interface`.
 - [x] Add clear active-team, rule-phase, turn number, force, and selected-item
   indicators. Expected scope: drawing system and test. Commit: `feat: show match state indicators`.
-- [ ] **Task [6.3]: Controller Input Bindings**
+- [x] **Task [6.3]: Controller Input Bindings**
   - **Goal:** Add controller stick/trigger bindings through the action abstraction.
   - **Target Files:** `src/input/controller.ts`, `src/input/actions.ts`
   - **Test File:** `tests/controller_input.test.ts`
