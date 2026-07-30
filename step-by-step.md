@@ -394,7 +394,7 @@
   - **Test File:** `tests/replay_format.test.ts`
   - **Allowed Context:** `src/contracts/documents.ts`, `src/engine/types.ts`
   - **Commit:** `feat: define replay format`
-- [ ] **Task [8.7]: Record Local Replays**
+- [x] **Task [8.7]: Record Local Replays**
   - **Goal:** Record accepted local actions into replay data and test export/replay equality.
   - **Target Files:** `src/replay/recorder.ts`, `src/emitter/EngineEmitter.ts`
   - **Test File:** `tests/local_replays.test.ts`
