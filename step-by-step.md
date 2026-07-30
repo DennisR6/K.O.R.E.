@@ -258,7 +258,7 @@
   Expected scope: item JSON and behavior test. Commit: `feat: add mini wall item`.
 - [x] Add the Freeze-Shot item data and behavior for temporary slowing. Expected
   scope: item JSON and behavior test. Commit: `feat: add freeze shot item`.
-- [ ] Add the Switch item data and behavior for validated figure-position swaps.
+- [x] Add the Switch item data and behavior for validated figure-position swaps.
   Expected scope: item JSON and behavior test. Commit: `feat: add switch item`.
 - [ ] Add the Jaegermeister-Elixier item data and behavior that prevents an
   opponent figure from being selected for its duration. Expected scope: item

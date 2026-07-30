@@ -156,7 +156,7 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/item/target.ts`: validates declarative self, entity, position, and zone
   targets against ownership, activity, range, and world bounds.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
-  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, and Freeze-Shot behavior using the validated item/effect pipeline.
+  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
 - `src/effects/ghostMode.ts`: serializable collision-filtering effect with turn
   expiration and snapshot-safe state.
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range

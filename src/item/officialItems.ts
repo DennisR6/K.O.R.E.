@@ -4,6 +4,7 @@ import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectTemporaryWall } from "../effects/temporaryWall.js";
 import { EffectFreeze } from "../effects/freeze.js";
+import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -23,6 +24,7 @@ export const MINI_WALL_HEIGHT = 10;
 export const MINI_WALL_DURATION_TURNS = 3;
 export const FREEZE_SHOT_SPEED_FACTOR = 0.25;
 export const FREEZE_SHOT_DURATION_TURNS = 2;
+export const SWITCH_RANGE = 300;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -129,6 +131,19 @@ export const freezeShotItem: ItemDocument = {
 	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
 };
 
+export const switchItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "switch",
+	name: "Switch",
+	description: "Swaps the active figure's position with a targeted ally.",
+	type: "utility",
+	effects: [{ type: "swapPosition", value: {} }],
+	targetType: "entity",
+	duration: { type: "instant", value: 0 },
+	useLimit: { perTurn: 1, perGame: 1 },
+	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: false, maxRange: SWITCH_RANGE },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -139,6 +154,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("delayedEffect");
 	validator.registerEffectType("temporaryWall");
 	validator.registerEffectType("freeze");
+	validator.registerEffectType("swapPosition");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
@@ -148,6 +164,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(verzoegerteMineItem);
 	loader.registerBuiltIn(miniWallItem);
 	loader.registerBuiltIn(freezeShotItem);
+	loader.registerBuiltIn(switchItem);
 	return loader;
 }
 
@@ -184,6 +201,10 @@ export function createMiniWall(position: { x: number; y: number }, wallId: strin
 
 export function createFreezeShot(): EffectFreeze {
 	return new EffectFreeze({ typeValue: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } });
+}
+
+export function applySwitch(first: PositionTargetState, second: PositionTargetState): [ { x: number; y: number }, { x: number; y: number } ] {
+	return new EffectSwapPosition().swap(first, second);
 }
 
 export function applyMagnetForce(velocity: { x: number; y: number }, source: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {
