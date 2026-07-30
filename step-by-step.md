@@ -237,7 +237,7 @@
   and expiration. Expected scope: effect and test. Commit: `feat: add freeze effect`.
 - [x] Add a reusable teleport/swap effect primitive and test invalid target
   rejection. Expected scope: effect and test. Commit: `feat: add swap position effect`.
-- [ ] Add a reusable temporary-wall effect primitive and test structure cleanup.
+- [x] Add a reusable temporary-wall effect primitive and test structure cleanup.
   Expected scope: effect and test. Commit: `feat: add temporary wall effect`.
 - [ ] Add the Anker item data and behavior for configurable knockback reduction.
   Expected scope: item JSON and behavior test. Commit: `feat: add anker item`.

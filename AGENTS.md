@@ -140,6 +140,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   expiration and snapshot-safe state.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
+- `src/effects/temporaryWall.ts`: serializable temporary-wall lifecycle with
+  deterministic structure cleanup state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an

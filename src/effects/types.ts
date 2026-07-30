@@ -24,6 +24,7 @@ export const enum ItemEffectType {
 	Shield = "shield",
 	Freeze = "freeze",
 	SwapPosition = "swapPosition",
+	TemporaryWall = "temporaryWall",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
