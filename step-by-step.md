@@ -244,7 +244,7 @@
 - [x] Add the Durchlaessigkeit item data and behavior for temporary ghost-mode
   collision filtering. Expected scope: item JSON and behavior test. Commit:
   `feat: add ghost mode item`.
-- [ ] Add the Magnet item data and behavior for configurable attraction or
+- [x] Add the Magnet item data and behavior for configurable attraction or
   repulsion. Expected scope: item JSON and behavior test. Commit: `feat: add magnet item`.
 - [ ] Add the Falltuer item data and behavior that spawns a kill-zone trigger.
   Expected scope: item JSON and behavior test. Commit: `feat: add trapdoor item`.
