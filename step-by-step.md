@@ -207,7 +207,7 @@
   `feat: configure item economy`.
 - [x] Implement fixed loadout initialization and use consumption. Expected
   scope: inventory system and test. Commit: `feat: initialize fixed item loadouts`.
-- [ ] Implement deterministic seeded item draws and serialize draw state for
+- [x] Implement deterministic seeded item draws and serialize draw state for
   replay and reconnect. Expected scope: draw system and test. Commit:
   `feat: add deterministic item draws`.
 - [ ] Implement map item pickups and validate active-team ownership. Expected

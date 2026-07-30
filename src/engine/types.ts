@@ -158,7 +158,13 @@ export interface EngineSettings extends GameSettings {
 	turnNumber: number
 	activeTeam: number
 	ruleState: RuleState
+	itemDrawState?: ItemDrawState
 	matchResult?: MatchResult
 	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
+}
+
+/** Serializable progress of the seeded item-draw sequence. */
+export interface ItemDrawState {
+	randomState: number
 }

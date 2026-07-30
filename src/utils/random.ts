@@ -23,4 +23,17 @@ export class SeededRandom {
 		}
 		return Math.floor(this.next() * maxExclusive)
 	}
+
+	/** Returns the exact internal state needed to resume this sequence. */
+	public getState(): number { return this.state }
+
+	/** Restores a sequence from a state emitted by getState(). */
+	public static fromState(state: number): SeededRandom {
+		if (!Number.isSafeInteger(state) || state < 0 || state > 0xFFFFFFFF) {
+			throw new RangeError("Random state must be an unsigned 32-bit integer")
+		}
+		const random = new SeededRandom(0)
+		random.state = state
+		return random
+	}
 }

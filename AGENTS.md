@@ -366,6 +366,8 @@ preserve all turn and rule-progress fields.
 `GameModeSettings` can carry an `ItemEconomySettings` contract for fixed
 per-team loadouts, declared map pickups, and deterministic seeded draw pools;
 the selected optional mode is preserved in engine snapshots.
+Seeded item-draw state is also preserved in engine snapshots so reconnect and
+replay restoration resume the configured deterministic draw pool.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 

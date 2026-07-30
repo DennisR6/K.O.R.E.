@@ -28,3 +28,13 @@ export function consumeInventoryItem(inventory: InventoryItem[], item: ItemDocum
 export function resetInventoryTurnUses(inventory: InventoryItem[]): void {
 	for (const item of inventory) item.usesThisTurn = 0;
 }
+
+/** Adds one drawn use without exceeding the item's per-game inventory limit. */
+export function addDrawnInventoryItem(inventory: InventoryItem[], item: ItemDocument): void {
+	const entry = inventory.find(candidate => candidate.itemId === item.id)
+	if (entry) {
+		entry.remainingUses = Math.min(entry.remainingUses + 1, item.useLimit.perGame)
+		return
+	}
+	inventory.push(createInventoryItem({ itemId: item.id, remainingUses: Math.min(1, item.useLimit.perGame) }))
+}

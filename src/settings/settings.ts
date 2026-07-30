@@ -115,7 +115,13 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
 	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
-	if (settings.gameMode !== undefined) validateItemEconomySettings(settings.gameMode.itemEconomy)
+	if (settings.gameMode !== undefined) {
+		validateItemEconomySettings(settings.gameMode.itemEconomy)
+		const draw = settings.gameMode.itemEconomy.randomDraw
+		if (draw && !draw.itemIds.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {
+			throw new Error("Seeded item draw references an unknown item")
+		}
+	}
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }

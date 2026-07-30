@@ -3,7 +3,7 @@ import { EntityManager } from "../entity/EntityManager.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { GameState, getEngineStateName } from "./types.js";
-import type { EngineSettings, IInput, IMouse, ISettingsSerialize, TurnPacket } from "./types.js"
+import type { EngineSettings, IInput, IMouse, ISettingsSerialize, ItemDrawState, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../settings/settings.js"
@@ -21,8 +21,9 @@ import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
-import { createFixedLoadoutInventory } from "../item/inventory.js";
+import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
+import { SeededRandom } from "../utils/random.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -96,6 +97,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectRound: Effect[] = []
 	private effectCollision: Effect[] = []
 	private items: ItemDocument[] = []
+	private itemDrawRandom: SeededRandom | undefined
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	/**
@@ -376,6 +378,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.context.activeTeam = ruleState.activeTeam
 		this.context.currTurn = ruleState.turnNumber
 	}
+	/** Starts a turn and grants its configured deterministic item draws. */
+	public startTurn(ruleState: RuleState): void {
+		this.setTurnNumber(ruleState.turnNumber)
+		this.setActiveTeam(ruleState.activeTeam)
+		this.setRuleState(ruleState)
+		this.drawItemsForActiveTeam()
+	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
 	public setMatchResult(result: MatchResult | undefined): void { this.matchResult = result && { ...result } }
 	/** Restores the configured local match without replacing installed UI systems. */
@@ -391,9 +400,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.setTeamSize(settings.allTeamSize)
 		this.setItems(settings.items)
 		this.loadEffects(settings.effects)
-		this.setTurnNumber(0)
-		this.setActiveTeam(0)
-		this.setRuleState({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		this.initializeItemDraws()
+		this.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
 		this.setState(GameState.Your_turn)
@@ -454,6 +462,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 			matchResult: this.getMatchResult(),
+			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 		}
 		this.saveSettings(settings)
 		return settings
@@ -500,6 +509,45 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			for (const entity of this.entityManager.getEntities()) {
 				if (entity.getTeam().includes(loadout.team)) entity.setInventory(inventory)
 			}
+		}
+	}
+	/** Initializes the configured draw sequence for a new match or rematch. */
+	public initializeItemDraws(): void {
+		const draw = this.settings?.gameMode?.itemEconomy.randomDraw
+		this.itemDrawRandom = draw ? new SeededRandom(draw.seed) : undefined
+		if (draw) this.validateItemDrawPool(draw.itemIds)
+	}
+	/** Restores a persisted draw sequence without granting an additional turn draw. */
+	public restoreItemDraws(state: ItemDrawState | undefined): void {
+		const draw = this.settings?.gameMode?.itemEconomy.randomDraw
+		if (!draw) {
+			if (state) throw new Error("Item draw state requires a configured random draw")
+			this.itemDrawRandom = undefined
+			return
+		}
+		this.validateItemDrawPool(draw.itemIds)
+		if (!state) throw new Error("Configured item draws require a serialized draw state")
+		this.itemDrawRandom = SeededRandom.fromState(state.randomState)
+	}
+	private drawItemsForActiveTeam(): void {
+		const draw = this.settings?.gameMode?.itemEconomy.randomDraw
+		if (!draw || !this.itemDrawRandom) return
+		const drawnItems = Array.from({ length: draw.drawsPerTurn }, () => {
+			const itemId = draw.itemIds[this.itemDrawRandom!.nextInt(draw.itemIds.length)]
+			const item = this.items.find(candidate => candidate.id === itemId)
+			if (!item) throw new Error(`Seeded item draw references unknown item '${itemId}'`)
+			return item
+		})
+		for (const entity of this.entityManager.getEntities()) {
+			if (!entity.getTeam().includes(this.getActiveTeam())) continue
+			const inventory = entity.getInventory()
+			for (const item of drawnItems) addDrawnInventoryItem(inventory, item)
+			entity.setInventory(inventory)
+		}
+	}
+	private validateItemDrawPool(itemIds: string[]): void {
+		for (const itemId of itemIds) {
+			if (!this.items.some(item => item.id === itemId)) throw new Error(`Seeded item draw references unknown item '${itemId}'`)
 		}
 	}
 }
@@ -551,7 +599,7 @@ export class GameHandlerBuilder {
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
-		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
@@ -569,7 +617,11 @@ export class GameHandlerBuilder {
 
 		// Player
 		players.forEach((player) => this.addPlayer(new Player(player)))
-		if (!("state" in gameSettings)) this.engine.initializeFixedLoadouts()
+		if (!("state" in gameSettings)) {
+			this.engine.initializeFixedLoadouts()
+			this.engine.initializeItemDraws()
+			this.engine.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		}
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
@@ -581,6 +633,7 @@ export class GameHandlerBuilder {
 			this.engine.setTurnNumber(ruleState.turnNumber)
 			this.engine.setActiveTeam(ruleState.activeTeam)
 			this.engine.setMatchResult(gameSettings.matchResult)
+			this.engine.restoreItemDraws(gameSettings.itemDrawState)
 		}
 
 		return this

@@ -33,9 +33,14 @@ export class GameEmitter implements IInputEmitter {
 		this.handler.playTurn(sim, () => {
 			this.ruleState = this.rules.advancePhase(this.ruleState)
 			this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount)
-			this.handler.setActiveTeam(this.ruleState.activeTeam)
-			this.handler.setTurnNumber(this.ruleState.turnNumber)
-			this.handler.setRuleState(this.ruleState)
+			const startTurn = (this.handler as Partial<GameHandler>).startTurn
+			if (startTurn) startTurn.call(this.handler, this.ruleState)
+			else {
+				this.handler.setActiveTeam(this.ruleState.activeTeam)
+				this.handler.setTurnNumber(this.ruleState.turnNumber)
+				this.handler.setRuleState(this.ruleState)
+			}
+			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
 	}
