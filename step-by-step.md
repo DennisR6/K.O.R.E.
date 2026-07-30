@@ -291,7 +291,7 @@
   - **Test File:** `tests/touch_input.test.ts`
   - **Allowed Context:** `src/input/actions.ts`, `src/systems/UiSystem.ts`
   - **Commit:** `feat: add touch input`
-- [ ] **Task [6.5]: Mobile Layout Adaptation**
+- [x] **Task [6.5]: Mobile Layout Adaptation**
   - **Goal:** Add responsive mobile layout rules with large touch targets and verify a small viewport browser path.
   - **Target Files:** `src/ui/layout.ts`, `src/main.ts`
   - **Test File:** `tests/mobile_layout.test.ts`

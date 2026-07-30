@@ -14,6 +14,7 @@ import { NetworkEmitter, installTurnReceiver } from "./emitter/NetworkEmitter.js
 import { getUserUUUID, setUserUUUID } from "./utils/id.js";
 import { wrap } from "./utils/net.js";
 import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNewUser, type UnTypedNetworkMessage } from "./server/types.js";
+import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 
 const uri = new URL(window.location.href)
 const usersettings = {
@@ -98,9 +99,10 @@ function startNetworkGame(serverUrl: string) {
 function startGame(h: GameHandler) {
 	const sketch = (p: p5Types) => {
 		let ctx: RenderContext;
-		const scale = (window.window.innerWidth * 0.9) / GameSettings.screenResolution.x
+		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
+		const scale = adapted.scale;
 		p.setup = () => {
-			p.createCanvas(scale * GameSettings.screenResolution.x, scale * GameSettings.screenResolution.y);
+			p.createCanvas(adapted.width, adapted.height);
 			ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 			ctx.mouseWheel(handler.handleMouseWheel)
