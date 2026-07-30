@@ -134,6 +134,8 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
   with snapshot restoration state.
 - `src/effects/delayedEffect.ts`: serializable fixed-tick delayed-effect
   primitive with snapshot-safe countdown state.
+- `src/effects/shield.ts`: serializable damage-absorbing shield with collision
+  blocking and snapshot-safe capacity state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an

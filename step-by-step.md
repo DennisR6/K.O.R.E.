@@ -231,7 +231,7 @@
   restoration. Expected scope: effect and test. Commit: `feat: add spawn trigger effect`.
 - [x] Add the serializable delayed-effect primitive and test fixed-tick timing.
   Expected scope: scheduler effect and test. Commit: `feat: add delayed effect`.
-- [ ] Add the serializable shield effect primitive and test damage/collision
+- [x] Add the serializable shield effect primitive and test damage/collision
   interaction. Expected scope: effect and test. Commit: `feat: add shield effect`.
 - [ ] Add the serializable freeze effect primitive and test movement reduction
   and expiration. Expected scope: effect and test. Commit: `feat: add freeze effect`.
