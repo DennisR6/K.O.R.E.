@@ -3,6 +3,7 @@ import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectTemporaryWall } from "../effects/temporaryWall.js";
+import { EffectFreeze } from "../effects/freeze.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
@@ -20,6 +21,8 @@ export const DELAYED_MINE_FORCE = 4;
 export const MINI_WALL_WIDTH = 80;
 export const MINI_WALL_HEIGHT = 10;
 export const MINI_WALL_DURATION_TURNS = 3;
+export const FREEZE_SHOT_SPEED_FACTOR = 0.25;
+export const FREEZE_SHOT_DURATION_TURNS = 2;
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -113,6 +116,19 @@ export const miniWallItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 };
 
+export const freezeShotItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "freeze-shot",
+	name: "Freeze-Shot",
+	description: "Temporarily slows a targeted figure.",
+	type: "offensive",
+	effects: [{ type: "freeze", value: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }],
+	targetType: "entity",
+	duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
+	useLimit: { perTurn: 1, perGame: 2 },
+	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
+};
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -122,6 +138,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("delayedEffect");
 	validator.registerEffectType("temporaryWall");
+	validator.registerEffectType("freeze");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);
@@ -130,6 +147,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(powerDashItem);
 	loader.registerBuiltIn(verzoegerteMineItem);
 	loader.registerBuiltIn(miniWallItem);
+	loader.registerBuiltIn(freezeShotItem);
 	return loader;
 }
 
@@ -162,6 +180,10 @@ export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: {
 
 export function createMiniWall(position: { x: number; y: number }, wallId: string = "mini-wall"): EffectTemporaryWall {
 	return new EffectTemporaryWall({ typeValue: { wallId, x: position.x, y: position.y, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } });
+}
+
+export function createFreezeShot(): EffectFreeze {
+	return new EffectFreeze({ typeValue: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } });
 }
 
 export function applyMagnetForce(velocity: { x: number; y: number }, source: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } {

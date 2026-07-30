@@ -256,7 +256,7 @@
   `feat: add delayed mine item`.
 - [x] Add the Mini-Wall item data and behavior for a temporary portable wall.
   Expected scope: item JSON and behavior test. Commit: `feat: add mini wall item`.
-- [ ] Add the Freeze-Shot item data and behavior for temporary slowing. Expected
+- [x] Add the Freeze-Shot item data and behavior for temporary slowing. Expected
   scope: item JSON and behavior test. Commit: `feat: add freeze shot item`.
 - [ ] Add the Switch item data and behavior for validated figure-position swaps.
   Expected scope: item JSON and behavior test. Commit: `feat: add switch item`.
