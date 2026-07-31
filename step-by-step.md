@@ -325,7 +325,7 @@
   - **Test File:** `tests/ai_emitter.test.ts`
   - **Allowed Context:** `src/emitter/Emitter.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add ai turn interface`
-- [ ] **Task [7.3]: Deterministic Easy AI**
+- [x] **Task [7.3]: Deterministic Easy AI**
   - **Goal:** Implement and test deterministic easy AI random angle and force choices.
   - **Target Files:** `src/ai/easyAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/easy_ai.test.ts`
