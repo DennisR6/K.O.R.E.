@@ -3,6 +3,7 @@ import type { RenderContext } from "./RenderContext.js";
 import { assetManager } from "../assetManager/loader.js";
 import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
 import { calculateDesktopLayout } from "../ui/layout.js";
+import { FitWorldCamera } from "../ui/FitWorldCamera.js";
 /**
  * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
  * 
@@ -20,6 +21,7 @@ export class P5Renderer implements RenderContext {
 	public WORLD_SIZE_X: number = 16
 	public WORLD_SIZE_Y: number = 9
 	private renderScale = 1;
+	private camera: FitWorldCamera;
 
 	/** 
 	 * @param p - Die p5Types.-Instanz.
@@ -34,10 +36,12 @@ export class P5Renderer implements RenderContext {
 		this.WORLD_SCALE_Y = scale * 9
 		this.WORLD_SIZE_X = worldWidth
 		this.WORLD_SIZE_Y = worldWidth / 16 * 9
+		this.camera = new FitWorldCamera({ x: this.WORLD_SIZE_X, y: this.WORLD_SIZE_Y });
 	}
 	setWorldSize(x: number, y: number) {
 		this.WORLD_SIZE_X = x
 		this.WORLD_SIZE_Y = y
+		this.camera.setWorldSize({ x, y })
 	}
 	setScaleFactor(x: number) {
 		this.p5ctx.resetMatrix()
@@ -158,7 +162,8 @@ export class P5Renderer implements RenderContext {
 	}
 	resizeCanvas(x: number, y: number): void {
 		const layout = calculateDesktopLayout(x, y, this.WORLD_SIZE_X, this.WORLD_SIZE_Y);
-		const finalScale = layout.scaleFactor;
+		this.camera.resize(this.WORLD_SIZE_X * layout.scaleFactor, this.WORLD_SIZE_Y * layout.scaleFactor);
+		const finalScale = this.camera.getScaleFactor();
 
 		// Setze die Skalierung
 		this.setScaleFactor(finalScale);

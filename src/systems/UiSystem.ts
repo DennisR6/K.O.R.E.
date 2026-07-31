@@ -46,6 +46,7 @@ export class UiSystem implements IUiSystem {
 	}
 
 	public setAimAngle(actorId: string, angle: number): void {
+		if (!actorId || !Number.isFinite(angle)) throw new Error("Actor and aim angle must be valid");
 		this.selectedActorId = actorId;
 		this.aimAngle = ((angle % 360) + 360) % 360;
 	}
@@ -72,6 +73,7 @@ export class UiSystem implements IUiSystem {
 				this.clearInput();
 				return;
 			}
+			this.clearAimAndCharge();
 		}
 
 		if (!this.start) return

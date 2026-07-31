@@ -3,6 +3,7 @@ import { RulePhase, WinCondition } from "../rules/types.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
 import { createDefaultGameSettings, validateGameSettings, type GameSettings } from "./settings.js";
 import { SHAPE } from "../physics/physics.js";
+import { FitWorldCamera } from "../ui/FitWorldCamera.js";
 
 /** The supported two-human local reference match for the playable vertical slice. */
 export const CANONICAL_PLAYABLE_MATCH = {
@@ -36,6 +37,7 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 	};
 	validateGameSettings(settings);
 	validateReferenceMapSettings(settings);
+	validateReferenceSpawnAndCamera(settings);
 	return JSON.parse(JSON.stringify(settings)) as GameSettings;
 }
 
@@ -52,6 +54,21 @@ export function validateReferenceMapSettings(settings: GameSettings): void {
 	for (const player of settings.players) {
 		if (player.position.x - player.size < 0 || player.position.y - player.size < 0 || player.position.x + player.size > width || player.position.y + player.size > height) throw new Error("reference map spawn is outside containment");
 		for (const other of settings.players) if (other !== player && Math.hypot(player.position.x - other.position.x, player.position.y - other.position.y) < player.size + other.size) throw new Error("reference map spawns overlap");
+	}
+}
+
+/** Validates that the shipped match opens with every live figure in the fixed arena view. */
+export function validateReferenceSpawnAndCamera(settings: GameSettings): void {
+	validateReferenceMapSettings(settings);
+	const camera = new FitWorldCamera(CANONICAL_PLAYABLE_MATCH.camera.worldSize);
+	const world = camera.getWorldBounds();
+	if (settings.worldSize.x !== world.w || settings.worldSize.y !== world.h) throw new Error("reference camera world does not match the arena");
+	const containment = settings.mapBoundarys.find(structure => structure.role === "containment");
+	if (!containment || containment.type !== SHAPE.RECTANGLE) throw new Error("reference camera requires rectangular containment");
+	for (const player of settings.players) {
+		if (player.isDead || player.hp <= 0 || player.team.length !== 1 || (player.team[0] !== 0 && player.team[0] !== 1)) throw new Error("reference player is not selectable");
+		if (!camera.containsCircle(player.position, player.size)) throw new Error("reference player is outside the initial camera");
+		if (player.position.x - player.size < containment.x || player.position.y - player.size < containment.y || player.position.x + player.size > containment.x + containment.w || player.position.y + player.size > containment.y + containment.h) throw new Error("reference player is outside containment");
 	}
 }
 

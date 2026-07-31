@@ -1017,7 +1017,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Required Invariants:** one unambiguous outer containment region, no accidental `"both"` role, no spawn inside solid geometry, no immediate hazard overlap, no invisible collision geometry, no visible obstacle without collision geometry, enough space for meaningful movement, all intended areas are reachable.
    - **Negative Tests:** reject overlapping spawns, reject out-of-bounds spawns, reject ambiguous outer boundaries, reject zero-size or invalid structures.
   - **Note:** Canonical Ice Duel now derives an explicit containment rectangle and explicit visible solid roles without changing legacy Ice Map fixtures. `validateReferenceMapSettings()` rejects ambiguous containment, invalid/out-of-world geometry, invisible solids, and overlapping or out-of-world spawns. `tests/reference_map_validation.test.ts` covers the reference contract and required negative cases.
-- [ ] **Task [14.4]: Validate Spawn, Selection, Camera, And Initial View**
+- [x] **Task [14.4]: Validate Spawn, Selection, Camera, And Initial View**
   - **Goal:** Ensure every player starts alive, visible, selectable, fully contained, and correctly framed by the initial camera.
   - **Target Files:** gameplay scene, camera controller, entity selection code
   - **Test File:** `tests/reference_spawn_and_camera.test.ts`
@@ -1025,6 +1025,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `feat: establish playable initial view`
   - **Positive Tests:** every player is visible, active-team figures can be selected, inactive-team figures cannot be submitted as actions, camera bounds include the relevant arena, resize preserves a usable view.
   - **Negative Tests:** no player starts behind UI, no NaN camera transform, no camera position outside its configured limits, no dead or invalid actor is preselected.
+  - **Note:** Implemented `src/ui/FitWorldCamera.ts` as the bounded fit-world controller used by `src/engine/drawingEngine.ts` on resize. `validateReferenceSpawnAndCamera()` in `src/settings/canonicalPlayableMatch.ts` verifies live, contained, one-team canonical spawns in the configured 800x450 view; `UiSystem` clears invalid preselection. `tests/reference_spawn_and_camera.test.ts` covers visibility, resize stability, active-team submission, and invalid camera/spawn cases.
 - [ ] **Task [14.5]: Render The Authoritative Match State**
   - **Goal:** Render players, structures, containment, hazards, items, effects, active team, death state, playback, and result state directly from the authoritative handler.
   - **Target Files:** `src/ui/**`, `src/rendering/**`, `src/scenes/**`
