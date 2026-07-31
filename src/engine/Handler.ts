@@ -110,6 +110,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private mapPickupSystem = new MapPickupSystem()
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
+	/** True while `resolveTurn` is resolving the accepted turn's final state. */
+	private resolvingTurn = false
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -164,6 +166,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// 	 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
 	// 	 */
 	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
+		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
 		return g.resolveTurn({ actorId, angle, power })
@@ -171,12 +174,21 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 	/** Resolves and commits one turn on this handler. Use this on the authoritative server. */
 	public resolveTurn({ actorId, angle, power }: IInput): TurnPacket {
+		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot resolve further turns")
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`);
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
 		this.physicsStrategy.applyImpulse(actor, angle, power);
+		// The resolution loop is part of the accepted turn: the completion gate
+		// must not freeze it even if a gameplay system completes the match
+		// mid-loop (the deciding tick already stored the result).
+		this.resolvingTurn = true;
 		let frames = 0;
-		for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++) this.tick()
+		try {
+			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++) this.tick()
+		} finally {
+			this.resolvingTurn = false;
+		}
 		const finalState = this.entityManager.serialize();
 		return {
 			actorId,
@@ -196,6 +208,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	/** Starts client-side visual playback for an already authoritative turn. */
 	public playTurn(packet: TurnPacket, onComplete?: () => void): void {
+		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot play further turns")
 		this.turns.push(packet)
 		this.setState(GameState.Playing)
 
@@ -218,6 +231,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 
 	public applyRawTurn({ actorId, angle, power }: IInput) {
+		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot accept raw turns")
 		const actor = this.entityManager.getEntityById(actorId);
 		if (!actor) { console.log("Player not Found"); return }
 		this.physicsStrategy.applyImpulse(actor, angle, power);
@@ -234,6 +248,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 */
 	public tick(dt: number = this.dt) {
+		// Completed matches are frozen: the accepted final turn has been
+		// synchronized and its result stored. No later tick may mutate
+		// entities, effects, structures, systems, inventories, or outcome
+		// state; `rematch()` is the only sanctioned way to resume gameplay.
+		// The one exception is an in-flight `resolveTurn`: its loop is the
+		// resolution of the accepted turn itself and must still run to its
+		// authoritative final state even when the deciding tick completes
+		// the match mid-loop.
+		if (this.context.state === GameState.Game_over && !this.resolvingTurn) return
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		for (const e of this.entityManager.getEntities()) { this.effectAlways.forEach(eff => { eff.apply(e) }) }
 		const drift = this.settings?.drift ?? DEFAULT_DRIFT
