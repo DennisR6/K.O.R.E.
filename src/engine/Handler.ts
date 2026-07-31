@@ -246,6 +246,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// als allerletzter Schritt, damit kein Gameplay-System, keine Struktur
 		// und kein Post-Ticker den autoritativen `finalState` verändern kann.
 		this.systems.forEach(s => s.flush?.(this.context))
+		// Abschluss-Callback erst NACH allen Flush-Hooks: finalisierende Systeme
+		// (z.B. WinningSystem) schließen den Turn-Endzustand zuerst ab, bevor
+		// die Turn-Weiterleitung entscheidet, ob der Zug noch fortgesetzt wird.
+		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem | undefined;
+		playback?.drainCompletion();
 	}
 
 	/**

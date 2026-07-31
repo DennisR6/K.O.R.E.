@@ -17,6 +17,8 @@ export class PlaybackSystem implements PlaybackSystem {
 	private remainingFrames = 0;
 	/** True, sobald der Countdown abgelaufen ist und der Sync aussteht. */
 	private syncPending = false;
+	/** True, wenn der Sync angewendet wurde und der Callback noch aussteht. */
+	private completionPending = false;
 	/** Der Zielzustand (Snapshot), an den die Entities angeglichen werden. */
 	private finalState: PlayerSettings[] | undefined;
 	/** Ein optionaler Callback, der ausgeführt wird, wenn der Sync abgeschlossen ist. */
@@ -54,10 +56,32 @@ export class PlaybackSystem implements PlaybackSystem {
 	 * Finale Phase des Ticks: wendet den ausstehenden Hard-Sync an, falls die
 	 * Wiedergabe abgelaufen ist. Läuft als letzter Mutations-Schritt, damit
 	 * der `finalState` des TurnPackets nach dem Sync unverändert bleibt.
+	 *
+	 * Der Abschluss-Callback wird hier NICHT ausgelöst: `GameHandler.tick()`
+	 * ruft nach allen `flush`-Hooks `drainCompletion()` auf, damit
+	 * finalisierende Systeme (z.B. WinningSystem) zuerst den Turn-Endzustand
+	 * abschließen können, bevor der Abschluss-Callback (Turn-Weiterleitung)
+	 * entscheidet, ob der Zug noch fortgesetzt wird.
 	 */
 	flush(ctx: IGameContext) {
 		if (!this.syncPending || this.finalState === undefined) return;
 		this.applyHardSync(ctx.entities);
+		this.completionPending = true;
+		// The turn completed: transition to Playing_done here (final mutation
+		// phase) so later flush hooks (e.g. WinningSystem) can finalize the
+		// match against the authoritative final state before the completion
+		// callback decides whether the next turn may start.
+		if (ctx.state === GameState.Playing) ctx.state = GameState.Playing_done;
+	}
+
+	/**
+	 * Feuert den Abschluss-Callback der Wiedergabe, nachdem ALLE
+	 * `flush`-Hooks gelaufen sind (aufgerufen vom `GameHandler`).
+	 */
+	public drainCompletion(): void {
+		if (!this.completionPending) return;
+		this.completionPending = false;
+		if (this.cb) this.cb();
 	}
 
 	/**
@@ -75,7 +99,8 @@ export class PlaybackSystem implements PlaybackSystem {
 		entities.applySettings(this.finalState);
 
 		this.finalState = undefined;
-		if (this.cb) this.cb();
+		// NOTE: the completion callback is NOT fired here. `drainCompletion()`
+		// fires it once after ALL flush hooks have run (called by the handler).
 	}
 
 	/**
