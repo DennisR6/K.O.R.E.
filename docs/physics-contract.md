@@ -87,10 +87,15 @@ original positions for the impulse computation.
 ### 7.1 Circle / Circle
 
 - Contact normal: from center A to center B, normalized.
-- **Zero distance (`dist === 0`):** deterministic axis selection; equal-mass
-  pairs split the correction symmetrically; immovable partners stay fixed.
-  Resolved completely — no early return leaves bodies overlapping.
-  *(Task 13.3)*
+- **Zero distance (`dist === 0`):** canonical fallback axis `(1, 0)` — the
+  first body (argument A) is corrected toward `-X`, the second body toward
+  `+X`. There is no early return and no random axis; the pair order at the
+  `PhysicsSystem` boundary is entity storage order, so the resolved assignment
+  is a pure function of storage order. Swapping the arguments mirrors the
+  resolved state along the axis; for equal masses the unordered world state is
+  identical. Equal-mass pairs split the correction symmetrically; immovable
+  partners (`mass === Infinity`) stay fixed; both-immovable pairs neither move
+  nor produce `NaN`/`Infinity`. *(Task 13.3)*
 - Positional correction: `overlap = rA + rB - dist`; slop
   `PHYSICS_CONTACT_SLOP = 0.05` is exempt; the fraction
   `PHYSICS_CONTACT_PERCENT = 0.2` of `max(overlap - slop, 0)` is applied per
@@ -99,8 +104,11 @@ original positions for the impulse computation.
   penetration deterministically).
 - Impulse response: relative normal velocity `< 0` → scalar impulse
   `j = -(1 + e) * relVelN / (iA + iB)`, applied opposite the normal, mass
-  weighted. *(Task 13.3 hardens the zero-distance case; Task 13.7 validates
-  energy.)*
+  weighted. Stationary, separating, and identically-moving bodies never gain
+  collision energy. For zero-distance contacts the impulse uses the same
+  canonical axis as the positional correction, so only approach along that
+  axis triggers a response. *(Task 13.3 removes the zero-distance no-op and
+  fixes the exact-center contact path; Task 13.7 validates energy.)*
 
 ### 7.2 Circle / Rectangle
 

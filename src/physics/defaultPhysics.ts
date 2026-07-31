@@ -1,6 +1,6 @@
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { forwardVectorFromRotation, getShapeName, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
+import { forwardVectorFromRotation, getShapeName, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -155,59 +155,81 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 		const dist = this.dist(posA, posB);
 
-		if (dist === 0) return;
-
 		switch (true) {
 			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.CIRCLE): {
 				const radiusA = entityA.getBounds().x;
 				const radiusB = entityB.getBounds().x;
 				const combinedRadius = radiusA + radiusB;
 
-				if (dist < combinedRadius) {
-					const overlap = combinedRadius - dist;
-					// 1. Vektor normalisieren
-					const nx = (posB.x - posA.x) / dist;
-					const ny = (posB.y - posA.y) / dist;
+				// Zero-distance contacts (coincident centers, Task 13.3) use the
+				// canonical fallback axis (1, 0): the first body is corrected
+				// toward -X, the second toward +X. The no-op early return is
+				// gone, so coincident circles are always separated and the
+				// contact events always fire. Every other contact derives the
+				// normal from the center difference.
+				let nx: number;
+				let ny: number;
+				let overlap: number;
+				if (dist === 0) {
+					nx = 1;
+					ny = 0;
+					overlap = combinedRadius;
+				} else {
+					nx = (posB.x - posA.x) / dist;
+					ny = (posB.y - posA.y) / dist;
+					overlap = combinedRadius - dist;
+				}
 
-					const invMassA = 1 / entityA.getMass();
-					const invMassB = 1 / entityB.getMass();
+				if (overlap > 0) {
+					// Inverse masses; an immovable body (mass === Infinity) never
+					// moves and never contributes to the split.
+					const invMassA = entityA.getMass() === Infinity ? 0 : 1 / entityA.getMass();
+					const invMassB = entityB.getMass() === Infinity ? 0 : 1 / entityB.getMass();
 					const totalInvMass = invMassA + invMassB;
 
-					// --- POSITIONSKORREKTUR (Depenetration) ---
-					const slop = 0.05;
-					const percent = 0.2;
-					const moveMagnitude = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
+					// Both bodies immovable: nothing can move, and the correction
+					// and impulse formulas would divide by zero - skip both so no
+					// NaN/Infinity is ever produced.
+					if (totalInvMass > 0) {
+						// --- POSITIONSKORREKTUR (Depenetration) ---
+						const slop = PHYSICS_CONTACT_SLOP;
+						const percent = PHYSICS_CONTACT_PERCENT;
+						const moveMagnitude = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
 
-					const moveA = moveMagnitude * invMassA;
-					const moveB = moveMagnitude * invMassB;
+						const moveA = moveMagnitude * invMassA;
+						const moveB = moveMagnitude * invMassB;
 
-					// Wende Korrektur an
-					entityA.setPos({ x: posA.x - nx * moveA, y: posA.y - ny * moveA });
-					entityB.setPos({ x: posB.x + nx * moveB, y: posB.y + ny * moveB });
+						// Wende Korrektur an
+						entityA.setPos({ x: posA.x - nx * moveA, y: posA.y - ny * moveA });
+						entityB.setPos({ x: posB.x + nx * moveB, y: posB.y + ny * moveB });
 
-					// --- IMPULS-ANTWORT (Auf Basis der URSPRÜNGLICHEN Positionen!) ---
-					// WICHTIG: Nutze die ursprünglichen Variablen velA/velB, 
-					// aber berechne den Impuls basierend auf den Vektoren, 
-					// OHNE die veränderten Positionen erneut abzurufen.
-					const velA = entityA.getVel();
-					const velB = entityB.getVel();
+						// --- IMPULS-ANTWORT (Auf Basis der URSPRÜNGLICHEN Positionen!) ---
+						// WICHTIG: Nutze die ursprünglichen Variablen velA/velB,
+						// aber berechne den Impuls basierend auf den Vektoren,
+						// OHNE die veränderten Positionen erneut abzurufen.
+						const velA = entityA.getVel();
+						const velB = entityB.getVel();
 
-					const relVelX = velB.x - velA.x;
-					const relVelY = velB.y - velA.y;
-					const dotProduct = relVelX * nx + relVelY * ny;
+						const relVelX = velB.x - velA.x;
+						const relVelY = velB.y - velA.y;
+						const dotProduct = relVelX * nx + relVelY * ny;
 
-					if (dotProduct < 0) {
-						const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
-						const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
+						// Only approaching bodies (relative normal velocity < 0)
+						// receive an impulse; stationary, separating, or
+						// identically-moving bodies never gain collision energy.
+						if (dotProduct < 0) {
+							const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
+							const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
 
-						entityA.setVel({
-							x: velA.x - (impulseMag * nx * invMassA),
-							y: velA.y - (impulseMag * ny * invMassA)
-						});
-						entityB.setVel({
-							x: velB.x + (impulseMag * nx * invMassB),
-							y: velB.y + (impulseMag * ny * invMassB)
-						});
+							entityA.setVel({
+								x: velA.x - (impulseMag * nx * invMassA),
+								y: velA.y - (impulseMag * ny * invMassA)
+							});
+							entityB.setVel({
+								x: velB.x + (impulseMag * nx * invMassB),
+								y: velB.y + (impulseMag * ny * invMassB)
+							});
+						}
 					}
 				}
 
