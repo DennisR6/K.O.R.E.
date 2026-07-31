@@ -1,7 +1,7 @@
 import { type Effect, type EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
-import { getShapeName, SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
+import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
 
@@ -98,6 +98,8 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	/** Line segments are collision obstacles only and never containment. */
+	public getCollisionRole(): StructureCollisionRole | undefined { return undefined }
 	public toSettings(): MapBoundarySettingsLine {
 		return { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] }
 	}

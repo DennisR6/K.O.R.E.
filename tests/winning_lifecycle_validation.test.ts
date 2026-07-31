@@ -17,8 +17,10 @@ import { WinningSystem, evaluateLastTeamStanding } from "../src/systems/WinningS
  * snapshot restoration.
  */
 
-/** Deterministic arena: the containment rect pushes players up, the near
- * player reaches the top wall first and is eliminated by the boundary. */
+/** Deterministic arena: the arena rect is explicitly configured with the
+ * `"both"` role so it stays solid and pushes players up (the historical
+ * behavior this winning-lifecycle fixture depends on); the near player
+ * reaches the top wall first and is eliminated by the boundary. */
 function makeArena() {
 	const settings = createDefaultGameSettings(2, 1);
 	const tiles = {
@@ -38,7 +40,7 @@ function makeArena() {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [] },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
 		{
 			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
 			effects: [

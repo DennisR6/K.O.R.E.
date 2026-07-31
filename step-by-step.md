@@ -577,3 +577,84 @@
   - **Test File:** `tests/cross_system_validation_smoke.test.ts`
   - **Allowed Context:** `tests/*.test.ts`
   - **Commit:** `docs: record cross-system validation`
+
+## 12. Engine Defect Hardening And Release Candidate Qualification
+
+- [x] **Task [12.1]: Separate Containment From Solid Obstacles**
+  - **Goal:** Introduce an explicit structure collision-purpose role contract (`"solid"`, `"containment"`, `"both"`) on `MapBoundarySettings` and the structure classes so containment boundaries are interpreted by the containment/boundary system only and never resolve as filled solid obstacles unless explicitly configured to serve both roles.
+  - **Target Files:** `src/physics/physics.ts`, `src/settings/settings.ts`, `src/structures/*.ts`, `src/systems/PhysicsSystem.ts`
+  - **Test File:** `tests/containment_structure_role.test.ts`
+  - **Allowed Context:** `src/structures/*.ts`, `src/systems/PhysicsSystem.ts`, `src/systems/BoundarySystem.ts`, `src/settings/settings.ts`, `src/physics/physics.ts`
+  - **Commit:** `fix: separate containment from solid obstacles`
+- [ ] **Task [12.2]: Resolve Embedded Circle/Rectangle Collisions Deterministically**
+  - **Goal:** Replace the undefined zero-distance circle/rectangle fallback normal with a deterministic nearest-edge exit (including tie-breaking for exact center or equal-edge-distance cases) so embedded entities are depenetrated without altering an unrelated velocity axis or drifting inside containment-only geometry.
+  - **Target Files:** `src/physics/defaultPhysics.ts`
+  - **Test File:** `tests/circle_rectangle_interior_collision.test.ts`
+  - **Allowed Context:** `src/physics/defaultPhysics.ts`, `src/physics/physics.ts`
+  - **Commit:** `fix: resolve embedded circle/rectangle collisions deterministically`
+- [ ] **Task [12.3]: Order Playback Final Sync Before Physics Mutation**
+  - **Goal:** Prove and fix the live-path playback defect where `PlaybackSystem` hard-syncs before `PhysicsSystem` runs on the final playback tick, so live resolution matches the authoritative frame count exactly (N ticks, no trailing mutation).
+  - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
+  - **Test File:** `tests/playback_sync_order.test.ts`
+  - **Allowed Context:** `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`, `src/systems/PhysicsSystem.ts`
+  - **Commit:** `fix: order playback final sync before physics mutation`
+- [ ] **Task [12.4]: Enforce Deterministic Per-Turn Frame Counts**
+  - **Goal:** Establish one documented deterministic frame-count contract for both the authoritative `resolveTurn` path and the live `playTurn` path (identical inputs, identical tick counts, identical final state) and add a regression test.
+  - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
+  - **Test File:** `tests/per_turn_frame_contract.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`, `src/physics/defaultPhysics.ts`
+  - **Commit:** `fix: enforce deterministic per-turn frame counts`
+- [ ] **Task [12.5]: Freeze Simulation When A Winner Is Decided**
+  - **Goal:** Ensure winning evaluation mid-playback immediately stops simulation and remaining gameplay systems so no entity state mutates after the match result is set.
+  - **Target Files:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`
+  - **Test File:** `tests/winner_freeze.test.ts`
+  - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
+  - **Commit:** `fix: freeze simulation after match completion`
+- [ ] **Task [12.6]: Restore Rule-State Orchestration For Replays**
+  - **Goal:** Prove replay playback restores and advances turn number, rule phase, item economy, and active-team state exactly as the live match did, including turn/phase ordering assertions across the full replay lifecycle.
+  - **Target Files:** `src/replay/player.ts`, `src/rules/RuleInterpreter.ts`
+  - **Test File:** `tests/replay_rule_state_orchestration.test.ts`
+  - **Allowed Context:** `src/replay/*.ts`, `src/rules/*.ts`, `src/emitter/EngineEmitter.ts`
+  - **Commit:** `fix: restore rule-state orchestration for replays`
+- [ ] **Task [12.7]: Model Explicit Match Status Results**
+  - **Goal:** Replace winner/draw ambiguity with an explicit `{ status: "ongoing" | "winner" | "draw" }` match-status model that never invents fake team IDs for draws.
+  - **Target Files:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
+  - **Test File:** `tests/match_status_model.test.ts`
+  - **Allowed Context:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
+  - **Commit:** `feat: model explicit match status results`
+- [ ] **Task [12.8]: Gate Gameplay Systems On Match Completion**
+  - **Goal:** Make every gameplay system and entity effect respect the completed-match state so nothing mutates after `Game_over` instead of only the winning evaluator early-returning.
+  - **Target Files:** `src/engine/Handler.ts`, `src/systems/*.ts`
+  - **Test File:** `tests/match_completion_gate.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/*.ts`, `src/effects/*.ts`
+  - **Commit:** `fix: gate gameplay systems on match completion`
+- [ ] **Task [12.9]: Unify Winner State With The Match Result**
+  - **Goal:** Remove the mutable winner duplicate inside `WinningSystem` so snapshot restoration, replay, and the live handler agree on the single authoritative `MatchResult`.
+  - **Target Files:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
+  - **Test File:** `tests/winner_state_unification.test.ts`
+  - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
+  - **Commit:** `refactor: unify winner state with match result`
+- [ ] **Task [12.10]: Make Settings Export Pure**
+  - **Goal:** Prove `handler.toSettings()` is a pure export that never mutates stored settings or internal state, with snapshot-equality assertions before and after repeated exports.
+  - **Target Files:** `src/engine/Handler.ts`
+  - **Test File:** `tests/settings_export_purity.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`
+  - **Commit:** `refactor: make settings export pure`
+- [ ] **Task [12.11]: Harden The Effect Factory Against Unknown Types**
+  - **Goal:** Make `MetaEffect` reject or explicitly handle unknown effect types instead of silently falling back to movement, and cover the missing freeze/shield/ghost/multi serialized cases with round-trip tests.
+  - **Target Files:** `src/effects/effects.ts`
+  - **Test File:** `tests/effect_factory_roundtrip.test.ts`
+  - **Allowed Context:** `src/effects/*.ts`, `src/entity/Player.ts`
+  - **Commit:** `fix: harden effect factory against unknown types`
+- [ ] **Task [12.12]: Deterministic AI-Vs-AI Game-Fuzz Suite**
+  - **Goal:** Ship a deterministic AI-vs-AI fuzz harness (`tests/support/aiMatchFuzz.ts`) with per-match/per-turn invariants, negative-action injection, repeat-same-case determinism, replay/persistence/rematch verification, and `RC_GAME_COUNT`-controlled smoke/RC/soak runs wired into package scripts.
+  - **Target Files:** `package.json`
+  - **Test File:** `tests/ai_match_fuzz.test.ts`
+  - **Allowed Context:** `tests/support/aiMatchFuzz.ts`, `src/ai/*.ts`, `src/engine/Handler.ts`, `src/emitter/EngineEmitter.ts`
+  - **Commit:** `test: add deterministic ai match fuzz suite`
+- [ ] **Task [12.13]: Qualify The Release Candidate**
+  - **Goal:** Run the full release-candidate gate (clean install, unit suite, typecheck, build, RC fuzz run, desktop build), record the 24-point report in `docs/release-verification.md`, and update `requirements.md`, `AGENTS.md`, and this checklist.
+  - **Target Files:** `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `package.json`
+  - **Test File:** `tests/release_candidate_gate.test.ts`
+  - **Allowed Context:** everything in this repository
+  - **Commit:** `docs: qualify release candidate`

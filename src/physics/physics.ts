@@ -23,6 +23,31 @@ export function forwardVectorFromRotation(rotation: number): Vector2D {
 }
 
 /**
+ * Explicit structure role separating containment geometry from solid obstacles.
+ *
+ * - `undefined` (default): the structure is a solid obstacle unless the outer
+ *   containment heuristic recognizes it as the enclosing arena boundary, in
+ *   which case it serves containment only and never resolves as filled.
+ * - `"solid"`: explicitly a filled obstacle; never interpreted as containment.
+ * - `"containment"`: explicitly a containment boundary only; never resolves as
+ *   a filled obstacle, even when it does not enclose every other structure.
+ * - `"both"`: explicitly containment AND a filled obstacle (the pre-12.1
+ *   arena-rect behavior, preserved for fixtures that depend on it).
+ */
+export type StructureCollisionRole = "solid" | "containment" | "both";
+
+/** Validates a serialized structure-role value. */
+export function isStructureCollisionRole(value: unknown): value is StructureCollisionRole {
+	return value === "solid" || value === "containment" || value === "both";
+}
+
+/**
+ * A physics object that additionally reports an explicit collision role.
+ * Only map structures carry roles; entities never do.
+ */
+export type RoleAwarePhysics = IPhysics<SHAPE> & { getCollisionRole(): StructureCollisionRole | undefined };
+
+/**
  * Das mathematische Gehirn der Engine.
  * 
  * Dieses Interface erzwingt, dass jede Physik-Implementierung (z.B. Arcade, Realistic)

@@ -1,5 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
-import type { PhysicsStrategy, SHAPE } from "../physics/physics.js";
+import { getOuterContainmentBoundaries } from "../structures/containment.js";
+import type { IPhysics, PhysicsStrategy, SHAPE } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
@@ -76,6 +77,9 @@ export class PhysicsSystem implements ISystem {
 	private resolveAllCollisions(ctx: IGameContext) {
 		const { entities, structures } = ctx;
 		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
+		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
+			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
+		);
 
 		for (let i = 0; i < enitityArr.length; i++) {
 			const entityA = enitityArr[i];
@@ -90,11 +94,26 @@ export class PhysicsSystem implements ISystem {
 			for (let j = 0; j < structures.length; j++) {
 				const structureB = structures[j] as Structure<SHAPE>;
 				if (!structureB.physicsEnabled()) continue
+				// Containment-only boundaries must never resolve as filled obstacles.
+				if (this.isContainmentOnly(structureB, containmentBoundaries)) continue
 				if (this.strategy.checkCollision(entityA, structureB)) {
 					this.strategy.handleCollision(entityA, structureB);
 				}
 			}
 		}
+	}
+
+	/**
+	 * Returns whether a structure serves containment only and must be skipped
+	 * by solid-collision resolution. Explicit `"both"` and `"solid"` roles are
+	 * always resolved as filled; an explicit `"containment"` role or a
+	 * recognized outer containment boundary (default role) is never filled.
+	 */
+	private isContainmentOnly(structureB: Structure<SHAPE>, containmentBoundaries: Set<IPhysics<SHAPE>>): boolean {
+		const role = structureB.getCollisionRole();
+		if (role === "both" || role === "solid") return false;
+		if (role === "containment") return true;
+		return containmentBoundaries.has(structureB);
 	}
 
 	//@ts-ignore

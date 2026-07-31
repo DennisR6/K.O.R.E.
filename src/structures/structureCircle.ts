@@ -2,7 +2,7 @@ import { MetaEffect } from "../effects/effects.js";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
-import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js"
+import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import { type MapBoundarySettingsCircle } from "../settings/settings.js";
 import { type Structure } from "./types.js";
 
@@ -39,14 +39,16 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	private collisionEffects: Effect[] = []
 	private alwaysEffects: Effect[] = []
 	private roundEffects: Effect[] = []
+	private collisionRole: StructureCollisionRole | undefined
 
-	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[]) {
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = SHAPE.CIRCLE
 		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
+		this.collisionRole = role
 		for (const eff of effects) {
 			switch (eff.trigger) {
 				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
@@ -106,12 +108,14 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
+	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
 	public toSettings(): MapBoundarySettingsCircle {
 		const effects: FullEffectSettings[] = []
 		this.alwaysEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Always, triggerValue: [], ...eff.toSettings() }))
 		this.roundEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Round, triggerValue: [], ...eff.toSettings() }))
 		this.collisionEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Collision, triggerValue: [], ...eff.toSettings() }))
-		const out = {
+		const out: MapBoundarySettingsCircle = {
 			type: this.shape,
 			x: this.position.x,
 			y: this.position.y,
@@ -119,6 +123,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 			color: this.color,
 			effects,
 		}
+		if (this.collisionRole !== undefined) out.role = this.collisionRole
 		return out
 	}
 	public getType(): SHAPE.CIRCLE { return this.shape }

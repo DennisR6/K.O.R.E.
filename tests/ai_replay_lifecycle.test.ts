@@ -15,8 +15,10 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem } from "../src/systems/WinningSystem.ts";
 
 /**
- * Deterministic AI-vs-AI arena: the containment rect pushes players upward,
- * the near player reaches the top wall first, and the far player survives.
+ * Deterministic AI-vs-AI arena: the arena rect is explicitly configured with
+ * the `"both"` role so it remains a solid obstacle that pushes players upward
+ * (the historical behavior this replay lifecycle depends on), the near player
+ * reaches the top wall first, and the far player survives.
  * The bottom circle is an enclosed structure so the rect is recognized as
  * the outer containment boundary (and is never reachable by the players).
  */
@@ -39,7 +41,7 @@ function makeAiArena() {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [] },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
 		{
 			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
 			effects: [

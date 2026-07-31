@@ -1,6 +1,6 @@
 import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
-import { SHAPE, type Vector2D } from "../physics/physics.js";
+import { isStructureCollisionRole, SHAPE, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import IceMap from "./iceMap.js";
 import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
@@ -63,6 +63,12 @@ export interface IMapBoundarySettings extends IEffectable {
 	type: SHAPE
 	x: number;
 	y: number;
+	/**
+	 * Explicit structure role. `undefined` keeps the legacy heuristic: a
+	 * structure that encloses every other non-line structure is treated as a
+	 * containment boundary (never filled) unless it declares `"both"`.
+	 */
+	role?: StructureCollisionRole
 }
 export interface MapBoundarySettingsCircle extends IMapBoundarySettings {
 	type: SHAPE.CIRCLE
@@ -137,6 +143,7 @@ function isEffect(value: unknown): value is FullEffectSettings {
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
+	if (value.role !== undefined && !isStructureCollisionRole(value.role)) return false
 	if (value.type === SHAPE.CIRCLE) return Number.isFinite(value.r) && value.r > 0
 	if (value.type === SHAPE.RECTANGLE) return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0
 	return value.type === SHAPE.LINE && Number.isFinite(value.x2) && Number.isFinite(value.y2)

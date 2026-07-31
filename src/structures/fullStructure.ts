@@ -1,16 +1,16 @@
 import type { EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js";
-import { SHAPE, type IdefaultPhysics, type IPhysics, type Vector2D } from "../physics/physics.js";
+import { SHAPE, type IdefaultPhysics, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
 
 export class FullStructure implements IStructure, IdefaultPhysics {
-	str: IStructure & IPhysics<SHAPE>
+	str: RoleAwarePhysics & IStructure
 	constructor(str: MapBoundarySettings) {
 		switch (str.type) {
-			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects); break;
-			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects); break;
+			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role); break;
+			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role); break;
 			default: this.str = new StructureCircle(str.x, str.y, 20, str.color, []); break;
 		}
 	}
@@ -34,5 +34,6 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 	public setVel(vel: Vector2D): void { this.str.setVel(vel) }
 	public getEffects(): EffectSettings[] { return [] }
 	public toSettings(): MapBoundarySettings { return this.str.toSettings() }
+	public getCollisionRole(): StructureCollisionRole | undefined { return this.str.getCollisionRole() }
 	public isPhysicsObj(): this is IStructure & IPhysics<SHAPE> { return typeof (this as any).str.getShape() === 'function' }
 }
