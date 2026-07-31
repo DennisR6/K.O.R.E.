@@ -4,7 +4,7 @@ import type { IGameContext, ISystem } from "./types.js";
 
 export class EmitterSystem implements ISystem {
 	emitter: IInputEmitter
-	constructor(em?: IInputEmitter) {
+	constructor(em?: IInputEmitter, private readonly onError?: (error: unknown) => void) {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
@@ -16,7 +16,13 @@ export class EmitterSystem implements ISystem {
 			return
 		}
 		const { actorId, angle, power } = ctx.mouse.turn
-		this.emitter.sendShot(actorId, angle, power)
+		try {
+			this.emitter.sendShot(actorId, angle, power)
+		} catch (error) {
+			this.onError?.(error)
+			ctx.state = GameState.Your_turn
+			return
+		}
 		console.log("sendShot")
 		// Network emitters are asynchronous. A local emitter may already have
 		// started playback, which must not be overwritten with a wait state.

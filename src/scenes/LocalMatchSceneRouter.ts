@@ -6,6 +6,7 @@ import { createCanonicalPlayableMatchHandler } from "../settings/canonicalPlayab
 import { DirectionArrow } from "../systems/DirectionArrow.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
+import { GameplayFeedback } from "../ui/GameplayFeedback.js";
 
 export type LocalHandlerFactory = () => GameHandler;
 
@@ -50,10 +51,12 @@ export function createLocalGameplayHandler(): GameHandler {
 	const arrow = new DirectionArrow(ui);
 	const emitters = new CombiEmitter();
 	emitters.addEmitter(new GameEmitter(handler));
+	const feedback = new GameplayFeedback(handler, ui);
 	handler.addSystem(ui);
 	handler.setMouseHandler(ui);
 	handler.addSystem(arrow);
-	handler.addSystem(new EmitterSystem(emitters));
+	handler.addSystem(new EmitterSystem(emitters, error => feedback.setRejection(error)));
 	handler.addPostDrawer(arrow);
+	handler.addPostDrawer(feedback);
 	return handler;
 }

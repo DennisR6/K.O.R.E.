@@ -1056,14 +1056,15 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** available items are displayed, legal item use advances correctly, item phase can be skipped, used-item allowance updates, physics phase accepts a shot, turn transition updates active team and UI.
   - **Negative Tests:** second item beyond allowance, item not in inventory, item use in Physics phase, shot before required phase transition, stale item buttons after turn change.
   - **Note:** `src/ui/ItemPhaseUI.ts` exposes detached available-item and phase state for the gameplay UI and routes item/skip actions through `IInputEmitter`. `GameEmitter` enforces active/dead actor validity, item allowance, phase skipping, and authoritative rule-state updates; the canonical match uses one fixed Power-Dash item per team in an Item -> Physics turn. Focused coverage is in `tests/gameplay_phase_integration.test.ts`.
-- [ ] **Task [14.8]: Add Turn, Aim, Power, And Error Feedback**
+- [x] **Task [14.8]: Add Turn, Aim, Power, And Error Feedback**
   - **Goal:** Show enough state for a first-time tester to understand who acts, what can be done, what is selected, and why an action was rejected.
   - **Target Files:** HUD, gameplay scene, feedback components
   - **Test File:** `tests/gameplay_feedback.test.ts`
   - **Allowed Context:** UI state, handler read APIs, action error types
   - **Commit:** `feat: add gameplay feedback`
   - **Required Feedback:** active team, selected actor, current phase, aim direction, power, available items, playback lock, winner or draw, actionable rejection reason.
-  - **Negative Tests:** no raw stack traces shown to players, no contradictory phase labels, no input shown as available while blocked, no stale winner banner after rematch.
+   - **Negative Tests:** no raw stack traces shown to players, no contradictory phase labels, no input shown as available while blocked, no stale winner banner after rematch.
+   - **Note:** Implemented `src/ui/GameplayFeedback.ts` as a handler-derived HUD for active team, selected actor, phase, aim, power, inventory, playback lock, result, and sanitized rejection reasons. `EmitterSystem` reports rejected local actions to the feedback layer without exposing stack traces; the local scene installs the drawer. Focused coverage is in `tests/gameplay_feedback.test.ts`.
 - [ ] **Task [14.9]: Complete The Match-End Flow**
   - **Goal:** Display explicit winner or draw results and provide functional rematch and return-to-menu actions.
   - **Target Files:** result overlay, scene router, rematch flow
