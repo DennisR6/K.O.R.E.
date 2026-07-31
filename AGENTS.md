@@ -241,6 +241,9 @@ Useful commands:
 
 ```sh
 bun test               # all Bun-discovered tests
+bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
+bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
+bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)
 npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
 bun run start          # run Bun HTTP/WebSocket server
@@ -482,6 +485,28 @@ same `isValidInput` predicate the server and AI path use, before recording or
 simulating). `tests/cross_system_validation_smoke.test.ts` references every
 section 11 file. When adding a cross-system test, mirror these boundaries and
 update the smoke file.
+
+### Section 12 Defect Hardening And Release Qualification
+
+`step-by-step.md` section 12 qualifies the release candidate after targeted
+defect hardening, each task shipped as one atomic commit with focused tests:
+match completion gating (`tests/match_completion_gate.test.ts`), the explicit
+match status model (`tests/match_status_model.test.ts`), winner-state
+unification (`tests/winner_state_unification.test.ts`), pure settings export
+(`tests/settings_export_purity.test.ts`), replay rule-state orchestration
+(`tests/replay_rule_state_orchestration.test.ts`), and the hardened effect
+factory (`tests/effect_factory_roundtrip.test.ts`; `MetaEffect` rejects
+unknown types and `EffectType.Multi` is a true ordered multi-effect). The
+deterministic AI-vs-AI fuzz suite (`tests/ai_match_fuzz.test.ts` plus
+`tests/support/aiMatchFuzz.ts`) derives all randomness from each match seed,
+injects negative actions that must be rejected without mutating the match,
+verifies the AI decision boundary, and checks replay/persistence/rematch per
+match; `RC_GAME_COUNT` controls smoke (25), RC (1000), and soak (5000) runs
+wired as `test:fuzz`, `test:fuzz:rc`, and `test:fuzz:soak` package scripts.
+`tests/release_candidate_gate.test.ts` references the Section 12 evidence
+files and the 24-point qualification record in `docs/release-verification.md`.
+When adding a hardening or fuzz test, mirror these boundaries and update the
+gate test.
 
 ## Assets And Generated Files
 

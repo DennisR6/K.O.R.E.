@@ -1,11 +1,17 @@
 # Slipstrike (KORE) Release Verification Record
 
 Date: 2026-07-31
-Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x
+Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x (vendored 1.11.x in `public/`)
+Branch: `test` (Section 12 release-candidate qualification complete)
 
 ## Verification Summary
 
-All core game systems, data contracts, physics, item economy, AI, authoritative networking, persistence, replay playback, security boundaries, and multi-platform targets have been verified end-to-end.
+All core game systems, data contracts, physics, item economy, AI, authoritative
+networking, persistence, replay playback, security boundaries, multi-platform
+targets, and the Section 12 defect-hardening work (engine gates, match status
+model, pure settings export, hardened effect factory, deterministic AI-vs-AI
+fuzz suite) have been verified end-to-end. This record is the 24-point
+release-candidate qualification.
 
 ---
 
@@ -17,7 +23,7 @@ All core game systems, data contracts, physics, item economy, AI, authoritative 
 bun install --frozen-lockfile
 ```
 - **Exit Code:** 0
-- **Output:** Checked 273 installs across 253 packages (no changes) [71.00ms]
+- **Output:** Checked 276 installs across 265 packages (no changes) [70.00ms]
 - **Status:** PASS
 
 ### 2. Full Test Suite
@@ -26,10 +32,11 @@ bun install --frozen-lockfile
 bun test
 ```
 - **Exit Code:** 0
-- **Result:** 354 pass, 0 fail (1683 assertions across 145 files) [~1.3s]
+- **Result:** 425 pass, 0 fail (2221 assertions across 157 files) [3.23s]
 - **Status:** PASS
-- **Cross-System Validation:** Section 11 of `step-by-step.md` is complete; its
-  nine suites are listed and referenced by `tests/cross_system_validation_smoke.test.ts`.
+- **Cross-System Validation:** Section 11 of `step-by-step.md` is complete and
+  referenced by `tests/cross_system_validation_smoke.test.ts`; Section 12
+  evidence is referenced by `tests/release_candidate_gate.test.ts`.
 
 ### 3. TypeScript Typecheck
 
@@ -46,36 +53,88 @@ npx tsc --noEmit
 bun run build
 ```
 - **Exit Code:** 0
-- **Result:** Successfully compiled `src/**/*` to `dist/main.js`.
+- **Result:** Successfully compiled `src/**/*` to `dist/main.js` and copied
+  `index.html` plus `public/` into `dist/`.
 - **Status:** PASS
 
-### 5. Authoritative Server & Matchmaking
+### 5. Release-Candidate Fuzz Run (1000 matches)
+
+```sh
+bun run test:fuzz:rc
+```
+- **Exit Code:** 0
+- **Result:** 1000 deterministic AI-vs-AI matches, 6010 assertions, 0 fail
+  [35.71s]
+- **Status:** PASS
+
+### 6. Soak Fuzz Run (5000 matches)
+
+```sh
+bun run test:fuzz:soak
+```
+- **Exit Code:** 0
+- **Result:** 5000 deterministic AI-vs-AI matches, 30010 assertions, 0 fail
+  [180.64s]
+- **Status:** PASS
+
+### 7. Authoritative Server & Matchmaking
 
 ```sh
 bun run start
 ```
-- **Verification:** Native Bun HTTP/WebSocket server (`server.ts`) with SQLite database persistence, reconnect restoration, and lobby matchmaking verified in `tests/e2e_network_match.test.ts` and `tests/authoritative_game.test.ts`.
+- **Verification:** Native Bun HTTP/WebSocket server (`server.ts`) with SQLite
+  database persistence, reconnect restoration, and lobby matchmaking verified
+  in `tests/e2e_network_match.test.ts` and `tests/authoritative_game.test.ts`.
 - **Status:** PASS
 
-### 6. Desktop Target (Tauri)
-
-```sh
-cargo check --manifest-path src-tauri/Cargo.toml
-```
-- **Exit Code:** 0
-- **Result:** Cargo checked `src-tauri` project scaffold (`Cargo.toml`, `build.rs`, `src/main.rs`, `tauri.conf.json`) cleanly.
+### 8. Desktop Target (Tauri)
 
 ```sh
 bun run desktop:build
 ```
 - **Exit Code:** 0
-- **Result:** Built release executable binary (`src-tauri/target/release/slipstrike`) and Debian package (`src-tauri/target/release/bundle/deb/Slipstrike_0.0.1_amd64.deb`).
+- **Result:** Built release executable binary
+  (`src-tauri/target/release/slipstrike`) and Debian package
+  (`src-tauri/target/release/bundle/deb/Slipstrike_0.0.1_amd64.deb`).
 - **Status:** PASS
 
-### 7. Mobile & Offline Target (PWA)
+### 9. Mobile & Offline Target (PWA)
 
-- **Verification:** Web app manifest, touch input translation, and offline PWA service worker caching verified in `tests/mobile_manifest.test.ts`, `tests/touch_input.test.ts`, and `tests/mobile_offline.test.ts`.
+- **Verification:** Web app manifest, touch input translation, and offline PWA
+  service worker caching verified in `tests/mobile_manifest.test.ts`,
+  `tests/touch_input.test.ts`, and `tests/mobile_offline.test.ts`.
 - **Status:** PASS
+
+---
+
+## 24-Point Release-Candidate Qualification
+
+| # | Verification point | Evidence | Status |
+| --- | --- | --- | --- |
+| 1 | Clean package installation from the frozen lockfile | `bun install --frozen-lockfile` (276 installs, no changes) | PASS |
+| 2 | Full unit suite green | `bun test`: 425 pass / 0 fail, 2221 assertions, 157 files | PASS |
+| 3 | Strict TypeScript typecheck | `npx tsc --noEmit`: 0 type errors | PASS |
+| 4 | Production browser build | `bun run build`: `dist/main.js` + assets | PASS |
+| 5 | RC fuzz run (1000 matches) | `bun run test:fuzz:rc`: 0 fail, 6010 assertions | PASS |
+| 6 | Soak fuzz run (5000 matches) | `bun run test:fuzz:soak`: 0 fail, 30010 assertions | PASS |
+| 7 | Repeat-same-case fuzz determinism | `tests/ai_match_fuzz.test.ts` re-runs the first seeded case | PASS |
+| 8 | Per-turn fuzz invariants | State machine, active team, exact turn progression, finite entity state, rule phase (`tests/support/aiMatchFuzz.ts`) | PASS |
+| 9 | Negative-action injection rejection | Out-of-range angle/power, NaN, unknown actor, dead actor, out-of-phase item use rejected without mutation | PASS |
+| 10 | AI decision boundary | Wrong-team/dead-actor decisions filtered by `AiTurnEmitter` (`injectAiBoundaryViolations`) | PASS |
+| 11 | Match completion gating | `tests/match_completion_gate.test.ts`: frozen ticks, rejected entry points, sanctioned rematch | PASS |
+| 12 | Explicit match status results | `tests/match_status_model.test.ts`: `MatchStatus` Ongoing/Winner/Draw | PASS |
+| 13 | Winner-state unification | `tests/winner_state_unification.test.ts`: single authoritative `MatchResult` outcome | PASS |
+| 14 | Settings export purity | `tests/settings_export_purity.test.ts`: exports share no internal references | PASS |
+| 15 | Effect factory hardening | `tests/effect_factory_roundtrip.test.ts`: unknown types rejected, true ordered `MultiEffect`, freeze/shield/ghost remaining-state round trips | PASS |
+| 16 | Replay rule-state orchestration | `tests/replay_rule_state_orchestration.test.ts`: replay drives the same `GameEmitter` rule transitions | PASS |
+| 17 | Replay lifecycle determinism | `tests/ai_replay_lifecycle.test.ts`: live vs replay full `toSettings()` equality | PASS |
+| 18 | Snapshot isolation & persistence continuation | `tests/handler_snapshot_isolation.test.ts`, `tests/persisted_match_continuation.test.ts` | PASS |
+| 19 | Item-effect remaining-state serialization | `tests/item_effect_snapshot_validation.test.ts` | PASS |
+| 20 | Uniform action-path rejection | `tests/action_path_consistency.test.ts`: emitter, AI, server, and replay share the input predicate | PASS |
+| 21 | Authoritative server & end-to-end network match | `tests/e2e_network_match.test.ts`, `tests/authoritative_game.test.ts` | PASS |
+| 22 | SQLite persistence & reconnect restoration | `tests/persisted_match_continuation.test.ts`, `tests/authoritative_game.test.ts` | PASS |
+| 23 | Desktop Tauri build | `bun run desktop:build`: release binary + Debian bundle | PASS |
+| 24 | Security boundaries | `tests/mod_security.test.ts`, `tests/item_validator.test.ts`, `tests/input_fuzz.test.ts`, `tests/editor_dom_rendering.test.ts`, `tests/editor_draft.test.ts` | PASS |
 
 ---
 
@@ -87,19 +146,38 @@ bun run desktop:build
 | Data-Driven Rule Interpreter | `src/rules/RuleInterpreter.ts`, `src/rules/defaultGameModes.ts` | `tests/rule_interpreter.test.ts`, `tests/rule_types.test.ts` | PASS |
 | Official Items & Economy | `src/item/officialItems.ts`, `src/item/inventory.ts`, `src/item/loader.ts` | `tests/item_types.test.ts`, `tests/item_validator.test.ts`, `tests/item_draws.test.ts` | PASS |
 | Canonical Map Documents | `src/contracts/documents.ts`, `src/settings/*.ts` | `tests/map_document.test.ts`, `tests/editor_map_conversion.test.ts` | PASS |
-| AI Opponents (Easy, Medium, Hard) | `src/ai/*.ts`, `src/emitter/AiEmitter.ts` | `tests/easy_ai.test.ts`, `tests/medium_ai.test.ts`, `tests/hard_ai.test.ts`, `tests/authoritative_ai.test.ts` | PASS |
-| Replay System | `src/replay/recorder.ts`, `src/replay/player.ts` | `tests/deterministic_replay.test.ts`, `tests/replay_format.test.ts` | PASS |
-| SQLite Persistence & Reconnect | `src/server/db.ts`, `src/server/gameRegistry.ts` | `tests/restore_matches.test.ts`, `tests/save_slots.test.ts` | PASS |
-| Untrusted Input Hardening | `src/server/gameRegistry.ts` | `tests/input_fuzz.test.ts` | PASS |
+| AI Opponents (Easy, Medium, Hard) | `src/ai/*.ts` | `tests/easy_ai.test.ts`, `tests/medium_ai.test.ts`, `tests/hard_ai.test.ts`, `tests/authoritative_ai.test.ts` | PASS |
+| Replay System | `src/replay/recorder.ts`, `src/replay/player.ts` | `tests/deterministic_replay.test.ts`, `tests/replay_format.test.ts`, `tests/ai_replay_lifecycle.test.ts` | PASS |
+| SQLite Persistence & Reconnect | `src/server/db.ts`, `src/server/gameRegistry.ts` | `tests/restore_matches.test.ts`, `tests/persisted_match_continuation.test.ts` | PASS |
+| Untrusted Input Hardening | `src/server/gameRegistry.ts` | `tests/input_fuzz.test.ts`, `tests/action_path_consistency.test.ts` | PASS |
 | Mod & Security Audit | `src/item/validate.ts`, `src/contracts/documents.ts` | `tests/mod_security.test.ts` | PASS |
-| Obsolete Code Cleanup | Removal of `src/start.ts` & `src/ui/Mouse.ts` | `tests/cleanup.test.ts` | PASS |
 | End-to-End Local Match | `src/engine/Handler.ts`, `src/emitter/EngineEmitter.ts` | `tests/local_match_lifecycle.integration.test.ts` | PASS |
 | End-to-End Network Match | `src/server/runtime.ts`, `src/emitter/NetworkEmitter.ts` | `tests/e2e_network_match.test.ts` | PASS |
+| Match Completion Gating (12.8) | `src/engine/Handler.ts` | `tests/match_completion_gate.test.ts` | PASS |
+| Match Status Model (12.7) | `src/rules/types.ts`, `src/systems/WinningSystem.ts` | `tests/match_status_model.test.ts`, `tests/winner_state_unification.test.ts` | PASS |
+| Pure Settings Export (12.10) | `src/engine/Handler.ts` | `tests/settings_export_purity.test.ts` | PASS |
+| Hardened Effect Factory (12.11) | `src/effects/effects.ts` | `tests/effect_factory_roundtrip.test.ts` | PASS |
+| Replay Rule-State Orchestration (12.6) | `src/replay/player.ts` | `tests/replay_rule_state_orchestration.test.ts` | PASS |
+| AI-vs-AI Fuzz Suite (12.12) | `tests/support/aiMatchFuzz.ts` | `tests/ai_match_fuzz.test.ts` (RC_GAME_COUNT smoke/RC/soak) | PASS |
+| Release-Candidate Gate (12.13) | `docs/release-verification.md`, `package.json` | `tests/release_candidate_gate.test.ts` | PASS |
 | Cross-System Validation (Section 11) | Engine, AI, replay, persistence, winning, item effects, action paths | `tests/handler_snapshot_isolation.test.ts`, `tests/simulate_turn_isolation.test.ts`, `tests/hard_ai_snapshot_validation.test.ts`, `tests/ai_replay_lifecycle.test.ts`, `tests/parallel_engine_instances.test.ts`, `tests/persisted_match_continuation.test.ts`, `tests/winning_lifecycle_validation.test.ts`, `tests/item_effect_snapshot_validation.test.ts`, `tests/action_path_consistency.test.ts`, `tests/cross_system_validation_smoke.test.ts` | PASS |
 
 ---
 
 ## Environmental & Operational Notes
 
-1. **Browser Audio/Canvas:** Browser rendering requires p5.js script loading and DOM canvas support. Headless test environments execute node/bun canvas fallback stubs.
-2. **Discord Integration:** Discord Rich Presence is runtime-optional. When Discord environment configuration is absent, integration functions gracefully as a no-op.
+1. **Browser Audio/Canvas:** Browser rendering requires p5.js script loading and
+   DOM canvas support. Headless test environments execute node/bun canvas
+   fallback stubs.
+2. **Discord Integration:** Discord Rich Presence is runtime-optional. When
+   Discord environment configuration is absent, integration functions
+   gracefully as a no-op.
+3. **Fuzz Qualification:** The default `bun test` run includes the 25-match
+   smoke fuzz run; the 1000-match RC run and 5000-match soak run are separate
+   scripts (`test:fuzz:rc`, `test:fuzz:soak`) and need an explicit test timeout
+   (bun's 5s default would abort them).
+4. **Local-Emitter Trust Boundary:** The local `GameEmitter` validates phase,
+   actor existence/activity, and input ranges but not active-team ownership;
+   team ownership is enforced by the server registry, the AI turn emitter, and
+   the UI system. The fuzz suite verifies the emitter boundary (points 9) and
+   the AI boundary (point 10) separately.
