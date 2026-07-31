@@ -1216,7 +1216,8 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Allowed Context:** AI candidate generation, action results, match traces
   - **Commit:** `test: validate meaningful player agency`
   - **Required Signals:** number of legal actors, number of distinct legal action ranges, position or state change after actions, opponent interaction, hazard interaction, action diversity across turns.
-  - **Negative Cases:** players cannot reach one another, every shot immediately hits the own spawn area, no action can change the match state, only one identical action repeats forever, a player dies without any opportunity to act.
+	- **Negative Cases:** players cannot reach one another, every shot immediately hits the own spawn area, no action can change the match state, only one identical action repeats forever, a player dies without any opportunity to act.
+	- **Note:** `tests/player_agency_validation.test.ts` analyzes deterministic `TurnPacket` action results and traces for legal actors, action-range diversity, state changes, opponent/hazard interaction, and repeated actions. Required negative cases are represented as warnings for balance or human review, while malformed authoritative results remain hard failures; the healthy trace is deterministic and has no warnings. This does not claim that all shipped configurations provide meaningful agency; matrix-wide agency qualification remains open.
 - [ ] **Task [15.8]: Qualify Item Usefulness And Item Economy**
   - **Goal:** Detect invalid, unusable, dominant, never-selected, or match-breaking items.
   - **Target Files:** item qualification harness, `docs/gameplay-balance-report.md`

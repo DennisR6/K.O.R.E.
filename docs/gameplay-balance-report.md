@@ -76,3 +76,19 @@ playback violation and requires a byte-for-byte repeat of the same tournament.
 The current hard-AI arena does not complete these fairness samples within its
 40-turn bound, so no spawn-side or team-index winner imbalance is inferred.
 The ongoing result is retained as a warning for the softlock and agency tasks.
+
+## Section 15.7 Meaningful Player Agency
+
+`tests/player_agency_validation.test.ts` analyzes accepted `TurnPacket` results
+and action traces rather than counting legal inputs alone. It records legal
+actors, distinct action ranges, state changes, opponent interaction, hazard
+interaction, and action diversity. The deterministic healthy trace has no
+agency warnings and is repeatable.
+
+The required negative traces cover unreachable opponents, one repeated action,
+no-op actions, absent hazard interaction, and death before a player acts.
+These are warnings for balance or human review, not hard release failures.
+Malformed action results, such as an actor mismatch or invalid playback
+duration, remain hard failures because they invalidate the evidence itself.
+This focused harness is evidence for the agency contract, not a claim that
+every shipped configuration has already passed it.
