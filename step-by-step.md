@@ -343,7 +343,7 @@
   - **Test File:** `tests/hard_ai.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add simulation hard ai`
-- [ ] **Task [7.6]: Versus AI Game Mode**
+- [x] **Task [7.6]: Versus AI Game Mode**
   - **Goal:** Add 1-player-versus-AI game-mode settings and initialize the AI team from those settings.
   - **Target Files:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/versus_ai.test.ts`

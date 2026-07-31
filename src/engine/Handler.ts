@@ -26,6 +26,11 @@ import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { validateItemTarget } from "../item/target.js";
+import type { AiSettings } from "../ai/types.js";
+import type { IAiTurnProducer } from "../ai/aiEmitter.js";
+import { EasyAi } from "../ai/easyAi.js";
+import { MediumAi } from "../ai/mediumAi.js";
+import { HardAi } from "../ai/hardAi.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -391,6 +396,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
 	public setMatchResult(result: MatchResult | undefined): void { this.matchResult = result && { ...result } }
+	public getAiSettings(): AiSettings | undefined {
+		return this.settings?.ai ? JSON.parse(JSON.stringify(this.settings.ai)) : undefined;
+	}
+	public createAiProducer(): IAiTurnProducer | undefined {
+		const ai = this.getAiSettings();
+		if (!ai) return undefined;
+		switch (ai.difficulty) {
+			case "easy": return new EasyAi();
+			case "medium": return new MediumAi();
+			case "hard": return new HardAi();
+		}
+	}
 	/** Restores the configured local match without replacing installed UI systems. */
 	public rematch(): this {
 		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
@@ -463,6 +480,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			playerCount: this.settings?.playerCount ?? 1,
 			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
 			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
+			...(this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {}),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },

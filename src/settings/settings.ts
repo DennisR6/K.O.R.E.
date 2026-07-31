@@ -9,7 +9,7 @@ import { EffectMove } from "../effects/movement.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
-import { validateAiSettings, type AiSettings } from "../ai/types.js";
+import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/types.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -231,5 +231,21 @@ export function arrangeInGrid(
 
 		player.position.x = rect.x + (col * cellSize) + (size / 2)
 		player.position.y = rect.y + (row * cellSize) + (size / 2)
-	})
+	});
+}
+
+export function createVersusAiGameSettings(
+	difficulty: AiDifficulty,
+	seed: number = 12345,
+	playerCount: number = 2,
+	figuresPerPlayer: number = 2
+): GameSettings {
+	const base = createDefaultGameSettings(playerCount, figuresPerPlayer);
+	base.ai = {
+		difficulty,
+		seed,
+		team: 1,
+	};
+	validateGameSettings(base);
+	return base;
 }
