@@ -1180,7 +1180,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
    - **Matrix Dimensions:** every shipped map, every shipped mode, supported team counts, supported figures per team, AI difficulty pairings, items enabled and disabled, fixed and seeded loadouts, multiple deterministic seeds.
    - **Per-Combination Requirement:** valid start, at least one legal action, no crash, no unresolved match, valid winner or draw, deterministic duplicate run, replay equality, restore equality.
    - **Note:** `tests/support/gameplayQualification.ts` executes 1,152 deterministic combinations from the shipped registry. Each case validates start, a legal AI action, the 1,200-frame playback bound, duplicate-run equality, replay equality, and snapshot restoration. The canonical Ice Duel is retained as qualified; source-present map/mode/economy/AI combinations remain explicitly blocked from selection, and an ongoing result is recorded rather than promoted to a terminal qualification claim when one action cannot complete the match.
-- [ ] **Task [15.4]: Detect Match Softlocks And Stalemates**
+- [x] **Task [15.4]: Detect Match Softlocks And Stalemates**
   - **Goal:** Detect states where the match technically runs but no meaningful progress occurs.
   - **Target Files:** gameplay qualification harness
   - **Test File:** `tests/match_softlock_detection.test.ts`
@@ -1209,7 +1209,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
    - **Warning Signals:** one spawn side wins disproportionately, team index predicts winner, first turn dominates independent of AI, one map geometry produces unavoidable elimination.
    - **Output:** Warnings may require human review before becoming hard release failures.
    - **Note:** `tests/support/gameplayFairnessTournament.ts` runs each seed in original, side-swapped, and first-turn-swapped variants, recording physical-side wins, team-index wins, draws, ongoing matches, and invariant violations. `tests/gameplay_fairness_tournament.test.ts` verifies 24 deterministic smoke matches and treats imbalance/safety-limit findings as warnings only. The focused command is `bun run test:gameplay-tournament`.
-- [ ] **Task [15.7]: Validate Meaningful Player Agency**
+- [x] **Task [15.7]: Validate Meaningful Player Agency**
   - **Goal:** Detect configurations where legal actions exist but have no meaningful consequences or only one forced action can ever succeed.
   - **Target Files:** gameplay analysis harness
   - **Test File:** `tests/player_agency_validation.test.ts`
