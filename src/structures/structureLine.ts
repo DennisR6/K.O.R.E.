@@ -42,6 +42,15 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 		 * @param color - Farbe der Wand.
 		 */
 	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = []) {
+		// Zero-length lines have no valid segment direction and would corrupt
+		// the collision normal (Task 13.4). Reject them at construction so no
+		// arbitrary fallback direction is silently invented.
+		if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(x2) || !Number.isFinite(y2)) {
+			throw new Error("Line structures must have finite coordinates");
+		}
+		if (x === x2 && y === y2) {
+			throw new Error("Line structures must have non-zero length");
+		}
 		this.position = { x, y }
 		this.w = x2
 		this.h = y2

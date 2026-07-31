@@ -246,9 +246,36 @@ export class defaultPhysics implements PhysicsStrategy {
 				const normal = this.sub(position, closest);
 				const distance = this.mag(normal);
 				const radius = circle.getBounds().x;
-				if (distance === 0 || distance > radius) break;
-				const unitNormal = this.mult(normal, 1 / distance);
+				// Separated contacts (distance > radius) are a no-op; an exactly
+				// touching contact (distance === radius) is stable and receives
+				// no correction, no impulse, and no event. Only strict
+				// penetration (distance < radius, including distance === 0)
+				// enters the resolution path.
+				if (distance >= radius) break;
+
+				let unitNormal: Vector2D;
+				if (distance === 0) {
+					// Zero-distance contact: the circle center lies exactly on the
+					// segment or on an endpoint. The canonical fallback normal is
+					// the normalized left-hand perpendicular of the stored
+					// start-to-end direction: (-dy, dx) / length. Swapping the
+					// line direction mirrors the fallback. Zero-length lines are
+					// rejected at construction, so length is always positive.
+					const start = line.getPos();
+					const end = line.getBounds();
+					const dx = end.x - start.x;
+					const dy = end.y - start.y;
+					const length = Math.hypot(dx, dy);
+					unitNormal = { x: -dy / length, y: dx / length };
+				} else {
+					unitNormal = this.mult(normal, 1 / distance);
+				}
+
+				// Full deterministic depenetration (existing line contract):
+				// the circle is repositioned to exactly touch the segment.
 				circle.setPos(this.add(closest, this.mult(unitNormal, radius)));
+
+				// Impulse only when the circle approaches along the normal.
 				const velocity = circle.getVel();
 				const normalVelocity = this.dot(velocity, unitNormal);
 				if (normalVelocity < 0) {

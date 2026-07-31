@@ -126,18 +126,38 @@ original positions for the impulse computation.
   exit axis), so the exit is not reversed by an impulse.
 - Exterior contacts additionally receive the impulse response (Section 4)
   with `MAX_COLLISION_IMPULSE = 50` as the per-contact magnitude clamp.
+- Corner contacts use the same radial closest-point path: when the closest
+  point lies on a corner, the normal is radial from the corner. The
+  edge-to-corner normal transition is continuous; a circle centered exactly on
+  a corner enters the interior solver (deterministic minimum-exit axis).
+  *(Task 13.4 validates corner and transition stability.)*
 - Velocity axes unrelated to the contact normal remain unchanged.
 
 ### 7.3 Circle / Line
 
-- Closest point on the finite segment (endpoints included); normal from
-  closest point to center.
-- `distance === 0` (exact endpoint/center alignment) uses the deterministic
-  fallback normal; zero-length lines are rejected or normalized at the
-  settings boundary. *(Task 13.4)*
-- Penetrating: circle is repositioned to `closest + normal * r`; approaching
-  normal velocity receives the restitution impulse. *(Task 13.4 stabilizes
-  endpoint and corner transitions.)*
+- Closest point on the finite segment (endpoints included): projection of the
+  circle center onto the start-to-end direction with the parameter clamped to
+  `[0, 1]`; `t === 0` is the start endpoint, `t === 1` the end endpoint,
+  `0 < t < 1` the line interior. The line is a segment, not an infinite ray.
+- Normal: `normalize(circleCenter - closestPoint)`; the endpoint normal is
+  radial from the endpoint.
+- `distance === 0` (center exactly on the segment or an endpoint) uses the
+  canonical fallback normal: the normalized left-hand perpendicular of the
+  stored start-to-end direction `(-dy, dx) / length`. The sign is fixed by the
+  stored direction; swapping the direction mirrors the fallback. There is no
+  silent return and no arbitrary negative-Y normal. *(Task 13.4)*
+- Separated (`distance > radius`) and exactly touching (`distance === radius`)
+  contacts are stable no-ops: no correction, no impulse, no event.
+- Penetrating (`distance < radius`, including `distance === 0`): circle is
+  repositioned to `closest + normal * r` (exactly touching, full
+  depenetration in one call); the next call is a no-op.
+- Impulse: only while the circle approaches along the normal
+  (`normalVelocity < 0`); the normal component is reflected with the combined
+  restitution `min(eA, eB)` and the tangential component is preserved.
+  Separating and stationary contacts never receive an impulse.
+- Zero-length lines (`start === end`) are rejected at construction:
+  `"Line structures must have non-zero length"`; non-finite coordinates are
+  rejected as well. *(Task 13.4)*
 
 ### 7.4 Rectangle / Rectangle
 
