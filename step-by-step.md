@@ -1236,7 +1236,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Session Rules:** first match without explanation beyond launch instructions, observer records confusion without immediately intervening, second match may include control clarification, testers complete a consistent questionnaire, crashes and blockers include reproduction details.
   - **Questions:** goal understandable, active team clear, aiming understandable, power understandable, items understandable, feedback immediate and clear, camera obstructive, anything unfair, match too short or too long, willingness to voluntarily play another match.
   - **Note:** Added tester-ready packaged-build verification, a two-match protocol with explicit observer intervention boundaries, a timestamped observation sheet, the consistent questionnaire in `docs/playtest-questionnaire.md`, and the `.github/ISSUE_TEMPLATE/playtest-finding.md` reproduction template. `tests/human_playtest_readiness.test.ts` validates the build command, launch/reset instructions, required observations and questionnaire prompts, issue evidence fields, and the Section 15.9 session rules. This defines collection readiness only; actual human sessions and results remain Section 15.10.
-- [ ] **Task [15.10]: Collect And Classify Human Playtest Evidence**
+- [x] **Task [15.10]: Collect And Classify Human Playtest Evidence**
   - **Goal:** Record structured results from actual tester sessions and distinguish blockers, usability defects, balance concerns, preferences, and unsupported requests.
   - **Target Files:** `docs/playtest-results/<session>.md`, issue tracker references
   - **Test File:** `tests/playtest_evidence_gate.test.ts`
@@ -1244,6 +1244,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `docs: record human playtest evidence`
   - **Required Evidence Per Session:** build commit, platform, controls used, completed matches, observed blockers, tester-reported issues, result and match length, willingness-to-replay response.
   - **Privacy Constraint:** Store only the minimum tester identity information needed for traceability.
+  - **Note:** Added `docs/playtest-results/pending-external-session.md` and `tests/playtest_evidence_gate.test.ts`. No external tester session is available, so the evidence status is explicitly **BLOCKED / PENDING**; no human result or tester identity was fabricated. The gate will validate completed records when sessions are added.
 - [ ] **Task [15.11]: Convert Playtest Defects Into Regression Tests**
   - **Goal:** Reproduce every confirmed technical or deterministic playtest defect and convert it into the lowest appropriate automated regression test.
   - **Target Files:** affected source files and focused tests

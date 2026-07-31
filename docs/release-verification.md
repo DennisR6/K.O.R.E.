@@ -15,6 +15,17 @@ Branch: `test` (Section 12 release-candidate qualification complete)
 - Focused gate: `tests/playtest_build_gate.test.ts`.
 - Status: PASS after the required commands completed; no commit was created per task instruction.
 
+## Section 15.10 Human Playtest Evidence
+
+- Evidence record: `docs/playtest-results/pending-external-session.md`.
+- Focused gate: `tests/playtest_evidence_gate.test.ts`.
+- Status: **BLOCKED / PENDING**. No completed external tester session is
+  available, so actual external tester evidence is not available and no human
+  result is claimed. The pending record contains no tester identity beyond a
+  non-identifying status ID.
+- Human qualification must not be declared until an actual tester completes the
+  two-match protocol and a record contains the required observations.
+
 ## Verification Summary
 
 All core game systems, data contracts, physics, item economy, AI, authoritative
