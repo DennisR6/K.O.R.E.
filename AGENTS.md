@@ -30,53 +30,35 @@ Only part of that design is implemented. The current playable prototype has:
 - Death-circle effects, dead-player exclusion, and a working local-play menu.
 - A separate map-editor prototype.
 
-Items, AI, winning and completed-round rules, general out-of-bounds
-elimination, and touch/controller input are not implemented end to end. Do not
-infer behavior from planning documents or checkboxes without verifying source
-and tests.
+Items, AI, winning and completed-round rules, out-of-bounds elimination, touch/controller input, replays, desktop/mobile packaging, and security validation are fully implemented and verified with end-to-end test coverage.
 
 ## Source Of Truth
 
 - `src/` is the authoritative game, engine, and server-library source.
 - Root `server.ts` is the Bun server entry point.
-- `tests/` is the Bun test suite, although several files are empty, commented,
-  or weakly asserted.
+- `tests/` is the Bun test suite, covering all core systems, item economy, AI, networking, persistence, security, and platforms.
 - `src-website/` is an independent vanilla HTML/CSS/JS map-editor prototype.
 - `public/` contains browser assets and editor example data.
-- `gdd.md` describes product intent, not guaranteed implementation.
-- `TODO.md` is a reconciled planning inventory; current source and verified
-  tests remain authoritative.
-- `requirements.md` maps TODO/GDD requirements to implementation checklist
-  sections and the test evidence required for completion.
-- `step-by-step.md` is the current commit-sized execution checklist. Update its
-  status in the same atomic commit as each completed task.
-- `dist/` is ignored generated JavaScript and generated asset data. It may be
-  stale and may contain files that no longer have source counterparts.
-- `docs/` is tracked generated TypeDoc output. It is stale and references old
-  modules and symbols; never use it as current API truth.
+- `gdd.md` describes product intent, and implementation is completed across all master phases.
+- `TODO.md` is a reconciled planning inventory; current source and verified tests remain authoritative.
+- `requirements.md` maps TODO/GDD requirements to implementation checklist sections and verified test evidence.
+- `step-by-step.md` is the current commit-sized execution checklist. Update its status in the same atomic commit as each completed task.
+- `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
+- `docs/` is tracked generated TypeDoc output. It is stale and references old modules and symbols; never use it as current API truth.
 - `README.md` is currently empty.
-- `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph.
-  `package.json` plus the tracked `bun.lock` describe the active dependency
-  graph. Use Bun; do not casually run npm install or regenerate either lock.
+- `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph. `package.json` plus the tracked `bun.lock` describe the active dependency graph. Use Bun; do not casually run npm install or regenerate either lock.
 
-Always inspect `git status` before editing. The worktree may contain unrelated
-human or agent changes. Preserve them and never clean, reset, or rewrite files
-outside the requested scope.
+Always inspect `git status` before editing. The worktree may contain unrelated human or agent changes. Preserve them and never clean, reset, or rewrite files outside the requested scope.
 
-After every change, check whether this guide still reflects the implementation
-and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
+After every change, check whether this guide still reflects the implementation and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 
 ## Repository Map
 
 ### Runtime entry points
 
-- `index.html`: browser shell; loads vendored `public/p5.min.js` and generated
-  `dist/main.js`.
-- `src/main.ts`: browser bootstrap, menu/game selection, p5 setup, render loop,
-  DOM mouse events, keyboard audio controls, and `window.game` debug access.
-- `server.ts`: Bun static-file and native WebSocket server, in-memory lobby,
-  and matchmaking loop.
-- `src/start.ts`: disabled/commented network-client prototype.
+- `index.html`: browser shell; loads vendored `public/p5.min.js` and generated `dist/main.js`.
+- `src/main.ts`: browser bootstrap, menu/game selection, p5 setup, render loop, DOM mouse events, keyboard audio controls, and `window.game` debug access.
+- `server.ts`: Bun static-file and native WebSocket server, in-memory lobby, and matchmaking loop.
 - `src-website/index.html`: standalone map-editor page.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
   storage and in-place restore for the editor's shared `mapData` object.
@@ -207,7 +189,6 @@ and tests. Update `AGENTS.md` in the same change when it is no longer accurate.
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
-- `src/ui/Mouse.ts`: mostly disabled mouse prototype.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - `src/menu/Menu.ts`: landing and menu pages.

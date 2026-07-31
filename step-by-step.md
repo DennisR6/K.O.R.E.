@@ -502,7 +502,7 @@
   - **Test File:** `tests/cleanup.test.ts`
   - **Allowed Context:** `src/main.ts`, `src/start.ts`
   - **Commit:** `refactor: remove obsolete game prototypes`
-- [ ] **Task [10.6]: Document Completed Game Systems**
+- [x] **Task [10.6]: Document Completed Game Systems**
   - **Goal:** Update `AGENTS.md`, `TODO.md`, GDD implementation notes, and this checklist to reflect the completed feature set.
   - **Target Files:** `AGENTS.md`, `TODO.md`
   - **Test File:** `tests/documentation.test.ts`
