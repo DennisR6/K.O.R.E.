@@ -82,7 +82,7 @@ export function createLocalGameplayHandler(): GameHandler {
 	const ui = new UiSystem();
 	const arrow = new DirectionArrow(ui);
 	const emitters = new CombiEmitter();
-	emitters.addEmitter(new GameEmitter(handler));
+	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2));
 	const feedback = new GameplayFeedback(handler, ui);
 	handler.addSystem(ui);
 	handler.setMouseHandler(ui);

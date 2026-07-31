@@ -326,7 +326,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 */
 	public handleMousePressed() {
 		if (this.disposed) return
-		if (this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over) return
+		if (this.context.state !== GameState.Starting && this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over) return
 		this.mouseHandler?.handleMousePressed()
 	}
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */

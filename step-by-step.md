@@ -1083,7 +1083,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Required Test Cycle:** menu -> match -> rematch -> result -> menu (repeat multiple times).
   - **Negative Tests:** no duplicated input callback, no duplicate render loop, no old handler receiving actions, no replay action recorded twice, no increasing listener count, no stale selected actor.
   - **Note:** `GameHandler.dispose()` now makes replaced scenes inert and releases their tick/draw/system/input registrations. `MatchResultOverlay` delegates safely to gameplay input after rematch and resets it; the local router disposes match scenes on menu transitions, and the shared render loop routes wheel input to the active handler. `tests/gameplay_scene_lifecycle.test.ts` repeats match -> result -> menu -> match -> rematch cycles three times and verifies teardown, callback isolation, and selection reset.
-- [ ] **Task [14.11]: Automate The Menu-To-Result Vertical Slice**
+- [x] **Task [14.11]: Automate The Menu-To-Result Vertical Slice**
   - **Goal:** Add one end-to-end test that starts at the menu, launches the canonical match, performs legal actions, reaches winner or draw, and returns to a valid rematch or menu state.
   - **Target Files:** browser/e2e test configuration
   - **Test File:** `tests/playable_vertical_slice.e2e.test.ts`
@@ -1091,6 +1091,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `test: validate playable vertical slice`
   - **Required Journey:** launch application, menu visible, start match, canonical map visible, select actor, use or skip item phase, submit shot, complete turns, show result, rematch, return to menu.
   - **Acceptance:** No developer tools, direct handler calls, or test-only shortcuts may be required for the primary journey.
+  - **Note:** `tests/playable_vertical_slice.e2e.test.ts` drives the real `LocalMatchSceneRouter`, menu mouse surface, authoritative renderer, `ItemPhaseUI`, `UiSystem`, `EmitterSystem`, playback, result overlay, rematch, and menu exit. It repeats the completed match after rematch to verify both result actions without setting handler state or result directly. `GameHandler.handleMousePressed()` now accepts the initial `Starting` menu state, which is required for the browser landing-page click to work. Focused slice test, TSC, browser build, and full Bun suite pass.
 - [ ] **Task [14.12]: Produce A Human-Testable Build**
   - **Goal:** Package a build that external testers can launch and use to complete the canonical match without repository access or developer instructions.
   - **Target Files:** packaging scripts, desktop configuration, `docs/playtest-build.md`, `docs/release-verification.md`
