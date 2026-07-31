@@ -5,7 +5,7 @@ import type { AiSettings } from "../src/ai/types.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
-import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
+import { EffectTrigger, EffectType } from "../src/effects/types.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
@@ -17,10 +17,12 @@ import { WinningSystem, evaluateLastTeamStanding } from "../src/systems/WinningS
  * snapshot restoration.
  */
 
-/** Deterministic arena: the arena rect is explicitly configured with the
- * `"both"` role so it stays solid and pushes players up (the historical
- * behavior this winning-lifecycle fixture depends on); the near player
- * reaches the top wall first and is eliminated by the boundary. */
+/** Deterministic arena: a narrow explicit containment boundary (physics
+ * contract 13.2: solid obstacles never embed resting players; the boundary
+ * eliminates figures that leave the arena). Team 0's first ram slides team 1
+ * out of the right containment edge, so the AI match terminates with a
+ * boundary elimination - the surviving team triggers the last-team-standing
+ * result. */
 function makeArena() {
 	const settings = createDefaultGameSettings(2, 1);
 	const tiles = {
@@ -37,24 +39,13 @@ function makeArena() {
 	};
 	settings.players[0]!.effects = [move, tiles];
 	settings.players[1]!.effects = [move, tiles];
-	settings.screenResolution = { x: 3000, y: 1600 };
-	settings.worldSize = { x: 3000, y: 1600 };
+	settings.screenResolution = { x: 500, y: 800 };
+	settings.worldSize = { x: 500, y: 800 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
-		{
-			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
-			effects: [
-				{
-					trigger: EffectTrigger.Collision,
-					triggerValue: [],
-					type: EffectType.ModifySetting,
-					typeValue: { operation: SettingOperation.Set, key: "dead", value: true },
-				},
-			],
-		},
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 500, h: 800, effects: [], role: "containment" },
 	];
-	settings.players[0]!.position = { x: 750, y: 365 };
-	settings.players[1]!.position = { x: 2250, y: 1100 };
+	settings.players[0]!.position = { x: 100, y: 400 };
+	settings.players[1]!.position = { x: 400, y: 400 };
 	return settings;
 }
 
@@ -103,18 +94,18 @@ describe("Winning Lifecycle Composition", () => {
 		const { handler } = match;
 		playToCompletion(match);
 
-		// Team 0's figure was pushed out of the containment boundary and died;
-		// the surviving team 1 figure triggers the last-team-standing result.
+		// Team 1's figure was rammed out of the containment boundary and died;
+		// the surviving team 0 figure triggers the last-team-standing result.
 		const entities = handler.getEntityManager().getEntities();
-		expect(entities[0]!.isDead()).toBe(true);
-		expect(entities[1]!.isDead()).toBe(false);
+		expect(entities[0]!.isDead()).toBe(false);
+		expect(entities[1]!.isDead()).toBe(true);
 		expect(handler.getState()).toBe(GameState.Game_over);
 
 		const result = handler.getMatchResult();
 		expect(result).toBeDefined();
-		expect(result?.winnerTeam).toBe(1);
+		expect(result?.winnerTeam).toBe(0);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(5);
+		expect(result?.turnNumber).toBe(2);
 	});
 
 	test("the match result is set exactly once and never overwritten", () => {
@@ -226,7 +217,7 @@ describe("Winning Lifecycle Composition", () => {
 		// The restored mid-match run ends with the same result as the
 		// uninterrupted run.
 		expect(restored.getMatchResult()).toEqual(handler.getMatchResult());
-		expect(restored.getMatchResult()?.winnerTeam).toBe(1);
+		expect(restored.getMatchResult()?.winnerTeam).toBe(0);
 		expect(restored.getMatchResult()?.reason).toBe(MatchEndReason.LastTeamStanding);
 	});
 

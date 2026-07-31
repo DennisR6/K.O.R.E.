@@ -142,7 +142,7 @@ export function makeAiArena(seed: number): GameSettings {
 	const circleX = 1000 + Math.floor(rand() * 1000);
 	const circleY = 1350 + Math.floor(rand() * 150);
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE, x: circleX, y: circleY, r: 80,
 			effects: [

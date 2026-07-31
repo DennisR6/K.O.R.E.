@@ -31,7 +31,7 @@ function arena(players: { x: number; y: number }[], killCircles: { x: number; y:
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		...killCircles.map(circle => ({
 			type: SHAPE.CIRCLE,
 			x: circle.x,
@@ -104,7 +104,7 @@ describe("match status model", () => {
 
 	test("a last-team-standing win is stored with explicit Winner status and the real team id", () => {
 		const { handler, emitter } = arena(
-			[{ x: 750, y: 365 }, { x: 1500, y: 1450 }],
+			[{ x: 750, y: 365 }, { x: 1500, y: 1400 }],
 			[{ x: 1500, y: 1450, r: 80 }],
 			physicsMode,
 		);
@@ -138,7 +138,7 @@ describe("match status model", () => {
 		// turn - so zero teams survive and the pending evaluation must be
 		// re-evaluated to a draw before the result is finalized.
 		const { handler, emitter } = arena(
-			[{ x: 750, y: 365 }, { x: 2250, y: 1100 }],
+			[{ x: 750, y: 365 }, { x: 2250, y: 1040 }],
 			[
 				{ x: 750, y: 530, r: 80 },
 				{ x: 2250, y: 1100, r: 80 },

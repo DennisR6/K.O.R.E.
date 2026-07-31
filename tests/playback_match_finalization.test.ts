@@ -37,7 +37,7 @@ function killCircleArena() {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
 			effects: [
@@ -51,9 +51,10 @@ function killCircleArena() {
 		},
 	];
 	settings.players[0]!.position = { x: 750, y: 365 };
-	// Player 2 spawns inside the kill circle: eliminated at the first
-	// physics frame while player 1's turn still plays out for many frames.
-	settings.players[1]!.position = { x: 1500, y: 1450 };
+	// Player 2 spawns inside the kill circle (off its exact center, so the
+	// deadly collision triggers): eliminated at the first physics frame while
+	// player 1's turn still plays out for many frames.
+	settings.players[1]!.position = { x: 1500, y: 1400 };
 	return settings;
 }
 

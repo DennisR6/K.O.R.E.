@@ -31,7 +31,7 @@ function winningArena() {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE,
 			x: 1500,
@@ -43,7 +43,9 @@ function winningArena() {
 		},
 	];
 	settings.players[0]!.position = { x: 750, y: 365 };
-	settings.players[1]!.position = { x: 1500, y: 1450 };
+	// Inside the kill circle (distance 50 < r 80 + radius 12) but not at its
+	// exact center, so the deadly collision triggers on the first physics frame.
+	settings.players[1]!.position = { x: 1500, y: 1400 };
 	settings.items = [];
 	const gameMode: GameModeSettings = {
 		id: "winner-unification",
@@ -165,7 +167,8 @@ describe("winner state unification", () => {
 				],
 				players: [
 					{ ...settings.players[0]!, position: { x: 750, y: 365 } },
-					{ ...settings.players[1]!, position: { x: 2250, y: 1100 } },
+					// Inside the second kill circle, off its exact center.
+					{ ...settings.players[1]!, position: { x: 2250, y: 1040 } },
 				],
 			} as never)
 			.build();

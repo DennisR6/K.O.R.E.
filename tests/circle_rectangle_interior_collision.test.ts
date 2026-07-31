@@ -5,11 +5,12 @@ import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 
 /**
- * Engine defect hardening 12.2: embedded circle/rectangle collisions resolve
- * deterministically through the nearest rect edge. The old zero-distance
- * fallback normal (always upward) is gone, ties are documented (left, right,
- * top, bottom), and the depenetration applies exactly once without altering
- * an unrelated velocity axis.
+ * Engine defect hardening 12.2 + physics contract 13.2: embedded
+ * circle/rectangle collisions resolve deterministically through the nearest
+ * rect edge. The old zero-distance fallback normal (always upward) is gone,
+ * ties are documented (left, right, top, bottom), and a single resolution
+ * call leaves the circle fully non-overlapping (minimum-translation exit)
+ * without altering an unrelated velocity axis.
  */
 
 const physics = new defaultPhysics();
@@ -24,19 +25,24 @@ test("exact center exits left with the documented tie-break", () => {
 	const player = circle(50, 50);
 	physics.handleCollision(player, rect);
 	// left = right = top = bottom = 10 -> tie-break order picks left (-x).
-	expect(player.getPos()).toEqual({ x: 48, y: 50 });
+	// overlap = 10 + radius 10 = 20, totalMove = 20.01 -> x = 50 - 20.01.
+	expect(player.getPos()).toEqual({ x: 29.99, y: 50 });
 	expect(player.getVel()).toEqual({ x: 0, y: 0 });
 });
 
-test("exact center fully depenetrates after enough ticks and stays finite", () => {
+test("exact center fully depenetrates in a single call and stays finite", () => {
 	const player = circle(50, 50);
-	for (let frame = 0; frame < 12; frame++) physics.handleCollision(player, rect);
+	physics.handleCollision(player, rect);
 	const pos = player.getPos();
 	// The circle edge must clear the rect (x + 10 <= 40 -> x <= 30).
 	expect(pos.x).toBeLessThanOrEqual(30.01);
 	expect(pos.y).toBe(50);
 	expect(Number.isFinite(pos.x)).toBe(true);
 	expect(Number.isFinite(pos.y)).toBe(true);
+	// No second correction is required on the next tick: the circle is
+	// already non-overlapping, so the follow-up call is a no-op.
+	physics.handleCollision(player, rect);
+	expect(player.getPos()).toEqual(pos);
 });
 
 test("an embedded circle near the bottom edge is pushed downward, not upward", () => {
@@ -100,9 +106,10 @@ test("finite-mass rects share a single mass-weighted depenetration", () => {
 	movable.setMass(1);
 	const player = circle(50, 55, 5);
 	physics.handleCollision(player, movable);
-	// invM1 = invM2 = 1, totalMove = 2 -> circle +1, rect -1 (single application).
-	expect(player.getPos()).toEqual({ x: 50, y: 56 });
-	expect(movable.getPos()).toEqual({ x: 40, y: 39 });
+	// invM1 = invM2 = 1, overlap = 5 + radius 5 = 10, totalMove = 10.01
+	// -> circle +5.005, rect -5.005 (single weighted application).
+	expect(player.getPos()).toEqual({ x: 50, y: 60.005 });
+	expect(movable.getPos()).toEqual({ x: 40, y: 34.995 });
 });
 
 test("interior resolution is deterministic across repeated runs", () => {
@@ -112,29 +119,23 @@ test("interior resolution is deterministic across repeated runs", () => {
 		physics.handleCollision(player, rect);
 		runs.push({ ...player.getPos() });
 	}
-	expect(runs).toEqual([{ x: 48, y: 50 }, { x: 48, y: 50 }, { x: 48, y: 50 }]);
+	expect(runs).toEqual([{ x: 29.99, y: 50 }, { x: 29.99, y: 50 }, { x: 29.99, y: 50 }]);
 });
 
-test("deep penetration resolves with strictly monotonic bounded iterations", () => {
-	// The documented bounded iterative solver (2.0/tick clamp) must strictly
-	// reduce the penetration on every resolving tick and finally leave the
-	// circle non-overlapping with the rectangle (touching is not colliding:
-	// the collision check uses strict `<`).
+test("deep penetration resolves fully in a single bounded iteration", () => {
+	// The documented full-resolution solver (physics contract 13.2) exits the
+	// circle completely on the first resolving call: one call leaves the
+	// circle non-overlapping, and no second correction is required on the
+	// next tick (touching is not colliding: the check uses strict `<`).
 	const player = circle(50, 50);
-	const edgeDistances: number[] = [];
-	let guard = 0;
-	while (physics.checkCollision(player, rect) && guard < 100) {
-		const before = player.getPos().x;
-		physics.handleCollision(player, rect);
-		if (player.getPos().x === before) break; // touch-only: no resolution
-		// Distance from the circle center to the left rect edge (exit axis).
-		edgeDistances.push(player.getPos().x - 40);
-		guard++;
-	}
-	expect(edgeDistances.length).toBeGreaterThan(1);
-	for (let i = 1; i < edgeDistances.length; i++) {
-		expect(edgeDistances[i]).toBeLessThan(edgeDistances[i - 1]);
-	}
+	const before = { ...player.getPos() };
+	physics.handleCollision(player, rect);
+	// overlap = 10 + radius 10 = 20 -> the full minimum translation 20.01.
+	expect(player.getPos()).toEqual({ x: before.x - 20.01, y: 50 });
+	// The next call is a strict no-op: the circle already cleared the rect.
+	const settled = { ...player.getPos() };
+	physics.handleCollision(player, rect);
+	expect(player.getPos()).toEqual(settled);
 	// Final state: the circle edge no longer overlaps the rect interior
 	// (touch is allowed; the resolver uses strict `<`), and the unrelated
 	// axis never moved.

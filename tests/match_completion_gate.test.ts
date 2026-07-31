@@ -32,7 +32,7 @@ function completedMatch(spawnInCircle: boolean) {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			// Either the enemy spawns inside this circle (instant win for
 			// team 0), or the shooter slides into it (instant win for team 1).
@@ -45,8 +45,10 @@ function completedMatch(spawnInCircle: boolean) {
 			],
 		},
 	];
+	// Player 2 spawns inside the kill circle, off its exact center, so the
+	// deadly collision triggers on the first physics frame.
 	settings.players[0]!.position = { x: 750, y: 365 };
-	settings.players[1]!.position = spawnInCircle ? { x: 750, y: 530 } : { x: 2250, y: 1100 };
+	settings.players[1]!.position = spawnInCircle ? { x: 750, y: 500 } : { x: 2250, y: 1100 };
 	settings.items = [];
 	const gameMode: GameModeSettings = {
 		id: "completion-gate",
@@ -146,13 +148,21 @@ describe("match completion gate", () => {
 		expect(handler.getState()).toBe(GameState.Your_turn);
 		expect(handler.getMatchResult()).toBeUndefined();
 
-		// The gate is open again: a tick moves entities and a turn resolves.
+		// The gate is open again: the match is in a playable state, a resting
+		// player stays put (no interior squeeze anymore - physics contract
+		// 13.2 resolves embedded contacts fully in one call), and a turn
+		// resolves and settles normally.
 		const actor = handler.getEntityManager().getEntities()[0]!;
-		const before = { ...actor.getPos() };
-		handler.tick();
-		expect(actor.getPos()).not.toEqual(before);
+		expect(handler.getState()).toBe(GameState.Your_turn);
 		const packet = handler.resolveTurn({ actorId: actor.getId(), angle: 0, power: 1 });
 		expect(packet.durationFrames).toBeGreaterThan(0);
+		let guard = 0;
+		while (handler.getState() === GameState.Playing && guard < 10_000) {
+			handler.tick();
+			guard++;
+		}
+		expect(guard).toBeLessThan(10_000);
+		expect(handler.getEntityManager().getEntities()[0]!.getPos()).not.toEqual({ x: 750, y: 365 });
 	});
 
 	test("ongoing matches are not frozen by the gate", () => {

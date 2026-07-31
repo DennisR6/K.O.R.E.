@@ -298,14 +298,12 @@ export class defaultPhysics implements PhysicsStrategy {
 					// Anwendung entlang der Kollisionsnormalen. Die frühere doppelte
 					// Anwendung (Korrektur + Gesamtverschiebung) ist entfernt.
 					//
-					// Dokumentierter beschränkter iterativer Löser: Für Überlappungen
-					// bis zum Schwellwert bewegt eine einzelne Auflösung den Kreis
-					// vollständig aus dem Rechteck heraus (overlap + 0.01). Tiefere
-					// Überlappungen werden pro Auflösung um höchstens 2.0 Welt-Einheiten
-					// entlang der Austrittsnormalen reduziert; die Penetration (Abstand
-					// zur nächsten Kante bzw. Kante zum Zentrum) nimmt dabei strikt
-					// monoton ab, bis der Kreis die Kante passiert hat.
-					const totalMove = Math.min(overlap + 0.01, 2.0); // Sicherheits-Clamp
+					// Dokumentierter vollständiger Löser (physics contract 13.2):
+					// Eine einzelne Auflösung schiebt den Kreis um den minimalen
+					// Translationsbetrag (overlap + 0.01) vollständig aus dem
+					// Rechteck heraus - der Kreis ist danach nie mehr überlappend,
+					// und der nächste Tick ist eine No-Op.
+					const totalMove = overlap + 0.01; // complete minimum-translation resolution
 
 					if (m2 === Infinity) {
 						// Wenn Rechteck unendlich schwer: Schiebe NUR den Kreis aus der Wand

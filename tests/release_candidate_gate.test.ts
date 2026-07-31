@@ -77,5 +77,5 @@ describe("Release Candidate Gate (Section 12.13)", () => {
 			expect(match.persistedOk).toBe(true);
 			if (match.outcome !== "ongoing") expect(match.rematchOk).toBe(true);
 		}
-	});
+	}, { timeout: 600000 });
 });

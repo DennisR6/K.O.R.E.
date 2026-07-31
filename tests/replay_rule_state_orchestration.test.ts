@@ -40,7 +40,7 @@ function makeItemArena(): ReturnType<typeof createDefaultGameSettings> {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
 			effects: [
@@ -190,8 +190,9 @@ describe("replay rule-state orchestration", () => {
 
 	test("full item-mode match replay ends with the same completed-match state", () => {
 		const settings = makeItemArena();
-		// Player 2 spawns on the kill circle: the first shot wins the match.
-		settings.players[1]!.position = { x: 1500, y: 1450 };
+		// Player 2 spawns inside the kill circle (off its exact center): the
+		// first shot wins the match.
+		settings.players[1]!.position = { x: 1500, y: 1400 };
 
 		const handler = new GameHandlerBuilder()
 			.defaultSystems()

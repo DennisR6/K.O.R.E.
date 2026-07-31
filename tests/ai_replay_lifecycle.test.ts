@@ -15,12 +15,11 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem } from "../src/systems/WinningSystem.ts";
 
 /**
- * Deterministic AI-vs-AI arena: the arena rect is explicitly configured with
- * the `"both"` role so it remains a solid obstacle that pushes players upward
- * (the historical behavior this replay lifecycle depends on), the near player
- * reaches the top wall first, and the far player survives.
- * The bottom circle is an enclosed structure so the rect is recognized as
- * the outer containment boundary (and is never reachable by the players).
+ * Deterministic AI-vs-AI arena: the arena rect is an explicit containment
+ * boundary (physics contract 13.2: solid obstacles never embed resting
+ * players). The seeded AI shots slide both figures toward the arena center;
+ * the kill circle sits on that deterministic convergence path, so the match
+ * terminates with a winner.
  */
 function makeAiArena() {
 	const settings = createDefaultGameSettings(2, 1);
@@ -41,9 +40,9 @@ function makeAiArena() {
 	settings.screenResolution = { x: 3000, y: 1600 };
 	settings.worldSize = { x: 3000, y: 1600 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "both" },
+		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
-			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
+			type: SHAPE.CIRCLE, x: 1500, y: 730, r: 80,
 			effects: [
 				{
 					trigger: EffectTrigger.Collision,
@@ -102,18 +101,20 @@ describe("AI Match Replay Lifecycle", () => {
 		const result = handler.getMatchResult();
 		expect(handler.getState()).toBe(GameState.Game_over);
 		expect(result).toBeDefined();
-		expect(result?.winnerTeam).toBe(1);
+		// The deterministic convergence match: team 1's figure reaches the
+		// mid-arena kill circle first and team 0 survives.
+		expect(result?.winnerTeam).toBe(0);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(5);
+		expect(result?.turnNumber).toBe(24);
 
 		const liveEntities = handler.getEntityManager().getEntities();
-		expect(liveEntities[0]!.isDead()).toBe(true);
-		expect(liveEntities[1]!.isDead()).toBe(false);
+		expect(liveEntities[0]!.isDead()).toBe(false);
+		expect(liveEntities[1]!.isDead()).toBe(true);
 
 		// The recorded replay is a valid document with one shot per action
 		const replay = emitter.recorder.getReplay();
 		expect(() => validateReplayDocument(replay)).not.toThrow();
-		expect(replay.actions).toHaveLength(6);
+		expect(replay.actions).toHaveLength(25);
 		expect(replay.actions.every(action => action.type === "shoot")).toBe(true);
 
 		// --- Deterministic replay: two independent playback runs are identical ----
@@ -157,15 +158,15 @@ describe("AI Match Replay Lifecycle", () => {
 		// --- The replay reproduces the live match outcome (winner, deaths) ---------
 		const replayEntities = replayA.getHandler().getEntityManager().getEntities();
 		expect(replayEntities).toHaveLength(2);
-		expect(replayEntities[0]!.isDead()).toBe(true);
-		expect(replayEntities[1]!.isDead()).toBe(false);
+		expect(replayEntities[0]!.isDead()).toBe(false);
+		expect(replayEntities[1]!.isDead()).toBe(true);
 		expect(replayA.getHandler().getState()).toBe(GameState.Game_over);
 
 		const replayResult = replayA.getHandler().getMatchResult();
 		expect(replayResult?.winnerTeam).toBe(result?.winnerTeam);
 		expect(replayResult?.reason).toBe(result?.reason);
 		// The replay advances turns exactly like the live match did.
-		expect(replayResult?.turnNumber).toBe(5);
+		expect(replayResult?.turnNumber).toBe(24);
 		expect(replayA.getHandler().getTurnNumber()).toBe(handler.getTurnNumber());
 		expect(replayA.getHandler().getActiveTeam()).toBe(handler.getActiveTeam());
 		expect(replayA.getHandler().getRuleState()).toEqual(handler.getRuleState());
