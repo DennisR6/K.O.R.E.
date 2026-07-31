@@ -92,3 +92,31 @@ Malformed action results, such as an actor mismatch or invalid playback
 duration, remain hard failures because they invalidate the evidence itself.
 This focused harness is evidence for the agency contract, not a claim that
 every shipped configuration has already passed it.
+
+## Section 15.8 Item Usefulness And Item Economy
+
+Command: `bun test tests/item_gameplay_qualification.test.ts`
+
+The deterministic item harness runs 33 cases: all 11 official items in fixed-
+loadout, map-pickup, and seeded-draw economies. It checks availability, legal
+target rejection, actual consumption, per-turn limits, replay continuity, and
+snapshot continuity. The repeated run is byte-for-byte identical.
+
+| Metric | Result |
+| --- | ---: |
+| Item/economy cases | 33 |
+| Availability | 100% |
+| Legal-use rate | 100% |
+| Actual-use rate | 100% |
+| Successful declarative-effect rate | 0% |
+| Replay continuity | 100% |
+| Snapshot continuity | 100% |
+| Winner correlation | unavailable; no terminal match in the item trace |
+
+**Status: INCOMPLETE with deterministic findings.** Invalid targets are
+rejected and the one-use-per-turn allowance is enforced, but
+`GameHandler.useItem()` currently consumes inventory without installing or
+executing the item's declarative effects. The harness therefore emits
+`effect-disappears-after-use` for every item. Winner dominance cannot be
+qualified until item actions are exercised in terminal matches; this is an
+explicit evidence gap, not a passing balance result.

@@ -1218,7 +1218,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Required Signals:** number of legal actors, number of distinct legal action ranges, position or state change after actions, opponent interaction, hazard interaction, action diversity across turns.
 	- **Negative Cases:** players cannot reach one another, every shot immediately hits the own spawn area, no action can change the match state, only one identical action repeats forever, a player dies without any opportunity to act.
 	- **Note:** `tests/player_agency_validation.test.ts` analyzes deterministic `TurnPacket` action results and traces for legal actors, action-range diversity, state changes, opponent/hazard interaction, and repeated actions. Required negative cases are represented as warnings for balance or human review, while malformed authoritative results remain hard failures; the healthy trace is deterministic and has no warnings. This does not claim that all shipped configurations provide meaningful agency; matrix-wide agency qualification remains open.
-- [ ] **Task [15.8]: Qualify Item Usefulness And Item Economy**
+- [x] **Task [15.8]: Qualify Item Usefulness And Item Economy**
   - **Goal:** Detect invalid, unusable, dominant, never-selected, or match-breaking items.
   - **Target Files:** item qualification harness, `docs/gameplay-balance-report.md`
   - **Test File:** `tests/item_gameplay_qualification.test.ts`
@@ -1226,6 +1226,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `test: qualify item gameplay`
   - **Required Metrics:** availability, legal-use rate, actual-use rate, successful effect rate, winner correlation, replay and snapshot continuity.
   - **Negative Signals:** item can never be legally used, item always causes an invalid state, item bypasses turn limits, one item determines nearly every outcome, item effects disappear or duplicate after restore, item creates a permanent softlock.
+  - **Note:** `tests/item_gameplay_qualification.test.ts` runs 33 deterministic cases covering all 11 official items across fixed-loadout, map-pickup, and seeded-draw economies. Availability, legal use, actual use, per-turn rejection, invalid-target rejection, replay continuity, and snapshot continuity pass at 100%. The harness correctly reports `effect-disappears-after-use` for every item because the current `GameHandler.useItem()` consumes inventory but does not apply declarative effects, and reports winner correlation as unavailable because these item-only traces do not complete a terminal match. These are retained as release findings rather than being converted into false qualification claims.
 - [ ] **Task [15.9]: Prepare Structured Human Playtest Sessions**
   - **Goal:** Produce a tester-ready build, instructions, observation sheet, issue template, and session protocol for the existing external playtesters.
   - **Target Files:** `docs/playtest-protocol.md`, `docs/playtest-questionnaire.md`, issue templates
