@@ -523,7 +523,7 @@
   - **Test File:** `tests/handler_snapshot_isolation.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/entity/Player.ts`, `src/emitter/EngineEmitter.ts`
   - **Commit:** `test: validate handler snapshot isolation`
-- **Task [11.2]: Validate Isolated Turn Simulation**
+- [x] **Task [11.2]: Validate Isolated Turn Simulation**
   - **Goal:** Prove `simulateTurn()` resolves deterministically on a cloned world without mutating the live handler's entities, rule state, or RNG state.
   - **Target Files:** `src/engine/Handler.ts`
   - **Test File:** `tests/simulate_turn_isolation.test.ts`
