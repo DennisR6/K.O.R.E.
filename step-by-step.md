@@ -349,7 +349,7 @@
   - **Test File:** `tests/versus_ai.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: add versus ai mode`
-- [ ] **Task [7.7]: Authoritative AI Match Coverage**
+- [x] **Task [7.7]: Authoritative AI Match Coverage**
   - **Goal:** Run AI through the authoritative turn path and add a complete simulated match regression test.
   - **Target Files:** `src/server/gameRegistry.ts`, `src/ai/aiEmitter.ts`
   - **Test File:** `tests/authoritative_ai.test.ts`
