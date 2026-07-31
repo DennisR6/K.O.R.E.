@@ -23,7 +23,9 @@ export class MainMenu implements IMenu {
 		new LandingPage((page: Pages) => this.activePage = page),
 		new MainMenuPage((page: Pages) => this.activePage = page),
 	]
-	constructor() { }
+	constructor(onPlayLocal?: () => void, private readonly getStartError?: () => string | undefined) {
+		this.pages = [new LandingPage((page: Pages) => this.activePage = page), new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal)]
+	}
 	private activePage: number = 0;
 	tick(deltatime: number, globalfriction: number): void { this.pages[this.activePage].tick(deltatime, globalfriction) }
 	handleMousePressed(): void {
@@ -40,7 +42,14 @@ export class MainMenu implements IMenu {
 		this.mouse.y = mouseY;
 		this.pages[this.activePage].updateMouse(mouseX, mouseY)
 	}
-	draw(ctx: RenderContext): void { this.pages[this.activePage].draw(ctx) }
+	draw(ctx: RenderContext): void {
+		this.pages[this.activePage].draw(ctx)
+		const error = this.getStartError?.()
+		if (error) {
+			ctx.setFillColor("#b91c1c")
+			ctx.drawText(error, 80, 390, 18)
+		}
+	}
 }
 
 export class LandingPage implements IMenuPage {
@@ -74,7 +83,7 @@ export class MainMenuPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
 	private timer = 0
 	private cb: (page: Pages) => void
-	constructor(pageSwitcher: (page: Pages) => void) { this.cb = pageSwitcher }
+	constructor(pageSwitcher: (page: Pages) => void, private readonly onPlayLocal?: () => void) { this.cb = pageSwitcher }
 	draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
@@ -88,6 +97,10 @@ export class MainMenuPage implements IMenuPage {
 	handleMousePressed(): void {
 		const { x, y } = this.mouse
 		if (x < playButton.x || x > playButton.x + playButton.w || y < playButton.y || y > playButton.y + playButton.h) return
+		if (this.onPlayLocal) {
+			this.onPlayLocal()
+			return
+		}
 		const url = new URL(window.location.href)
 		url.searchParams.set("skipmenu", "1")
 		url.searchParams.delete("url")

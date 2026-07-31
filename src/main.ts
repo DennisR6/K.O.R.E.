@@ -3,7 +3,6 @@ import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
 import { GameHandler, GameHandlerBuilder } from "./engine/Handler.js";
-import { MainMenu } from "./menu/Menu.js";
 import { AudioManager } from "./menu/AudioManager.js";
 import { DirectionArrow } from "./systems/DirectionArrow.js";
 import { EmitterSystem } from "./systems/Emitter.js";
@@ -16,6 +15,7 @@ import { wrap } from "./utils/net.js";
 import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNewUser, type UnTypedNetworkMessage } from "./server/types.js";
 import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 import { ReplayViewer } from "./menu/replayViewer.js";
+import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 
 const uri = new URL(window.location.href)
 const usersettings = {
@@ -32,11 +32,9 @@ let handler: GameHandler
 const builder = new GameHandlerBuilder()
 	.defaultSystems()
 if (!usersettings.skipmenu) {
-	handler = builder.build()
-	const menu = new MainMenu()
-	handler.setMouseHandler(menu)
-	handler.addPreTickAndDraw(menu)
-	startGame(handler)
+	const router = new LocalMatchSceneRouter()
+	handler = router.getHandler()
+	startGame(handler, () => router.getHandler())
 	} else if (usersettings.url && usersettings.url !== "local") {
 	startNetworkGame(usersettings.url)
 } else {
@@ -102,7 +100,7 @@ if (usersettings.replay) {
 	})
 }
 
-function startGame(h: GameHandler) {
+function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h) {
 	const sketch = (p: p5Types) => {
 		let ctx: RenderContext;
 		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
@@ -123,9 +121,10 @@ function startGame(h: GameHandler) {
 
 		p.draw = () => {
 			if (!ctx) return
-			h.tick()
+			const active = getActiveHandler()
+			active.tick()
 			p.push()
-			h.drawWorld(ctx)
+			active.drawWorld(ctx)
 			p.pop()
 		};
 
@@ -134,21 +133,21 @@ function startGame(h: GameHandler) {
 			if (!canvasEl) return
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
-			h.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
+			getActiveHandler().updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 		})
 		window.addEventListener("mousedown", (e) => {
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (!canvasEl) return
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
-			h.handleMousePressed()
+			getActiveHandler().handleMousePressed()
 		})
 		window.addEventListener("mouseup", (e) => {
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (!canvasEl) return
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
-			h.handleMouseReleased()
+			getActiveHandler().handleMouseReleased()
 		})
 
 		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)

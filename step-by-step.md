@@ -999,14 +999,15 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Required Definition:** reference map, game mode, team count, figures per team, spawn positions, item configuration, AI or human slots, camera defaults, expected winner/draw handling.
    - **Acceptance:** The configuration validates, starts deterministically, provides a legal first action, and can complete through the headless engine.
   - **Note:** Implemented in `src/settings/canonicalPlayableMatch.ts`: stable two-human/one-figure Ice Duel settings, physics-only/no-item rules, fit-world 800×450 camera metadata, and a builder that installs `WinningSystem`. `docs/playable-slice.md` records the contract. The focused headless test validates deterministic settings, a legal authoritative shot, and terminal winner synchronization. Gates: 563 pass / 3 skip / 0 fail across 171 files; TSC and build clean.
-- [ ] **Task [14.2]: Connect The Main Menu To Local Match Creation**
+- [x] **Task [14.2]: Connect The Main Menu To Local Match Creation**
   - **Goal:** Make the primary play action create the canonical handler and transition from the menu into the gameplay scene.
   - **Target Files:** `src/ui/**`, `src/scenes/**`, application entry point, actual existing menu controller
   - **Test File:** `tests/menu_match_start.integration.test.ts`
   - **Allowed Context:** menu, scene router, handler builder, canonical match settings
   - **Commit:** `feat: connect menu to local match`
   - **Positive Tests:** play button creates exactly one handler, canonical settings are used, scene changes exactly once, loading errors are visible, repeated clicks do not create duplicate matches.
-  - **Negative Tests:** invalid settings do not enter gameplay, failed handler construction leaves the menu usable, stale handlers are not reused accidentally.
+   - **Negative Tests:** invalid settings do not enter gameplay, failed handler construction leaves the menu usable, stale handlers are not reused accidentally.
+  - **Note:** `src/scenes/LocalMatchSceneRouter.ts` now owns the menu-to-match boundary. `src/main.ts` renders and routes input through its active authoritative handler; `src/menu/Menu.ts` invokes a local-play callback and displays construction failures. `tests/menu_match_start.integration.test.ts` proves one canonical handler is created, duplicate starts are ignored, and failed construction retains the usable menu with a visible error source. Gates: 564 pass / 3 skip / 0 fail across 172 files; TSC and browser build clean.
 - [ ] **Task [14.3]: Clean And Validate The Reference Map**
   - **Goal:** Replace temporary geometry with an intentional reference arena using explicit containment roles, solid obstacles, hazards, safe spawns, and matching visual geometry.
   - **Target Files:** reference-map settings, map renderer assets
