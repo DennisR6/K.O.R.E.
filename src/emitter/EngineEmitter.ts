@@ -6,6 +6,7 @@ import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types
 import { TurnSystem } from "../systems/TurnSystem.js";
 import type { ItemTarget } from "../item/target.js";
 import { ReplayRecorder } from "../replay/recorder.js";
+import { isValidInput } from "../server/gameRegistry.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -33,6 +34,13 @@ export class GameEmitter implements IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number): void {
 		this.ruleState = this.handler.getRuleState()
 		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
+		// Reject the same invalid inputs as the authoritative server and the AI
+		// path before recording or simulating: a rejected shot never mutates the
+		// match and never reaches the replay document.
+		if (!isValidInput({ actorId, angle, power })) throw new Error("Invalid shot input")
+		const actor = this.handler.getEntityManager().getEntityById(actorId)
+		if (!actor) throw new Error(`Actor ${actorId} not found`)
+		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`)
 		this.recorder.recordShoot(actorId, angle, power)
 		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
 		const sim = this.handler.simulateTurn(actorId, angle, power)

@@ -23,6 +23,7 @@ test("GameEmitter advances local hotseat turns through the rule interpreter", ()
 		getTurnNumber: () => turnNumber,
 		getRuleState: () => ({ phase: RulePhase.Physics, activeTeam, turnNumber, itemUses: 0 }),
 		setRuleState: () => { },
+		getEntityManager: () => ({ getEntityById: () => ({ isDead: () => false }) }),
 	} as unknown as GameHandler
 
 	new GameEmitter(handler).sendShot("actor", 90, 5)

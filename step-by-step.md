@@ -565,7 +565,7 @@
   - **Test File:** `tests/item_effect_snapshot_validation.test.ts`
   - **Allowed Context:** `src/effects/*.ts`, `src/item/officialItems.ts`
   - **Commit:** `test: validate item effect snapshot continuity`
-- **Task [11.9]: Validate Action Path Consistency**
+- [x] **Task [11.9]: Validate Action Path Consistency**
   - **Goal:** Prove the emitter, AI, server, and replay action paths reject the same invalid inputs and leave the match unchanged after rejection.
   - **Target Files:** `src/server/gameRegistry.ts`, `src/emitter/EngineEmitter.ts`
   - **Test File:** `tests/action_path_consistency.test.ts`
