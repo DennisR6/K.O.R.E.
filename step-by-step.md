@@ -600,12 +600,13 @@
   - **Allowed Context:** `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`, `src/systems/PhysicsSystem.ts`
   - **Commit:** `fix: finalize playback sync after gameplay mutation`
   - **Note:** `ISystem` gained an optional `flush(ctx)` hook; `GameHandler.tick()` invokes it after post-tickers. Playback sync now completes the countdown tick itself (playback length = exactly `durationFrames` ticks). The completion callback no longer clobbers a terminal `Game_over` state set by gameplay systems on the sync tick.
-- [ ] **Task [12.4]: Enforce Deterministic Per-Turn Frame Counts**
+- [x] **Task [12.4]: Enforce Deterministic Per-Turn Frame Counts**
   - **Goal:** Establish one documented deterministic frame-count contract for both the authoritative `resolveTurn` path and the live `playTurn` path (identical inputs, identical tick counts, identical final state) and add a regression test.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
   - **Test File:** `tests/per_turn_frame_contract.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`, `src/physics/defaultPhysics.ts`
   - **Commit:** `fix: enforce deterministic per-turn frame counts`
+  - **Note:** The contract (from 12.3): live playback runs exactly `durationFrames` ticks and completes with live state equal to `TurnPacket.finalState`. Tests cover six shots on the ice map, restored-handler repeats, and repeated authoritative resolutions from identical snapshots.
 - [ ] **Task [12.5]: Complete Accepted Turns Before Match Finalization**
   - **Goal:** Ensure a winner or draw detected during active playback is finalized only after the accepted turn reaches its authoritative final state. Winning detection may become pending during playback, but must not cancel playback, skip the final sync, or expose a partial completed-match snapshot.
   - **Target Files:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
