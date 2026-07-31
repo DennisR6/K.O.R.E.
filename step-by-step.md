@@ -529,7 +529,7 @@
   - **Test File:** `tests/simulate_turn_isolation.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`
   - **Commit:** `test: validate isolated turn simulation`
-- **Task [11.3]: Validate Hard AI Snapshot Isolation**
+- [x] **Task [11.3]: Validate Hard AI Snapshot Isolation**
   - **Goal:** Prove the hard AI computes identical decisions on a snapshot-restored handler and its own simulation never mutates the live match.
   - **Target Files:** `src/ai/hardAi.ts`
   - **Test File:** `tests/hard_ai_snapshot_validation.test.ts`
