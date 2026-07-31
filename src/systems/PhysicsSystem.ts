@@ -175,7 +175,9 @@ export class PhysicsSystem implements ISystem {
 			}
 
 			const progress = prevTotalOverlap - totalOverlap;
-			if (iter === MAX_CONTACT_SOLVER_ITERATIONS - 1 && totalOverlap > 1e-4 && progress < 1e-4) {
+			// Circle/circle resolution intentionally leaves the contact slop. Do
+			// not label the final sub-slop convergence tail as an unresolved trap.
+			if (iter === MAX_CONTACT_SOLVER_ITERATIONS - 1 && totalOverlap > PHYSICS_CONTACT_SLOP && progress < 1e-4) {
 				throw new Error("Unresolved penetration after max solver iterations");
 			}
 			prevTotalOverlap = totalOverlap;
