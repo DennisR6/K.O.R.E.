@@ -1047,7 +1047,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Negative Tests:** inactive-team actor, dead actor, non-finite input, out-of-range power, duplicate click or touch, input after `Game_over`.
   - **State Guarantee:** Every rejected UI action leaves the handler byte-identical.
    - **Note:** Added the shared `src/input/validate.ts` shot boundary and connected mouse/touch UI interpretation through actor, team, dead-state, finite-coordinate, and power validation before the authoritative local emitter starts playback. Duplicate and blocked input is ignored without changing the handler snapshot; `tests/gameplay_input_integration.test.ts` covers the complete path and rejection cases.
-- [ ] **Task [14.7]: Integrate Items And Rule Phases**
+- [x] **Task [14.7]: Integrate Items And Rule Phases**
   - **Goal:** Make Item, Physics, Complete, winner, and draw phases understandable and controllable through the gameplay UI.
   - **Target Files:** gameplay UI, item controls, phase controls
   - **Test File:** `tests/gameplay_phase_integration.test.ts`
@@ -1055,7 +1055,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `feat: integrate gameplay phases and items`
   - **Positive Tests:** available items are displayed, legal item use advances correctly, item phase can be skipped, used-item allowance updates, physics phase accepts a shot, turn transition updates active team and UI.
   - **Negative Tests:** second item beyond allowance, item not in inventory, item use in Physics phase, shot before required phase transition, stale item buttons after turn change.
-  - **Note:** `src/ui/ItemPhaseUI.ts` exposes detached available-item and phase state for the gameplay UI and routes item/skip actions through `IInputEmitter`. `GameEmitter` enforces active/dead actor validity, item allowance, phase skipping, and authoritative rule-state updates; the canonical match uses one fixed Power-Dash item per team in an Item -> Physics turn. Focused coverage is in `tests/gameplay_phase_integration.test.ts`.
+   - **Note:** `src/ui/ItemPhaseUI.ts` exposes detached available-item and phase state for the gameplay UI and routes item/skip actions through `IInputEmitter`. `GameEmitter` enforces active/dead actor validity, item allowance, phase skipping, and authoritative rule-state updates; the canonical match uses one fixed Power-Dash item per team in an Item -> Physics turn. Focused coverage is in `tests/gameplay_phase_integration.test.ts`.
 - [x] **Task [14.8]: Add Turn, Aim, Power, And Error Feedback**
   - **Goal:** Show enough state for a first-time tester to understand who acts, what can be done, what is selected, and why an action was rejected.
   - **Target Files:** HUD, gameplay scene, feedback components
