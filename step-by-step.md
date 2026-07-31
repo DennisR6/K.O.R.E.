@@ -331,7 +331,7 @@
   - **Test File:** `tests/easy_ai.test.ts`
   - **Allowed Context:** `src/utils/random.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add deterministic easy ai`
-- [ ] **Task [7.4]: Heuristic Medium AI**
+- [x] **Task [7.4]: Heuristic Medium AI**
   - **Goal:** Implement medium AI target-angle heuristics with collision and out-of-bounds risk penalties.
   - **Target Files:** `src/ai/mediumAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/medium_ai.test.ts`
