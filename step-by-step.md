@@ -571,7 +571,7 @@
   - **Test File:** `tests/action_path_consistency.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/emitter/EngineEmitter.ts`, `src/ai/aiEmitter.ts`
   - **Commit:** `test: validate action path consistency`
-- **Task [11.10]: Record Cross-System Validation**
+- [x] **Task [11.10]: Record Cross-System Validation**
   - **Goal:** Document the cross-system validation suite with exact pass counts and a smoke test referencing every section 11 test file.
   - **Target Files:** `docs/release-verification.md`, `requirements.md`, `AGENTS.md`
   - **Test File:** `tests/cross_system_validation_smoke.test.ts`

@@ -26,8 +26,10 @@ bun install --frozen-lockfile
 bun test
 ```
 - **Exit Code:** 0
-- **Result:** 313 pass, 0 fail (1140 assertions across 134 files) [405ms]
+- **Result:** 354 pass, 0 fail (1683 assertions across 145 files) [~1.3s]
 - **Status:** PASS
+- **Cross-System Validation:** Section 11 of `step-by-step.md` is complete; its
+  nine suites are listed and referenced by `tests/cross_system_validation_smoke.test.ts`.
 
 ### 3. TypeScript Typecheck
 
@@ -93,6 +95,7 @@ bun run desktop:build
 | Obsolete Code Cleanup | Removal of `src/start.ts` & `src/ui/Mouse.ts` | `tests/cleanup.test.ts` | PASS |
 | End-to-End Local Match | `src/engine/Handler.ts`, `src/emitter/EngineEmitter.ts` | `tests/local_match_lifecycle.integration.test.ts` | PASS |
 | End-to-End Network Match | `src/server/runtime.ts`, `src/emitter/NetworkEmitter.ts` | `tests/e2e_network_match.test.ts` | PASS |
+| Cross-System Validation (Section 11) | Engine, AI, replay, persistence, winning, item effects, action paths | `tests/handler_snapshot_isolation.test.ts`, `tests/simulate_turn_isolation.test.ts`, `tests/hard_ai_snapshot_validation.test.ts`, `tests/ai_replay_lifecycle.test.ts`, `tests/parallel_engine_instances.test.ts`, `tests/persisted_match_continuation.test.ts`, `tests/winning_lifecycle_validation.test.ts`, `tests/item_effect_snapshot_validation.test.ts`, `tests/action_path_consistency.test.ts`, `tests/cross_system_validation_smoke.test.ts` | PASS |
 
 ---
 

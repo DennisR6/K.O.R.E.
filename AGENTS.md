@@ -464,6 +464,25 @@ For changes in these areas, explicitly cover:
 - Editor-to-engine conversion if one is introduced.
 - Network packet validation and disconnect/matchmaking cleanup.
 
+### Section 11 Cross-System Validation Suite
+
+`step-by-step.md` section 11 is a commit-sized cross-system validation suite;
+each of its nine tasks ships one focused test plus the checklist flip. The
+suite proves deterministic engine snapshots (`handler_snapshot_isolation`,
+`simulate_turn_isolation`, `parallel_engine_instances`), hard-AI decision
+equality on restored handlers (`hard_ai_snapshot_validation`), replay
+lifecycle determinism and strict replay document validation
+(`ai_replay_lifecycle`), SQLite match restoration with identical rule state
+and malformed-snapshot rejection (`persisted_match_continuation`), winning
+evaluation composition and result-once semantics (`winning_lifecycle_validation`),
+item-effect remaining-state serialization (`item_effect_snapshot_validation`),
+and uniform invalid-input rejection across the emitter, AI, server, and replay
+paths (`action_path_consistency`; `GameEmitter.sendShot` rejects through the
+same `isValidInput` predicate the server and AI path use, before recording or
+simulating). `tests/cross_system_validation_smoke.test.ts` references every
+section 11 file. When adding a cross-system test, mirror these boundaries and
+update the smoke file.
+
 ## Assets And Generated Files
 
 `bun run createAssets` is a mutating, potentially data-breaking operation. It:
