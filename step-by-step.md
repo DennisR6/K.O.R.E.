@@ -1065,14 +1065,15 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Required Feedback:** active team, selected actor, current phase, aim direction, power, available items, playback lock, winner or draw, actionable rejection reason.
    - **Negative Tests:** no raw stack traces shown to players, no contradictory phase labels, no input shown as available while blocked, no stale winner banner after rematch.
    - **Note:** Implemented `src/ui/GameplayFeedback.ts` as a handler-derived HUD for active team, selected actor, phase, aim, power, inventory, playback lock, result, and sanitized rejection reasons. `EmitterSystem` reports rejected local actions to the feedback layer without exposing stack traces; the local scene installs the drawer. Focused coverage is in `tests/gameplay_feedback.test.ts`.
-- [ ] **Task [14.9]: Complete The Match-End Flow**
+- [x] **Task [14.9]: Complete The Match-End Flow**
   - **Goal:** Display explicit winner or draw results and provide functional rematch and return-to-menu actions.
   - **Target Files:** result overlay, scene router, rematch flow
   - **Test File:** `tests/match_end_ui_flow.test.ts`
   - **Allowed Context:** MatchResult, handler rematch APIs, scene lifecycle
   - **Commit:** `feat: complete match end flow`
   - **Positive Tests:** winner result names the correct team, draw result never displays a fake winner, result appears only after final synchronization, rematch clears result and runtime state, return-to-menu disposes the match.
-  - **Negative Tests:** no result before completion, no double result overlay, no action accepted behind the result overlay, no previous result leaks into the next match.
+   - **Negative Tests:** no result before completion, no double result overlay, no action accepted behind the result overlay, no previous result leaks into the next match.
+   - **Note:** Implemented `src/ui/MatchResultOverlay.ts` and wired it through `src/scenes/LocalMatchSceneRouter.ts`. The overlay renders authoritative winner/draw state only for a synchronized `Game_over`, consumes terminal input, and routes rematch through `GameHandler.rematch()` or return-to-menu through a fresh menu handler. Focused coverage is in `tests/match_end_ui_flow.test.ts`.
 - [ ] **Task [14.10]: Stabilize Rematch And Scene Teardown**
   - **Goal:** Ensure repeated menu-to-match, rematch, and match-to-menu cycles do not leak handlers, event listeners, render loops, timers, replay recorders, or stale state.
   - **Target Files:** scene lifecycle, event registration, renderer teardown
