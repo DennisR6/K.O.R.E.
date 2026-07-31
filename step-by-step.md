@@ -1171,14 +1171,15 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
    - **Commit:** `docs: inventory shipped gameplay content`
    - **Acceptance:** Every shipped configuration is either qualified, explicitly unsupported, or blocked from selection.
    - **Note:** `src/content/gameplayContentRegistry.ts` inventories the four map factories, two mode definitions, supported team/figure counts, easy/medium/hard AI, all 11 official item IDs and economy shapes, plus platform/control combinations. `docs/gameplay-matrix.md` records the current menu boundary: the canonical two-team one-figure Ice Duel with Power-Dash and mouse drag is qualified; source-present maps, generic mode, AI, item catalog, unverified desktop targets, and unwired controls are explicitly blocked or unsupported. Task 15.3 remains responsible for executing the non-qualified matrix.
-- [ ] **Task [15.3]: Validate Every Shipped Map And Mode Combination**
+- [x] **Task [15.3]: Validate Every Shipped Map And Mode Combination**
   - **Goal:** Run deterministic AI-vs-AI qualification matches over the complete supported content matrix.
   - **Target Files:** `tests/support/gameplayQualification.ts`, package scripts
   - **Test File:** `tests/gameplay_content_matrix.test.ts`
   - **Allowed Context:** Section-12 game fuzz harness, shipped content registry
   - **Commit:** `test: qualify gameplay content matrix`
-  - **Matrix Dimensions:** every shipped map, every shipped mode, supported team counts, supported figures per team, AI difficulty pairings, items enabled and disabled, fixed and seeded loadouts, multiple deterministic seeds.
-  - **Per-Combination Requirement:** valid start, at least one legal action, no crash, no unresolved match, valid winner or draw, deterministic duplicate run, replay equality, restore equality.
+   - **Matrix Dimensions:** every shipped map, every shipped mode, supported team counts, supported figures per team, AI difficulty pairings, items enabled and disabled, fixed and seeded loadouts, multiple deterministic seeds.
+   - **Per-Combination Requirement:** valid start, at least one legal action, no crash, no unresolved match, valid winner or draw, deterministic duplicate run, replay equality, restore equality.
+   - **Note:** `tests/support/gameplayQualification.ts` executes 1,152 deterministic combinations from the shipped registry. Each case validates start, a legal AI action, the 1,200-frame playback bound, duplicate-run equality, replay equality, and snapshot restoration. The canonical Ice Duel is retained as qualified; source-present map/mode/economy/AI combinations remain explicitly blocked from selection, and an ongoing result is recorded rather than promoted to a terminal qualification claim when one action cannot complete the match.
 - [ ] **Task [15.4]: Detect Match Softlocks And Stalemates**
   - **Goal:** Detect states where the match technically runs but no meaningful progress occurs.
   - **Target Files:** gameplay qualification harness
