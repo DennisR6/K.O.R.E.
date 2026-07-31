@@ -313,43 +313,43 @@
 
 ## 7. AI And Play Modes
 
-- [-] **Task [7.1]: Define AI Settings**
+- [ ] **Task [7.1]: Define AI Settings**
   - **Goal:** Define serializable AI configuration including seed, difficulty, and decision limits.
   - **Target Files:** `src/ai/types.ts`, `src/settings/settings.ts`
   - **Test File:** `tests/ai_settings.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/types.ts`
   - **Commit:** `feat: define ai settings`
-- [-] **Task [7.2]: AI Turn Emitter Interface**
+- [ ] **Task [7.2]: AI Turn Emitter Interface**
   - **Goal:** Add a shared AI turn-emitter interface that submits the same validated input as a human player.
   - **Target Files:** `src/ai/aiEmitter.ts`, `src/emitter/Emitter.ts`
   - **Test File:** `tests/ai_emitter.test.ts`
   - **Allowed Context:** `src/emitter/Emitter.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add ai turn interface`
-- [-] **Task [7.3]: Deterministic Easy AI**
+- [ ] **Task [7.3]: Deterministic Easy AI**
   - **Goal:** Implement and test deterministic easy AI random angle and force choices.
   - **Target Files:** `src/ai/easyAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/easy_ai.test.ts`
   - **Allowed Context:** `src/utils/random.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add deterministic easy ai`
-- [-] **Task [7.4]: Heuristic Medium AI**
+- [ ] **Task [7.4]: Heuristic Medium AI**
   - **Goal:** Implement medium AI target-angle heuristics with collision and out-of-bounds risk penalties.
   - **Target Files:** `src/ai/mediumAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/medium_ai.test.ts`
   - **Allowed Context:** `src/physics/physics.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add heuristic medium ai`
-- [-] **Task [7.5]: Simulation Hard AI**
+- [ ] **Task [7.5]: Simulation Hard AI**
   - **Goal:** Implement hard AI bounded angle/force simulation search with a fixed deterministic evaluation budget.
   - **Target Files:** `src/ai/hardAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/hard_ai.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add simulation hard ai`
-- [-] **Task [7.6]: Versus AI Game Mode**
+- [ ] **Task [7.6]: Versus AI Game Mode**
   - **Goal:** Add 1-player-versus-AI game-mode settings and initialize the AI team from those settings.
   - **Target Files:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/versus_ai.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/Handler.ts`
   - **Commit:** `feat: add versus ai mode`
-- [-] **Task [7.7]: Authoritative AI Match Coverage**
+- [ ] **Task [7.7]: Authoritative AI Match Coverage**
   - **Goal:** Run AI through the authoritative turn path and add a complete simulated match regression test.
   - **Target Files:** `src/server/gameRegistry.ts`, `src/ai/aiEmitter.ts`
   - **Test File:** `tests/authoritative_ai.test.ts`
