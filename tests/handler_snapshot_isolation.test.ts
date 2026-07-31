@@ -46,13 +46,16 @@ describe("Handler Snapshot Isolation", () => {
 		settings.players[3]!.position = { x: 500, y: 520 };
 		settings.players[3]!.velocity = { x: 0, y: 1.2 };
 		settings.players[3]!.isDead = true;
-		// A shield with partially consumed capacity (state must survive serialization)
+		// A fully-structured player effect (its typeValue must survive
+		// serialization verbatim). Remaining-state effects such as shields
+		// belong to the item-effect pipeline and are covered by
+		// `item_effect_snapshot_validation`.
 		settings.players[0]!.effects = [
 			{
 				trigger: EffectTrigger.Collision,
 				triggerValue: [],
-				type: EffectType.Shield,
-				typeValue: { capacity: 5, remainingCapacity: 3 },
+				type: EffectType.ModifySetting,
+				typeValue: { operation: SettingOperation.Set, key: "mass", value: 3 },
 			},
 		];
 		// Handler-level effect

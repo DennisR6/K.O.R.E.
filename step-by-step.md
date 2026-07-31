@@ -650,12 +650,13 @@
   - **Allowed Context:** `src/engine/Handler.ts`
   - **Commit:** `refactor: make settings export pure`
   - **Note:** `toSettings()` previously retained the returned object itself via `saveSettings`, so caller mutations of an export polluted the stored settings and all later exports. It now stores only a detached deep copy (keeping the existing "settings reflects the latest engine snapshot" contract for `getSettings()` consumers), and the export shares no references with internal state. `settings_export_purity` proves repeated exports are equal and mutation-free, caller pollution never leaks, the export is deep-detached from the live handler, item-economy/draw state only advances by consuming turns (never by exporting), and restored handlers export purely too.
-- [ ] **Task [12.11]: Harden The Effect Factory Against Unknown Types**
+- [x] **Task [12.11]: Harden The Effect Factory Against Unknown Types**
   - **Goal:** Make `MetaEffect` reject or explicitly handle unknown effect types instead of silently falling back to movement, and cover the missing freeze/shield/ghost/multi serialized cases with round-trip tests.
   - **Target Files:** `src/effects/effects.ts`
   - **Test File:** `tests/effect_factory_roundtrip.test.ts`
   - **Allowed Context:** `src/effects/*.ts`, `src/entity/Player.ts`
   - **Commit:** `fix: harden effect factory against unknown types`
+  - **Note:** `MetaEffect` now throws `Unknown effect type` for anything outside the registered `EffectType` set instead of silently constructing an `EffectMove`. `EffectType.Multi` is a real `MultiEffect` that applies its `typeValue` child-settings array in order and round-trips it (recursively); malformed Multi settings are rejected. The hardening exposed a latent section-11 defect: `handler_snapshot_isolation` used `EffectType.Shield` (which does not exist - shields live in the item-effect pipeline), so the effect had silently been movement; the fixture now uses a valid fully-structured `ModifySetting` effect, and remaining-state round trips stay covered by `item_effect_snapshot_validation`. `effect_factory_roundtrip` covers every registered engine type, unknown/undefined/null rejection, ordered Multi application with recursion, malformed-Multi rejection, and freeze/shield/ghost serialized round trips preserving remaining turns/capacity. AGENTS.md limitation list updated.
 - [ ] **Task [12.12]: Deterministic AI-Vs-AI Game-Fuzz Suite**
   - **Goal:** Ship a deterministic AI-vs-AI fuzz harness (`tests/support/aiMatchFuzz.ts`) with per-match/per-turn invariants, negative-action injection, repeat-same-case determinism, replay/persistence/rematch verification, and `RC_GAME_COUNT`-controlled smoke/RC/soak runs wired into package scripts.
   - **Target Files:** `package.json`

@@ -101,7 +101,7 @@ After every change, check whether this guide still reflects the implementation a
 - `src/entity/DebugPlayer.ts`: debug entity behavior.
 - `src/effects/types.ts`: `EffectType`, `EffectTrigger`, and serialized effect
   shapes.
-- `src/effects/effects.ts`: `MetaEffect`, the serialized-type factory.
+- `src/effects/effects.ts`: `MetaEffect` (the hardened serialized-type factory that rejects unknown types) and `MultiEffect` (a true ordered multi-effect over child settings).
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
 - `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
@@ -540,7 +540,7 @@ not desired design:
   blocked, but winning evaluation is not yet integrated into round progression.
 - Round effects are stored but not meaningfully executed. Circle and rectangle
   collision effects execute, including converted editor push and kill zones.
-- `EffectType.Multi` currently falls back to movement, not a true multi-effect.
+- `EffectType.Multi` is a true ordered multi-effect that applies and serializes its children; `MetaEffect` rejects unknown effect types instead of silently substituting movement.
 - Outer circle/rectangle containment is inferred from mixed structures; line
   segments are collision obstacles only. Leaving an inferred containment
   boundary kills a player; a last-team-standing evaluator exists but is not yet
