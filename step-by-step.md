@@ -484,7 +484,7 @@
   - **Test File:** `tests/e2e_network_match.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
   - **Commit:** `test: cover complete network match`
-- [ ] **Task [10.3]: Harden Untrusted Game Inputs**
+- [x] **Task [10.3]: Harden Untrusted Game Inputs**
   - **Goal:** Add malformed schema, invalid packet, and unauthorized action fuzz-style regression cases.
   - **Target Files:** `tests/input_fuzz.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/input_fuzz.test.ts`

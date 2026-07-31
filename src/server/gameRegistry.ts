@@ -160,6 +160,10 @@ export class GameRegistry {
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
 		if (record.ruleState.phase !== RulePhase.Item) return { ok: false, error: "Items may only be used during the item phase" }
 
+		if (typeof actorId !== "string" || !actorId || typeof itemId !== "string" || !itemId) {
+			return { ok: false, error: "Invalid item use parameter" }
+		}
+
 		const actor = record.handler.getEntityManager().getEntityById(actorId)
 		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
@@ -253,8 +257,10 @@ export class GameRegistry {
 	}
 }
 
-export function isValidInput(input: IInput): boolean {
-	return typeof input.actorId === "string" && input.actorId.length > 0 &&
-		Number.isFinite(input.angle) && input.angle >= 0 && input.angle < 360 &&
-		Number.isFinite(input.power) && input.power > 0 && input.power <= 10
+export function isValidInput(input: unknown): boolean {
+	if (!input || typeof input !== "object") return false
+	const candidate = input as Partial<IInput>
+	return typeof candidate.actorId === "string" && candidate.actorId.length > 0 &&
+		typeof candidate.angle === "number" && Number.isFinite(candidate.angle) && candidate.angle >= 0 && candidate.angle < 360 &&
+		typeof candidate.power === "number" && Number.isFinite(candidate.power) && candidate.power > 0 && candidate.power <= 10
 }
