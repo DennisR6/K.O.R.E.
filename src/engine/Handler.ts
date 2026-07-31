@@ -487,6 +487,17 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getMouseHandler() { return this.mouseHandler }
 
 	public setTickRate(tickRate: number) { this.dt = tickRate } public getCurrentMousePosition(): Vector2D { return { x: 0, y: 0 } }
+	public getTickRate(): number { return this.dt }
+	/** Restores physics lifecycle state after the complete world has been rebuilt. */
+	public restorePhysicsState(state: EngineSettings["physicsState"]): void {
+		for (const system of this.systems) {
+			if (system instanceof PhysicsSystem) system.restoreSnapshotState(state, this.context)
+		}
+	}
+	public getPhysicsState(): NonNullable<EngineSettings["physicsState"]> | undefined {
+		const system = this.systems.find(candidate => candidate instanceof PhysicsSystem) as PhysicsSystem | undefined
+		return system?.toSnapshotState()
+	}
 	public setCurrentMousePosition(_pos: Vector2D): void { }
 	public saveSettings(settings: GameSettings | EngineSettings) { this.settings = settings }
 	public setInitialSettings(settings: GameSettings): void { this.initialSettings = JSON.parse(JSON.stringify(settings)) as GameSettings }
@@ -533,6 +544,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 			matchResult: this.getMatchResult(),
+			physicsState: this.getPhysicsState(),
+			tickRate: this.getTickRate(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
 		}
@@ -678,10 +691,11 @@ export class GameHandlerBuilder {
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
-		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, ...initialSettings } = gameSettings as EngineSettings
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, physicsState: _physicsState, tickRate: _tickRate, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
+		this.engine.setTickRate((gameSettings as EngineSettings).tickRate ?? 1)
 		this.engine.setWorldSize(worldSize)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
 
@@ -715,6 +729,7 @@ export class GameHandlerBuilder {
 			this.engine.setMatchResult(gameSettings.matchResult)
 			this.engine.restoreItemDraws(gameSettings.itemDrawState)
 			this.engine.restoreMapItemPickups(gameSettings.itemPickupState)
+			this.engine.restorePhysicsState(gameSettings.physicsState)
 		}
 
 		return this

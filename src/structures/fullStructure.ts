@@ -2,7 +2,7 @@ import type { EffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IdefaultPhysics, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
-import { StructureCircle, StructureRectangle } from "./types.js";
+import { StructureCircle, StructureLine, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
 
 export class FullStructure implements IStructure, IdefaultPhysics {
@@ -11,7 +11,7 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 		switch (str.type) {
 			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role); break;
 			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role); break;
-			default: this.str = new StructureCircle(str.x, str.y, 20, str.color, []); break;
+			case SHAPE.LINE: this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects); break;
 		}
 	}
 

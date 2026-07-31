@@ -7,6 +7,7 @@ import type { RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
 import type { ItemTarget } from "../item/target.js";
 import type { ItemPickupState } from "../item/types.js";
+import type { PhysicsContactState } from "../physics/physics.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -164,6 +165,10 @@ export interface EngineSettings extends GameSettings {
 	itemDrawState?: ItemDrawState
 	itemPickupState?: ItemPickupState
 	matchResult?: MatchResult
+	/** Contact lifecycle state captured only between completed physics ticks. */
+	physicsState?: PhysicsContactState
+	/** Handler tick duration; defaults to one for legacy snapshots. */
+	tickRate?: number
 	players: PlayerSettings[];
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }

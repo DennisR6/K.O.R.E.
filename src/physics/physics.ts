@@ -59,6 +59,12 @@ export interface PhysicsContact {
 	kind: "circle-circle" | "circle-rectangle" | "circle-line" | "rectangle-rectangle";
 }
 
+/** JSON-safe contact lifecycle state at a completed physics-tick boundary. */
+export interface PhysicsContactState {
+	/** Sorted canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<index>` keys. */
+	activePairs: string[];
+}
+
 /** True when both vector components are finite numbers. */
 export function isFiniteVector(v: Vector2D): boolean {
 	return Number.isFinite(v.x) && Number.isFinite(v.y);

@@ -861,7 +861,7 @@ Use deterministic fixtures and seeded random generation only.
    - no stale contact state after snapshot restore,
    - no contact identity collision between unrelated entity pairs.
   - **Note:** `PhysicsSystem` now carries end-of-tick active contact pairs across frames while retaining a separate per-tick dispatch set for solver passes and CCD substeps. Callbacks therefore run on entry only; physics resolution remains active during persistence, a fully separated pair is removed, and re-entry dispatches again. Pair identity is per-system `WeakMap` object identity rather than mutable structure properties or geometry, so duplicate structures cannot suppress each other. `collision_effect_lifecycle` covers damage entry/persistence/re-entry, identical simultaneous structures, one deadly CCD callback, shield/ghost adapter behavior, fresh-system restoration without stale runtime identity, and rectangle depenetration not retaining a phantom contact. Gates: 554 pass / 3 skip / 0 fail across 166 files; TSC and build clean.
-- [ ] **Task [13.9]: Preserve Physics Continuity Across Snapshot And Restore**
+- [x] **Task [13.9]: Preserve Physics Continuity Across Snapshot And Restore**
   - **Goal:** Prove that snapshotting during movement, contact, collision-effect state, and solver progression produces an identical continuation after restoration.
   - **Target Files:** `src/engine/Handler.ts`, physics snapshot state as required
   - **Test File:** `tests/physics_snapshot_continuity.test.ts`
@@ -873,8 +873,9 @@ Use deterministic fixtures and seeded random generation only.
     - snapshot during persistent contact,
     - snapshot after contact entry but before separation,
     - multi-contact state,
-    - collision-triggered effect state.
-  - **Acceptance:** Restored and uninterrupted handlers must produce identical per-tick snapshots until rest or match completion.
+   - collision-triggered effect state.
+   - **Acceptance:** Restored and uninterrupted handlers must produce identical per-tick snapshots until rest or match completion.
+  - **Note:** `EngineSettings` now carries a JSON-safe `PhysicsContactState` plus handler `tickRate`. `PhysicsSystem` exports sorted active entry-contact pairs using stable entity UUID and structure-index keys, validates restored pairs against the rebuilt live contact set, and rejects malformed, duplicate, unknown, stale, or unsorted state. `GameHandlerBuilder` restores the state only after players and structures are rebuilt. `FullStructure` also reconstructs serialized lines as lines rather than silently substituting a circle. `physics_snapshot_continuity` compares uninterrupted/restored complete settings on every tick through CCD line impact, persistent multi-structure collision effects, separation/re-entry, and malformed-state rejection. Gates: 554 pass / 3 skip / 0 fail across 167 files; TSC and build clean.
 - [ ] **Task [13.10]: Add Deterministic Physics Property Fuzzing**
   - **Goal:** Generate deterministic geometry, body, velocity, mass, and effect combinations and validate physics invariants over many seeded scenarios.
   - **Target Files:** `tests/support/physicsFuzz.ts`, `tests/physics_fuzz.test.ts`, `package.json`

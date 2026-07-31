@@ -1,6 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
-import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsStrategy } from "../physics/physics.js";
+import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
@@ -33,7 +33,7 @@ export class PhysicsSystem implements ISystem {
 	 * not invoke callbacks until a later separation and re-entry.
 	 */
 	private activeContactPairs = new Set<string>();
-	private readonly objectIdentities = new WeakMap<object, number>();
+	private readonly objectIdentities = new WeakMap<object, string>();
 	private nextObjectIdentity = 1;
 
 	/**
@@ -57,6 +57,7 @@ export class PhysicsSystem implements ISystem {
 	 * @see PhysicsStrategy für die mathematischen Details der Berechnung.
 	 */
 	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, _friction: number): void {
+		this.registerContactIdentities(ctx);
 		const activeEntities = ctx.entities.getEntities().filter(e => !e.isDead() && e.physicsEnabled());
 
 		let maxDisplacement = 0;
@@ -181,13 +182,49 @@ export class PhysicsSystem implements ISystem {
 		}
 	}
 
+	/** Exports lifecycle state only at completed outer-tick boundaries. */
+	public toSnapshotState(): PhysicsContactState {
+		return { activePairs: [...this.activeContactPairs].sort() };
+	}
+
+	/** Restores validated contact entries after entities and structures exist. */
+	public restoreSnapshotState(state: PhysicsContactState | undefined, ctx: IGameContext): void {
+		this.registerContactIdentities(ctx);
+		if (!state) {
+			this.activeContactPairs.clear();
+			return;
+		}
+		if (!Array.isArray(state.activePairs) || !state.activePairs.every(pair => typeof pair === "string")) {
+			throw new Error("Invalid physics contact snapshot");
+		}
+		const available = this.collectCurrentContactPairs(ctx);
+		const restored = new Set<string>();
+		let previous = "";
+		for (const pair of state.activePairs) {
+			if (pair <= previous || restored.has(pair) || !available.has(pair)) throw new Error("Invalid physics contact snapshot pair");
+			restored.add(pair);
+			previous = pair;
+		}
+		this.activeContactPairs = restored;
+	}
+
+	private registerContactIdentities(ctx: IGameContext): void {
+		for (const entity of ctx.entities.getEntities()) {
+			const id = typeof (entity as any).getId === "function" ? entity.getId() : this.nextObjectIdentity++;
+			this.objectIdentities.set(entity, `entity:${id}`);
+		}
+		ctx.structures.forEach((structure, index) => {
+			this.objectIdentities.set(structure, `structure:${index}`);
+		});
+	}
+
 	private getObjectIdentity(obj: object): string {
 		let id = this.objectIdentities.get(obj);
 		if (id === undefined) {
-			id = this.nextObjectIdentity++;
+			id = `runtime:${this.nextObjectIdentity++}`;
 			this.objectIdentities.set(obj, id);
 		}
-		return String(id);
+		return id;
 	}
 
 	private getPairKey(a: object, b: object): string {
@@ -244,6 +281,7 @@ export class PhysicsSystem implements ISystem {
 		}
 		return contacts;
 	}
+
 
 	private getOverlapDistance(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): number {
 		const shapeA = entityA.getShape();
