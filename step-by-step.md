@@ -535,7 +535,7 @@
   - **Test File:** `tests/hard_ai_snapshot_validation.test.ts`
   - **Allowed Context:** `src/ai/hardAi.ts`, `src/ai/aiEmitter.ts`
   - **Commit:** `test: validate hard ai snapshot isolation`
-- **Task [11.4]: Validate AI Match Replay Lifecycle**
+- [x] **Task [11.4]: Validate AI Match Replay Lifecycle**
   - **Goal:** Prove an AI-vs-AI match records a valid replay that deterministically reproduces the final entity state, and that the replay boundary rejects malformed actions instead of ignoring them.
   - **Target Files:** `src/replay/player.ts`, `src/replay/types.ts`
   - **Test File:** `tests/ai_replay_lifecycle.test.ts`

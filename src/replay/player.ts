@@ -21,22 +21,14 @@ export class ReplayPlayer {
 
 	public playAll(): PlayerSettings[] {
 		for (const action of this.replay.actions) {
-			if (action.type === "shoot" && action.input) {
-				try {
-					this.handler.resolveTurn({
-						actorId: action.actorId,
-						angle: action.input.angle,
-						power: action.input.power,
-					});
-				} catch {
-					// Ignore invalid action during replay playback
-				}
-			} else if (action.type === "itemUse" && action.itemId) {
-				try {
-					this.handler.useItem(action.actorId, action.itemId, action.target);
-				} catch {
-					// Ignore invalid item use
-				}
+			if (action.type === "shoot") {
+				this.handler.resolveTurn({
+					actorId: action.actorId,
+					angle: action.input!.angle,
+					power: action.input!.power,
+				});
+			} else {
+				this.handler.useItem(action.actorId, action.itemId!, action.target);
 			}
 		}
 		return this.handler.getEntityManager().serialize();
