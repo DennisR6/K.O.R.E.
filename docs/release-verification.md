@@ -26,6 +26,14 @@ Branch: `test` (Section 12 release-candidate qualification complete)
 - Human qualification must not be declared until an actual tester completes the
   two-match protocol and a record contains the required observations.
 
+## Section 15.11 Playtest Regression Coverage
+
+- Focused contract: `tests/playtest_regressions.test.ts`.
+- Confirmed technical or deterministic findings: `0`; no external playtest
+  session is available to produce a defect reproduction.
+- Regression tests added: none. Subjective preferences and unassessed human
+  observations are excluded from technical regression requirements.
+
 ## Verification Summary
 
 All core game systems, data contracts, physics, item economy, AI, authoritative

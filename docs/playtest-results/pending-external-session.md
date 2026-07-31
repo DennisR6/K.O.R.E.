@@ -30,6 +30,15 @@ mistaking an empty results directory for a pass.
 - Preferences: not assessed
 - Unsupported requests: not assessed
 
+## Section 15.11 Regression Findings
+
+- Confirmed technical findings: `0`
+- Confirmed deterministic findings: `0`
+- Regression tests added: none
+- No confirmed playtest defect exists to reproduce because no external session
+  has been completed. Subjective preferences are excluded from regression
+  coverage and are not treated as technical invariants.
+
 ## Traceability And Privacy
 
 - Issue tracker references: none

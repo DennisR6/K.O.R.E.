@@ -1245,7 +1245,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Required Evidence Per Session:** build commit, platform, controls used, completed matches, observed blockers, tester-reported issues, result and match length, willingness-to-replay response.
   - **Privacy Constraint:** Store only the minimum tester identity information needed for traceability.
   - **Note:** Added `docs/playtest-results/pending-external-session.md` and `tests/playtest_evidence_gate.test.ts`. No external tester session is available, so the evidence status is explicitly **BLOCKED / PENDING**; no human result or tester identity was fabricated. The gate will validate completed records when sessions are added.
-- [ ] **Task [15.11]: Convert Playtest Defects Into Regression Tests**
+- [x] **Task [15.11]: Convert Playtest Defects Into Regression Tests**
   - **Goal:** Reproduce every confirmed technical or deterministic playtest defect and convert it into the lowest appropriate automated regression test.
   - **Target Files:** affected source files and focused tests
   - **Test File:** `tests/playtest_regressions.test.ts` plus focused subsystem tests
@@ -1254,6 +1254,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Classification:** engine defect, physics defect, UI defect, map defect, rules defect, balance issue, usability issue.
   - **Constraint:** Do not encode subjective preference as a technical invariant unless it has been accepted as a product requirement.
   - **Acceptance:** Every fixed blocker has a deterministic regression test or a documented reason why only human verification is possible.
+  - **Note:** `tests/playtest_regressions.test.ts` records the empty confirmed-findings contract from the pending Section 15.10 evidence. There are no confirmed technical or deterministic playtest defects to reproduce, no subsystem regression tests to add, and subjective preferences remain excluded from technical invariants.
 - [ ] **Task [15.12]: Qualify The Gameplay Release Candidate**
   - **Goal:** Combine automated content qualification, AI tournaments, softlock detection, balance evidence, vertical-slice E2E results, packaged-build checks, and actual human playtest evidence into the final gameplay release gate.
   - **Target Files:** `docs/gameplay-balance-report.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
