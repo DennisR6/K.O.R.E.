@@ -1154,7 +1154,7 @@ Human playtesting must evaluate clarity, controls, pacing, fairness, feedback, a
 
 Automated evidence cannot prove that the game is fun. Human feedback cannot replace deterministic technical regression tests. Both are required.
 
-- [ ] **Task [15.1]: Define The Gameplay Qualification Contract**
+- [x] **Task [15.1]: Define The Gameplay Qualification Contract**
   - **Goal:** Define measurable technical playability criteria and a repeatable human-playtest protocol.
   - **Target Files:** `docs/gameplay-qualification.md`, `docs/playtest-protocol.md`
   - **Test File:** `tests/gameplay_qualification_contract.test.ts`
@@ -1162,6 +1162,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `docs: define gameplay qualification contract`
   - **Technical Playability Criteria:** valid spawn, legal first action, advancing rule phases, bounded playback, no softlock, winner or explicit draw, stable replay, stable snapshot restore, no post-completion mutation.
   - **Human Criteria:** control comprehension, objective comprehension, phase comprehension, action feedback, camera usability, pacing, perceived fairness, willingness to play another match.
+  - **Note:** `docs/gameplay-qualification.md` defines the nine per-configuration technical pass/fail criteria, evidence record, 1,200-frame playback bound, explicit winner/draw requirement, softlock evidence, replay/restore equality, and terminal immutability. `docs/playtest-protocol.md` defines the repeatable two-match human session, no-explanation first match, 1-5 ratings, suggested measurable signals, blocker classification, and session record. `tests/gameplay_qualification_contract.test.ts` verifies both documents and this checklist linkage. This task defines the contract only; shipped-content matrix execution and human evidence remain Section 15.2 onward.
 - [ ] **Task [15.2]: Inventory The Shipped Gameplay Matrix**
   - **Goal:** Produce a machine-readable inventory of all maps, modes, team counts, player counts, AI difficulties, item sets, and supported platform/control combinations intended for release.
   - **Target Files:** content registry, `docs/gameplay-matrix.md`
