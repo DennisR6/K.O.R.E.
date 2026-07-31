@@ -8,6 +8,8 @@ import { validateGameSettings, type GameSettings } from "../settings/settings.js
 import { GameDatabase, type StoredGame } from "./db.js";
 import { ReplayRecorder } from "../replay/recorder.js";
 import type { ReplayDocument } from "../replay/types.js";
+import { isValidInput } from "../input/validate.js";
+export { isValidInput } from "../input/validate.js";
 
 export type GameRecord = {
 	id: string;
@@ -255,12 +257,4 @@ export class GameRegistry {
 		record.lastAccess = Date.now()
 		return record
 	}
-}
-
-export function isValidInput(input: unknown): boolean {
-	if (!input || typeof input !== "object") return false
-	const candidate = input as Partial<IInput>
-	return typeof candidate.actorId === "string" && candidate.actorId.length > 0 &&
-		typeof candidate.angle === "number" && Number.isFinite(candidate.angle) && candidate.angle >= 0 && candidate.angle < 360 &&
-		typeof candidate.power === "number" && Number.isFinite(candidate.power) && candidate.power > 0 && candidate.power <= 10
 }

@@ -2,6 +2,7 @@ import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
 import { GameState, type IMouse } from "../engine/types.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { IGameContext, ISystem } from "./types.js";
+import { isValidInput } from "../input/validate.js";
 
 export interface IUiSystem extends ISystem, IDrawer, IMouse { }
 
@@ -17,6 +18,7 @@ export class UiSystem implements IUiSystem {
 	constructor() { }
 
 	private getLocalInput(start: Vector2D, now: Vector2D): { angle: number, power: number } | undefined {
+		if (![start.x, start.y, now.x, now.y].every(Number.isFinite)) return undefined;
 		const dx = now.x - start.x;
 		const dy = now.y - start.y;
 		let rawPower = Math.sqrt(dx * dx + dy * dy);
@@ -66,8 +68,13 @@ export class UiSystem implements IUiSystem {
 		if (this.aimAngle !== null && this.chargePower !== null && this.selectedActorId !== null) {
 			const actor = ctx.entities.getEntityById(this.selectedActorId);
 			if (actor && !actor.isDead() && (actor.getTeam().length === 0 || actor.getTeam().includes(ctx.activeTeam))) {
-				actor.setRotation(this.aimAngle);
-				ctx.mouse.turn = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
+				const input = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
+				if (!isValidInput(input)) {
+					this.clearAimAndCharge();
+					return;
+				}
+				actor.setRotation(input.angle);
+				ctx.mouse.turn = input;
 				ctx.state = GameState.Turn_done;
 				this.clearAimAndCharge();
 				this.clearInput();
@@ -78,7 +85,7 @@ export class UiSystem implements IUiSystem {
 
 		if (!this.start) return
 		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y)
-		if (!actor || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
+		if (!actor || actor.isDead() || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
 			this.clearInput()
 			return
 		}
@@ -88,8 +95,13 @@ export class UiSystem implements IUiSystem {
 			this.clearInput()
 			return
 		}
-		actor.setRotation(e.angle);
-		ctx.mouse.turn = { ...e, actorId: actor.getId() }
+		const input = { ...e, actorId: actor.getId() };
+		if (!isValidInput(input)) {
+			this.clearInput();
+			return;
+		}
+		actor.setRotation(input.angle);
+		ctx.mouse.turn = input
 		ctx.state = GameState.Turn_done
 		this.clearInput()
 	}
@@ -110,6 +122,7 @@ export class UiSystem implements IUiSystem {
 	}
 
 	updateMouse(x: number, y: number): void {
+		if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 		const pos = { x, y }
 		this.currentMouse = { ...pos }
 	}

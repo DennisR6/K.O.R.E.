@@ -1036,7 +1036,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** entity position reflects handler state, dead entities are represented correctly, structures use their actual role and geometry, effect visuals follow serialized effect state, final hard sync is visible without drift.
   - **Negative Tests:** rendering cannot mutate the handler, stale cached entities cannot survive rematch, containment-only structures are not rendered as filled obstacles unless intended.
   - **Note:** Implemented `src/ui/AuthoritativeGameplayRenderer.ts` as the stateless world layer invoked by `GameHandler.drawWorld()`. It renders live entity snapshots, active-team state, death markers, serialized effects, inventory/map pickups, actual structure roles and geometry, playback status, and results without retaining mutable match data. `tests/gameplay_scene_rendering.test.ts` verifies direct authoritative positions, effect/death presentation, containment outlines, non-mutation, hard-sync visibility, and rematch freshness.
-- [ ] **Task [14.6]: Connect Player Input To Validated Actions**
+- [x] **Task [14.6]: Connect Player Input To Validated Actions**
   - **Goal:** Convert mouse, touch, keyboard, or controller interactions into validated actor selection, aim, power, shot, and cancellation operations.
   - **Target Files:** input controller, gameplay scene, `src/emitter/EngineEmitter.ts`
   - **Test File:** `tests/gameplay_input_integration.test.ts`
@@ -1046,6 +1046,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** active actor selection, aim update, minimum and maximum legal power, shot submission exactly once, input disabled during playback.
   - **Negative Tests:** inactive-team actor, dead actor, non-finite input, out-of-range power, duplicate click or touch, input after `Game_over`.
   - **State Guarantee:** Every rejected UI action leaves the handler byte-identical.
+   - **Note:** Added the shared `src/input/validate.ts` shot boundary and connected mouse/touch UI interpretation through actor, team, dead-state, finite-coordinate, and power validation before the authoritative local emitter starts playback. Duplicate and blocked input is ignored without changing the handler snapshot; `tests/gameplay_input_integration.test.ts` covers the complete path and rejection cases.
 - [ ] **Task [14.7]: Integrate Items And Rule Phases**
   - **Goal:** Make Item, Physics, Complete, winner, and draw phases understandable and controllable through the gameplay UI.
   - **Target Files:** gameplay UI, item controls, phase controls

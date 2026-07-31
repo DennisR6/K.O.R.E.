@@ -6,7 +6,7 @@ import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types
 import { TurnSystem } from "../systems/TurnSystem.js";
 import type { ItemTarget } from "../item/target.js";
 import { ReplayRecorder } from "../replay/recorder.js";
-import { isValidInput } from "../server/gameRegistry.js";
+import { isValidInput } from "../input/validate.js";
 
 /**
  * Der "Local Player" Emitter.
