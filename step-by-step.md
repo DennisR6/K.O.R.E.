@@ -1008,14 +1008,15 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** play button creates exactly one handler, canonical settings are used, scene changes exactly once, loading errors are visible, repeated clicks do not create duplicate matches.
    - **Negative Tests:** invalid settings do not enter gameplay, failed handler construction leaves the menu usable, stale handlers are not reused accidentally.
   - **Note:** `src/scenes/LocalMatchSceneRouter.ts` now owns the menu-to-match boundary. `src/main.ts` renders and routes input through its active authoritative handler; `src/menu/Menu.ts` invokes a local-play callback and displays construction failures. `tests/menu_match_start.integration.test.ts` proves one canonical handler is created, duplicate starts are ignored, and failed construction retains the usable menu with a visible error source. Gates: 564 pass / 3 skip / 0 fail across 172 files; TSC and browser build clean.
-- [ ] **Task [14.3]: Clean And Validate The Reference Map**
+- [x] **Task [14.3]: Clean And Validate The Reference Map**
   - **Goal:** Replace temporary geometry with an intentional reference arena using explicit containment roles, solid obstacles, hazards, safe spawns, and matching visual geometry.
   - **Target Files:** reference-map settings, map renderer assets
   - **Test File:** `tests/reference_map_validation.test.ts`
   - **Allowed Context:** map settings, structures, containment, physics qualification tests
   - **Commit:** `fix: clean reference gameplay map`
   - **Required Invariants:** one unambiguous outer containment region, no accidental `"both"` role, no spawn inside solid geometry, no immediate hazard overlap, no invisible collision geometry, no visible obstacle without collision geometry, enough space for meaningful movement, all intended areas are reachable.
-  - **Negative Tests:** reject overlapping spawns, reject out-of-bounds spawns, reject ambiguous outer boundaries, reject zero-size or invalid structures.
+   - **Negative Tests:** reject overlapping spawns, reject out-of-bounds spawns, reject ambiguous outer boundaries, reject zero-size or invalid structures.
+  - **Note:** Canonical Ice Duel now derives an explicit containment rectangle and explicit visible solid roles without changing legacy Ice Map fixtures. `validateReferenceMapSettings()` rejects ambiguous containment, invalid/out-of-world geometry, invisible solids, and overlapping or out-of-world spawns. `tests/reference_map_validation.test.ts` covers the reference contract and required negative cases.
 - [ ] **Task [14.4]: Validate Spawn, Selection, Camera, And Initial View**
   - **Goal:** Ensure every player starts alive, visible, selectable, fully contained, and correctly framed by the initial camera.
   - **Target Files:** gameplay scene, camera controller, entity selection code
