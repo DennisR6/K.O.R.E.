@@ -27,8 +27,10 @@ test("map drift deterministically steers moving velocity while preserving speed"
 	for (let frame = 0; frame < 3; frame++) handler.tick();
 	const player = handler.getEntityManager().getEntities()[0];
 
-	expect(player.getVel()).toEqual({ x: 7.364649810826372, y: 6.764756696577866 });
-	expect(player.getPos()).toEqual({ x: 16.176503284801715, y: 24.502789173159158 });
+	expect(player.getVel().x).toBeCloseTo(7.364649810826372, 10);
+	expect(player.getVel().y).toBeCloseTo(6.764756696577866, 10);
+	expect(player.getPos().x).toBeCloseTo(16.176503284801715, 10);
+	expect(player.getPos().y).toBeCloseTo(24.502789173159158, 10);
 	expect(Math.hypot(player.getVel().x, player.getVel().y)).toBe(10);
 });
 

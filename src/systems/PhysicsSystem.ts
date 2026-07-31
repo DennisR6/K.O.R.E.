@@ -1,6 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
-import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, type IPhysics, type PhysicsStrategy } from "../physics/physics.js";
+import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISystem } from "./types.js";
 
@@ -48,18 +48,56 @@ export class PhysicsSystem implements ISystem {
 	 * 
 	 * @see PhysicsStrategy für die mathematischen Details der Berechnung.
 	 */
-	ticker(ctx: IGameContext, _dt: number = this.DEFAULTFPS, _friction: number): void {
+	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, _friction: number): void {
+		const activeEntities = ctx.entities.getEntities().filter(e => !e.isDead() && e.physicsEnabled());
+
+		let maxDisplacement = 0;
+		for (const e of activeEntities) {
+			const vel = e.getVel();
+			const disp = Math.hypot(vel.x, vel.y) * dt;
+			if (disp > maxDisplacement) {
+				maxDisplacement = disp;
+			}
+		}
+
+		const stepSize = CCD_MAX_STEP_SIZE;
+		const substeps = maxDisplacement > stepSize
+			? Math.min(Math.ceil(maxDisplacement / stepSize), MAX_CCD_SUBSTEPS)
+			: 1;
+
+		const contactedPairsThisTick = new Set<string>();
+		if (substeps <= 1) {
+			this.resolveAllCollisions(ctx, contactedPairsThisTick);
+		} else {
+			// Substep CCD: rewind entities to start-of-tick position
+			for (const e of activeEntities) {
+				const vel = e.getVel();
+				const pos = e.getPos();
+				e.setPos({
+					x: pos.x - vel.x * dt,
+					y: pos.y - vel.y * dt,
+				});
+			}
+
+			const subDt = dt / substeps;
+
+			for (let step = 0; step < substeps; step++) {
+				for (const e of activeEntities) {
+					if (e.isDead() || !e.physicsEnabled()) continue;
+					const vel = e.getVel();
+					const pos = e.getPos();
+					e.setPos({
+						x: pos.x + vel.x * subDt,
+						y: pos.y + vel.y * subDt,
+					});
+				}
+				this.resolveAllCollisions(ctx, contactedPairsThisTick);
+			}
+		}
+
 		let totalMovement = 0;
-
-		this.resolveAllCollisions(ctx);
-
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
-			if (entity.isDead() || !entity.physicsEnabled()) return
-			// this.strategy.applyFriction(entity, dt)
-
-			// entity.tick(dt, friction);
-			// this.constrainToMap(entity, ctx);
-
+			if (entity.isDead() || !entity.physicsEnabled()) return;
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
 				entity.setVel({ x: 0, y: 0 });
@@ -74,13 +112,12 @@ export class PhysicsSystem implements ISystem {
 	 * Wendet Kollisionen und Reibung an und stoppt Objekte, die die 
 	 * Mindestgeschwindigkeit unterschreiten.
 	 */
-	private resolveAllCollisions(ctx: IGameContext) {
+	private resolveAllCollisions(ctx: IGameContext, contactedPairsThisTick: Set<string> = new Set<string>()) {
 		const { entities, structures } = ctx;
 		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
 		);
-		const contactedPairsThisTick = new Set<string>();
 
 		let prevTotalOverlap = Infinity;
 		for (let iter = 0; iter < MAX_CONTACT_SOLVER_ITERATIONS; iter++) {
@@ -131,9 +168,21 @@ export class PhysicsSystem implements ISystem {
 		}
 	}
 
+	private getObjectIdentity(obj: any): string {
+		if (obj.getId && typeof obj.getId === "function") return String(obj.getId());
+		if (obj.id !== undefined) return String(obj.id);
+		if (obj._physicsId) return obj._physicsId;
+		const pos = obj.getPos ? obj.getPos() : { x: 0, y: 0 };
+		const bounds = obj.getBounds ? obj.getBounds() : { x: 0, y: 0 };
+		const shape = obj.getShape ? obj.getShape() : "obj";
+		const id = `${shape}_${pos.x}_${pos.y}_${bounds.x}_${bounds.y}`;
+		obj._physicsId = id;
+		return id;
+	}
+
 	private getPairKey(a: any, b: any): string {
-		const idA = a.getId ? a.getId() : (a.id ?? `${a.getPos?.().x ?? 0}_${a.getPos?.().y ?? 0}`);
-		const idB = b.getId ? b.getId() : (b.id ?? `${b.getPos?.().x ?? 0}_${b.getPos?.().y ?? 0}`);
+		const idA = this.getObjectIdentity(a);
+		const idB = this.getObjectIdentity(b);
 		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
 	}
 

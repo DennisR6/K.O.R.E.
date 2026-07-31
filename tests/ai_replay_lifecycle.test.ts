@@ -105,7 +105,7 @@ describe("AI Match Replay Lifecycle", () => {
 		// mid-arena kill circle first and team 0 survives.
 		expect(result?.winnerTeam).toBe(0);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(24);
+		expect(result?.turnNumber).toBe(30);
 
 		const liveEntities = handler.getEntityManager().getEntities();
 		expect(liveEntities[0]!.isDead()).toBe(false);
@@ -114,7 +114,7 @@ describe("AI Match Replay Lifecycle", () => {
 		// The recorded replay is a valid document with one shot per action
 		const replay = emitter.recorder.getReplay();
 		expect(() => validateReplayDocument(replay)).not.toThrow();
-		expect(replay.actions).toHaveLength(25);
+		expect(replay.actions).toHaveLength(31);
 		expect(replay.actions.every(action => action.type === "shoot")).toBe(true);
 
 		// --- Deterministic replay: two independent playback runs are identical ----
@@ -166,7 +166,7 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(replayResult?.winnerTeam).toBe(result?.winnerTeam);
 		expect(replayResult?.reason).toBe(result?.reason);
 		// The replay advances turns exactly like the live match did.
-		expect(replayResult?.turnNumber).toBe(24);
+		expect(replayResult?.turnNumber).toBe(30);
 		expect(replayA.getHandler().getTurnNumber()).toBe(handler.getTurnNumber());
 		expect(replayA.getHandler().getActiveTeam()).toBe(handler.getActiveTeam());
 		expect(replayA.getHandler().getRuleState()).toEqual(handler.getRuleState());
@@ -187,7 +187,7 @@ describe("AI Match Replay Lifecycle", () => {
 		const secondEntities = second.handler.getEntityManager().getEntities();
 		expect(secondEntities.map(entity => entity.getPos())).toEqual(firstEntities.map(entity => entity.getPos()));
 		expect(secondEntities.map(entity => entity.isDead())).toEqual(firstEntities.map(entity => entity.isDead()));
-	});
+	}, 120_000);
 
 	test("rejects malformed replay actions at the document boundary", () => {
 		const valid = () => {

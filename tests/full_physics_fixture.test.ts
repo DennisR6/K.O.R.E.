@@ -55,14 +55,14 @@ test("a fixed seed produces the complete physics regression snapshot", () => {
 	}))).toEqual([
 		{
 			id: moving.id,
-			position: { x: 68.61414644859991, y: 112.64749181438843 },
-			velocity: { x: 2.051172411643234, y: 2.568003415882364 },
+			position: { x: 66.83043913872267, y: 110.60364891374049 },
+			velocity: { x: 1.346619659898994, y: 2.637705526451129 },
 			isDead: false,
 		},
 		{
 			id: target.id,
-			position: { x: 86.02821553122183, y: 102.97165587873697 },
-			velocity: { x: 0.9634462067846066, y: -0.09654336173581375 },
+			position: { x: 85.95805590899384, y: 105.00384661452777 },
+			velocity: { x: 2.027026314315535, y: 0.33565438851029156 },
 			isDead: false,
 		},
 		{

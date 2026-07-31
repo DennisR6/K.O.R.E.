@@ -36,6 +36,12 @@ export const PHYSICS_CONTACT_PERCENT = 0.2;
 /** Upper bound for multi-contact solver passes (Section 13.5). */
 export const MAX_CONTACT_SOLVER_ITERATIONS = 16;
 
+/** Maximum spatial displacement per substep before CCD triggers subdivision (Section 13.6). */
+export const CCD_MAX_STEP_SIZE = 4.0;
+
+/** Upper bound for continuous collision detection substeps per tick (Section 13.6). */
+export const MAX_CCD_SUBSTEPS = 16;
+
 /** Per-contact impulse magnitude clamp (circle/rectangle exterior contacts). */
 export const MAX_COLLISION_IMPULSE = 50;
 

@@ -131,7 +131,10 @@ export class Player implements IEntity {
 	public setFriction(friction: number | undefined): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public addHP(hp: number): void { this.hp += hp; }
+	public addHP(hp: number): void {
+		this.hp += hp;
+		if (this.hp <= 0) this.setIsDead(true);
+	}
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }

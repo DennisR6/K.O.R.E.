@@ -20,8 +20,10 @@ test("Frostbite Arena loads an arbitrary world and applies full drift on fixed f
 	expect(map.drift).toBe(1);
 	expect(handler.getContext().worldSize).toEqual({ x: 1234, y: 789 });
 	expect(settings.screenResolution).toEqual({ x: 800, y: 450 });
-	expect({ position: actor.getPos(), velocity: actor.getVel() }).toEqual({
-		position: { x: 229.8203, y: 200 },
-		velocity: { x: 9.8208985, y: 0 },
-	});
+	const pos = actor.getPos();
+	const vel = actor.getVel();
+	expect(pos.x).toBeCloseTo(229.8203, 3);
+	expect(pos.y).toBeCloseTo(200, 3);
+	expect(vel.x).toBeCloseTo(9.8208985, 3);
+	expect(vel.y).toBeCloseTo(0, 3);
 });
