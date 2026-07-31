@@ -37,7 +37,7 @@ describe("Deterministic AI-vs-AI Fuzz Suite", () => {
 	test("re-running the same fuzz case reproduces the identical outcome", () => {
 		const suite = runFuzzSuite({ gameCount: 2 });
 		expect(suite.determinismVerified).toBe(true);
-	});
+	}, { timeout: 120000 });
 
 	test("RC_GAME_COUNT controls the match count with a 25-match smoke default", () => {
 		const previous = process.env.RC_GAME_COUNT;

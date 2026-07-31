@@ -1199,15 +1199,16 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Negative Signals:** matches ending before meaningful player agency, matches regularly reaching safety limits, one map producing extreme duration outliers, deterministic loops producing artificial long matches.
   - **Constraint:** Thresholds must be mode-specific rather than universal.
    - **Note:** `tests/support/aiMatchFuzz.ts` records accepted actions, simulated frames, deterministic engine work, and explicit instant-death/turn-limit signals, then summarizes min/median/p90/p95/max and rates with nearest-rank percentiles. `tests/match_length_distribution.test.ts` verifies the calculations, mode-specific thresholds, duplicate-run equality, and a 10-match hazard-seeking pacing fixture. `docs/gameplay-balance-report.md` records 3 / 7 / 11 / 11 / 11 turns, 3,030 simulated frames, 3,100 engine-work units, 0% draws, 0% instant deaths, and 0% turn-limit matches. It also records the real limitation that stock hard AI can still fail to seek lethal hazards and hit the safety limit.
-- [ ] **Task [15.6]: Measure Spawn And Team Fairness**
+- [x] **Task [15.6]: Measure Spawn And Team Fairness**
   - **Goal:** Detect map-side, spawn-order, first-turn, team-index, and AI-pairing advantages using mirrored deterministic tournaments.
   - **Target Files:** gameplay tournament harness
   - **Test File:** `tests/gameplay_fairness_tournament.test.ts`
   - **Allowed Context:** maps, AI, game modes, deterministic fuzz harness
   - **Commit:** `test: measure gameplay fairness`
   - **Required Method:** run each seed with teams in original positions, rerun with sides swapped, rerun with first turn swapped where supported, compare winner and draw distributions.
-  - **Warning Signals:** one spawn side wins disproportionately, team index predicts winner, first turn dominates independent of AI, one map geometry produces unavoidable elimination.
-  - **Output:** Warnings may require human review before becoming hard release failures.
+   - **Warning Signals:** one spawn side wins disproportionately, team index predicts winner, first turn dominates independent of AI, one map geometry produces unavoidable elimination.
+   - **Output:** Warnings may require human review before becoming hard release failures.
+   - **Note:** `tests/support/gameplayFairnessTournament.ts` runs each seed in original, side-swapped, and first-turn-swapped variants, recording physical-side wins, team-index wins, draws, ongoing matches, and invariant violations. `tests/gameplay_fairness_tournament.test.ts` verifies 24 deterministic smoke matches and treats imbalance/safety-limit findings as warnings only. The focused command is `bun run test:gameplay-tournament`.
 - [ ] **Task [15.7]: Validate Meaningful Player Agency**
   - **Goal:** Detect configurations where legal actions exist but have no meaningful consequences or only one forced action can ever succeed.
   - **Target Files:** gameplay analysis harness

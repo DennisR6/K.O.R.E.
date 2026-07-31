@@ -52,3 +52,27 @@ so it can reach the safety limit indefinitely on this arena. That limitation is
 not hidden by this pacing qualification and remains relevant to later AI/agency
 work. The pacing harness still fails any fixture that actually reaches its
 turn limit.
+
+## Section 15.6 Spawn And Team Fairness
+
+Command: `bun run test:gameplay-tournament`
+
+The deterministic smoke tournament runs 8 seeds in each of three variants:
+original placement, swapped spawn sides, and swapped first turn. It records
+winner distributions by physical side and team index. Fairness imbalance and
+safety-limit findings are warnings for human review, not hard release failures.
+
+The test also requires every seeded run to complete without an invariant or
+playback violation and requires a byte-for-byte repeat of the same tournament.
+
+### Deterministic Smoke Output
+
+| Variant | Matches | Left wins | Right wins | Team 0 wins | Team 1 wins | Draws | Ongoing warnings |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original | 8 | 0 | 0 | 0 | 0 | 0 | 8 |
+| Swapped sides | 8 | 0 | 0 | 0 | 0 | 0 | 8 |
+| Swapped first turn | 8 | 0 | 0 | 0 | 0 | 0 | 8 |
+
+The current hard-AI arena does not complete these fairness samples within its
+40-turn bound, so no spawn-side or team-index winner imbalance is inferred.
+The ongoing result is retained as a warning for the softlock and agency tasks.
