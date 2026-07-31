@@ -837,7 +837,7 @@ Use deterministic fixtures and seeded random generation only.
     - no friction value causes sign-flipping jitter,
     - no entity wakes after reaching a valid rest state without a new force.
   - **Implementation Note:** Pure test task — no source changes. `tests/physics_energy_invariants.test.ts` covers: 4 friction/drag monotonicity tests (exponential, linear, stop threshold, no-wake); 4 restitution contract tests (zero-restitution no-energy-increase, restitution-1 energy conservation, stationary no-velocity, separating no-impulse); 3 drift tests (drift=0 direction unchanged, drift=1 speed preserved, drift skipped below stopThreshold); 4 negative tests (no energy from stationary collision, no speed increase over 100 wall-bounce ticks, no sign-flip jitter, no wake after rest). All 16 tests pass. Gates: 548 pass / 3 skip / 0 fail across 165 files; TSC clean.
-- [ ] **Task [13.8]: Fire Collision Effects Exactly Once Per Contact Event**
+- [x] **Task [13.8]: Fire Collision Effects Exactly Once Per Contact Event**
   - **Goal:** Distinguish contact entry, persistent contact, and contact exit so collision-triggered effects do not fire once per solver iteration or once per physics substep.
   - **Target Files:** `src/systems/PhysicsSystem.ts`, `src/effects/*.ts`
   - **Test File:** `tests/collision_effect_lifecycle.test.ts`
@@ -857,9 +857,10 @@ Use deterministic fixtures and seeded random generation only.
     - simultaneous contacts with different structures.
   - **Negative Tests:**
     - no repeated damage while resting against one wall unless configured,
-    - no duplicate death event,
-    - no stale contact state after snapshot restore,
-    - no contact identity collision between unrelated entity pairs.
+   - no duplicate death event,
+   - no stale contact state after snapshot restore,
+   - no contact identity collision between unrelated entity pairs.
+  - **Note:** `PhysicsSystem` now carries end-of-tick active contact pairs across frames while retaining a separate per-tick dispatch set for solver passes and CCD substeps. Callbacks therefore run on entry only; physics resolution remains active during persistence, a fully separated pair is removed, and re-entry dispatches again. Pair identity is per-system `WeakMap` object identity rather than mutable structure properties or geometry, so duplicate structures cannot suppress each other. `collision_effect_lifecycle` covers damage entry/persistence/re-entry, identical simultaneous structures, one deadly CCD callback, shield/ghost adapter behavior, fresh-system restoration without stale runtime identity, and rectangle depenetration not retaining a phantom contact. Gates: 554 pass / 3 skip / 0 fail across 166 files; TSC and build clean.
 - [ ] **Task [13.9]: Preserve Physics Continuity Across Snapshot And Restore**
   - **Goal:** Prove that snapshotting during movement, contact, collision-effect state, and solver progression produces an identical continuation after restoration.
   - **Target Files:** `src/engine/Handler.ts`, physics snapshot state as required

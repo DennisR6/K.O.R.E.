@@ -27,6 +27,14 @@ export class PhysicsSystem implements ISystem {
 	strategy: PhysicsStrategy
 
 	DEFAULTFPS: number;
+	/**
+	 * Pairs that still touch after the previous completed physics tick. Collision
+	 * effects are edge-triggered: persistent contacts continue to resolve but do
+	 * not invoke callbacks until a later separation and re-entry.
+	 */
+	private activeContactPairs = new Set<string>();
+	private readonly objectIdentities = new WeakMap<object, number>();
+	private nextObjectIdentity = 1;
 
 	/**
 	 * @param strategy - Die zu verwendende Physik-Logik.
@@ -105,6 +113,11 @@ export class PhysicsSystem implements ISystem {
 				totalMovement += speed;
 			}
 		});
+
+		// Only contacts that remain at the end of this complete tick are carried
+		// forward. A one-call rectangle/line depenetration must not suppress a
+		// later genuine entry merely because it was touched earlier this tick.
+		this.activeContactPairs = this.collectCurrentContactPairs(ctx);
 	}
 
 	/**
@@ -168,19 +181,16 @@ export class PhysicsSystem implements ISystem {
 		}
 	}
 
-	private getObjectIdentity(obj: any): string {
-		if (obj.getId && typeof obj.getId === "function") return String(obj.getId());
-		if (obj.id !== undefined) return String(obj.id);
-		if (obj._physicsId) return obj._physicsId;
-		const pos = obj.getPos ? obj.getPos() : { x: 0, y: 0 };
-		const bounds = obj.getBounds ? obj.getBounds() : { x: 0, y: 0 };
-		const shape = obj.getShape ? obj.getShape() : "obj";
-		const id = `${shape}_${pos.x}_${pos.y}_${bounds.x}_${bounds.y}`;
-		obj._physicsId = id;
-		return id;
+	private getObjectIdentity(obj: object): string {
+		let id = this.objectIdentities.get(obj);
+		if (id === undefined) {
+			id = this.nextObjectIdentity++;
+			this.objectIdentities.set(obj, id);
+		}
+		return String(id);
 	}
 
-	private getPairKey(a: any, b: any): string {
+	private getPairKey(a: object, b: object): string {
 		const idA = this.getObjectIdentity(a);
 		const idB = this.getObjectIdentity(b);
 		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
@@ -192,7 +202,7 @@ export class PhysicsSystem implements ISystem {
 		contactedPairs: Set<string>,
 	) {
 		const pairKey = this.getPairKey(entityA, entityB);
-		if (contactedPairs.has(pairKey)) {
+		if (contactedPairs.has(pairKey) || this.activeContactPairs.has(pairKey)) {
 			const origA = entityA.onCollision;
 			const origB = entityB.onCollision;
 			entityA.onCollision = () => {};
@@ -207,6 +217,32 @@ export class PhysicsSystem implements ISystem {
 			contactedPairs.add(pairKey);
 			this.strategy.handleCollision(entityA, entityB);
 		}
+	}
+
+	/**
+	 * Returns the eligible contacts after all solver/CCD passes. This is kept
+	 * separate from the per-tick dispatch set so an entry followed by immediate
+	 * separation does not become a stale persistent contact.
+	 */
+	private collectCurrentContactPairs(ctx: IGameContext): Set<string> {
+		const contacts = new Set<string>();
+		const entities = ctx.entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled());
+		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
+			getOuterContainmentBoundaries(ctx.structures as unknown as IPhysics<SHAPE>[]),
+		);
+
+		for (let i = 0; i < entities.length; i++) {
+			const entity = entities[i];
+			for (let j = i + 1; j < entities.length; j++) {
+				const other = entities[j];
+				if (this.strategy.checkCollision(entity, other)) contacts.add(this.getPairKey(entity, other));
+			}
+			for (const structure of ctx.structures as Structure<SHAPE>[]) {
+				if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries)) continue;
+				if (this.strategy.checkCollision(entity, structure)) contacts.add(this.getPairKey(entity, structure));
+			}
+		}
+		return contacts;
 	}
 
 	private getOverlapDistance(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): number {
