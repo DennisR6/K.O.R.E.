@@ -8,12 +8,14 @@
 		"dev": "concurrently \"bun run server.ts\" \"bun run watch:ts\"",
 		"watch:ts": "tsc --watch",
 		"serve": "live-server",
-		"build": "tsc",
+		"build": "tsc && cp index.html dist/ && cp -r public dist/",
 		"test": "bun test",
 		"createAssets": "bun run scripts/createAssetPack.ts",
-		"desktop": "tauri dev"
+		"desktop": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri dev",
+		"desktop:build": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri build"
 	},
 	"devDependencies": {
+		"@tauri-apps/cli": "^2.1.0",
 		"@types/bun": "latest",
 		"@types/express": "^5.0.6",
 		"@types/node": "^25.9.2",

@@ -57,7 +57,17 @@ bun run start
 
 ### 6. Desktop Target (Tauri)
 
-- **Verification:** Desktop packaging configuration in `src-tauri/tauri.conf.json`, Steam Deck (1280x800) and desktop display layout scaling verified in `tests/desktop_packaging.test.ts` and `tests/scaling_layout.test.ts`.
+```sh
+cargo check --manifest-path src-tauri/Cargo.toml
+```
+- **Exit Code:** 0
+- **Result:** Cargo checked `src-tauri` project scaffold (`Cargo.toml`, `build.rs`, `src/main.rs`, `tauri.conf.json`) cleanly.
+
+```sh
+bun run desktop:build
+```
+- **Exit Code:** 0
+- **Result:** Built release executable binary (`src-tauri/target/release/slipstrike`) and Debian package (`src-tauri/target/release/bundle/deb/Slipstrike_0.0.1_amd64.deb`).
 - **Status:** PASS
 
 ### 7. Mobile & Offline Target (PWA)
