@@ -490,7 +490,7 @@
   - **Test File:** `tests/input_fuzz.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/item/validate.ts`
   - **Commit:** `test: harden untrusted game inputs`
-- [ ] **Task [10.4]: Harden Declarative Mod Loading**
+- [x] **Task [10.4]: Harden Declarative Mod Loading**
   - **Goal:** Audit every game-data boundary to ensure external content cannot execute code or bypass the effect whitelist.
   - **Target Files:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/mod_security.test.ts`

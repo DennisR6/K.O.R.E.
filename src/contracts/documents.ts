@@ -104,6 +104,9 @@ export interface EditorAi { difficulty: "easy" | "normal" | "hard" | "insane" | 
 
 /** Adds the first explicit version to legacy documents and rejects unknown versions. */
 export function migrateDocument<T extends object>(document: T): T & VersionedDocument {
+	if (!document || typeof document !== "object" || Array.isArray(document)) {
+		throw new Error("Document must be an object");
+	}
 	const version = (document as Partial<VersionedDocument>).schemaVersion
 	if (version === undefined) return { ...document, schemaVersion: DOCUMENT_SCHEMA_VERSION }
 	if (version !== DOCUMENT_SCHEMA_VERSION) throw new Error(`Unsupported document schema version: ${version}`)
@@ -135,7 +138,11 @@ function isRecord(value: unknown): value is Record<string, unknown> { return typ
 function isVector(value: unknown): value is { x: number; y: number } { return isRecord(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y) }
 function isNonNegativeFinite(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0 }
 function isPositiveFinite(value: unknown): value is number { return isNonNegativeFinite(value) && value > 0 }
-function isEditorBackground(value: unknown): value is EditorBackground | null { return value === null || (isRecord(value) && value.type === "image" && typeof value.url === "string") }
+function isSafeUrl(url: string): boolean {
+	const lower = url.trim().toLowerCase()
+	return !lower.startsWith("javascript:") && !lower.startsWith("vbscript:") && !lower.startsWith("data:text/html")
+}
+function isEditorBackground(value: unknown): value is EditorBackground | null { return value === null || (isRecord(value) && value.type === "image" && typeof value.url === "string" && isSafeUrl(value.url)) }
 function isEditorScreenResolution(value: unknown): value is EditorScreenResolution { return isRecord(value) && isPositiveFinite(value.x) && isPositiveFinite(value.y) && isPositiveFinite(value.factor) }
 function hasFiniteVector(value: Record<string, unknown>): boolean { return typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y) }
 function isEditorWall(value: unknown): value is EditorWall { return isRecord(value) && value.type === "rectangle" && hasFiniteVector(value) && isPositiveFinite(value.w) && isPositiveFinite(value.h) && typeof value.color === "string" }

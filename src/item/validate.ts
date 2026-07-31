@@ -66,7 +66,18 @@ function assertKnownObject(
 }
 
 function isExecutableKey(key: string): boolean {
-	return key === "script" || key === "code" || key === "handler" || /^on[A-Z]/.test(key);
+	return (
+		key === "script" ||
+		key === "code" ||
+		key === "handler" ||
+		key === "eval" ||
+		key === "exec" ||
+		key === "function" ||
+		key === "__proto__" ||
+		key === "constructor" ||
+		key === "prototype" ||
+		/^on[a-zA-Z]/i.test(key)
+	);
 }
 
 function assertJsonValue(value: unknown, path: string, ancestors: Set<object>): void {
