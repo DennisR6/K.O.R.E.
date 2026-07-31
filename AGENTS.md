@@ -44,8 +44,8 @@ Items, AI, winning and completed-round rules, out-of-bounds elimination, touch/c
 - `requirements.md` maps TODO/GDD requirements to implementation checklist sections and verified test evidence.
 - `step-by-step.md` is the current commit-sized execution checklist. Update its status in the same atomic commit as each completed task.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
-- `docs/` is tracked generated TypeDoc output. It is stale and references old modules and symbols; never use it as current API truth.
-- `README.md` is currently empty.
+- `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
+- `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
 - `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph. `package.json` plus the tracked `bun.lock` describe the active dependency graph. Use Bun; do not casually run npm install or regenerate either lock.
 
 Always inspect `git status` before editing. The worktree may contain unrelated human or agent changes. Preserve them and never clean, reset, or rewrite files outside the requested scope.

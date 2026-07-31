@@ -1,6 +1,7 @@
 {
   "entryPoints": ["src/**/*"],
   "out": "docs",
+  "cleanOutputDir": false,
   "tsconfig": "tsconfig.json",
   "excludePrivate": true,
   "excludeInternal": true
