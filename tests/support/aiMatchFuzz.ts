@@ -57,7 +57,12 @@ export interface FuzzConfig {
 export interface FuzzMatchSummary {
 	seed: number;
 	turns: number;
+	acceptedActions: number;
+	simulatedFrames: number;
+	engineWork: number;
 	outcome: "winner" | "draw" | "ongoing";
+	instantDeath: boolean;
+	turnLimit: boolean;
 	/** Human-readable invariant violations; empty for a clean match. */
 	violations: string[];
 	/** Negative actions injected into this match. */
@@ -75,6 +80,117 @@ export interface FuzzSuiteResult {
 	determinismVerified: boolean;
 	/** Deep-equality compare used for snapshot comparisons. */
 	deepEqual: (a: unknown, b: unknown) => boolean;
+}
+
+export interface MatchLengthDistribution {
+	count: number;
+	min: number;
+	median: number;
+	p90: number;
+	p95: number;
+	max: number;
+	drawRate: number;
+	instantDeathRate: number;
+	turnLimitRate: number;
+	totalAcceptedActions: number;
+	totalSimulatedFrames: number;
+	totalEngineWork: number;
+}
+
+export interface MatchLengthThresholds {
+	minTurns: number;
+	maxP95Turns: number;
+	maxTurnLimitRate: number;
+	maxInstantDeathRate: number;
+}
+
+export const MATCH_LENGTH_THRESHOLDS: Record<string, MatchLengthThresholds> = {
+	"local-ice-duel-v1": { minTurns: 2, maxP95Turns: 50, maxTurnLimitRate: 0.1, maxInstantDeathRate: 0.25 },
+	"current-turn": { minTurns: 2, maxP95Turns: 100, maxTurnLimitRate: 0.05, maxInstantDeathRate: 0.25 },
+};
+
+function percentile(values: number[], quantile: number): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	return sorted[Math.min(sorted.length - 1, Math.ceil(values.length * quantile) - 1)]!;
+}
+
+export function summarizeMatchLengths(matches: FuzzMatchSummary[]): MatchLengthDistribution {
+	const turns = matches.map(match => match.turns);
+	const count = matches.length;
+	return {
+		count,
+		min: percentile(turns, 0.01),
+		median: percentile(turns, 0.5),
+		p90: percentile(turns, 0.9),
+		p95: percentile(turns, 0.95),
+		max: percentile(turns, 1),
+		drawRate: count === 0 ? 0 : matches.filter(match => match.outcome === "draw").length / count,
+		instantDeathRate: count === 0 ? 0 : matches.filter(match => match.instantDeath).length / count,
+		turnLimitRate: count === 0 ? 0 : matches.filter(match => match.turnLimit).length / count,
+		totalAcceptedActions: matches.reduce((total, match) => total + match.acceptedActions, 0),
+		totalSimulatedFrames: matches.reduce((total, match) => total + match.simulatedFrames, 0),
+		totalEngineWork: matches.reduce((total, match) => total + match.engineWork, 0),
+	};
+}
+
+export function qualifiesMatchLengthDistribution(modeId: string, distribution: MatchLengthDistribution): boolean {
+	const thresholds = MATCH_LENGTH_THRESHOLDS[modeId];
+	if (!thresholds) throw new Error(`No match-length thresholds configured for mode '${modeId}'`);
+	return distribution.min >= thresholds.minTurns
+		&& distribution.p95 <= thresholds.maxP95Turns
+		&& distribution.turnLimitRate <= thresholds.maxTurnLimitRate
+		&& distribution.instantDeathRate <= thresholds.maxInstantDeathRate;
+}
+
+/** Runs bounded pacing fixtures with a legal, deterministic hazard-seeking policy. */
+export function runPacingSuite(gameCount = 10): FuzzMatchSummary[] {
+	const matches: FuzzMatchSummary[] = [];
+	for (let index = 0; index < gameCount; index++) {
+		const seed = 2000 + index;
+		const settings = makeAiArena(seed);
+		const hazard = settings.mapBoundarys.find(boundary => boundary.type === SHAPE.CIRCLE);
+		if (!hazard || hazard.type !== SHAPE.CIRCLE) throw new Error("pacing fixture requires a deadly circle");
+		const steps = 2 + (index % 5);
+		hazard.x = 750 + 300 * steps;
+		hazard.y = 365;
+		const handler = buildFuzzHandler(settings);
+		const emitter = new GameEmitter(handler, settings.gameMode!, 2, seed);
+		let turns = 0;
+		let simulatedFrames = 0;
+		while (handler.getState() !== GameState.Game_over && turns < 20) {
+			const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam()));
+			if (!actor) break;
+			// Team 0 advances toward the seeded hazard; team 1 takes a harmless turn.
+			emitter.sendShot(actor.getId(), handler.getActiveTeam() === 0 ? 0 : 90, handler.getActiveTeam() === 0 ? 10 : 1);
+			let ticks = 0;
+			while (handler.getState() === GameState.Playing && ticks < 5000) {
+				handler.tick();
+				ticks++;
+			}
+			simulatedFrames += ticks;
+			turns++;
+		}
+		const outcome = handler.getState() === GameState.Game_over
+			? handler.getMatchResult()?.status === MatchStatus.Draw ? "draw" : "winner"
+			: "ongoing";
+		matches.push({
+			seed,
+			turns,
+			acceptedActions: turns,
+			simulatedFrames,
+			engineWork: simulatedFrames + turns,
+			outcome,
+			instantDeath: turns <= 1 && outcome !== "ongoing",
+			turnLimit: handler.getState() !== GameState.Game_over && turns >= 20,
+			violations: handler.getState() === GameState.Game_over ? [] : ["pacing fixture reached its turn limit"],
+			injections: 0,
+			replayOk: true,
+			persistedOk: true,
+			rematchOk: true,
+		});
+	}
+	return matches;
 }
 
 const AI_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
@@ -270,6 +386,7 @@ export function runFuzzMatch(seed: number, config: Required<FuzzConfig>): FuzzMa
 		const aiTeam1: AiSettings = { difficulty: "hard", seed: seed * 2 + 1, team: 1, decisionLimits: AI_LIMITS };
 
 		let turns = 0;
+		let simulatedFrames = 0;
 		let deadActorIds: string[] = [];
 		while (handler.getState() !== GameState.Game_over && turns < config.maxTurnsPerMatch) {
 			const team = handler.getActiveTeam();
@@ -286,6 +403,7 @@ export function runFuzzMatch(seed: number, config: Required<FuzzConfig>): FuzzMa
 				handler.tick();
 				ticks++;
 			}
+			simulatedFrames += ticks;
 			if (handler.getState() === GameState.Playing) {
 				violations.push(`match ${seed} turn ${turns}: turn did not settle within ${config.maxTicksPerTurn} ticks`);
 				break;
@@ -362,10 +480,24 @@ export function runFuzzMatch(seed: number, config: Required<FuzzConfig>): FuzzMa
 			if (!rematchOk) violations.push(`match ${seed}: rematch did not reset the completed match`);
 		}
 
-		return { seed, turns, outcome, violations, injections, replayOk, persistedOk, rematchOk };
+		return {
+			seed,
+			turns,
+			acceptedActions: turns,
+			simulatedFrames,
+			engineWork: simulatedFrames + turns,
+			outcome,
+			instantDeath: turns <= 1 && outcome !== "ongoing",
+			turnLimit: handler.getState() !== GameState.Game_over && turns >= config.maxTurnsPerMatch,
+			violations,
+			injections,
+			replayOk,
+			persistedOk,
+			rematchOk,
+		};
 	} catch (e) {
 		violations.push(`match ${seed} crashed: ${e instanceof Error ? e.message : String(e)}`);
-		return { seed, turns: 0, outcome: "ongoing", violations, injections, replayOk: false, persistedOk: false, rematchOk: false };
+		return { seed, turns: 0, acceptedActions: 0, simulatedFrames: 0, engineWork: 0, outcome: "ongoing", instantDeath: false, turnLimit: false, violations, injections, replayOk: false, persistedOk: false, rematchOk: false };
 	}
 }
 

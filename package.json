@@ -18,6 +18,7 @@
 		"test:physics-fuzz:rc": "PHYSICS_FUZZ_CASES=5000 bun test tests/physics_fuzz.test.ts",
 		"test:physics-fuzz:soak": "PHYSICS_FUZZ_CASES=25000 bun test tests/physics_fuzz.test.ts",
 		"test:gameplay-matrix": "GAMEPLAY_MATRIX=1 bun test tests/gameplay_content_matrix.test.ts",
+		"test:gameplay-pacing": "bun test tests/match_length_distribution.test.ts",
 		"bench:physics": "bun test tests/physics_performance.test.ts",
 		"createAssets": "bun run scripts/createAssetPack.ts",
 		"desktop": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri dev",

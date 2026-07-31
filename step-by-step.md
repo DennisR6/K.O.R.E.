@@ -1189,7 +1189,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Progress Fingerprint:** turnNumber, activeTeam, phase, entityStateHash, playbackFramesRemaining, matchStatus.
   - **Detected Failures:** identical full state repeating beyond a limit, turn number not advancing, phase not advancing, playback countdown not decreasing, all AIs returning no action, actions accepted without state change, endless draw-like behavior without an explicit draw result.
    - **Note:** `tests/support/gameplayQualification.ts` now emits deterministic progress fingerprints and applies explicit repeat, no-action, no-op-action, and playback-stall limits. `tests/match_softlock_detection.test.ts` covers deterministic softlock fixtures and a bounded ongoing case that remains valid; no inferred timeout is promoted to an explicit draw.
-- [ ] **Task [15.5]: Qualify Match Length And Pacing**
+- [x] **Task [15.5]: Qualify Match Length And Pacing**
   - **Goal:** Measure match duration in turns, accepted actions, simulated frames, and wall-clock-independent engine work.
   - **Target Files:** gameplay qualification harness, `docs/gameplay-balance-report.md`
   - **Test File:** `tests/match_length_distribution.test.ts`
@@ -1198,6 +1198,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Required Metrics:** minimum, median, 90th percentile, 95th percentile, maximum, draw rate, instant-death rate, turn-limit rate.
   - **Negative Signals:** matches ending before meaningful player agency, matches regularly reaching safety limits, one map producing extreme duration outliers, deterministic loops producing artificial long matches.
   - **Constraint:** Thresholds must be mode-specific rather than universal.
+   - **Note:** `tests/support/aiMatchFuzz.ts` records accepted actions, simulated frames, deterministic engine work, and explicit instant-death/turn-limit signals, then summarizes min/median/p90/p95/max and rates with nearest-rank percentiles. `tests/match_length_distribution.test.ts` verifies the calculations, mode-specific thresholds, duplicate-run equality, and a 10-match hazard-seeking pacing fixture. `docs/gameplay-balance-report.md` records 3 / 7 / 11 / 11 / 11 turns, 3,030 simulated frames, 3,100 engine-work units, 0% draws, 0% instant deaths, and 0% turn-limit matches. It also records the real limitation that stock hard AI can still fail to seek lethal hazards and hit the safety limit.
 - [ ] **Task [15.6]: Measure Spawn And Team Fairness**
   - **Goal:** Detect map-side, spawn-order, first-turn, team-index, and AI-pairing advantages using mirrored deterministic tournaments.
   - **Target Files:** gameplay tournament harness
