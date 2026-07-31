@@ -541,7 +541,7 @@
   - **Test File:** `tests/ai_replay_lifecycle.test.ts`
   - **Allowed Context:** `src/ai/hardAi.ts`, `src/replay/player.ts`, `src/replay/types.ts`, `src/emitter/EngineEmitter.ts`
   - **Commit:** `test: validate ai match replay lifecycle`
-- **Task [11.5]: Validate Parallel Engine Instances**
+- [x] **Task [11.5]: Validate Parallel Engine Instances**
   - **Goal:** Prove independent handlers built from the same settings evolve identically and never share state across instances.
   - **Target Files:** `src/engine/Handler.ts`
   - **Test File:** `tests/parallel_engine_instances.test.ts`
