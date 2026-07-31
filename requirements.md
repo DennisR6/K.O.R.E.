@@ -43,6 +43,8 @@ be marked complete in `TODO.md` and `step-by-step.md`.
 
 | R-16 | Physics solver contract | [Physics Qualification](step-by-step.md#13-physics-solver-hardening-and-continuous-collision-qualification) | `tests/physics_qualification_gate.test.ts` links the Section 13 contact, CCD, energy, lifecycle, snapshot, fuzz, and performance evidence; `bun run test:physics-fuzz:rc` and `bun run test:physics-fuzz:soak` qualify 5,000 and 25,000 seeded cases. | Section 13 complete. |
 
+| R-17 | Section 15 gameplay release qualification | [Gameplay Qualification](step-by-step.md#15-gameplay-qualification-and-human-playtest-validation) | `tests/gameplay_release_gate.test.ts` gates the matrix, softlock, pacing, fairness, agency, item, vertical-slice, package, and human-playtest evidence. The automated record is explicit, but the final status remains `BLOCKED / NOT QUALIFIED` until an external tester completes the two-match protocol. | Complete automated evidence record and actual human playtest evidence. |
+
 ## Update Rules
 
 - Add a concrete test path to `Current evidence` when a checklist item is

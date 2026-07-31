@@ -120,3 +120,37 @@ executing the item's declarative effects. The harness therefore emits
 `effect-disappears-after-use` for every item. Winner dominance cannot be
 qualified until item actions are exercised in terminal matches; this is an
 explicit evidence gap, not a passing balance result.
+
+## Section 15.12 Final Gameplay Release Decision
+
+The automated evidence is recorded without promoting warnings or incomplete
+features to qualification claims. The final gameplay release candidate is
+**BLOCKED / NOT QUALIFIED** because the required external human playtest has
+not occurred. This is an evidence blocker, not a fabricated human result.
+
+| Gate area | Evidence and result |
+| --- | --- |
+| Matrix qualification | 1,152 deterministic configurations executed; the canonical selectable Ice Duel is qualified, while source-present maps, blocked mode/AI/economy combinations remain blocked from selection. |
+| Softlock detection | Focused deterministic fixtures pass; fairness samples still produce ongoing safety-limit warnings and are not promoted to completed-match evidence. |
+| Pacing | 10 deterministic hazard-seeking matches pass: 3 / 7 / 11 / 11 / 11 turns, 0% draws, 0% instant deaths, 0% turn-limit matches. |
+| Spawn-side fairness | 24 mirrored tournament matches are deterministic with no invariant violations; all 24 are ongoing at the current hard-AI safety limit, so no winner imbalance is inferred. |
+| Meaningful agency | Healthy trace passes; matrix-wide agency remains open and negative traces remain human-review warnings. |
+| Item usefulness/economy | 33 cases pass availability, legal use, consumption, replay, and snapshot continuity; all 11 items report `effect-disappears-after-use`, with winner correlation unavailable. |
+| Vertical-slice E2E | Local menu-to-result lifecycle coverage passes in `tests/local_match_lifecycle.integration.test.ts`; browser/packaged human completion is not claimed without a human session. |
+| Packaged build | Linux x86_64 Tauri executable and Debian bundle are covered by Section 14.12 evidence and `tests/playtest_build_gate.test.ts`. Windows, macOS, and mobile remain unsupported or unverified. |
+| Human sessions completed | 0 external sessions. `docs/playtest-results/pending-external-session.md` is explicitly `BLOCKED / PENDING`. |
+| Human blockers reported | Missing external tester session and therefore missing clarity, controls, pacing, fairness, feedback, and replay evidence. |
+| Human blockers fixed | 0; no human defect was fabricated or classified as fixed. |
+| Remaining usability concerns | Unassessed until the two-match protocol is completed; only mouse-drag Linux/browser and Linux Tauri paths are in the qualified release surface. |
+| Known balance limitations | Hard AI may fail to seek lethal hazards; item effects do not currently persist into gameplay; blocked configurations have no release qualification. |
+
+The Section 15 command record is authoritative for this decision: the full
+suite passed with 625 pass / 5 skip / 0 fail, physics fuzz RC passed 5,000
+seeded cases, the matrix passed 1,152 cases, and the tournament passed 24
+mirrored matches. The 1,000-match AI fuzz RC command timed out after 600
+seconds and is therefore not qualified. This does not change the separate
+human-evidence blocker.
+
+The gate test is `tests/gameplay_release_gate.test.ts`. It verifies the report,
+the complete command list, all Section 15 evidence files, the tournament and
+matrix scripts, and this explicit blocked boundary.

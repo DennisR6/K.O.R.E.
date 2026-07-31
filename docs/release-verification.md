@@ -34,6 +34,83 @@ Branch: `test` (Section 12 release-candidate qualification complete)
 - Regression tests added: none. Subjective preferences and unassessed human
   observations are excluded from technical regression requirements.
 
+## Section 15 Gameplay Release Candidate Gate
+
+Date: 2026-07-31. Base commit: `ff31f4a213ce29bc739f3c6360e2c4ca28e08662`.
+Git commit: none. Worktree state: dirty by design for this uncommitted change.
+The working tree is intentionally uncommitted. Focused gate:
+`tests/gameplay_release_gate.test.ts`.
+
+### Required Command Record
+
+| Command | Result |
+| --- | --- |
+| `bun install --frozen-lockfile` | PASS: 276 installs across 265 packages, no changes |
+| `bun test` | PASS: 625 pass, 5 skip, 0 fail; 7,845 assertions across 194 files [76.62s] |
+| `npx tsc --noEmit` | PASS: 0 type errors |
+| `bun run build` | PASS: `dist/main.js` and browser assets compiled |
+| `bun run desktop:build` | PASS: Linux executable and Debian bundle produced |
+| `bun run test:fuzz:rc` | TIMEOUT / NOT QUALIFIED: terminated by SIGTERM after 600 seconds; no 1,000-match result |
+| `bun run test:physics-fuzz:rc` | PASS: 2 tests, 5,001 assertions, 0 failures [0.56s] |
+| `bun run test:gameplay-matrix` | PASS: 2 tests, 6,918 assertions, 0 failures [55.40s] |
+| `bun run test:gameplay-tournament` | PASS: 2 tests, 10 assertions, 0 failures [4.70s] |
+
+### Section 15 Evidence Gate
+
+- Matrix qualification: `tests/gameplay_content_matrix.test.ts`,
+  `docs/gameplay-matrix.md`; 1,152 deterministic combinations execute, with
+  the selectable Ice Duel qualified and non-selectable source content blocked.
+- Softlock detection: `tests/match_softlock_detection.test.ts`; deterministic
+  fixtures pass, while ongoing AI safety-limit warnings remain visible.
+- Pacing: `tests/match_length_distribution.test.ts`; 10-match deterministic
+  evidence is recorded in `docs/gameplay-balance-report.md`.
+- Spawn-side fairness: `tests/gameplay_fairness_tournament.test.ts`; 24
+  mirrored matches are deterministic, with ongoing safety-limit warnings.
+- Meaningful agency: `tests/player_agency_validation.test.ts`; the healthy
+  trace passes, but matrix-wide agency remains open.
+- Item-use findings / item usefulness-economy: `tests/item_gameplay_qualification.test.ts`; 33
+  cases pass continuity and consumption checks, but all 11 items report the
+  known `effect-disappears-after-use` finding.
+- Vertical-slice E2E: `tests/local_match_lifecycle.integration.test.ts` and
+  `tests/playtest_build_gate.test.ts` cover the local lifecycle and Linux
+  package artifacts. Human menu-to-result completion is not claimed.
+- Packaged build: Section 14.12 Linux x86_64 binary and Debian bundle evidence is
+  retained; other desktop targets and mobile remain unsupported or unverified.
+- AI matches completed: 1,152 matrix cases attempted and 24 mirrored tournament
+  matches completed; the separate 1,000-match RC fuzz run did not complete.
+- Winner distribution: the matrix records winner/draw/ongoing outcomes; the
+  mirrored hard-AI tournament records no winners because all 24 reached its
+  safety limit.
+- Draw distribution: no explicit draws in the deterministic pacing sample; the
+  fairness tournament has 0 draws and 24 ongoing matches.
+- Match-length distribution: pacing sample is 3 / 7 / 11 / 11 / 11 turns
+  (minimum / median / p90 / p95 / maximum).
+- Softlocks detected: deterministic softlock fixtures pass; no false draw is
+  inferred from the 24 ongoing hard-AI fairness matches.
+- Replay mismatches: 0 in the matrix and focused continuity evidence.
+- Snapshot or persistence mismatches: 0 in the matrix and focused continuity
+  evidence.
+- Spawn-side fairness warnings: ongoing safety-limit warnings in all three
+  mirrored variants; no winner imbalance is inferred.
+- Human sessions completed: 0 external sessions; the pending record is explicitly
+  `BLOCKED / PENDING`, with no tester result or identity fabricated.
+- Human blockers reported: missing external tester session and therefore missing
+  clarity, controls, pacing, fairness, feedback, and replay evidence.
+- Human blockers fixed: 0; no human defect was fabricated or classified as fixed.
+- Remaining usability concerns: unassessed until the two-match protocol is
+  completed.
+- Known balance limitations: blocked matrix configurations, hard-AI safety-limit
+  behavior, and item effects that disappear after use remain documented.
+
+### Final Gameplay Release Status
+
+**FINAL STATUS: BLOCKED / NOT QUALIFIED**
+
+Human playtest is the explicit release blocker: actual external tester evidence
+is not available. Automated evidence also retains the documented blocked matrix,
+hard-AI safety-limit/agency limitations, and item-effect findings. The gate does
+not convert any of these findings into a pass.
+
 ## Verification Summary
 
 All core game systems, data contracts, physics, item economy, AI, authoritative

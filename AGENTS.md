@@ -30,7 +30,14 @@ Only part of that design is implemented. The current playable prototype has:
 - Death-circle effects, dead-player exclusion, and a working local-play menu.
 - A separate map-editor prototype.
 
-Items, AI, winning and completed-round rules, out-of-bounds elimination, touch/controller input, replays, desktop/mobile packaging, and security validation are fully implemented and verified with end-to-end test coverage.
+AI, winning and completed-round rules, out-of-bounds elimination, replays,
+desktop packaging, and security validation are implemented and verified with
+automated coverage. Gameplay release qualification remains conditional: the
+Section 15 record retains blocked configurations and known item/AI limitations,
+and external human playtest evidence is still pending.
+Items, AI, winning and completed-round rules, out-of-bounds elimination are
+fully implemented and verified at their automated contract boundaries; this
+does not promote blocked gameplay configurations or pending human evidence.
 
 ## Source Of Truth
 
@@ -145,7 +152,9 @@ After every change, check whether this guide still reflects the implementation a
   and deterministic vector behavior.
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
-  commented placeholders; item gameplay is not active.
+  commented placeholders; the declarative official-item path is active for
+  validation and inventory tests, but item effects are not yet installed by
+  `GameHandler.useItem()`.
 
 ### Physics, structures, and systems
 
@@ -246,6 +255,8 @@ bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
 bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)
 npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
+bun run test:gameplay-matrix     # Section 15 deterministic content matrix
+bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run start          # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously
@@ -259,6 +270,12 @@ branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
 scripts, and `src-website/` are not typechecked by `npx tsc --noEmit`.
 
 The root `.env` currently sets `PORT=4001`; the server fallback is 3000.
+
+Section 15 gameplay release qualification is recorded in
+`docs/gameplay-balance-report.md` and `docs/release-verification.md`, with
+`tests/gameplay_release_gate.test.ts` as the evidence gate. The current final
+status is **BLOCKED / NOT QUALIFIED** because no external human playtest session
+has been completed; automated evidence does not substitute for human evidence.
 
 ## Browser Workflow
 
@@ -582,6 +599,10 @@ not desired design:
   boundary kills a player; a last-team-standing evaluator exists but is not yet
   integrated into completed-match flow.
 - Mouse tracking depends on a browser-created `defaultCanvas0` global.
+- Gameplay release qualification is blocked pending an external two-match
+  human session. Automated evidence retains blocked matrix configurations,
+  hard-AI safety-limit/agency limitations, and item effects that disappear after
+  `GameHandler.useItem()` consumes them.
 - The editor stores one validated temporary draft in browser `localStorage` and
   restores it on startup; its embedded and popup previews use the current
   browser origin.

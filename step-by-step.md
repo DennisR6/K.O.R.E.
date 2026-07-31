@@ -1255,7 +1255,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Constraint:** Do not encode subjective preference as a technical invariant unless it has been accepted as a product requirement.
   - **Acceptance:** Every fixed blocker has a deterministic regression test or a documented reason why only human verification is possible.
   - **Note:** `tests/playtest_regressions.test.ts` records the empty confirmed-findings contract from the pending Section 15.10 evidence. There are no confirmed technical or deterministic playtest defects to reproduce, no subsystem regression tests to add, and subjective preferences remain excluded from technical invariants.
-- [ ] **Task [15.12]: Qualify The Gameplay Release Candidate**
+- [x] **Task [15.12]: Qualify The Gameplay Release Candidate**
   - **Goal:** Combine automated content qualification, AI tournaments, softlock detection, balance evidence, vertical-slice E2E results, packaged-build checks, and actual human playtest evidence into the final gameplay release gate.
   - **Target Files:** `docs/gameplay-balance-report.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
   - **Test File:** `tests/gameplay_release_gate.test.ts`
@@ -1263,6 +1263,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `docs: qualify gameplay release candidate`
   - **Required Commands:** `bun install --frozen-lockfile`, `bun test`, `npx tsc --noEmit`, `bun run build`, `bun run desktop:build`, `bun run test:fuzz:rc`, `bun run test:physics-fuzz:rc`, `bun run test:gameplay-matrix`, `bun run test:gameplay-tournament`
   - **Required Report:** git commit, worktree state, test and assertion counts, physics qualification result, vertical-slice E2E result, packaged-build result, maps qualified, modes qualified, configuration combinations executed, AI matches completed, winner distribution, draw distribution, match-length distribution, softlocks detected, replay mismatches, snapshot or persistence mismatches, spawn-side fairness warnings, item-use findings, human sessions completed, human blockers reported, human blockers fixed, remaining usability concerns, known balance limitations, final gameplay release status.
+  - **Note:** `tests/gameplay_release_gate.test.ts` gates every Section 15 evidence source and required command, including matrix, softlock, pacing, fairness, agency, items, vertical-slice, package, and human evidence. The automated record is complete, but the final gameplay status is **BLOCKED / NOT QUALIFIED**: human playtest evidence remains BLOCKED / PENDING because no external tester session exists. No human result is fabricated.
 
 ### Section 15 Acceptance Criteria
 
