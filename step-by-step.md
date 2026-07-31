@@ -472,43 +472,43 @@
 
 ## 10. Final Hardening And Release Readiness
 
-- [-] **Task [10.1]: Cover Complete Local Match**
+- [ ] **Task [10.1]: Cover Complete Local Match**
   - **Goal:** Add end-to-end coverage for a local match with items, hazards, elimination, result, reset, and replay.
   - **Target Files:** `tests/e2e_local_match.test.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/e2e_local_match.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/item/officialItems.ts`
   - **Commit:** `test: cover complete local match`
-- [-] **Task [10.2]: Cover Complete Network Match**
+- [ ] **Task [10.2]: Cover Complete Network Match**
   - **Goal:** Add end-to-end coverage for a network match with item authority, disconnect/reconnect, result, and replay persistence.
   - **Target Files:** `tests/e2e_network_match.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/e2e_network_match.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/server/runtime.ts`
   - **Commit:** `test: cover complete network match`
-- [-] **Task [10.3]: Harden Untrusted Game Inputs**
+- [ ] **Task [10.3]: Harden Untrusted Game Inputs**
   - **Goal:** Add malformed schema, invalid packet, and unauthorized action fuzz-style regression cases.
   - **Target Files:** `tests/input_fuzz.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/input_fuzz.test.ts`
   - **Allowed Context:** `src/server/gameRegistry.ts`, `src/item/validate.ts`
   - **Commit:** `test: harden untrusted game inputs`
-- [-] **Task [10.4]: Harden Declarative Mod Loading**
+- [ ] **Task [10.4]: Harden Declarative Mod Loading**
   - **Goal:** Audit every game-data boundary to ensure external content cannot execute code or bypass the effect whitelist.
   - **Target Files:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Test File:** `tests/mod_security.test.ts`
   - **Allowed Context:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Commit:** `fix: harden declarative mod loading`
-- [-] **Task [10.5]: Remove Obsolete Game Prototypes**
+- [ ] **Task [10.5]: Remove Obsolete Game Prototypes**
   - **Goal:** Remove obsolete commented prototypes and duplicate paths only after their replacement coverage is complete.
   - **Target Files:** `src/start.ts`, `src/ui/Mouse.ts`
   - **Test File:** `tests/cleanup.test.ts`
   - **Allowed Context:** `src/main.ts`, `src/start.ts`
   - **Commit:** `refactor: remove obsolete game prototypes`
-- [-] **Task [10.6]: Document Completed Game Systems**
+- [ ] **Task [10.6]: Document Completed Game Systems**
   - **Goal:** Update `AGENTS.md`, `TODO.md`, GDD implementation notes, and this checklist to reflect the completed feature set.
   - **Target Files:** `AGENTS.md`, `TODO.md`
   - **Test File:** `tests/documentation.test.ts`
   - **Allowed Context:** `AGENTS.md`, `TODO.md`
   - **Commit:** `docs: document completed game systems`
-- [-] **Task [10.7]: Record Release Verification**
+- [ ] **Task [10.7]: Record Release Verification**
   - **Goal:** Run clean-install, unit, typecheck, browser-build, server, desktop, and mobile smoke checks; record exact results in release documentation.
   - **Target Files:** `docs/release-verification.md`, `package.json`
   - **Test File:** `tests/release_smoke.test.ts`
