@@ -559,7 +559,7 @@
   - **Test File:** `tests/winning_lifecycle_validation.test.ts`
   - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
   - **Commit:** `test: validate winning lifecycle composition`
-- **Task [11.8]: Validate Item Effect Snapshot Continuity**
+- [x] **Task [11.8]: Validate Item Effect Snapshot Continuity**
   - **Goal:** Prove item-triggered effects serialize their remaining state and continue correctly after snapshot restoration.
   - **Target Files:** `src/effects/shield.ts`, `src/effects/freeze.ts`
   - **Test File:** `tests/item_effect_snapshot_validation.test.ts`
