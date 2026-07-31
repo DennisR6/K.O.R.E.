@@ -15,34 +15,49 @@ import type { IGameContext } from "./types.js";
 export class PlaybackSystem implements PlaybackSystem {
 	/** Anzahl der verbleibenden Frames, bis der Endzustand erzwungen wird. */
 	private remainingFrames = 0;
+	/** True, sobald der Countdown abgelaufen ist und der Sync aussteht. */
+	private syncPending = false;
 	/** Der Zielzustand (Snapshot), an den die Entities angeglichen werden. */
 	private finalState: PlayerSettings[] | undefined;
 	/** Ein optionaler Callback, der ausgeführt wird, wenn der Sync abgeschlossen ist. */
 	private cb: (() => void) | undefined;
 
 	/**
-		 * Startet einen Wiedergabe-Countdown.
-		 * @param frames - Dauer der Simulation in Frames.
-		 * @param finalState - Die exakten Ziel-Daten (Position/Velocity) am Ende.
-		 * @param cb - (Optional) Aktion nach Abschluss (z.B. UI einblenden).
-		 */
+	 * Startet einen Wiedergabe-Countdown.
+	 * @param frames - Dauer der Simulation in Frames.
+	 * @param finalState - Die exakten Ziel-Daten (Position/Velocity) am Ende.
+	 * @param cb - (Optional) Aktion nach Abschluss (z.B. UI einblenden).
+	 */
 	public start(frames: number, finalState: PlayerSettings[], cb?: () => void) {
 		this.finalState = finalState
 		this.remainingFrames = frames;
+		this.syncPending = frames === 0;
 		this.cb = cb;
 	}
 
 	/**
-		 * Reduziert den Frame-Counter in jedem Tick.
-		 * Sobald 0 erreicht ist, wird der Hard-Sync ausgelöst.
-		 */
+	 * Reduziert den Frame-Counter in jedem Tick. Sobald 0 erreicht ist, wird
+	 * der Hard-Sync NICHT hier, sondern in `flush` ausgelöst - also erst in
+	 * der finalen Mutations-Phase des Ticks, nachdem alle Gameplay-Systeme,
+	 * Strukturen und Post-Ticker gelaufen sind. So kann kein späterer
+	 * Physik-/Kollisionsschritt den autoritativen `finalState` verändern.
+	 */
 	ticker(ctx: IGameContext) {
 		if (ctx.state !== GameState.Playing) return
-		if (this.remainingFrames > 0)
+		if (this.remainingFrames > 0) {
 			this.remainingFrames--;
-		else if (this.finalState) {
-			this.applyHardSync(ctx.entities);
+			if (this.remainingFrames === 0) this.syncPending = true;
 		}
+	}
+
+	/**
+	 * Finale Phase des Ticks: wendet den ausstehenden Hard-Sync an, falls die
+	 * Wiedergabe abgelaufen ist. Läuft als letzter Mutations-Schritt, damit
+	 * der `finalState` des TurnPackets nach dem Sync unverändert bleibt.
+	 */
+	flush(ctx: IGameContext) {
+		if (!this.syncPending || this.finalState === undefined) return;
+		this.applyHardSync(ctx.entities);
 	}
 
 	/**

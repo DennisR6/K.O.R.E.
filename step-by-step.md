@@ -593,12 +593,13 @@
   - **Test File:** `tests/circle_rectangle_interior_collision.test.ts`
   - **Allowed Context:** `src/physics/defaultPhysics.ts`, `src/physics/physics.ts`
   - **Commit:** `fix: resolve embedded circle/rectangle collisions deterministically`
-- [ ] **Task [12.3]: Apply Playback Final Sync After All Gameplay Mutation**
+- [x] **Task [12.3]: Apply Playback Final Sync After All Gameplay Mutation**
   - **Goal:** Move playback final-state synchronization to the final mutation phase of the handler tick so no physics, effects, structures, or gameplay systems can alter `TurnPacket.finalState` afterward.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
   - **Test File:** `tests/playback_sync_order.test.ts`
   - **Allowed Context:** `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`, `src/systems/PhysicsSystem.ts`
   - **Commit:** `fix: finalize playback sync after gameplay mutation`
+  - **Note:** `ISystem` gained an optional `flush(ctx)` hook; `GameHandler.tick()` invokes it after post-tickers. Playback sync now completes the countdown tick itself (playback length = exactly `durationFrames` ticks). The completion callback no longer clobbers a terminal `Game_over` state set by gameplay systems on the sync tick.
 - [ ] **Task [12.4]: Enforce Deterministic Per-Turn Frame Counts**
   - **Goal:** Establish one documented deterministic frame-count contract for both the authoritative `resolveTurn` path and the live `playTurn` path (identical inputs, identical tick counts, identical final state) and add a regression test.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`

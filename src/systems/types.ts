@@ -43,6 +43,16 @@ export interface ISystem {
 	 * @param friction - Die aktuell wirkende globale Reibung.
 	 */
 	ticker(ctx: IGameContext, dt: number, friction: number): void;
+
+	/**
+	 * Optionaler letzter Mutations-Schritt eines Ticks.
+	 *
+	 * Wird vom `GameHandler` NACH Systems, Map-Pickups, Struktur-Ticks und
+	 * Post-Tickern aufgerufen. Systeme, die einen autoritativen Endzustand
+	 * (z.B. Playback-Snapshots) anwenden, müssen dies hier tun, damit keine
+	 * andere Gameplay-Mutation den finalen Zustand danach noch verändern kann.
+	 */
+	flush?(ctx: IGameContext): void;
 }
 
 /**

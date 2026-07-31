@@ -206,7 +206,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		if (!playback) throw new Error("playbacksystem not found!")
 		playback.start(packet.durationFrames, packet.finalState, () => {
-			this.setState(GameState.Playing_done)
+			// A terminal match state set by gameplay systems during the final
+			// tick (e.g. WinningSystem) must survive the playback completion.
+			if (this.context.state !== GameState.Game_over) {
+				this.setState(GameState.Playing_done)
+			}
 			onComplete?.()
 			console.log("done")
 		});
@@ -238,6 +242,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.mapPickupSystem.ticker(this.context, dt, this.physicsStrategy.getFriction())
 		this.context.structures.forEach(str => str.tick(dt, this.physicsStrategy.getFriction()))
 		this.postTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
+		// Finale Mutations-Phase: Playback-Syncs (und andere Flush-Hooks) laufen
+		// als allerletzter Schritt, damit kein Gameplay-System, keine Struktur
+		// und kein Post-Ticker den autoritativen `finalState` verändern kann.
+		this.systems.forEach(s => s.flush?.(this.context))
 	}
 
 	/**
