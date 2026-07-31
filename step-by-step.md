@@ -917,7 +917,7 @@ Use deterministic fixtures and seeded random generation only.
    - **Constraint:** Avoid fragile wall-clock assertions in the ordinary unit suite. Use broad regression budgets or explicit benchmark commands for machine-dependent measurements.
    - **Negative Gate:** Fail on unbounded iteration, exponential contact growth, or memory growth across repeated identical cases.
   - **Note:** `physics_performance` executes 200 deterministic physics scenarios, reports the broad 10-second/64-MiB regression budget, and asserts the solver and CCD constants remain bounded at 16 iterations/substeps and 4-unit CCD steps. `bun run bench:physics` runs the measurement independently. The workload uses two bodies, one structure contact surface, eight ticks per scenario, and serialized contact state, so it detects repeat-case heap growth without fragile microbenchmark thresholds. Gates: 561 pass / 3 skip / 0 fail across 169 files; TSC and build clean.
-- [ ] **Task [13.12]: Qualify And Record The Physics Contract**
+- [x] **Task [13.12]: Qualify And Record The Physics Contract**
   - **Goal:** Run the complete physics test, fuzz, soak, typecheck, and build gate and document the verified solver contract.
   - **Target Files:** `docs/physics-contract.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
   - **Test File:** `tests/physics_qualification_gate.test.ts`
@@ -939,6 +939,7 @@ Use deterministic fixtures and seeded random generation only.
     - collision-effect lifecycle checks,
     - unresolved limitations,
     - final physics qualification status.
+  - **Note:** Final qualification recorded in `docs/release-verification.md` and enforced by `physics_qualification_gate`. Full suite: 562 pass / 3 skip / 0 fail across 565 files with 7,411 assertions [59.57s]; TSC and production build clean. Physics RC fuzz: 5,000 cases / 5,001 assertions / 0 fail [0.36s]; soak: 25,000 cases / 25,001 assertions / 0 fail. Solver and CCD bounds remain 16 iterations/substeps with 4-unit CCD steps. `requirements.md` and `AGENTS.md` now describe the qualified Section 13 contract and evidence.
 
 ### Section 13 Acceptance Criteria
 

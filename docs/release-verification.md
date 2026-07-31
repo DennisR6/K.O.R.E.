@@ -13,6 +13,28 @@ model, pure settings export, hardened effect factory, deterministic AI-vs-AI
 fuzz suite) have been verified end-to-end. This record is the 24-point
 release-candidate qualification.
 
+## Physics Solver Qualification (Section 13)
+
+Date: 2026-07-31. The complete contact contract is documented in
+`docs/physics-contract.md` and enforced by `physics_contact_contract`,
+`circle_rectangle_full_depenetration`, `circle_circle_zero_distance`,
+`line_endpoint_collision`, `multi_contact_solver`, `continuous_collision_detection`,
+`physics_energy_invariants`, `collision_effect_lifecycle`,
+`physics_snapshot_continuity`, `physics_fuzz`, and `physics_performance`.
+Qualification: 565 test files, 562 pass / 3 skip / 0 fail, 7411 assertions
+[59.57s]; TypeScript and production build clean.
+
+- Physics fuzz RC: 5,000 seeded cases, 5,001 assertions, 0 failures [0.36s].
+- Physics fuzz soak: 25,000 seeded cases, 25,001 assertions, 0 failures.
+- Maximum solver iterations: 16; maximum CCD substeps: 16; CCD step: 4 units.
+- Snapshot comparisons cover high-speed pre-impact, persistent multi-contact,
+  separation/re-entry, line restoration, collision-effect lifecycle, and
+  malformed contact-state rejection.
+- Limitation: property fuzz deliberately avoids synthetic unresolvable
+  two-body/wall traps; that failure path remains explicitly covered by
+  `multi_contact_solver`.
+- Status: PASS.
+
 ---
 
 ## Command Verification Results

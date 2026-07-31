@@ -508,6 +508,16 @@ files and the 24-point qualification record in `docs/release-verification.md`.
 When adding a hardening or fuzz test, mirror these boundaries and update the
 gate test.
 
+### Section 13 Physics Solver Qualification
+
+Section 13 defines and qualifies the collision contract: deterministic complete
+depenetration, zero-distance and endpoint handling, bounded multi-contact and
+CCD, energy/rest invariants, entry-only collision effects, and snapshot contact
+continuity. `PhysicsSystem` serializes active lifecycle pairs only at completed
+tick boundaries using entity UUID/structure-index keys. `tests/physics_qualification_gate.test.ts`
+references the solver evidence; `test:physics-fuzz`, `test:physics-fuzz:rc`,
+and `test:physics-fuzz:soak` run 100, 5,000, and 25,000 deterministic cases.
+
 ## Assets And Generated Files
 
 `bun run createAssets` is a mutating, potentially data-breaking operation. It:
