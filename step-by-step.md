@@ -319,7 +319,7 @@
   - **Test File:** `tests/ai_settings.test.ts`
   - **Allowed Context:** `src/settings/settings.ts`, `src/engine/types.ts`
   - **Commit:** `feat: define ai settings`
-- [ ] **Task [7.2]: AI Turn Emitter Interface**
+- [x] **Task [7.2]: AI Turn Emitter Interface**
   - **Goal:** Add a shared AI turn-emitter interface that submits the same validated input as a human player.
   - **Target Files:** `src/ai/aiEmitter.ts`, `src/emitter/Emitter.ts`
   - **Test File:** `tests/ai_emitter.test.ts`
