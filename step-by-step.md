@@ -547,7 +547,7 @@
   - **Test File:** `tests/parallel_engine_instances.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`
   - **Commit:** `test: validate parallel engine instances`
-- **Task [11.6]: Validate Persisted Match Continuation**
+- [x] **Task [11.6]: Validate Persisted Match Continuation**
   - **Goal:** Prove a persisted SQLite game snapshot restores a running match with identical rule state, and malformed persisted snapshots are rejected.
   - **Target Files:** `src/server/db.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/persisted_match_continuation.test.ts`
