@@ -496,7 +496,7 @@
   - **Test File:** `tests/mod_security.test.ts`
   - **Allowed Context:** `src/item/validate.ts`, `src/contracts/documents.ts`
   - **Commit:** `fix: harden declarative mod loading`
-- [ ] **Task [10.5]: Remove Obsolete Game Prototypes**
+- [x] **Task [10.5]: Remove Obsolete Game Prototypes**
   - **Goal:** Remove obsolete commented prototypes and duplicate paths only after their replacement coverage is complete.
   - **Target Files:** `src/start.ts`, `src/ui/Mouse.ts`
   - **Test File:** `tests/cleanup.test.ts`
