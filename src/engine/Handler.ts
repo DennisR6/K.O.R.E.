@@ -408,6 +408,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 
 	public getState(): GameState { return this.context.state }
+	public getPlaybackFramesRemaining(): number {
+		const playback = this.systems.find(system => system instanceof PlaybackSystem) as PlaybackSystem | undefined;
+		return playback?.getRemainingFrames() ?? 0;
+	}
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void {

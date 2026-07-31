@@ -1188,6 +1188,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `test: detect gameplay softlocks`
   - **Progress Fingerprint:** turnNumber, activeTeam, phase, entityStateHash, playbackFramesRemaining, matchStatus.
   - **Detected Failures:** identical full state repeating beyond a limit, turn number not advancing, phase not advancing, playback countdown not decreasing, all AIs returning no action, actions accepted without state change, endless draw-like behavior without an explicit draw result.
+   - **Note:** `tests/support/gameplayQualification.ts` now emits deterministic progress fingerprints and applies explicit repeat, no-action, no-op-action, and playback-stall limits. `tests/match_softlock_detection.test.ts` covers deterministic softlock fixtures and a bounded ongoing case that remains valid; no inferred timeout is promoted to an explicit draw.
 - [ ] **Task [15.5]: Qualify Match Length And Pacing**
   - **Goal:** Measure match duration in turns, accepted actions, simulated frames, and wall-clock-independent engine work.
   - **Target Files:** gameplay qualification harness, `docs/gameplay-balance-report.md`

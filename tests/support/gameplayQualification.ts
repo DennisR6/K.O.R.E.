@@ -41,7 +41,40 @@ export interface GameplayQualificationResult {
 	replayOk: boolean;
 	restoreOk: boolean;
 	violations: string[];
+	softlock: SoftlockAnalysis;
 }
+
+export interface ProgressFingerprint {
+	turnNumber: number;
+	activeTeam: number;
+	phase: string;
+	entityStateHash: string;
+	playbackFramesRemaining: number;
+	matchStatus: string;
+}
+
+export interface SoftlockObservation {
+	fingerprint: ProgressFingerprint;
+	acceptedAction?: boolean;
+	stateChanged?: boolean;
+	aiActionAvailable?: boolean;
+}
+
+export interface SoftlockAnalysis {
+	detected: boolean;
+	reason?: string;
+	repeatedFingerprintCount: number;
+	fingerprintCount: number;
+}
+
+export const SOFTLOCK_LIMITS = {
+	repeatedFingerprint: 4,
+	noActionObservations: 4,
+	noOpActions: 3,
+	playbackStalls: 3,
+	turnStalls: 4,
+	phaseStalls: 4,
+} as const;
 
 const WORLD = { x: 800, y: 450 };
 const SEEDS = [1503, 1504];
@@ -60,6 +93,61 @@ const mapFactories = {
 const aiFactories = { easy: EasyAi, medium: MediumAi, hard: HardAi } as const;
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
+
+function stableJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+	if (value && typeof value === "object") {
+		return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(",")}}`;
+	}
+	return JSON.stringify(value);
+}
+
+export function progressFingerprint(handler: GameHandler): ProgressFingerprint {
+	const snapshot = handler.toSettings();
+	return {
+		turnNumber: handler.getTurnNumber(),
+		activeTeam: handler.getActiveTeam(),
+		phase: handler.getRuleState().phase,
+		entityStateHash: stableJson(snapshot.players),
+		playbackFramesRemaining: handler.getPlaybackFramesRemaining(),
+		matchStatus: handler.getMatchResult()?.status ?? "ongoing",
+	};
+}
+
+function fingerprintKey(fingerprint: ProgressFingerprint): string { return stableJson(fingerprint); }
+
+export function detectSoftlock(observations: SoftlockObservation[], limits = SOFTLOCK_LIMITS): SoftlockAnalysis {
+	const counts = new Map<string, number>();
+	let repeatedFingerprintCount = 0;
+	let noActionCount = 0;
+	let noOpActionCount = 0;
+	let playbackStallCount = 0;
+	let turnStallCount = 0;
+	let phaseStallCount = 0;
+	let previous: SoftlockObservation | undefined;
+	for (const observation of observations) {
+		const key = fingerprintKey(observation.fingerprint);
+		const count = (counts.get(key) ?? 0) + 1;
+		counts.set(key, count);
+		repeatedFingerprintCount = Math.max(repeatedFingerprintCount, count);
+		if (count > limits.repeatedFingerprint) return { detected: true, reason: "identical progress fingerprint repeated beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		noActionCount = observation.aiActionAvailable === false ? noActionCount + 1 : 0;
+		if (noActionCount >= limits.noActionObservations) return { detected: true, reason: "all AI decisions returned no action beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		noOpActionCount = observation.acceptedAction && observation.stateChanged === false ? noOpActionCount + 1 : 0;
+		if (noOpActionCount >= limits.noOpActions) return { detected: true, reason: "accepted actions did not change state beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		if (previous && observation.fingerprint.playbackFramesRemaining > 0 && observation.fingerprint.playbackFramesRemaining >= previous.fingerprint.playbackFramesRemaining) playbackStallCount++;
+		else playbackStallCount = 0;
+		if (playbackStallCount >= limits.playbackStalls) return { detected: true, reason: "playback countdown did not decrease beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		if (previous?.acceptedAction && observation.acceptedAction && observation.fingerprint.turnNumber === previous.fingerprint.turnNumber) turnStallCount++;
+		else turnStallCount = 0;
+		if (turnStallCount >= limits.turnStalls) return { detected: true, reason: "turn number did not advance beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		if (previous?.acceptedAction && observation.acceptedAction && observation.fingerprint.phase === previous.fingerprint.phase) phaseStallCount++;
+		else phaseStallCount = 0;
+		if (phaseStallCount >= limits.phaseStalls) return { detected: true, reason: "rule phase did not advance beyond limit", repeatedFingerprintCount, fingerprintCount: observations.length };
+		previous = observation;
+	}
+	return { detected: false, repeatedFingerprintCount, fingerprintCount: observations.length };
+}
 
 function quiet<T>(callback: () => T): T {
 	const log = console.log;
@@ -141,14 +229,21 @@ function outcome(handler: GameHandler): "winner" | "draw" | "ongoing" {
 	return handler.getMatchResult()?.status === "draw" ? "draw" : "winner";
 }
 
-function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[] } {
+function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[]; softlock: SoftlockAnalysis } {
 	const violations: string[] = [];
 	const settings = makeSettings(testCase);
 	const handler = build(settings);
 	const emitter = new GameEmitter(handler, settings.gameMode, 2, testCase.seed);
+	const before = progressFingerprint(handler);
 	const actionAccepted = quiet(() => executeAction(handler, emitter, testCase));
 	if (actionAccepted) settle(handler);
 	else violations.push("AI did not produce a legal first action");
+	const after = progressFingerprint(handler);
+	const softlock = detectSoftlock([
+		{ fingerprint: before, acceptedAction: actionAccepted, stateChanged: before.entityStateHash !== after.entityStateHash, aiActionAvailable: actionAccepted },
+		{ fingerprint: after, aiActionAvailable: actionAccepted },
+	]);
+	if (softlock.detected) violations.push(`softlock: ${softlock.reason}`);
 	const snapshot = handler.toSettings();
 	const restored = build(snapshot);
 	const restoreOk = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
@@ -160,7 +255,7 @@ function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<Ga
 		replayOk = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
 	} catch (error) { violations.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`); }
 	if (!replayOk) violations.push("replay did not reproduce the live snapshot");
-	return { snapshot, replay: emitter.recorder.getReplay(), actionAccepted, turns: handler.getTurnNumber(), outcome: outcome(handler), replayOk, restoreOk, violations };
+	return { snapshot, replay: emitter.recorder.getReplay(), actionAccepted, turns: handler.getTurnNumber(), outcome: outcome(handler), replayOk, restoreOk, violations, softlock };
 }
 
 export function qualifyGameplayCase(testCase: GameplayQualificationCase): GameplayQualificationResult {
@@ -172,9 +267,9 @@ export function qualifyGameplayCase(testCase: GameplayQualificationCase): Gamepl
 		const deterministic = JSON.stringify(first.snapshot) === JSON.stringify(second.snapshot);
 		const violations = [...first.violations];
 		if (!deterministic) violations.push("duplicate seeded run diverged");
-		return { case: testCase, registryStatus, started: true, actionAccepted: first.actionAccepted, turns: first.turns, outcome: first.outcome, deterministic, replayOk: first.replayOk, restoreOk: first.restoreOk, violations };
+		return { case: testCase, registryStatus, started: true, actionAccepted: first.actionAccepted, turns: first.turns, outcome: first.outcome, deterministic, replayOk: first.replayOk, restoreOk: first.restoreOk, violations, softlock: first.softlock };
 	} catch (error) {
-		return { case: testCase, registryStatus, started: false, actionAccepted: false, turns: 0, outcome: "ongoing", deterministic: false, replayOk: false, restoreOk: false, violations: [error instanceof Error ? error.message : String(error)] };
+		return { case: testCase, registryStatus, started: false, actionAccepted: false, turns: 0, outcome: "ongoing", deterministic: false, replayOk: false, restoreOk: false, violations: [error instanceof Error ? error.message : String(error)], softlock: { detected: false, repeatedFingerprintCount: 0, fingerprintCount: 0 } };
 	}
 }
 
