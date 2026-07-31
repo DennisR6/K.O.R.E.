@@ -4,6 +4,17 @@ Date: 2026-07-31
 Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x (vendored 1.11.x in `public/`)
 Branch: `test` (Section 12 release-candidate qualification complete)
 
+## Section 14.12 Human-Testable Build Evidence
+
+- Exact source commit: `176c3e38a7bcc37f2c2574f51e09cbe98a9f0461` (base `HEAD`; this evidence change is intentionally uncommitted).
+- Required commands: `bun test`, `npx tsc --noEmit`, `bun run build`, and `bun run desktop:build`.
+- Reproducible wrapper: `bun run playtest:build`.
+- Verified Linux x86_64 executable: `src-tauri/target/release/slipstrike`.
+- Verified Debian bundle: `src-tauri/target/release/bundle/deb/Slipstrike_0.0.1_amd64.deb`.
+- Human instructions, canonical controls, known limitations, reset procedure, and log/screenshot collection: `docs/playtest-build.md`.
+- Focused gate: `tests/playtest_build_gate.test.ts`.
+- Status: PASS after the required commands completed; no commit was created per task instruction.
+
 ## Verification Summary
 
 All core game systems, data contracts, physics, item economy, AI, authoritative

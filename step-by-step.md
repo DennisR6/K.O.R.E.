@@ -1092,7 +1092,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Required Journey:** launch application, menu visible, start match, canonical map visible, select actor, use or skip item phase, submit shot, complete turns, show result, rematch, return to menu.
   - **Acceptance:** No developer tools, direct handler calls, or test-only shortcuts may be required for the primary journey.
   - **Note:** `tests/playable_vertical_slice.e2e.test.ts` drives the real `LocalMatchSceneRouter`, menu mouse surface, authoritative renderer, `ItemPhaseUI`, `UiSystem`, `EmitterSystem`, playback, result overlay, rematch, and menu exit. It repeats the completed match after rematch to verify both result actions without setting handler state or result directly. `GameHandler.handleMousePressed()` now accepts the initial `Starting` menu state, which is required for the browser landing-page click to work. Focused slice test, TSC, browser build, and full Bun suite pass.
-- [ ] **Task [14.12]: Produce A Human-Testable Build**
+ - [x] **Task [14.12]: Produce A Human-Testable Build**
   - **Goal:** Package a build that external testers can launch and use to complete the canonical match without repository access or developer instructions.
   - **Target Files:** packaging scripts, desktop configuration, `docs/playtest-build.md`, `docs/release-verification.md`
   - **Test File:** `tests/playtest_build_gate.test.ts`
@@ -1100,6 +1100,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `build: produce human testable vertical slice`
   - **Required Commands:** `bun test`, `npx tsc --noEmit`, `bun run build`, `bun run desktop:build`
   - **Required Evidence:** exact commit, executable or bundle path, launch instructions, canonical controls, known limitations, test reset instructions, log and screenshot collection instructions.
+  - **Note:** Added the reproducible `playtest:build` wrapper, Tauri artifact gate in `tests/playtest_build_gate.test.ts`, and `docs/playtest-build.md`. Linux x86_64 executable and Debian bundle paths, launch/control/reset guidance, known limitations, and failure evidence collection are recorded in `docs/release-verification.md`; the required build and test gates passed with no commit created.
 
 ### Section 14 Acceptance Criteria
 
