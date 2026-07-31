@@ -337,7 +337,7 @@
   - **Test File:** `tests/medium_ai.test.ts`
   - **Allowed Context:** `src/physics/physics.ts`, `src/ai/types.ts`
   - **Commit:** `feat: add heuristic medium ai`
-- [ ] **Task [7.5]: Simulation Hard AI**
+- [x] **Task [7.5]: Simulation Hard AI**
   - **Goal:** Implement hard AI bounded angle/force simulation search with a fixed deterministic evaluation budget.
   - **Target Files:** `src/ai/hardAi.ts`, `src/ai/types.ts`
   - **Test File:** `tests/hard_ai.test.ts`
