@@ -508,7 +508,7 @@
   - **Test File:** `tests/documentation.test.ts`
   - **Allowed Context:** `AGENTS.md`, `TODO.md`
   - **Commit:** `docs: document completed game systems`
-- [ ] **Task [10.7]: Record Release Verification**
+- [x] **Task [10.7]: Record Release Verification**
   - **Goal:** Run clean-install, unit, typecheck, browser-build, server, desktop, and mobile smoke checks; record exact results in release documentation.
   - **Target Files:** `docs/release-verification.md`, `package.json`
   - **Test File:** `tests/release_smoke.test.ts`
