@@ -39,7 +39,7 @@ be marked complete in `TODO.md` and `step-by-step.md`.
 | R-12 | TODO Phase 10; GDD 3 and 15 | [Platforms](step-by-step.md#9-desktop-mobile-and-discord) | Local browser hotseat works without WebSocket; no package or PWA evidence exists. | Tauri build smoke test, installable offline mobile-web test, and mobile reconnect/touch smoke test. |
 | R-13 | TODO Phase 11; GDD 3 and 14 | [Platforms](step-by-step.md#9-desktop-mobile-and-discord) | No Discord runtime or dependency exists. | Disabled-config no-op test, mocked Rich Presence state tests, and validated join/invite tests. |
 | R-14 | TODO optional workshop decision; GDD 12 | [Persistence](step-by-step.md#8-persistence-sharing-and-replays) | Scope decision recorded in `TODO.md`; no workshop is required. | Validated settings export and server-distributed settings tests provide the agreed sharing mechanism. |
-| R-15 | All TODO/GDD requirements | [Final Hardening](step-by-step.md#10-final-hardening-and-release-readiness) | `bun test` runs the active Bun suite; several historical tests remain empty or commented. | Local/network end-to-end matches, malformed-input coverage, mod-boundary security audit, and clean release verification. |
+| R-15 | All TODO/GDD requirements | [Final Hardening](step-by-step.md#10-final-hardening-and-release-readiness) | `bun test` runs the active Bun suite; `tests/e2e_local_match.test.ts` covers complete local match lifecycle; several historical tests remain empty or commented. | Local/network end-to-end matches, malformed-input coverage, mod-boundary security audit, and clean release verification. |
 
 ## Update Rules
 

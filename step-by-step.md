@@ -472,7 +472,7 @@
 
 ## 10. Final Hardening And Release Readiness
 
-- [ ] **Task [10.1]: Cover Complete Local Match**
+- [x] **Task [10.1]: Cover Complete Local Match**
   - **Goal:** Add end-to-end coverage for a local match with items, hazards, elimination, result, reset, and replay.
   - **Target Files:** `tests/e2e_local_match.test.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/e2e_local_match.test.ts`

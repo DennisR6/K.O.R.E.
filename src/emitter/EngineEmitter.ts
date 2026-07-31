@@ -31,6 +31,7 @@ export class GameEmitter implements IInputEmitter {
 	}
 
 	sendShot(actorId: string, angle: number, power: number): void {
+		this.ruleState = this.handler.getRuleState()
 		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
 		this.recorder.recordShoot(actorId, angle, power)
 		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
@@ -52,6 +53,7 @@ export class GameEmitter implements IInputEmitter {
 	}
 
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
+		this.ruleState = this.handler.getRuleState()
 		if (this.ruleState.phase !== RulePhase.Item) throw new Error("Local item use is not in the item phase")
 		this.recorder.recordItemUse(actorId, itemId, target)
 		this.handler.useItem(actorId, itemId, target)
