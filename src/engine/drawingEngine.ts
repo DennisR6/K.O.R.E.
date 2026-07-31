@@ -53,6 +53,9 @@ export class P5Renderer implements RenderContext {
 	setFillColor(color: string): void {
 		this.p5ctx.fill(color)
 	}
+	setNoFill(): void {
+		this.p5ctx.noFill()
+	}
 	setStrokeColor(color: string): void {
 		this.p5ctx.stroke(color)
 	}

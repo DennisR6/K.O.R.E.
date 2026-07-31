@@ -36,6 +36,11 @@ export class MapPickupSystem implements ISystem {
 		return this.state && clonePickupState(this.state);
 	}
 
+	/** Returns a detached pickup configuration for presentation-only consumers. */
+	public getPickups(): ItemPickup[] {
+		return structuredClone(this.pickups);
+	}
+
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (!this.state) return;
 		if (this.state.turnNumber !== ctx.currTurn) {

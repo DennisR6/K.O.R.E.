@@ -14,6 +14,7 @@ export interface RenderContext {
 	drawRect(x: number, y: number, width: number, height: number): void;
 	drawText(text: string, x: number, y: number, fontSize?: number): void;
 	setFillColor(color: string): void;
+	setNoFill(): void;
 	setStrokeColor(color: string): void;
 	setStroke(weight: number): void;
 	rotate(x: number): void;
@@ -71,4 +72,3 @@ export interface IDrawer {
 	 */
 	draw(ctx: RenderContext): void;
 }
-

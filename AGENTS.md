@@ -570,8 +570,9 @@ not desired design:
   non-positive mass.
 - Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
   player dead. Death circles use `EffectModifySetting` to set `dead: true`.
-  Dead players no longer render, tick, collide, accept selection, or resolve a
-  turn; settings snapshots preserve their dead state. Match-end input is
+  Dead players render as authoritative `OUT` markers but no longer tick,
+  collide, accept selection, or resolve a turn; settings snapshots preserve
+  their dead state. Match-end input is
   blocked, but winning evaluation is not yet integrated into round progression.
 - Round effects are stored but not meaningfully executed. Circle and rectangle
   collision effects execute, including converted editor push and kill zones.

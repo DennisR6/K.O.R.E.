@@ -2,7 +2,7 @@ import { SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../ph
 import { EntityManager } from "../entity/EntityManager.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
-import { GameState, getEngineStateName } from "./types.js";
+import { GameState } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, ItemDrawState, TurnPacket } from "./types.js"
 import type { IGameContext, ISystem } from "../systems/types.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
@@ -33,6 +33,7 @@ import type { IAiTurnProducer } from "../ai/aiEmitter.js";
 import { EasyAi } from "../ai/easyAi.js";
 import { MediumAi } from "../ai/mediumAi.js";
 import { HardAi } from "../ai/hardAi.js";
+import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../ui/AuthoritativeGameplayRenderer.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -108,6 +109,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private items: ItemDocument[] = []
 	private itemDrawRandom: SeededRandom | undefined
 	private mapPickupSystem = new MapPickupSystem()
+	private readonly gameplayRenderer = new AuthoritativeGameplayRenderer(this)
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
@@ -288,16 +290,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	public drawWorld(renderer: RenderContext): void {
 		renderer.clear()
-		renderer.drawText(getEngineStateName(this.context.state), renderer.WORLD_SIZE_X / 2 - 32 * 3, 32 * 2, 32)
 		this.preDrawers.forEach(d => d.draw(renderer))
-		this.context.structures.forEach(str => str.draw(renderer))
-		// 2. Entities (Player/Pucks) zeichnen
-		this.getEntityManager().getEntities().forEach(entity => {
-			renderer.push()
-			entity.draw(renderer);
-			renderer.pop()
-		});
-		this.drawUI(renderer)
+		this.gameplayRenderer.draw(renderer)
 		this.postDrawers.forEach(d => d.draw(renderer))
 
 	}
@@ -571,6 +565,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.items = structuredClone(items)
 	}
 	public configureMapItemPickups(pickups: ItemPickup[]): void { this.mapPickupSystem.configure(pickups, this.items) }
+	/** Produces the complete detached state consumed by the gameplay renderer. */
+	public getAuthoritativeRenderState(): AuthoritativeGameplaySnapshot {
+		return {
+			gameState: this.getState(),
+			ruleState: this.getRuleState(),
+			matchResult: this.getMatchResult(),
+			structures: this.context.structures.map(structure => structure.toSettings()),
+			players: this.entityManager.toSettings(),
+			pickups: this.mapPickupSystem.getPickups(),
+			pickupState: this.mapPickupSystem.toState(),
+		}
+	}
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
 	/** Consumes a declared item without applying its effects or validating targets. */

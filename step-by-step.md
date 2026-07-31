@@ -1026,7 +1026,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** every player is visible, active-team figures can be selected, inactive-team figures cannot be submitted as actions, camera bounds include the relevant arena, resize preserves a usable view.
   - **Negative Tests:** no player starts behind UI, no NaN camera transform, no camera position outside its configured limits, no dead or invalid actor is preselected.
   - **Note:** Implemented `src/ui/FitWorldCamera.ts` as the bounded fit-world controller used by `src/engine/drawingEngine.ts` on resize. `validateReferenceSpawnAndCamera()` in `src/settings/canonicalPlayableMatch.ts` verifies live, contained, one-team canonical spawns in the configured 800x450 view; `UiSystem` clears invalid preselection. `tests/reference_spawn_and_camera.test.ts` covers visibility, resize stability, active-team submission, and invalid camera/spawn cases.
-- [ ] **Task [14.5]: Render The Authoritative Match State**
+- [x] **Task [14.5]: Render The Authoritative Match State**
   - **Goal:** Render players, structures, containment, hazards, items, effects, active team, death state, playback, and result state directly from the authoritative handler.
   - **Target Files:** `src/ui/**`, `src/rendering/**`, `src/scenes/**`
   - **Test File:** `tests/gameplay_scene_rendering.test.ts`
@@ -1035,6 +1035,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Constraint:** Rendering must not maintain a parallel mutable gameplay model.
   - **Positive Tests:** entity position reflects handler state, dead entities are represented correctly, structures use their actual role and geometry, effect visuals follow serialized effect state, final hard sync is visible without drift.
   - **Negative Tests:** rendering cannot mutate the handler, stale cached entities cannot survive rematch, containment-only structures are not rendered as filled obstacles unless intended.
+  - **Note:** Implemented `src/ui/AuthoritativeGameplayRenderer.ts` as the stateless world layer invoked by `GameHandler.drawWorld()`. It renders live entity snapshots, active-team state, death markers, serialized effects, inventory/map pickups, actual structure roles and geometry, playback status, and results without retaining mutable match data. `tests/gameplay_scene_rendering.test.ts` verifies direct authoritative positions, effect/death presentation, containment outlines, non-mutation, hard-sync visibility, and rematch freshness.
 - [ ] **Task [14.6]: Connect Player Input To Validated Actions**
   - **Goal:** Convert mouse, touch, keyboard, or controller interactions into validated actor selection, aim, power, shot, and cancellation operations.
   - **Target Files:** input controller, gameplay scene, `src/emitter/EngineEmitter.ts`
