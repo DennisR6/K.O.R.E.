@@ -1227,7 +1227,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Required Metrics:** availability, legal-use rate, actual-use rate, successful effect rate, winner correlation, replay and snapshot continuity.
   - **Negative Signals:** item can never be legally used, item always causes an invalid state, item bypasses turn limits, one item determines nearly every outcome, item effects disappear or duplicate after restore, item creates a permanent softlock.
   - **Note:** `tests/item_gameplay_qualification.test.ts` runs 33 deterministic cases covering all 11 official items across fixed-loadout, map-pickup, and seeded-draw economies. Availability, legal use, actual use, per-turn rejection, invalid-target rejection, replay continuity, and snapshot continuity pass at 100%. The harness correctly reports `effect-disappears-after-use` for every item because the current `GameHandler.useItem()` consumes inventory but does not apply declarative effects, and reports winner correlation as unavailable because these item-only traces do not complete a terminal match. These are retained as release findings rather than being converted into false qualification claims.
-- [ ] **Task [15.9]: Prepare Structured Human Playtest Sessions**
+- [x] **Task [15.9]: Prepare Structured Human Playtest Sessions**
   - **Goal:** Produce a tester-ready build, instructions, observation sheet, issue template, and session protocol for the existing external playtesters.
   - **Target Files:** `docs/playtest-protocol.md`, `docs/playtest-questionnaire.md`, issue templates
   - **Test File:** `tests/human_playtest_readiness.test.ts`
@@ -1235,6 +1235,7 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Commit:** `docs: prepare structured human playtests`
   - **Session Rules:** first match without explanation beyond launch instructions, observer records confusion without immediately intervening, second match may include control clarification, testers complete a consistent questionnaire, crashes and blockers include reproduction details.
   - **Questions:** goal understandable, active team clear, aiming understandable, power understandable, items understandable, feedback immediate and clear, camera obstructive, anything unfair, match too short or too long, willingness to voluntarily play another match.
+  - **Note:** Added tester-ready packaged-build verification, a two-match protocol with explicit observer intervention boundaries, a timestamped observation sheet, the consistent questionnaire in `docs/playtest-questionnaire.md`, and the `.github/ISSUE_TEMPLATE/playtest-finding.md` reproduction template. `tests/human_playtest_readiness.test.ts` validates the build command, launch/reset instructions, required observations and questionnaire prompts, issue evidence fields, and the Section 15.9 session rules. This defines collection readiness only; actual human sessions and results remain Section 15.10.
 - [ ] **Task [15.10]: Collect And Classify Human Playtest Evidence**
   - **Goal:** Record structured results from actual tester sessions and distinguish blockers, usability defects, balance concerns, preferences, and unsupported requests.
   - **Target Files:** `docs/playtest-results/<session>.md`, issue tracker references
