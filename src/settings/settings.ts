@@ -9,6 +9,7 @@ import { EffectMove } from "../effects/movement.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
+import { validateAiSettings, type AiSettings } from "../ai/types.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -32,6 +33,7 @@ export interface GameSettings {
 	figuresPerPlayer: number,
 	/** Optional to keep persisted settings from before game modes loadable. */
 	gameMode?: GameModeSettings,
+	ai?: AiSettings,
 	minPlayers: number,
 	maxPlayers: number,
 	turn?: number
@@ -122,6 +124,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 			throw new Error("Seeded item draw references an unknown item")
 		}
 	}
+	if (settings.ai !== undefined) validateAiSettings(settings.ai)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }

@@ -313,7 +313,7 @@
 
 ## 7. AI And Play Modes
 
-- [ ] **Task [7.1]: Define AI Settings**
+- [x] **Task [7.1]: Define AI Settings**
   - **Goal:** Define serializable AI configuration including seed, difficulty, and decision limits.
   - **Target Files:** `src/ai/types.ts`, `src/settings/settings.ts`
   - **Test File:** `tests/ai_settings.test.ts`
