@@ -901,7 +901,7 @@ Use deterministic fixtures and seeded random generation only.
    - contact effects follow entry/persist/exit semantics.
    - **Failure Output:** Print seed, generated geometry, initial body state, tick index, contact set, and a direct reproduction command.
   - **Note:** `physicsFuzz` builds bounded deterministic two-body/thin-wall scenarios from each seed, checks finite state through eight ticks, records serializable contact state, and reruns every case for byte-identical output. Invalid solver failures include seed, tick, full player/structure settings, and a direct reproduction command. `PHYSICS_FUZZ_CASES` defaults to 100; package scripts provide 100-case smoke, 5,000-case RC, and 25,000-case soak runs. The fuzz fixture deliberately keeps bodies on opposite sides of its thin wall to avoid manufacturing an already-covered unresolvable two-body/wall trap; multi-contact solver failure remains an explicit 13.5 regression. A sub-slop convergence tail no longer raises an unresolved-trap error, while penetration above the contact slop still does. Gates: 558 pass / 3 skip / 0 fail across 168 files; 5,000-case RC fuzz, TSC, and build clean.
-- [ ] **Task [13.11]: Establish A Physics Performance Budget**
+- [x] **Task [13.11]: Establish A Physics Performance Budget**
   - **Goal:** Measure and bound the cost of collision detection, multi-contact resolution, CCD, effect dispatch, and physics fuzz scenarios.
   - **Target Files:** `tests/physics_performance.test.ts`, benchmark helpers, `package.json`
   - **Test File:** `tests/physics_performance.test.ts`
@@ -914,8 +914,9 @@ Use deterministic fixtures and seeded random generation only.
     - CCD substeps,
     - effect dispatch count,
     - peak fuzz-case duration.
-  - **Constraint:** Avoid fragile wall-clock assertions in the ordinary unit suite. Use broad regression budgets or explicit benchmark commands for machine-dependent measurements.
-  - **Negative Gate:** Fail on unbounded iteration, exponential contact growth, or memory growth across repeated identical cases.
+   - **Constraint:** Avoid fragile wall-clock assertions in the ordinary unit suite. Use broad regression budgets or explicit benchmark commands for machine-dependent measurements.
+   - **Negative Gate:** Fail on unbounded iteration, exponential contact growth, or memory growth across repeated identical cases.
+  - **Note:** `physics_performance` executes 200 deterministic physics scenarios, reports the broad 10-second/64-MiB regression budget, and asserts the solver and CCD constants remain bounded at 16 iterations/substeps and 4-unit CCD steps. `bun run bench:physics` runs the measurement independently. The workload uses two bodies, one structure contact surface, eight ticks per scenario, and serialized contact state, so it detects repeat-case heap growth without fragile microbenchmark thresholds. Gates: 561 pass / 3 skip / 0 fail across 169 files; TSC and build clean.
 - [ ] **Task [13.12]: Qualify And Record The Physics Contract**
   - **Goal:** Run the complete physics test, fuzz, soak, typecheck, and build gate and document the verified solver contract.
   - **Target Files:** `docs/physics-contract.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
