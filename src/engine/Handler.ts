@@ -20,6 +20,8 @@ import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
+import { RuleInterpreter } from "../rules/RuleInterpreter.js";
+import { currentTurnMode } from "../rules/defaultGameModes.js";
 import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
@@ -131,6 +133,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			currTurn: 0,
 			activeTeam: 0,
 			myTeamNumber: 0,
+			setMatchResult: (result) => this.setMatchResult(result),
 		}
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
@@ -387,6 +390,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.context.activeTeam = ruleState.activeTeam
 		this.context.currTurn = ruleState.turnNumber
 	}
+	/** Advances to the next rule phase in the current game mode. */
+	public skipCurrentPhase(): RuleState {
+		const mode = this.settings?.gameMode ?? currentTurnMode
+		const interpreter = new RuleInterpreter(mode)
+		const nextState = interpreter.advancePhase(this.ruleState)
+		this.setRuleState(nextState)
+		return this.getRuleState()
+	}
 	/** Starts a turn and grants its configured deterministic item draws. */
 	public startTurn(ruleState: RuleState): void {
 		this.setTurnNumber(ruleState.turnNumber)
@@ -423,7 +434,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.loadEffects(settings.effects)
 		this.initializeItemDraws()
 		this.resetMapItemPickups()
-		this.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		const initialPhase = settings.gameMode?.phases?.[0] ?? RulePhase.Physics
+		this.startTurn({ phase: initialPhase, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
 		this.setState(GameState.Your_turn)

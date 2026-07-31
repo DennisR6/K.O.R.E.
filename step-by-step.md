@@ -474,8 +474,8 @@
 
 - [x] **Task [10.1]: Cover Complete Local Match**
   - **Goal:** Add end-to-end coverage for a local match with items, hazards, elimination, result, reset, and replay.
-  - **Target Files:** `tests/e2e_local_match.test.ts`, `src/engine/Handler.ts`
-  - **Test File:** `tests/e2e_local_match.test.ts`
+  - **Target Files:** `tests/local_match_lifecycle.integration.test.ts`, `src/engine/Handler.ts`
+  - **Test File:** `tests/local_match_lifecycle.integration.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/item/officialItems.ts`
   - **Commit:** `test: cover complete local match`
 - [x] **Task [10.2]: Cover Complete Network Match**

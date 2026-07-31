@@ -2,6 +2,7 @@ import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
 import type { ReplayDocument } from "./types.js";
 import { validateReplayDocument } from "./types.js";
 import type { PlayerSettings } from "../entity/types.js";
+import { WinningSystem } from "../systems/WinningSystem.js";
 
 export class ReplayPlayer {
 	private handler: GameHandler;
@@ -10,7 +11,12 @@ export class ReplayPlayer {
 	public constructor(replay: ReplayDocument) {
 		validateReplayDocument(replay);
 		this.replay = JSON.parse(JSON.stringify(replay));
-		this.handler = new GameHandlerBuilder().defaultSystems().fromSettings(this.replay.initialSettings).build();
+		const teamCount = this.replay.initialSettings.playerCount ?? 2;
+		this.handler = new GameHandlerBuilder()
+			.defaultSystems()
+			.addSystem(new WinningSystem(teamCount))
+			.fromSettings(this.replay.initialSettings)
+			.build();
 	}
 
 	public playAll(): PlayerSettings[] {

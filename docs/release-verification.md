@@ -91,7 +91,7 @@ bun run desktop:build
 | Untrusted Input Hardening | `src/server/gameRegistry.ts` | `tests/input_fuzz.test.ts` | PASS |
 | Mod & Security Audit | `src/item/validate.ts`, `src/contracts/documents.ts` | `tests/mod_security.test.ts` | PASS |
 | Obsolete Code Cleanup | Removal of `src/start.ts` & `src/ui/Mouse.ts` | `tests/cleanup.test.ts` | PASS |
-| End-to-End Local Match | `src/engine/Handler.ts`, `src/emitter/EngineEmitter.ts` | `tests/e2e_local_match.test.ts` | PASS |
+| End-to-End Local Match | `src/engine/Handler.ts`, `src/emitter/EngineEmitter.ts` | `tests/local_match_lifecycle.integration.test.ts` | PASS |
 | End-to-End Network Match | `src/server/runtime.ts`, `src/emitter/NetworkEmitter.ts` | `tests/e2e_network_match.test.ts` | PASS |
 
 ---

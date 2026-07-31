@@ -1,5 +1,5 @@
 import type { GameHandler } from "../engine/Handler.js";
-import { type IInputEmitter } from "../engine/types.js";
+import { GameState, type IInputEmitter } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types.js";
@@ -38,6 +38,7 @@ export class GameEmitter implements IInputEmitter {
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
 		this.handler.playTurn(sim, () => {
+			if (this.handler.getState?.() === GameState.Game_over) return
 			this.ruleState = this.rules.advancePhase(this.ruleState)
 			this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount)
 			const startTurn = (this.handler as Partial<GameHandler>).startTurn
@@ -47,7 +48,6 @@ export class GameEmitter implements IInputEmitter {
 				this.handler.setTurnNumber(this.ruleState.turnNumber)
 				this.handler.setRuleState(this.ruleState)
 			}
-			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
 	}

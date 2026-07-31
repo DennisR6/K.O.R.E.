@@ -1,6 +1,7 @@
 import type { GameState, IInput, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
+import type { MatchResult } from "../rules/types.js";
 import type { IStructure } from "../structures/types.js";
 
 /**
@@ -25,6 +26,7 @@ export interface IGameContext {
 	currTurn: number
 	activeTeam: number
 	myTeamNumber: number
+	setMatchResult?: (result: MatchResult | undefined) => void;
 }
 
 /**
