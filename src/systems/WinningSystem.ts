@@ -42,11 +42,9 @@ export function evaluateLastTeamStanding(entities: IEntity[], teamCount: number)
  * team eliminated later in the same turn can turn a pending win into a draw.
  */
 export class WinningSystem implements ISystem {
-	private winner: number | undefined
 	private pending: { evaluation: LastTeamStandingEvaluation; turn: number } | undefined
 
 	public constructor(private readonly teamCount: number) { }
-	public getWinner(): number | undefined { return this.winner }
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state === GameState.Game_over) return
 		const evaluation = evaluateLastTeamStanding(ctx.entities.getEntities(), this.teamCount)
@@ -90,7 +88,9 @@ export class WinningSystem implements ISystem {
 				reason: MatchEndReason.Draw,
 				turnNumber,
 			}
-		if (evaluation.status === MatchStatus.Winner) this.winner = evaluation.winnerTeam
+		// The winner is never stored here: the handler's `MatchResult` is the
+		// single authoritative outcome state, shared by the live handler,
+		// snapshot restoration, and replay playback.
 		ctx.state = GameState.Game_over
 		ctx.setMatchResult?.(result)
 	}

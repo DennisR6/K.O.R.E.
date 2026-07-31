@@ -636,12 +636,13 @@
   - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/*.ts`, `src/effects/*.ts`
   - **Commit:** `fix: gate gameplay systems on match completion`
   - **Note:** `GameHandler.tick()` now no-ops once the match is `Game_over`, so the post-sync interior depenetration can no longer drift resting players and nothing may mutate the completed snapshot. `simulateTurn`, `resolveTurn`, `playTurn`, and `applyRawTurn` throw `completed match` errors on a finished match; `rematch()` is the only sanctioned resume path. One deliberate exception: an in-flight `resolveTurn` (flagged `resolvingTurn`) keeps ticking even when the deciding tick completes the match mid-loop, because that loop IS the accepted turn's resolution - without it the authoritative chain froze the survivor mid-flight at the kill frame and spun to the 1200-frame cap, diverging from the emitter's sim (the `ai_replay_lifecycle` chain-vs-replay assertion caught this). `match_completion_gate` proves frozen no-op ticks, rejected entry points, frozen snapshot restoration, rematch unfreezing, and that ongoing matches are unaffected. The rematch case uses a shot-driven kill because a spawn-inside-kill-circle arena re-dies on the first post-rematch tick.
-- [ ] **Task [12.9]: Unify Winner State With The Match Result**
+- [x] **Task [12.9]: Unify Winner State With The Match Result**
   - **Goal:** Remove the mutable winner duplicate inside `WinningSystem` so snapshot restoration, replay, and the live handler agree on the single authoritative `MatchResult`.
   - **Target Files:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
   - **Test File:** `tests/winner_state_unification.test.ts`
   - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
   - **Commit:** `refactor: unify winner state with match result`
+  - **Note:** `WinningSystem` no longer keeps a `winner` field or `getWinner()` (it had zero callers); `finalize` only stores the `MatchResult` through `ctx.setMatchResult`, so the live handler, restored snapshots, and replay playback share exactly one outcome state. `winner_state_unification` proves the result is the only winner state (no top-level snapshot key carries it), no outcome is observable mid-playback, restored and replayed handlers agree with the live `MatchResult`, and draws unify identically.
 - [ ] **Task [12.10]: Make Settings Export Pure**
   - **Goal:** Prove `handler.toSettings()` is a pure export that never mutates stored settings or internal state, with snapshot-equality assertions before and after repeated exports.
   - **Target Files:** `src/engine/Handler.ts`
