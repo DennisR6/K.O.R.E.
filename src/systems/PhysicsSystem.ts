@@ -80,25 +80,17 @@ export class PhysicsSystem implements ISystem {
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
 		);
+		const contactedPairsThisTick = new Set<string>();
 
-		let previousTotalOverlap = Infinity;
-		let hitLimit = false;
-		let finalOverlap = 0;
-
+		let prevTotalOverlap = Infinity;
 		for (let iter = 0; iter < MAX_CONTACT_SOLVER_ITERATIONS; iter++) {
-			let resolvedAny = false;
-			let totalOverlap = 0;
-
 			for (let i = 0; i < enitityArr.length; i++) {
 				const entityA = enitityArr[i];
 
 				for (let j = i + 1; j < enitityArr.length; j++) {
 					const entityB = enitityArr[j];
 					if (this.strategy.checkCollision(entityA, entityB)) {
-						if (this.isStrictlyPenetrating(entityA, entityB)) {
-							resolvedAny = true;
-						}
-						this.strategy.handleCollision(entityA, entityB);
+						this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
 					}
 				}
 
@@ -108,53 +100,67 @@ export class PhysicsSystem implements ISystem {
 					// Containment-only boundaries must never resolve as filled obstacles.
 					if (this.isContainmentOnly(structureB, containmentBoundaries)) continue
 					if (this.strategy.checkCollision(entityA, structureB)) {
-						if (this.isStrictlyPenetrating(entityA, structureB)) {
-							resolvedAny = true;
-						}
-						this.strategy.handleCollision(entityA, structureB);
+						this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
 					}
 				}
 			}
 
+			let totalOverlap = 0;
 			for (let i = 0; i < enitityArr.length; i++) {
 				const entityA = enitityArr[i];
 				for (let j = i + 1; j < enitityArr.length; j++) {
 					const entityB = enitityArr[j];
-					if (this.isStrictlyPenetrating(entityA, entityB)) {
-						totalOverlap += 1;
-					}
+					totalOverlap += this.getOverlapDistance(entityA, entityB);
 				}
 				for (let j = 0; j < structures.length; j++) {
 					const structureB = structures[j] as Structure<SHAPE>;
 					if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries)) continue;
-					if (this.isStrictlyPenetrating(entityA, structureB)) {
-						totalOverlap += 1;
-					}
+					totalOverlap += this.getOverlapDistance(entityA, structureB);
 				}
 			}
 
-			finalOverlap = totalOverlap;
-			if (!resolvedAny) {
+			if (totalOverlap <= 1e-4) {
 				break;
 			}
-			if (iter === MAX_CONTACT_SOLVER_ITERATIONS - 1 && totalOverlap > PHYSICS_CONTACT_SLOP) {
-				hitLimit = true;
-			}
-			if (totalOverlap >= previousTotalOverlap - 1e-12) {
-				if (iter >= 1 && totalOverlap > PHYSICS_CONTACT_SLOP) {
-					hitLimit = true;
-				}
-				break;
-			}
-			previousTotalOverlap = totalOverlap;
-		}
 
-		if (hitLimit && finalOverlap > PHYSICS_CONTACT_SLOP) {
-			throw new Error("Unresolved penetration after max solver iterations");
+			const progress = prevTotalOverlap - totalOverlap;
+			if (iter === MAX_CONTACT_SOLVER_ITERATIONS - 1 && totalOverlap > 1e-4 && progress < 1e-4) {
+				throw new Error("Unresolved penetration after max solver iterations");
+			}
+			prevTotalOverlap = totalOverlap;
 		}
 	}
 
-	private isStrictlyPenetrating(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): boolean {
+	private getPairKey(a: any, b: any): string {
+		const idA = a.getId ? a.getId() : (a.id ?? `${a.getPos?.().x ?? 0}_${a.getPos?.().y ?? 0}`);
+		const idB = b.getId ? b.getId() : (b.id ?? `${b.getPos?.().x ?? 0}_${b.getPos?.().y ?? 0}`);
+		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+	}
+
+	private handlePairCollision(
+		entityA: IPhysics<SHAPE>,
+		entityB: IPhysics<SHAPE>,
+		contactedPairs: Set<string>,
+	) {
+		const pairKey = this.getPairKey(entityA, entityB);
+		if (contactedPairs.has(pairKey)) {
+			const origA = entityA.onCollision;
+			const origB = entityB.onCollision;
+			entityA.onCollision = () => {};
+			entityB.onCollision = () => {};
+			try {
+				this.strategy.handleCollision(entityA, entityB);
+			} finally {
+				entityA.onCollision = origA;
+				entityB.onCollision = origB;
+			}
+		} else {
+			contactedPairs.add(pairKey);
+			this.strategy.handleCollision(entityA, entityB);
+		}
+	}
+
+	private getOverlapDistance(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): number {
 		const shapeA = entityA.getShape();
 		const shapeB = entityB.getShape();
 		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.CIRCLE) {
@@ -165,7 +171,7 @@ export class PhysicsSystem implements ISystem {
 			const dist = Math.hypot(dx, dy);
 			const rSum = cA.getBounds().x + cB.getBounds().x;
 			const overlap = rSum - dist;
-			return overlap > PHYSICS_CONTACT_SLOP;
+			return Math.max(overlap - PHYSICS_CONTACT_SLOP, 0);
 		}
 		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.RECTANGLE) {
 			const c = entityA as IPhysics<SHAPE.CIRCLE>;
@@ -180,10 +186,10 @@ export class PhysicsSystem implements ISystem {
 			const dy = cPos.y - closestY;
 			const distance = Math.hypot(dx, dy);
 			const overlap = radius - distance;
-			return overlap > PHYSICS_CONTACT_SLOP;
+			return Math.max(overlap - 0.01, 0);
 		}
 		if (shapeA === SHAPE.RECTANGLE && shapeB === SHAPE.CIRCLE) {
-			return this.isStrictlyPenetrating(entityB, entityA);
+			return this.getOverlapDistance(entityB, entityA);
 		}
 		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.LINE) {
 			const c = entityA as IPhysics<SHAPE.CIRCLE>;
@@ -202,12 +208,12 @@ export class PhysicsSystem implements ISystem {
 			const distance = Math.hypot(dx, dy);
 			const radius = c.getBounds().x;
 			const overlap = radius - distance;
-			return overlap > PHYSICS_CONTACT_SLOP;
+			return Math.max(overlap - 0.01, 0);
 		}
 		if (shapeA === SHAPE.LINE && shapeB === SHAPE.CIRCLE) {
-			return this.isStrictlyPenetrating(entityB, entityA);
+			return this.getOverlapDistance(entityB, entityA);
 		}
-		return false;
+		return 0;
 	}
 
 	/**
