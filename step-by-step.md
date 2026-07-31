@@ -1163,13 +1163,14 @@ Automated evidence cannot prove that the game is fun. Human feedback cannot repl
   - **Technical Playability Criteria:** valid spawn, legal first action, advancing rule phases, bounded playback, no softlock, winner or explicit draw, stable replay, stable snapshot restore, no post-completion mutation.
   - **Human Criteria:** control comprehension, objective comprehension, phase comprehension, action feedback, camera usability, pacing, perceived fairness, willingness to play another match.
   - **Note:** `docs/gameplay-qualification.md` defines the nine per-configuration technical pass/fail criteria, evidence record, 1,200-frame playback bound, explicit winner/draw requirement, softlock evidence, replay/restore equality, and terminal immutability. `docs/playtest-protocol.md` defines the repeatable two-match human session, no-explanation first match, 1-5 ratings, suggested measurable signals, blocker classification, and session record. `tests/gameplay_qualification_contract.test.ts` verifies both documents and this checklist linkage. This task defines the contract only; shipped-content matrix execution and human evidence remain Section 15.2 onward.
-- [ ] **Task [15.2]: Inventory The Shipped Gameplay Matrix**
+- [x] **Task [15.2]: Inventory The Shipped Gameplay Matrix**
   - **Goal:** Produce a machine-readable inventory of all maps, modes, team counts, player counts, AI difficulties, item sets, and supported platform/control combinations intended for release.
   - **Target Files:** content registry, `docs/gameplay-matrix.md`
   - **Test File:** `tests/gameplay_content_inventory.test.ts`
   - **Allowed Context:** maps, modes, items, AI configurations, build targets
-  - **Commit:** `docs: inventory shipped gameplay content`
-  - **Acceptance:** Every shipped configuration is either qualified, explicitly unsupported, or blocked from selection.
+   - **Commit:** `docs: inventory shipped gameplay content`
+   - **Acceptance:** Every shipped configuration is either qualified, explicitly unsupported, or blocked from selection.
+   - **Note:** `src/content/gameplayContentRegistry.ts` inventories the four map factories, two mode definitions, supported team/figure counts, easy/medium/hard AI, all 11 official item IDs and economy shapes, plus platform/control combinations. `docs/gameplay-matrix.md` records the current menu boundary: the canonical two-team one-figure Ice Duel with Power-Dash and mouse drag is qualified; source-present maps, generic mode, AI, item catalog, unverified desktop targets, and unwired controls are explicitly blocked or unsupported. Task 15.3 remains responsible for executing the non-qualified matrix.
 - [ ] **Task [15.3]: Validate Every Shipped Map And Mode Combination**
   - **Goal:** Run deterministic AI-vs-AI qualification matches over the complete supported content matrix.
   - **Target Files:** `tests/support/gameplayQualification.ts`, package scripts
