@@ -818,7 +818,7 @@ Use deterministic fixtures and seeded random generation only.
     - no frame-rate-dependent outcome,
     - no unbounded substep count.
   - **Implementation Note:** Added `CCD_MAX_STEP_SIZE = 4.0` and `MAX_CCD_SUBSTEPS = 16` to `src/physics/physics.ts`. When max entity displacement per tick exceeds `CCD_MAX_STEP_SIZE`, `PhysicsSystem.ticker` rewinds entities to start-of-tick positions and advances them in `min(ceil(displacement/4), 16)` substeps of `dt/N`, calling `resolveAllCollisions` at each substep. A single `contactedPairsThisTick` set spans all substeps so `onCollision` triggers at most once per pair per tick. Structure identity is stable via cached `_physicsId` property assigned on first access. Updated `DeadlyObstacleCircle.onCollision` to call `entity.addHP(-100)`. Updated `Player.addHP` to set `dead=true` when hp≤0. All 9 CCD tests pass. Recalibrated float assertions in `engine_test.ts` (`toBeCloseTo`) and deterministic AI turn counts in `ai_replay_lifecycle.test.ts` (24→30 turns, 25→31 actions). Gates: 532 pass / 3 skip / 0 fail across 164 files; TSC clean; build clean; fuzz 25/25 clean.
-- [ ] **Task [13.7]: Validate Energy, Restitution, Friction, And Rest States**
+- [x] **Task [13.7]: Validate Energy, Restitution, Friction, And Rest States**
   - **Goal:** Prove that movement, friction, linear drag, collision restitution, and stop thresholds behave coherently and do not create energy or perpetual jitter.
   - **Target Files:** `src/physics/defaultPhysics.ts`, movement and physics effects
   - **Test File:** `tests/physics_energy_invariants.test.ts`
@@ -836,6 +836,7 @@ Use deterministic fixtures and seeded random generation only.
     - no repeated contact increases speed,
     - no friction value causes sign-flipping jitter,
     - no entity wakes after reaching a valid rest state without a new force.
+  - **Implementation Note:** Pure test task — no source changes. `tests/physics_energy_invariants.test.ts` covers: 4 friction/drag monotonicity tests (exponential, linear, stop threshold, no-wake); 4 restitution contract tests (zero-restitution no-energy-increase, restitution-1 energy conservation, stationary no-velocity, separating no-impulse); 3 drift tests (drift=0 direction unchanged, drift=1 speed preserved, drift skipped below stopThreshold); 4 negative tests (no energy from stationary collision, no speed increase over 100 wall-bounce ticks, no sign-flip jitter, no wake after rest). All 16 tests pass. Gates: 548 pass / 3 skip / 0 fail across 165 files; TSC clean.
 - [ ] **Task [13.8]: Fire Collision Effects Exactly Once Per Contact Event**
   - **Goal:** Distinguish contact entry, persistent contact, and contact exit so collision-triggered effects do not fire once per solver iteration or once per physics substep.
   - **Target Files:** `src/systems/PhysicsSystem.ts`, `src/effects/*.ts`
