@@ -16,6 +16,90 @@ export interface Vector2D {
 	y: number;
 }
 
+// --- Contact And Resolution Contract (Section 13.1, docs/physics-contract.md) ---
+
+/**
+ * Distance tolerance for the touching/penetrating boundary. Detection treats
+ * touching as contact (inclusive), response acts only on strict penetration.
+ */
+export const PHYSICS_CONTACT_EPSILON = 1e-9;
+
+/**
+ * Residual overlap exempt from circle/circle positional correction. Overlap
+ * at or below the slop is intentional and stable (never oscillates).
+ */
+export const PHYSICS_CONTACT_SLOP = 0.05;
+
+/** Fraction of `max(overlap - slop, 0)` resolved per circle/circle call. */
+export const PHYSICS_CONTACT_PERCENT = 0.2;
+
+/** Upper bound for multi-contact solver passes (Section 13.5). */
+export const MAX_CONTACT_SOLVER_ITERATIONS = 16;
+
+/** Per-contact impulse magnitude clamp (circle/rectangle exterior contacts). */
+export const MAX_COLLISION_IMPULSE = 50;
+
+/**
+ * A resolved contact between two bodies. The normal always points from body A
+ * toward body B for circle/circle contacts and from the structure toward the
+ * circle for structure contacts.
+ */
+export interface PhysicsContact {
+	/** Unit contact normal (from A to B / from structure to circle). */
+	normal: Vector2D;
+	/** Penetration depth; `0` for a pure touching contact. */
+	overlap: number;
+	/** Shape-pair classification of the contact. */
+	kind: "circle-circle" | "circle-rectangle" | "circle-line" | "rectangle-rectangle";
+}
+
+/** True when both vector components are finite numbers. */
+export function isFiniteVector(v: Vector2D): boolean {
+	return Number.isFinite(v.x) && Number.isFinite(v.y);
+}
+
+/** The body properties the validity contract checks (Section 13). */
+export interface PhysicsBodyState {
+	position: Vector2D;
+	velocity: Vector2D;
+	bounds: Vector2D;
+	mass: number;
+	bounceFactor: number;
+	shape: SHAPE;
+}
+
+/**
+ * Validates a body against the physics validity contract:
+ * - position/velocity must be finite,
+ * - bounds must be finite and non-negative (positive for circles),
+ * - mass must be strictly positive and finite, or `Infinity` (immovable),
+ * - bounce factor must be finite within `[0, 1]`, or `Infinity` (inherit).
+ *
+ * Throws on the first violation. `validatePhysicsBody` is the boundary check;
+ * `handleCollision` additionally guards against non-finite input state so no
+ * response can ever produce `NaN` or `Infinity`.
+ */
+export function validatePhysicsBody(body: PhysicsBodyState): void {
+	if (!isFiniteVector(body.position)) {
+		throw new Error(`Invalid physics body: non-finite position (${body.position.x}, ${body.position.y})`);
+	}
+	if (!isFiniteVector(body.velocity)) {
+		throw new Error(`Invalid physics body: non-finite velocity (${body.velocity.x}, ${body.velocity.y})`);
+	}
+	if (!Number.isFinite(body.bounds.x) || !Number.isFinite(body.bounds.y) || body.bounds.x < 0 || body.bounds.y < 0) {
+		throw new Error(`Invalid physics body: bounds must be finite and non-negative, got (${body.bounds.x}, ${body.bounds.y})`);
+	}
+	if (body.shape === SHAPE.CIRCLE && body.bounds.x <= 0) {
+		throw new Error(`Invalid physics body: a circle needs a positive radius, got ${body.bounds.x}`);
+	}
+	if (body.mass !== Infinity && (!Number.isFinite(body.mass) || body.mass <= 0)) {
+		throw new Error(`Invalid physics body: mass must be positive or Infinity, got ${body.mass}`);
+	}
+	if (body.bounceFactor !== Infinity && (!Number.isFinite(body.bounceFactor) || body.bounceFactor < 0 || body.bounceFactor > 1)) {
+		throw new Error(`Invalid physics body: bounce factor must be within [0, 1] or Infinity, got ${body.bounceFactor}`);
+	}
+}
+
 /** Returns the unit forward vector for a clockwise screen-space rotation in degrees. */
 export function forwardVectorFromRotation(rotation: number): Vector2D {
 	const radians = (rotation * Math.PI) / 180;

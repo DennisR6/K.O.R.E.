@@ -671,3 +671,625 @@
   - **Allowed Context:** everything in this repository
   - **Commit:** `docs: qualify release candidate`
   - **Note:** Full gate executed and recorded in `docs/release-verification.md` (24 numbered qualification points): `bun install --frozen-lockfile` clean (276 installs, no changes), `bun test` 425 pass / 0 fail / 2221 assertions across 157 files [3.23s], `npx tsc --noEmit` clean, `bun run build` succeeded, `bun run test:fuzz:rc` 1000 matches / 6010 assertions / 0 fail [35.71s], `bun run test:fuzz:soak` 5000 matches / 30010 assertions / 0 fail [180.64s], and `bun run desktop:build` produced the release binary plus Debian bundle. `tests/release_candidate_gate.test.ts` (5 tests) asserts the 24-point record with the current suite size, the Section 12 evidence files, the 12.1-12.13 checklist flips, the wired fuzz scripts, and a clean 5-match fuzz smoke run. `requirements.md` R-15 and the AGENTS.md toolchain/section-12 documentation updated to the current evidence.
+
+## 13. Physics Solver Hardening And Continuous Collision Qualification
+
+Section 13 strengthens the mathematical and runtime guarantees of the physics solver.
+
+Section 12 established deterministic containment roles, deterministic embedded circle/rectangle correction, exact playback frame counts, final-state synchronization, replay equivalence, and release-candidate fuzzing. Section 13 must now prove that collision resolution itself produces stable, non-overlapping, deterministic, and physically coherent states.
+
+Do not weaken Section 12 regression tests.
+
+Every task must be implemented as one atomic commit.
+
+For every source change:
+
+```sh
+bun test <focused-test-file>
+bun test
+npx tsc --noEmit
+```
+
+Run `bun run build` whenever exported types, runtime behavior, or packaging are affected.
+
+Use deterministic fixtures and seeded random generation only.
+
+- [x] **Task [13.1]: Define The Physics Contact And Resolution Contract**
+  - **Goal:** Document and encode the exact semantics for contact detection, penetration, touching, collision resolution, restitution, friction, mass handling, and immovable bodies.
+  - **Target Files:** `src/physics/physics.ts`, `src/physics/defaultPhysics.ts`, `docs/physics-contract.md`
+  - **Test File:** `tests/physics_contact_contract.test.ts`
+  - **Allowed Context:** `src/physics/*.ts`, `src/structures/*.ts`, existing physics tests
+  - **Commit:** `docs: define physics contact and resolution contract`
+  - **Note:** `docs/physics-contract.md` defines the full contract (15 clauses) with a task-enforcement matrix; `src/physics/physics.ts` encodes the contract constants (`PHYSICS_CONTACT_EPSILON`, `PHYSICS_CONTACT_SLOP`, `PHYSICS_CONTACT_PERCENT`, `MAX_CONTACT_SOLVER_ITERATIONS`, `MAX_COLLISION_IMPULSE`) plus `isFiniteVector` and `validatePhysicsBody` (rejects non-finite position/velocity, non-finite/negative/zero-circle bounds, non-positive or non-finite mass except `Infinity`, and bounce outside `[0, 1]` except the `Infinity` inherit marker); `defaultPhysics.handleCollision` now defensively ignores non-finite input state so no response can produce `NaN`/`Infinity`. `tests/physics_contact_contract.test.ts` (11 tests, 1858 assertions): separated bodies unchanged, 500-tick touching stability for circle/circle and circle/rect, exact circle/circle correction formula (slop/percent), exterior shallow rect resolution, interior min-axis exit with left/top tie order, immovable partners fixed, bit-identical duplicate runs, invalid-value rejection, non-finite input guard, monotone overlap convergence to the slop residual, and containment-only structures never entering solid resolution (counted strategy through `PhysicsSystem`). Known current behavior documented for later tasks: circle/circle correction is partial (20% beyond slop per call), the circle/rect embedded correction still has the legacy 2.0-unit clamp (full depenetration is 13.2), and zero-distance circle/circle contacts still early-return (13.3).
+- [ ] **Task [13.2]: Fully Resolve Embedded Circle And Rectangle Contacts**
+  - **Goal:** Replace the current externally iterative two-unit correction for embedded circle/rectangle contacts with a complete deterministic minimum-translation resolution inside one physics tick.
+  - **Target Files:** `src/physics/defaultPhysics.ts`
+  - **Test File:** `tests/circle_rectangle_full_depenetration.test.ts`
+  - **Allowed Context:** `src/physics/defaultPhysics.ts`, `tests/circle_rectangle_interior_collision.test.ts`
+  - **Commit:** `fix: fully depenetrate circle rectangle contacts`
+  - **Required Invariants:**
+    - one collision-resolution call leaves the circle non-overlapping,
+    - the minimum valid exit axis is selected,
+    - equal-distance ties use the documented stable order,
+    - no arbitrary negative-Y fallback exists,
+    - no second correction is required on the next tick,
+    - velocity axes unrelated to the contact remain unchanged.
+  - **Positive Tests:**
+    - nearest-left, nearest-right, nearest-top, and nearest-bottom exits,
+    - exact-center tie,
+    - two-way and four-way equal-distance ties,
+    - exterior edge penetration,
+    - finite-mass rectangle displacement,
+    - immovable rectangle correction.
+  - **Negative Tests:**
+    - deep embedding cannot remain after the physics tick,
+    - the resolver cannot oscillate between edges,
+    - correction cannot move the circle farther into the rectangle,
+    - containment rectangles never invoke this solver.
+- [ ] **Task [13.3]: Resolve Zero-Distance Circle And Circle Contacts**
+  - **Goal:** Replace the current `distance === 0` early return for overlapping circles with a deterministic and complete resolution.
+  - **Target Files:** `src/physics/defaultPhysics.ts`
+  - **Test File:** `tests/circle_circle_zero_distance.test.ts`
+  - **Allowed Context:** `src/physics/defaultPhysics.ts`, `src/entity/*.ts`
+  - **Commit:** `fix: resolve zero distance circle contacts`
+  - **Required Invariants:**
+    - coincident circles are separated,
+    - identical inputs choose an identical correction axis,
+    - finite masses split correction proportionally,
+    - an infinite-mass body remains fixed,
+    - no artificial energy is introduced without configured restitution.
+  - **Positive Tests:**
+    - equal mass,
+    - unequal mass,
+    - one immovable body,
+    - both bodies initially stationary,
+    - moving coincident bodies,
+    - repeated seeded execution.
+  - **Negative Tests:**
+    - no early return leaves bodies overlapping,
+    - no random direction is used,
+    - entity iteration order cannot change the result,
+    - no non-finite velocity or position is produced.
+- [ ] **Task [13.4]: Stabilize Circle, Line, Endpoint, And Corner Contacts**
+  - **Goal:** Define and validate collision behavior against line segments, endpoints, rectangle corners, and exact geometric transition points.
+  - **Target Files:** `src/physics/defaultPhysics.ts`, `src/structures/structureLine.ts`
+  - **Test File:** `tests/line_endpoint_collision.test.ts`
+  - **Allowed Context:** `src/physics/*.ts`, `src/structures/structureLine.ts`
+  - **Commit:** `fix: stabilize line and corner collisions`
+  - **Positive Tests:**
+    - perpendicular line impact,
+    - glancing line impact,
+    - endpoint impact,
+    - exact endpoint-center alignment,
+    - rectangle-corner impact,
+    - transition from edge normal to corner normal,
+    - immovable and finite-mass line structures.
+  - **Negative Tests:**
+    - no normal-direction discontinuity creates extreme velocity,
+    - no endpoint tunnelling,
+    - no repeated correction after separation,
+    - no division by zero for zero-length lines.
+  - **Validation:** Reject or explicitly normalize zero-length line structures at the settings boundary.
+- [ ] **Task [13.5]: Make Multi-Contact Resolution Deterministic**
+  - **Goal:** Resolve entities touching multiple structures or entities in a stable order without oscillation, order-dependent winners, or unresolved penetration.
+  - **Target Files:** `src/systems/PhysicsSystem.ts`, `src/physics/defaultPhysics.ts`
+  - **Test File:** `tests/multi_contact_solver.test.ts`
+  - **Allowed Context:** `src/systems/PhysicsSystem.ts`, `src/physics/defaultPhysics.ts`
+  - **Commit:** `fix: stabilize multi contact resolution`
+  - **Required Invariants:**
+    - contact processing order is explicit and deterministic,
+    - entity insertion order does not change the final result,
+    - structure insertion order does not change the final result,
+    - the solver terminates within a fixed iteration bound,
+    - each solver iteration makes measurable progress,
+    - final state contains no unresolved supported penetrations.
+  - **Positive Tests:**
+    - circle between two walls,
+    - circle in a corner,
+    - three-circle chain,
+    - multiple circles against one wall,
+    - simultaneous entity and structure contacts.
+  - **Negative Tests:**
+    - no left/right oscillation,
+    - no energy explosion,
+    - no iteration-limit success with unresolved contact,
+    - no dependence on array or map iteration order.
+- [ ] **Task [13.6]: Prevent High-Speed Tunnelling**
+  - **Goal:** Prevent circles from crossing thin walls, line segments, hazards, or other entities between discrete frames at supported gameplay speeds.
+  - **Target Files:** `src/physics/defaultPhysics.ts`, `src/systems/PhysicsSystem.ts`
+  - **Test File:** `tests/continuous_collision_detection.test.ts`
+  - **Allowed Context:** `src/physics/*.ts`, `src/systems/PhysicsSystem.ts`
+  - **Commit:** `feat: add continuous collision detection`
+  - **Implementation Constraint:** Use swept tests, deterministic substeps, or another explicitly documented continuous-collision technique. Do not rely on arbitrary global speed caps unless the game contract explicitly requires them.
+  - **Positive Tests:**
+    - fast circle versus thin rectangle,
+    - fast circle versus line,
+    - two fast circles moving toward one another,
+    - diagonal corner crossing,
+    - collision with kill hazards,
+    - exact contact at the final substep.
+  - **Negative Tests:**
+    - no object may appear on the opposite side without a collision,
+    - no duplicate collision event from substeps,
+    - no frame-rate-dependent outcome,
+    - no unbounded substep count.
+- [ ] **Task [13.7]: Validate Energy, Restitution, Friction, And Rest States**
+  - **Goal:** Prove that movement, friction, linear drag, collision restitution, and stop thresholds behave coherently and do not create energy or perpetual jitter.
+  - **Target Files:** `src/physics/defaultPhysics.ts`, movement and physics effects
+  - **Test File:** `tests/physics_energy_invariants.test.ts`
+  - **Allowed Context:** `src/physics/*.ts`, `src/effects/*.ts`
+  - **Commit:** `test: validate physics energy invariants`
+  - **Positive Tests:**
+    - zero restitution does not increase kinetic energy,
+    - restitution one preserves expected normal energy within the defined numeric contract,
+    - friction and drag monotonically reduce speed,
+    - stop threshold produces a stable zero velocity,
+    - stationary entities remain stationary,
+    - drift changes direction only according to configured drift.
+  - **Negative Tests:**
+    - no collision creates velocity from two stationary bodies,
+    - no repeated contact increases speed,
+    - no friction value causes sign-flipping jitter,
+    - no entity wakes after reaching a valid rest state without a new force.
+- [ ] **Task [13.8]: Fire Collision Effects Exactly Once Per Contact Event**
+  - **Goal:** Distinguish contact entry, persistent contact, and contact exit so collision-triggered effects do not fire once per solver iteration or once per physics substep.
+  - **Target Files:** `src/systems/PhysicsSystem.ts`, `src/effects/*.ts`
+  - **Test File:** `tests/collision_effect_lifecycle.test.ts`
+  - **Allowed Context:** `src/systems/PhysicsSystem.ts`, `src/effects/*.ts`, `src/item/*.ts`
+  - **Commit:** `fix: stabilize collision effect lifecycle`
+  - **Required Semantics:**
+    - contact entry triggers once,
+    - persistent contact does not retrigger unless explicitly configured,
+    - separation clears the contact state,
+    - re-entry may trigger again,
+    - CCD or solver substeps do not duplicate effects.
+  - **Positive Tests:**
+    - damage collision,
+    - death collision,
+    - shielded collision,
+    - ghost-mode collision,
+    - simultaneous contacts with different structures.
+  - **Negative Tests:**
+    - no repeated damage while resting against one wall unless configured,
+    - no duplicate death event,
+    - no stale contact state after snapshot restore,
+    - no contact identity collision between unrelated entity pairs.
+- [ ] **Task [13.9]: Preserve Physics Continuity Across Snapshot And Restore**
+  - **Goal:** Prove that snapshotting during movement, contact, collision-effect state, and solver progression produces an identical continuation after restoration.
+  - **Target Files:** `src/engine/Handler.ts`, physics snapshot state as required
+  - **Test File:** `tests/physics_snapshot_continuity.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/physics/*.ts`, `src/systems/PhysicsSystem.ts`
+  - **Commit:** `test: validate physics snapshot continuity`
+  - **Required Cases:**
+    - high-speed movement before impact,
+    - snapshot immediately before contact,
+    - snapshot during persistent contact,
+    - snapshot after contact entry but before separation,
+    - multi-contact state,
+    - collision-triggered effect state.
+  - **Acceptance:** Restored and uninterrupted handlers must produce identical per-tick snapshots until rest or match completion.
+- [ ] **Task [13.10]: Add Deterministic Physics Property Fuzzing**
+  - **Goal:** Generate deterministic geometry, body, velocity, mass, and effect combinations and validate physics invariants over many seeded scenarios.
+  - **Target Files:** `tests/support/physicsFuzz.ts`, `tests/physics_fuzz.test.ts`, `package.json`
+  - **Test File:** `tests/physics_fuzz.test.ts`
+  - **Allowed Context:** physics, structure, entity, and effect implementations
+  - **Commit:** `test: add deterministic physics fuzzing`
+  - **Configuration:**
+    - `PHYSICS_FUZZ_CASES=100`
+    - `PHYSICS_FUZZ_CASES=5000`
+    - `PHYSICS_FUZZ_CASES=25000`
+  - **Suggested Scripts:**
+    - `test:physics-fuzz`
+    - `test:physics-fuzz:rc`
+    - `test:physics-fuzz:soak`
+  - **Per-Case Invariants:**
+    - all numeric values remain finite,
+    - no unsupported penetration remains after resolution,
+    - deterministic duplicate runs are identical,
+    - no solver exceeds its iteration bound,
+    - stationary bodies do not drift,
+    - kinetic energy respects the configured contract,
+    - snapshot interruption preserves continuation,
+    - contact effects follow entry/persist/exit semantics.
+  - **Failure Output:** Print seed, generated geometry, initial body state, tick index, contact set, and a direct reproduction command.
+- [ ] **Task [13.11]: Establish A Physics Performance Budget**
+  - **Goal:** Measure and bound the cost of collision detection, multi-contact resolution, CCD, effect dispatch, and physics fuzz scenarios.
+  - **Target Files:** `tests/physics_performance.test.ts`, benchmark helpers, `package.json`
+  - **Test File:** `tests/physics_performance.test.ts`
+  - **Allowed Context:** completed Section 13 implementation
+  - **Commit:** `test: establish physics performance budget`
+  - **Required Measurements:**
+    - entities per tick,
+    - structure contacts per tick,
+    - multi-contact iterations,
+    - CCD substeps,
+    - effect dispatch count,
+    - peak fuzz-case duration.
+  - **Constraint:** Avoid fragile wall-clock assertions in the ordinary unit suite. Use broad regression budgets or explicit benchmark commands for machine-dependent measurements.
+  - **Negative Gate:** Fail on unbounded iteration, exponential contact growth, or memory growth across repeated identical cases.
+- [ ] **Task [13.12]: Qualify And Record The Physics Contract**
+  - **Goal:** Run the complete physics test, fuzz, soak, typecheck, and build gate and document the verified solver contract.
+  - **Target Files:** `docs/physics-contract.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
+  - **Test File:** `tests/physics_qualification_gate.test.ts`
+  - **Allowed Context:** completed Section 13 tasks
+  - **Commit:** `docs: qualify physics solver`
+  - **Required Commands:**
+    - `bun test`
+    - `npx tsc --noEmit`
+    - `bun run build`
+    - `bun run test:physics-fuzz:rc`
+    - `bun run test:physics-fuzz:soak`
+  - **Required Report:**
+    - exact commit,
+    - exact test and assertion counts,
+    - physics fuzz case count,
+    - maximum solver iterations observed,
+    - CCD cases executed,
+    - snapshot comparisons,
+    - collision-effect lifecycle checks,
+    - unresolved limitations,
+    - final physics qualification status.
+
+### Section 13 Acceptance Criteria
+
+```text
+supported overlap
+→ deterministic complete resolution
+```
+
+```text
+touching contact
+→ stable, no jitter
+```
+
+```text
+high-speed movement
+→ no tunnelling
+```
+
+```text
+multi-contact state
+→ deterministic bounded solution
+```
+
+```text
+collision effect
+→ exactly-once contact semantics
+```
+
+```text
+snapshot during physics
+→ identical continuation
+```
+
+```text
+same seed
+→ same physics result
+```
+
+## 14. Playable Vertical Slice And Gameplay Integration
+
+Section 14 must produce one complete human-playable reference game from the existing application menu through match completion and back to rematch or menu.
+
+Do not attempt to qualify every map and mode before one canonical vertical slice works completely.
+
+The reference slice must use the same authoritative engine, action validation, replay, winning, draw, and snapshot contracts proven by Sections 11-13.
+
+UI code must not duplicate engine rules.
+
+Before each task, identify the actual existing menu, scene, rendering, and input files. Update the task note with exact paths when the repository uses different names than the directory globs below.
+
+- [ ] **Task [14.1]: Define The Canonical Playable Match**
+  - **Goal:** Define one officially supported local reference match used by development, automated UI tests, and human testers.
+  - **Target Files:** `src/settings/**`, reference-map files, `docs/playable-slice.md`
+  - **Test File:** `tests/canonical_playable_match.test.ts`
+  - **Allowed Context:** game settings, game modes, maps, items, UI entry points
+  - **Commit:** `feat: define canonical playable match`
+  - **Required Definition:** reference map, game mode, team count, figures per team, spawn positions, item configuration, AI or human slots, camera defaults, expected winner/draw handling.
+  - **Acceptance:** The configuration validates, starts deterministically, provides a legal first action, and can complete through the headless engine.
+- [ ] **Task [14.2]: Connect The Main Menu To Local Match Creation**
+  - **Goal:** Make the primary play action create the canonical handler and transition from the menu into the gameplay scene.
+  - **Target Files:** `src/ui/**`, `src/scenes/**`, application entry point, actual existing menu controller
+  - **Test File:** `tests/menu_match_start.integration.test.ts`
+  - **Allowed Context:** menu, scene router, handler builder, canonical match settings
+  - **Commit:** `feat: connect menu to local match`
+  - **Positive Tests:** play button creates exactly one handler, canonical settings are used, scene changes exactly once, loading errors are visible, repeated clicks do not create duplicate matches.
+  - **Negative Tests:** invalid settings do not enter gameplay, failed handler construction leaves the menu usable, stale handlers are not reused accidentally.
+- [ ] **Task [14.3]: Clean And Validate The Reference Map**
+  - **Goal:** Replace temporary geometry with an intentional reference arena using explicit containment roles, solid obstacles, hazards, safe spawns, and matching visual geometry.
+  - **Target Files:** reference-map settings, map renderer assets
+  - **Test File:** `tests/reference_map_validation.test.ts`
+  - **Allowed Context:** map settings, structures, containment, physics qualification tests
+  - **Commit:** `fix: clean reference gameplay map`
+  - **Required Invariants:** one unambiguous outer containment region, no accidental `"both"` role, no spawn inside solid geometry, no immediate hazard overlap, no invisible collision geometry, no visible obstacle without collision geometry, enough space for meaningful movement, all intended areas are reachable.
+  - **Negative Tests:** reject overlapping spawns, reject out-of-bounds spawns, reject ambiguous outer boundaries, reject zero-size or invalid structures.
+- [ ] **Task [14.4]: Validate Spawn, Selection, Camera, And Initial View**
+  - **Goal:** Ensure every player starts alive, visible, selectable, fully contained, and correctly framed by the initial camera.
+  - **Target Files:** gameplay scene, camera controller, entity selection code
+  - **Test File:** `tests/reference_spawn_and_camera.test.ts`
+  - **Allowed Context:** rendering, camera, entities, canonical settings
+  - **Commit:** `feat: establish playable initial view`
+  - **Positive Tests:** every player is visible, active-team figures can be selected, inactive-team figures cannot be submitted as actions, camera bounds include the relevant arena, resize preserves a usable view.
+  - **Negative Tests:** no player starts behind UI, no NaN camera transform, no camera position outside its configured limits, no dead or invalid actor is preselected.
+- [ ] **Task [14.5]: Render The Authoritative Match State**
+  - **Goal:** Render players, structures, containment, hazards, items, effects, active team, death state, playback, and result state directly from the authoritative handler.
+  - **Target Files:** `src/ui/**`, `src/rendering/**`, `src/scenes/**`
+  - **Test File:** `tests/gameplay_scene_rendering.test.ts`
+  - **Allowed Context:** handler read APIs, renderer, structures, effects
+  - **Commit:** `feat: render authoritative gameplay state`
+  - **Constraint:** Rendering must not maintain a parallel mutable gameplay model.
+  - **Positive Tests:** entity position reflects handler state, dead entities are represented correctly, structures use their actual role and geometry, effect visuals follow serialized effect state, final hard sync is visible without drift.
+  - **Negative Tests:** rendering cannot mutate the handler, stale cached entities cannot survive rematch, containment-only structures are not rendered as filled obstacles unless intended.
+- [ ] **Task [14.6]: Connect Player Input To Validated Actions**
+  - **Goal:** Convert mouse, touch, keyboard, or controller interactions into validated actor selection, aim, power, shot, and cancellation operations.
+  - **Target Files:** input controller, gameplay scene, `src/emitter/EngineEmitter.ts`
+  - **Test File:** `tests/gameplay_input_integration.test.ts`
+  - **Allowed Context:** UI input code, GameEmitter, shared action validators
+  - **Commit:** `feat: connect gameplay input`
+  - **Required Flow:** input -> UI interpretation -> shared action validation -> authoritative emitter -> playback
+  - **Positive Tests:** active actor selection, aim update, minimum and maximum legal power, shot submission exactly once, input disabled during playback.
+  - **Negative Tests:** inactive-team actor, dead actor, non-finite input, out-of-range power, duplicate click or touch, input after `Game_over`.
+  - **State Guarantee:** Every rejected UI action leaves the handler byte-identical.
+- [ ] **Task [14.7]: Integrate Items And Rule Phases**
+  - **Goal:** Make Item, Physics, Complete, winner, and draw phases understandable and controllable through the gameplay UI.
+  - **Target Files:** gameplay UI, item controls, phase controls
+  - **Test File:** `tests/gameplay_phase_integration.test.ts`
+  - **Allowed Context:** RuleInterpreter, GameEmitter, item inventory, canonical mode
+  - **Commit:** `feat: integrate gameplay phases and items`
+  - **Positive Tests:** available items are displayed, legal item use advances correctly, item phase can be skipped, used-item allowance updates, physics phase accepts a shot, turn transition updates active team and UI.
+  - **Negative Tests:** second item beyond allowance, item not in inventory, item use in Physics phase, shot before required phase transition, stale item buttons after turn change.
+- [ ] **Task [14.8]: Add Turn, Aim, Power, And Error Feedback**
+  - **Goal:** Show enough state for a first-time tester to understand who acts, what can be done, what is selected, and why an action was rejected.
+  - **Target Files:** HUD, gameplay scene, feedback components
+  - **Test File:** `tests/gameplay_feedback.test.ts`
+  - **Allowed Context:** UI state, handler read APIs, action error types
+  - **Commit:** `feat: add gameplay feedback`
+  - **Required Feedback:** active team, selected actor, current phase, aim direction, power, available items, playback lock, winner or draw, actionable rejection reason.
+  - **Negative Tests:** no raw stack traces shown to players, no contradictory phase labels, no input shown as available while blocked, no stale winner banner after rematch.
+- [ ] **Task [14.9]: Complete The Match-End Flow**
+  - **Goal:** Display explicit winner or draw results and provide functional rematch and return-to-menu actions.
+  - **Target Files:** result overlay, scene router, rematch flow
+  - **Test File:** `tests/match_end_ui_flow.test.ts`
+  - **Allowed Context:** MatchResult, handler rematch APIs, scene lifecycle
+  - **Commit:** `feat: complete match end flow`
+  - **Positive Tests:** winner result names the correct team, draw result never displays a fake winner, result appears only after final synchronization, rematch clears result and runtime state, return-to-menu disposes the match.
+  - **Negative Tests:** no result before completion, no double result overlay, no action accepted behind the result overlay, no previous result leaks into the next match.
+- [ ] **Task [14.10]: Stabilize Rematch And Scene Teardown**
+  - **Goal:** Ensure repeated menu-to-match, rematch, and match-to-menu cycles do not leak handlers, event listeners, render loops, timers, replay recorders, or stale state.
+  - **Target Files:** scene lifecycle, event registration, renderer teardown
+  - **Test File:** `tests/gameplay_scene_lifecycle.test.ts`
+  - **Allowed Context:** application scene manager and gameplay dependencies
+  - **Commit:** `fix: stabilize gameplay scene lifecycle`
+  - **Required Test Cycle:** menu -> match -> rematch -> result -> menu (repeat multiple times).
+  - **Negative Tests:** no duplicated input callback, no duplicate render loop, no old handler receiving actions, no replay action recorded twice, no increasing listener count, no stale selected actor.
+- [ ] **Task [14.11]: Automate The Menu-To-Result Vertical Slice**
+  - **Goal:** Add one end-to-end test that starts at the menu, launches the canonical match, performs legal actions, reaches winner or draw, and returns to a valid rematch or menu state.
+  - **Target Files:** browser/e2e test configuration
+  - **Test File:** `tests/playable_vertical_slice.e2e.test.ts`
+  - **Allowed Context:** completed Section 14 implementation
+  - **Commit:** `test: validate playable vertical slice`
+  - **Required Journey:** launch application, menu visible, start match, canonical map visible, select actor, use or skip item phase, submit shot, complete turns, show result, rematch, return to menu.
+  - **Acceptance:** No developer tools, direct handler calls, or test-only shortcuts may be required for the primary journey.
+- [ ] **Task [14.12]: Produce A Human-Testable Build**
+  - **Goal:** Package a build that external testers can launch and use to complete the canonical match without repository access or developer instructions.
+  - **Target Files:** packaging scripts, desktop configuration, `docs/playtest-build.md`, `docs/release-verification.md`
+  - **Test File:** `tests/playtest_build_gate.test.ts`
+  - **Allowed Context:** build and packaging configuration
+  - **Commit:** `build: produce human testable vertical slice`
+  - **Required Commands:** `bun test`, `npx tsc --noEmit`, `bun run build`, `bun run desktop:build`
+  - **Required Evidence:** exact commit, executable or bundle path, launch instructions, canonical controls, known limitations, test reset instructions, log and screenshot collection instructions.
+
+### Section 14 Acceptance Criteria
+
+```text
+application launch
+→ usable main menu
+```
+
+```text
+play action
+→ valid canonical match
+```
+
+```text
+canonical map
+→ clean, visible, and physically valid
+```
+
+```text
+human input
+→ shared validated action path
+```
+
+```text
+accepted action
+→ visible deterministic playback
+```
+
+```text
+terminal match
+→ explicit winner or draw
+```
+
+```text
+result
+→ working rematch and menu return
+```
+
+```text
+packaged build
+→ playable without developer tools
+```
+
+## 15. Gameplay Qualification And Human Playtest Validation
+
+Section 15 qualifies the actual game rather than only the engine or vertical slice.
+
+Automated qualification must cover every shipped map, mode, supported player configuration, and item configuration.
+
+Human playtesting must evaluate clarity, controls, pacing, fairness, feedback, and perceived enjoyment.
+
+Automated evidence cannot prove that the game is fun. Human feedback cannot replace deterministic technical regression tests. Both are required.
+
+- [ ] **Task [15.1]: Define The Gameplay Qualification Contract**
+  - **Goal:** Define measurable technical playability criteria and a repeatable human-playtest protocol.
+  - **Target Files:** `docs/gameplay-qualification.md`, `docs/playtest-protocol.md`
+  - **Test File:** `tests/gameplay_qualification_contract.test.ts`
+  - **Allowed Context:** Sections 12-14 evidence and shipped game content
+  - **Commit:** `docs: define gameplay qualification contract`
+  - **Technical Playability Criteria:** valid spawn, legal first action, advancing rule phases, bounded playback, no softlock, winner or explicit draw, stable replay, stable snapshot restore, no post-completion mutation.
+  - **Human Criteria:** control comprehension, objective comprehension, phase comprehension, action feedback, camera usability, pacing, perceived fairness, willingness to play another match.
+- [ ] **Task [15.2]: Inventory The Shipped Gameplay Matrix**
+  - **Goal:** Produce a machine-readable inventory of all maps, modes, team counts, player counts, AI difficulties, item sets, and supported platform/control combinations intended for release.
+  - **Target Files:** content registry, `docs/gameplay-matrix.md`
+  - **Test File:** `tests/gameplay_content_inventory.test.ts`
+  - **Allowed Context:** maps, modes, items, AI configurations, build targets
+  - **Commit:** `docs: inventory shipped gameplay content`
+  - **Acceptance:** Every shipped configuration is either qualified, explicitly unsupported, or blocked from selection.
+- [ ] **Task [15.3]: Validate Every Shipped Map And Mode Combination**
+  - **Goal:** Run deterministic AI-vs-AI qualification matches over the complete supported content matrix.
+  - **Target Files:** `tests/support/gameplayQualification.ts`, package scripts
+  - **Test File:** `tests/gameplay_content_matrix.test.ts`
+  - **Allowed Context:** Section-12 game fuzz harness, shipped content registry
+  - **Commit:** `test: qualify gameplay content matrix`
+  - **Matrix Dimensions:** every shipped map, every shipped mode, supported team counts, supported figures per team, AI difficulty pairings, items enabled and disabled, fixed and seeded loadouts, multiple deterministic seeds.
+  - **Per-Combination Requirement:** valid start, at least one legal action, no crash, no unresolved match, valid winner or draw, deterministic duplicate run, replay equality, restore equality.
+- [ ] **Task [15.4]: Detect Match Softlocks And Stalemates**
+  - **Goal:** Detect states where the match technically runs but no meaningful progress occurs.
+  - **Target Files:** gameplay qualification harness
+  - **Test File:** `tests/match_softlock_detection.test.ts`
+  - **Allowed Context:** handler snapshots, playback state, rule state, AI decisions
+  - **Commit:** `test: detect gameplay softlocks`
+  - **Progress Fingerprint:** turnNumber, activeTeam, phase, entityStateHash, playbackFramesRemaining, matchStatus.
+  - **Detected Failures:** identical full state repeating beyond a limit, turn number not advancing, phase not advancing, playback countdown not decreasing, all AIs returning no action, actions accepted without state change, endless draw-like behavior without an explicit draw result.
+- [ ] **Task [15.5]: Qualify Match Length And Pacing**
+  - **Goal:** Measure match duration in turns, accepted actions, simulated frames, and wall-clock-independent engine work.
+  - **Target Files:** gameplay qualification harness, `docs/gameplay-balance-report.md`
+  - **Test File:** `tests/match_length_distribution.test.ts`
+  - **Allowed Context:** qualified content matrix
+  - **Commit:** `test: validate match length distribution`
+  - **Required Metrics:** minimum, median, 90th percentile, 95th percentile, maximum, draw rate, instant-death rate, turn-limit rate.
+  - **Negative Signals:** matches ending before meaningful player agency, matches regularly reaching safety limits, one map producing extreme duration outliers, deterministic loops producing artificial long matches.
+  - **Constraint:** Thresholds must be mode-specific rather than universal.
+- [ ] **Task [15.6]: Measure Spawn And Team Fairness**
+  - **Goal:** Detect map-side, spawn-order, first-turn, team-index, and AI-pairing advantages using mirrored deterministic tournaments.
+  - **Target Files:** gameplay tournament harness
+  - **Test File:** `tests/gameplay_fairness_tournament.test.ts`
+  - **Allowed Context:** maps, AI, game modes, deterministic fuzz harness
+  - **Commit:** `test: measure gameplay fairness`
+  - **Required Method:** run each seed with teams in original positions, rerun with sides swapped, rerun with first turn swapped where supported, compare winner and draw distributions.
+  - **Warning Signals:** one spawn side wins disproportionately, team index predicts winner, first turn dominates independent of AI, one map geometry produces unavoidable elimination.
+  - **Output:** Warnings may require human review before becoming hard release failures.
+- [ ] **Task [15.7]: Validate Meaningful Player Agency**
+  - **Goal:** Detect configurations where legal actions exist but have no meaningful consequences or only one forced action can ever succeed.
+  - **Target Files:** gameplay analysis harness
+  - **Test File:** `tests/player_agency_validation.test.ts`
+  - **Allowed Context:** AI candidate generation, action results, match traces
+  - **Commit:** `test: validate meaningful player agency`
+  - **Required Signals:** number of legal actors, number of distinct legal action ranges, position or state change after actions, opponent interaction, hazard interaction, action diversity across turns.
+  - **Negative Cases:** players cannot reach one another, every shot immediately hits the own spawn area, no action can change the match state, only one identical action repeats forever, a player dies without any opportunity to act.
+- [ ] **Task [15.8]: Qualify Item Usefulness And Item Economy**
+  - **Goal:** Detect invalid, unusable, dominant, never-selected, or match-breaking items.
+  - **Target Files:** item qualification harness, `docs/gameplay-balance-report.md`
+  - **Test File:** `tests/item_gameplay_qualification.test.ts`
+  - **Allowed Context:** item registry, AI item decisions, RuleInterpreter
+  - **Commit:** `test: qualify item gameplay`
+  - **Required Metrics:** availability, legal-use rate, actual-use rate, successful effect rate, winner correlation, replay and snapshot continuity.
+  - **Negative Signals:** item can never be legally used, item always causes an invalid state, item bypasses turn limits, one item determines nearly every outcome, item effects disappear or duplicate after restore, item creates a permanent softlock.
+- [ ] **Task [15.9]: Prepare Structured Human Playtest Sessions**
+  - **Goal:** Produce a tester-ready build, instructions, observation sheet, issue template, and session protocol for the existing external playtesters.
+  - **Target Files:** `docs/playtest-protocol.md`, `docs/playtest-questionnaire.md`, issue templates
+  - **Test File:** `tests/human_playtest_readiness.test.ts`
+  - **Allowed Context:** completed Section 14 build and controls
+  - **Commit:** `docs: prepare structured human playtests`
+  - **Session Rules:** first match without explanation beyond launch instructions, observer records confusion without immediately intervening, second match may include control clarification, testers complete a consistent questionnaire, crashes and blockers include reproduction details.
+  - **Questions:** goal understandable, active team clear, aiming understandable, power understandable, items understandable, feedback immediate and clear, camera obstructive, anything unfair, match too short or too long, willingness to voluntarily play another match.
+- [ ] **Task [15.10]: Collect And Classify Human Playtest Evidence**
+  - **Goal:** Record structured results from actual tester sessions and distinguish blockers, usability defects, balance concerns, preferences, and unsupported requests.
+  - **Target Files:** `docs/playtest-results/<session>.md`, issue tracker references
+  - **Test File:** `tests/playtest_evidence_gate.test.ts`
+  - **Allowed Context:** completed playtest sessions
+  - **Commit:** `docs: record human playtest evidence`
+  - **Required Evidence Per Session:** build commit, platform, controls used, completed matches, observed blockers, tester-reported issues, result and match length, willingness-to-replay response.
+  - **Privacy Constraint:** Store only the minimum tester identity information needed for traceability.
+- [ ] **Task [15.11]: Convert Playtest Defects Into Regression Tests**
+  - **Goal:** Reproduce every confirmed technical or deterministic playtest defect and convert it into the lowest appropriate automated regression test.
+  - **Target Files:** affected source files and focused tests
+  - **Test File:** `tests/playtest_regressions.test.ts` plus focused subsystem tests
+  - **Allowed Context:** confirmed playtest findings
+  - **Commit:** `test: preserve playtest regressions`
+  - **Classification:** engine defect, physics defect, UI defect, map defect, rules defect, balance issue, usability issue.
+  - **Constraint:** Do not encode subjective preference as a technical invariant unless it has been accepted as a product requirement.
+  - **Acceptance:** Every fixed blocker has a deterministic regression test or a documented reason why only human verification is possible.
+- [ ] **Task [15.12]: Qualify The Gameplay Release Candidate**
+  - **Goal:** Combine automated content qualification, AI tournaments, softlock detection, balance evidence, vertical-slice E2E results, packaged-build checks, and actual human playtest evidence into the final gameplay release gate.
+  - **Target Files:** `docs/gameplay-balance-report.md`, `docs/release-verification.md`, `requirements.md`, `AGENTS.md`, `step-by-step.md`
+  - **Test File:** `tests/gameplay_release_gate.test.ts`
+  - **Allowed Context:** completed Sections 13-15
+  - **Commit:** `docs: qualify gameplay release candidate`
+  - **Required Commands:** `bun install --frozen-lockfile`, `bun test`, `npx tsc --noEmit`, `bun run build`, `bun run desktop:build`, `bun run test:fuzz:rc`, `bun run test:physics-fuzz:rc`, `bun run test:gameplay-matrix`, `bun run test:gameplay-tournament`
+  - **Required Report:** git commit, worktree state, test and assertion counts, physics qualification result, vertical-slice E2E result, packaged-build result, maps qualified, modes qualified, configuration combinations executed, AI matches completed, winner distribution, draw distribution, match-length distribution, softlocks detected, replay mismatches, snapshot or persistence mismatches, spawn-side fairness warnings, item-use findings, human sessions completed, human blockers reported, human blockers fixed, remaining usability concerns, known balance limitations, final gameplay release status.
+
+### Section 15 Acceptance Criteria
+
+```text
+every shipped configuration
+→ automatically qualified or explicitly blocked from selection
+```
+
+```text
+every automated match
+→ winner or explicit draw within its mode bounds
+```
+
+```text
+same seed and configuration
+→ same complete match
+```
+
+```text
+no legal configuration
+→ softlock or unresolved match
+```
+
+```text
+playable build
+→ complete menu-to-result journey
+```
+
+```text
+actual testers
+→ complete matches without developer intervention
+```
+
+```text
+confirmed technical playtest defect
+→ deterministic regression coverage
+```
+
+```text
+final gameplay RC
+→ automated and human evidence both present
+```
+
+### Combined Sections 13-15 Completion Chain
+
+```text
+Section 13
+→ physics mathematically stable and qualified
+```
+
+```text
+Section 14
+→ one complete packaged human-playable vertical slice
+```
+
+```text
+Section 15
+→ all shipped gameplay configurations automatically qualified
+→ actual human testers validate clarity and basic enjoyment
+```
+
+Do not declare the game gameplay-qualified merely because the engine release candidate is stable.
+
+Do not begin final human qualification before the Section 14 build allows a tester to complete the canonical match from menu to result without developer tools.

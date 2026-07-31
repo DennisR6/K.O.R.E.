@@ -145,6 +145,14 @@ export class defaultPhysics implements PhysicsStrategy {
 	public handleCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): void {
 		const posA = { ...entityA.getPos() };
 		const posB = { ...entityB.getPos() };
+
+		// Validity contract (Section 13, docs/physics-contract.md): a response
+		// never mutates state from non-finite input and never produces NaN or
+		// Infinity. Invalid bodies are rejected earlier at validation
+		// boundaries; this guard keeps the solver safe defensively.
+		if (!Number.isFinite(posA.x) || !Number.isFinite(posA.y) || !Number.isFinite(posB.x) || !Number.isFinite(posB.y)) {
+			return;
+		}
 		const dist = this.dist(posA, posB);
 
 		if (dist === 0) return;
