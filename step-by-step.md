@@ -514,3 +514,66 @@
   - **Test File:** `tests/release_smoke.test.ts`
   - **Allowed Context:** `package.json`
   - **Commit:** `docs: record release verification`
+
+## 11. Cross-System Validation
+
+- [x] **Task [11.1]: Validate Handler Snapshot Isolation**
+  - **Goal:** Prove `handler.toSettings()` produces a complete, defensive engine snapshot that reconstructs a semantically equivalent handler via `GameHandlerBuilder.fromSettings()` and shares no mutable state with the original.
+  - **Target Files:** `src/engine/Handler.ts`, `src/entity/Player.ts`
+  - **Test File:** `tests/handler_snapshot_isolation.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`, `src/entity/Player.ts`, `src/emitter/EngineEmitter.ts`
+  - **Commit:** `test: validate handler snapshot isolation`
+- **Task [11.2]: Validate Isolated Turn Simulation**
+  - **Goal:** Prove `simulateTurn()` resolves deterministically on a cloned world without mutating the live handler's entities, rule state, or RNG state.
+  - **Target Files:** `src/engine/Handler.ts`
+  - **Test File:** `tests/simulate_turn_isolation.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`
+  - **Commit:** `test: validate isolated turn simulation`
+- **Task [11.3]: Validate Hard AI Snapshot Isolation**
+  - **Goal:** Prove the hard AI computes identical decisions on a snapshot-restored handler and its own simulation never mutates the live match.
+  - **Target Files:** `src/ai/hardAi.ts`
+  - **Test File:** `tests/hard_ai_snapshot_validation.test.ts`
+  - **Allowed Context:** `src/ai/hardAi.ts`, `src/ai/aiEmitter.ts`
+  - **Commit:** `test: validate hard ai snapshot isolation`
+- **Task [11.4]: Validate AI Match Replay Lifecycle**
+  - **Goal:** Prove an AI-vs-AI match records a valid replay that deterministically reproduces the final entity state, and that the replay boundary rejects malformed actions instead of ignoring them.
+  - **Target Files:** `src/replay/player.ts`, `src/replay/types.ts`
+  - **Test File:** `tests/ai_replay_lifecycle.test.ts`
+  - **Allowed Context:** `src/ai/hardAi.ts`, `src/replay/player.ts`, `src/replay/types.ts`, `src/emitter/EngineEmitter.ts`
+  - **Commit:** `test: validate ai match replay lifecycle`
+- **Task [11.5]: Validate Parallel Engine Instances**
+  - **Goal:** Prove independent handlers built from the same settings evolve identically and never share state across instances.
+  - **Target Files:** `src/engine/Handler.ts`
+  - **Test File:** `tests/parallel_engine_instances.test.ts`
+  - **Allowed Context:** `src/engine/Handler.ts`
+  - **Commit:** `test: validate parallel engine instances`
+- **Task [11.6]: Validate Persisted Match Continuation**
+  - **Goal:** Prove a persisted SQLite game snapshot restores a running match with identical rule state, and malformed persisted snapshots are rejected.
+  - **Target Files:** `src/server/db.ts`, `src/server/gameRegistry.ts`
+  - **Test File:** `tests/persisted_match_continuation.test.ts`
+  - **Allowed Context:** `src/server/db.ts`, `src/server/gameRegistry.ts`, `src/engine/Handler.ts`
+  - **Commit:** `test: validate persisted match continuation`
+- **Task [11.7]: Validate Winning Lifecycle Composition**
+  - **Goal:** Prove the winning evaluation composes with boundary elimination, sets the match result once, and survives snapshot restoration.
+  - **Target Files:** `src/systems/WinningSystem.ts`
+  - **Test File:** `tests/winning_lifecycle_validation.test.ts`
+  - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
+  - **Commit:** `test: validate winning lifecycle composition`
+- **Task [11.8]: Validate Item Effect Snapshot Continuity**
+  - **Goal:** Prove item-triggered effects serialize their remaining state and continue correctly after snapshot restoration.
+  - **Target Files:** `src/effects/shield.ts`, `src/effects/freeze.ts`
+  - **Test File:** `tests/item_effect_snapshot_validation.test.ts`
+  - **Allowed Context:** `src/effects/*.ts`, `src/item/officialItems.ts`
+  - **Commit:** `test: validate item effect snapshot continuity`
+- **Task [11.9]: Validate Action Path Consistency**
+  - **Goal:** Prove the emitter, AI, server, and replay action paths reject the same invalid inputs and leave the match unchanged after rejection.
+  - **Target Files:** `src/server/gameRegistry.ts`, `src/emitter/EngineEmitter.ts`
+  - **Test File:** `tests/action_path_consistency.test.ts`
+  - **Allowed Context:** `src/server/gameRegistry.ts`, `src/emitter/EngineEmitter.ts`, `src/ai/aiEmitter.ts`
+  - **Commit:** `test: validate action path consistency`
+- **Task [11.10]: Record Cross-System Validation**
+  - **Goal:** Document the cross-system validation suite with exact pass counts and a smoke test referencing every section 11 test file.
+  - **Target Files:** `docs/release-verification.md`, `requirements.md`, `AGENTS.md`
+  - **Test File:** `tests/cross_system_validation_smoke.test.ts`
+  - **Allowed Context:** `tests/*.test.ts`
+  - **Commit:** `docs: record cross-system validation`

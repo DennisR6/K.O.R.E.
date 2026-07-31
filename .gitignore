@@ -31,3 +31,4 @@ src-tauri/target
 src-tauri/gen
 src-tauri/.libs
 src-tauri/Cargo.lock
+.mailmap
