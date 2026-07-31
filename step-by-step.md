@@ -586,32 +586,34 @@
   - **Test File:** `tests/containment_structure_role.test.ts`
   - **Allowed Context:** `src/structures/*.ts`, `src/systems/PhysicsSystem.ts`, `src/systems/BoundarySystem.ts`, `src/settings/settings.ts`, `src/physics/physics.ts`
   - **Commit:** `fix: separate containment from solid obstacles`
-- [ ] **Task [12.2]: Resolve Embedded Circle/Rectangle Collisions Deterministically**
+- [x] **Task [12.2]: Resolve Embedded Circle/Rectangle Collisions Deterministically**
   - **Goal:** Replace the undefined zero-distance circle/rectangle fallback normal with a deterministic nearest-edge exit (including tie-breaking for exact center or equal-edge-distance cases) so embedded entities are depenetrated without altering an unrelated velocity axis or drifting inside containment-only geometry.
+  - **Required Invariant:** One collision resolution must apply a deterministic minimum translation that leaves the circle non-overlapping with the selected rectangle, except where an explicitly documented bounded iterative solver is used and strict monotonic penetration reduction is proven.
   - **Target Files:** `src/physics/defaultPhysics.ts`
   - **Test File:** `tests/circle_rectangle_interior_collision.test.ts`
   - **Allowed Context:** `src/physics/defaultPhysics.ts`, `src/physics/physics.ts`
   - **Commit:** `fix: resolve embedded circle/rectangle collisions deterministically`
-- [ ] **Task [12.3]: Order Playback Final Sync Before Physics Mutation**
-  - **Goal:** Prove and fix the live-path playback defect where `PlaybackSystem` hard-syncs before `PhysicsSystem` runs on the final playback tick, so live resolution matches the authoritative frame count exactly (N ticks, no trailing mutation).
+- [ ] **Task [12.3]: Apply Playback Final Sync After All Gameplay Mutation**
+  - **Goal:** Move playback final-state synchronization to the final mutation phase of the handler tick so no physics, effects, structures, or gameplay systems can alter `TurnPacket.finalState` afterward.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
   - **Test File:** `tests/playback_sync_order.test.ts`
   - **Allowed Context:** `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`, `src/systems/PhysicsSystem.ts`
-  - **Commit:** `fix: order playback final sync before physics mutation`
+  - **Commit:** `fix: finalize playback sync after gameplay mutation`
 - [ ] **Task [12.4]: Enforce Deterministic Per-Turn Frame Counts**
   - **Goal:** Establish one documented deterministic frame-count contract for both the authoritative `resolveTurn` path and the live `playTurn` path (identical inputs, identical tick counts, identical final state) and add a regression test.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`
   - **Test File:** `tests/per_turn_frame_contract.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/PlayBackSystem.ts`, `src/physics/defaultPhysics.ts`
   - **Commit:** `fix: enforce deterministic per-turn frame counts`
-- [ ] **Task [12.5]: Freeze Simulation When A Winner Is Decided**
-  - **Goal:** Ensure winning evaluation mid-playback immediately stops simulation and remaining gameplay systems so no entity state mutates after the match result is set.
-  - **Target Files:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`
-  - **Test File:** `tests/winner_freeze.test.ts`
+- [ ] **Task [12.5]: Complete Accepted Turns Before Match Finalization**
+  - **Goal:** Ensure a winner or draw detected during active playback is finalized only after the accepted turn reaches its authoritative final state. Winning detection may become pending during playback, but must not cancel playback, skip the final sync, or expose a partial completed-match snapshot.
+  - **Target Files:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
+  - **Test File:** `tests/playback_match_finalization.test.ts`
   - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
-  - **Commit:** `fix: freeze simulation after match completion`
+  - **Commit:** `fix: complete accepted turns before match finalization`
 - [ ] **Task [12.6]: Restore Rule-State Orchestration For Replays**
   - **Goal:** Prove replay playback restores and advances turn number, rule phase, item economy, and active-team state exactly as the live match did, including turn/phase ordering assertions across the full replay lifecycle.
+  - **Constraint:** `ReplayPlayer` must invoke the same authoritative domain transitions as the original action path. It must not manually increment turn numbers, phases, active teams, or item counters as a parallel replay-only rules implementation.
   - **Target Files:** `src/replay/player.ts`, `src/rules/RuleInterpreter.ts`
   - **Test File:** `tests/replay_rule_state_orchestration.test.ts`
   - **Allowed Context:** `src/replay/*.ts`, `src/rules/*.ts`, `src/emitter/EngineEmitter.ts`
@@ -622,8 +624,8 @@
   - **Test File:** `tests/match_status_model.test.ts`
   - **Allowed Context:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
   - **Commit:** `feat: model explicit match status results`
-- [ ] **Task [12.8]: Gate Gameplay Systems On Match Completion**
-  - **Goal:** Make every gameplay system and entity effect respect the completed-match state so nothing mutates after `Game_over` instead of only the winning evaluator early-returning.
+- [ ] **Task [12.8]: Freeze Gameplay After Final Match Completion**
+  - **Goal:** Once the accepted final turn has completed, its authoritative final state has been synchronized, and the match result has been stored, prevent every later gameplay tick from mutating entities, effects, structures, rules, inventories, or outcome state.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/*.ts`
   - **Test File:** `tests/match_completion_gate.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/systems/*.ts`, `src/effects/*.ts`

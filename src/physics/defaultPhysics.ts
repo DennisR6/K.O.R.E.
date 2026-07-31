@@ -254,11 +254,28 @@ export class defaultPhysics implements PhysicsStrategy {
 				if (distanceSq < radius * radius) {
 					const distance = Math.sqrt(distanceSq);
 
-					// Normale berechnen (Richtung der Kollision)
-					const nx = distance > 0 ? dx / distance : 0;
-					const ny = distance > 0 ? dy / distance : -1;
-
-					const overlap = radius - distance;
+					// Normale und Überlappung bestimmen.
+					let nx: number;
+					let ny: number;
+					let overlap: number;
+					if (distance > 0) {
+						// Exterior: Normalen-Richtung vom nächsten Kantenpunkt zum Zentrum.
+						nx = dx / distance;
+						ny = dy / distance;
+						overlap = radius - distance;
+					} else {
+						// Interior (Zentrum innerhalb des Rechtecks): deterministischer
+						// Austritt über die nächstgelegene Kante. Bei Gleichstand gilt
+						// die dokumentierte Reihenfolge links, rechts, oben, unten.
+						const left = cPos.x - rPos.x;
+						const right = rPos.x + rBounds.x - cPos.x;
+						const top = cPos.y - rPos.y;
+						const bottom = rPos.y + rBounds.y - cPos.y;
+						if (left <= right && left <= top && left <= bottom) { nx = -1; ny = 0; overlap = left + radius; }
+						else if (right <= top && right <= bottom) { nx = 1; ny = 0; overlap = right + radius; }
+						else if (top <= bottom) { nx = 0; ny = -1; overlap = top + radius; }
+						else { nx = 0; ny = 1; overlap = bottom + radius; }
+					}
 
 					// Massen abrufen
 					const m1 = circle.getMass();    // z.B. 1
@@ -268,23 +285,19 @@ export class defaultPhysics implements PhysicsStrategy {
 					const invM1 = 1 / m1;
 					const invM2 = 1 / m2;
 					const invMassSum = invM1 + invM2;
-					// 1. Positionskorrektur (Depenetration)
-					// Verhindert das Ineinandersteckenbleiben proportional zur Masse
+
+					// 1. Positionskorrektur (Depenetration) - genau EINE gewichtete
+					// Anwendung entlang der Kollisionsnormalen. Die frühere doppelte
+					// Anwendung (Korrektur + Gesamtverschiebung) ist entfernt.
+					//
+					// Dokumentierter beschränkter iterativer Löser: Für Überlappungen
+					// bis zum Schwellwert bewegt eine einzelne Auflösung den Kreis
+					// vollständig aus dem Rechteck heraus (overlap + 0.01). Tiefere
+					// Überlappungen werden pro Auflösung um höchstens 2.0 Welt-Einheiten
+					// entlang der Austrittsnormalen reduziert; die Penetration (Abstand
+					// zur nächsten Kante bzw. Kante zum Zentrum) nimmt dabei strikt
+					// monoton ab, bis der Kreis die Kante passiert hat.
 					const totalMove = Math.min(overlap + 0.01, 2.0); // Sicherheits-Clamp
-
-					const EPSILON = 0.05;
-					const correction = totalMove + EPSILON;
-
-					// circle.setPos({
-					// 	x: cPos.x + nx * totalMove * (invM1 / invMassSum),
-					// 	y: cPos.y + ny * totalMove * (invM1 / invMassSum)
-					// });
-					circle.setPos({
-						x: cPos.x + nx * correction,
-						y: cPos.y + ny * correction
-					});
-
-
 
 					if (m2 === Infinity) {
 						// Wenn Rechteck unendlich schwer: Schiebe NUR den Kreis aus der Wand
@@ -294,10 +307,6 @@ export class defaultPhysics implements PhysicsStrategy {
 						});
 					} else {
 						// Wenn Rechteck beweglich: Teile den Impuls wie gehabt
-						const invM1 = 1 / m1;
-						const invM2 = 1 / m2;
-						const invMassSum = invM1 + invM2;
-
 						circle.setPos({
 							x: cPos.x + nx * totalMove * (invM1 / invMassSum),
 							y: cPos.y + ny * totalMove * (invM1 / invMassSum)
@@ -308,36 +317,41 @@ export class defaultPhysics implements PhysicsStrategy {
 						});
 					}
 
-					// 2. Impuls-Antwort (Geschwindigkeit)
-					const v1 = circle.getVel();
-					const v2 = rectangle.getVel();
+					// 2. Impuls-Antwort (Geschwindigkeit) - nur beim Exterior-Fall.
+					// Eingebettete Kreise werden rein positionell depenetriert, damit
+					// der Austritt nicht durch eine Reflexion auf der Austrittsachse
+					// wieder rückgängig gemacht wird.
+					if (distance > 0) {
+						const v1 = circle.getVel();
+						const v2 = rectangle.getVel();
 
-					// Relative Geschwindigkeit in Richtung der Normalen
-					const relativeVelX = v1.x - v2.x;
-					const relativeVelY = v1.y - v2.y;
-					const dot = relativeVelX * nx + relativeVelY * ny;
+						// Relative Geschwindigkeit in Richtung der Normalen
+						const relativeVelX = v1.x - v2.x;
+						const relativeVelY = v1.y - v2.y;
+						const dot = relativeVelX * nx + relativeVelY * ny;
 
-					// Nur berechnen, wenn die Objekte sich aufeinander zubewegen
-					if (dot < 0) {
-						// Kombinierter Bounce-Faktor (Durchschnitt oder Minimum beider Partner)
-						const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
+						// Nur berechnen, wenn die Objekte sich aufeinander zubewegen
+						if (dot < 0) {
+							// Kombinierter Bounce-Faktor (Durchschnitt oder Minimum beider Partner)
+							const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
 
-						// Der Impuls-Skalar (J)
-						// Setze ein hartes Limit für den Impuls
-						const maxImpulse = 50;
-						const j = Math.max(Math.min(-(1 + bounce) * dot / invMassSum, maxImpulse), -maxImpulse);
+							// Der Impuls-Skalar (J)
+							// Setze ein hartes Limit für den Impuls
+							const maxImpulse = 50;
+							const j = Math.max(Math.min(-(1 + bounce) * dot / invMassSum, maxImpulse), -maxImpulse);
 
-						// Neue Geschwindigkeiten anwenden
-						circle.setVel({
-							x: v1.x + (j * nx) * invM1,
-							y: v1.y + (j * ny) * invM1
-						});
-
-						if (m2 !== Infinity) {
-							rectangle.setVel({
-								x: v2.x - (j * nx) * invM2,
-								y: v2.y - (j * ny) * invM2
+							// Neue Geschwindigkeiten anwenden
+							circle.setVel({
+								x: v1.x + (j * nx) * invM1,
+								y: v1.y + (j * ny) * invM1
 							});
+
+							if (m2 !== Infinity) {
+								rectangle.setVel({
+									x: v2.x - (j * nx) * invM2,
+									y: v2.y - (j * ny) * invM2
+								});
+							}
 						}
 					}
 

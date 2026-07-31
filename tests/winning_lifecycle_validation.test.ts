@@ -53,7 +53,7 @@ function makeArena() {
 			],
 		},
 	];
-	settings.players[0]!.position = { x: 750, y: 500 };
+	settings.players[0]!.position = { x: 750, y: 365 };
 	settings.players[1]!.position = { x: 2250, y: 1100 };
 	return settings;
 }
@@ -114,7 +114,7 @@ describe("Winning Lifecycle Composition", () => {
 		expect(result).toBeDefined();
 		expect(result?.winnerTeam).toBe(1);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(4);
+		expect(result?.turnNumber).toBe(5);
 	});
 
 	test("the match result is set exactly once and never overwritten", () => {

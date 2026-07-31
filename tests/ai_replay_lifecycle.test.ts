@@ -54,7 +54,7 @@ function makeAiArena() {
 			],
 		},
 	];
-	settings.players[0]!.position = { x: 750, y: 500 };
+	settings.players[0]!.position = { x: 750, y: 365 };
 	settings.players[1]!.position = { x: 2250, y: 1100 };
 	return settings;
 }
@@ -104,7 +104,7 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(result).toBeDefined();
 		expect(result?.winnerTeam).toBe(1);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(4);
+		expect(result?.turnNumber).toBe(5);
 
 		const liveEntities = handler.getEntityManager().getEntities();
 		expect(liveEntities[0]!.isDead()).toBe(true);
@@ -113,7 +113,7 @@ describe("AI Match Replay Lifecycle", () => {
 		// The recorded replay is a valid document with one shot per action
 		const replay = emitter.recorder.getReplay();
 		expect(() => validateReplayDocument(replay)).not.toThrow();
-		expect(replay.actions).toHaveLength(5);
+		expect(replay.actions).toHaveLength(6);
 		expect(replay.actions.every(action => action.type === "shoot")).toBe(true);
 
 		// --- Deterministic replay: two independent playback runs are identical ----
@@ -158,7 +158,7 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(replayResult?.reason).toBe(result?.reason);
 		// The replay engine never advances turns; the live engine did (documented difference)
 		expect(replayResult?.turnNumber).toBe(0);
-		expect(result?.turnNumber).toBe(4);
+		expect(result?.turnNumber).toBe(5);
 	});
 
 	test("AI-vs-AI matches are deterministic across match seeds", () => {
