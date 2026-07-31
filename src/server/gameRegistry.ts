@@ -198,7 +198,7 @@ export class GameRegistry {
 		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(stored.settings).build()
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions)
 		this.games.set(id, record)
 		return record
 	}
@@ -211,10 +211,11 @@ export class GameRegistry {
 		turnNumber: number,
 		lastAccess: number = Date.now(),
 		ruleState?: RuleState,
+		actions?: ReplayDocument["actions"],
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
-		const recorder = new ReplayRecorder(handler.toSettings())
+		const recorder = new ReplayRecorder(handler.toSettings(), 12345, actions ?? [])
 		return {
 			id,
 			handler,
@@ -239,6 +240,7 @@ export class GameRegistry {
 			currentTeam: record.currentTeam,
 			turnNumber: record.turnNumber,
 			updatedAt: Date.now(),
+			actions: record.recorder.getReplay().actions,
 		}
 		if (this.database.hasGame(record.id)) this.database.saveGame(game)
 		else this.database.createGame(game)

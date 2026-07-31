@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { EngineSettings } from "../engine/types.js";
+import type { ReplayAction } from "../replay/types.js";
 
 export type StoredGame = {
 	id: string;
@@ -11,6 +12,7 @@ export type StoredGame = {
 	currentTeam: number;
 	turnNumber: number;
 	updatedAt: number;
+	actions?: ReplayAction[];
 };
 
 type StoredGameRow = {
@@ -55,7 +57,7 @@ export class GameDatabase {
 	}
 
 	public createGame(game: StoredGame): void {
-		const snapshot = compress(game.settings);
+		const snapshot = compress({ settings: game.settings, actions: game.actions ?? [] });
 		this.db.transaction(() => {
 			this.db.query(`
 				INSERT INTO games (id, snapshot, current_team, turn_number, updated_at)
@@ -67,7 +69,7 @@ export class GameDatabase {
 	}
 
 	public saveGame(game: StoredGame): void {
-		const snapshot = compress(game.settings);
+		const snapshot = compress({ settings: game.settings, actions: game.actions ?? [] });
 		this.db.query(`
 			UPDATE games
 			SET snapshot = ?2, current_team = ?3, turn_number = ?4, updated_at = ?5
@@ -81,9 +83,11 @@ export class GameDatabase {
 		if (!row) return undefined;
 		const users = this.db.query("SELECT user_id FROM game_players WHERE game_id = ?1 ORDER BY team ASC")
 			.all(id) as StoredUserRow[];
+		const decompressed = decompress(row.snapshot);
 		return {
 			id: row.id,
-			settings: decompress(row.snapshot),
+			settings: decompressed.settings,
+			actions: decompressed.actions,
 			users: users.map(user => user.user_id),
 			currentTeam: row.current_team,
 			turnNumber: row.turn_number,
@@ -108,10 +112,14 @@ export class GameDatabase {
 	public close(): void { this.db.close() }
 }
 
-function compress(settings: EngineSettings): Uint8Array {
-	return gzipSync(JSON.stringify(settings));
+function compress(data: { settings: EngineSettings; actions: ReplayAction[] }): Uint8Array {
+	return gzipSync(JSON.stringify(data));
 }
 
-function decompress(snapshot: Uint8Array): EngineSettings {
-	return JSON.parse(gunzipSync(snapshot).toString()) as EngineSettings;
+function decompress(snapshot: Uint8Array): { settings: EngineSettings; actions: ReplayAction[] } {
+	const parsed = JSON.parse(gunzipSync(snapshot).toString());
+	if (parsed && typeof parsed === "object" && "settings" in parsed) {
+		return { settings: parsed.settings as EngineSettings, actions: (parsed.actions ?? []) as ReplayAction[] };
+	}
+	return { settings: parsed as EngineSettings, actions: [] };
 }

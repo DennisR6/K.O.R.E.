@@ -6,12 +6,12 @@ import { validateReplayDocument } from "./types.js";
 export class ReplayRecorder {
 	private document: ReplayDocument;
 
-	public constructor(initialSettings: GameSettings, seed: number = 12345) {
+	public constructor(initialSettings: GameSettings, seed: number = 12345, actions: ReplayDocument["actions"] = []) {
 		this.document = {
 			schemaVersion: DOCUMENT_SCHEMA_VERSION,
 			initialSettings: JSON.parse(JSON.stringify(initialSettings)),
 			seed,
-			actions: [],
+			actions: JSON.parse(JSON.stringify(actions)),
 		};
 		validateReplayDocument(this.document);
 	}

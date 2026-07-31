@@ -478,7 +478,7 @@
   - **Test File:** `tests/e2e_local_match.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`, `src/item/officialItems.ts`
   - **Commit:** `test: cover complete local match`
-- [ ] **Task [10.2]: Cover Complete Network Match**
+- [x] **Task [10.2]: Cover Complete Network Match**
   - **Goal:** Add end-to-end coverage for a network match with item authority, disconnect/reconnect, result, and replay persistence.
   - **Target Files:** `tests/e2e_network_match.test.ts`, `src/server/gameRegistry.ts`
   - **Test File:** `tests/e2e_network_match.test.ts`
