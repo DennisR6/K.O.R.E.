@@ -990,14 +990,15 @@ UI code must not duplicate engine rules.
 
 Before each task, identify the actual existing menu, scene, rendering, and input files. Update the task note with exact paths when the repository uses different names than the directory globs below.
 
-- [ ] **Task [14.1]: Define The Canonical Playable Match**
+- [x] **Task [14.1]: Define The Canonical Playable Match**
   - **Goal:** Define one officially supported local reference match used by development, automated UI tests, and human testers.
   - **Target Files:** `src/settings/**`, reference-map files, `docs/playable-slice.md`
   - **Test File:** `tests/canonical_playable_match.test.ts`
   - **Allowed Context:** game settings, game modes, maps, items, UI entry points
   - **Commit:** `feat: define canonical playable match`
   - **Required Definition:** reference map, game mode, team count, figures per team, spawn positions, item configuration, AI or human slots, camera defaults, expected winner/draw handling.
-  - **Acceptance:** The configuration validates, starts deterministically, provides a legal first action, and can complete through the headless engine.
+   - **Acceptance:** The configuration validates, starts deterministically, provides a legal first action, and can complete through the headless engine.
+  - **Note:** Implemented in `src/settings/canonicalPlayableMatch.ts`: stable two-human/one-figure Ice Duel settings, physics-only/no-item rules, fit-world 800×450 camera metadata, and a builder that installs `WinningSystem`. `docs/playable-slice.md` records the contract. The focused headless test validates deterministic settings, a legal authoritative shot, and terminal winner synchronization. Gates: 563 pass / 3 skip / 0 fail across 171 files; TSC and build clean.
 - [ ] **Task [14.2]: Connect The Main Menu To Local Match Creation**
   - **Goal:** Make the primary play action create the canonical handler and transition from the menu into the gameplay scene.
   - **Target Files:** `src/ui/**`, `src/scenes/**`, application entry point, actual existing menu controller
