@@ -10,7 +10,7 @@ import { SHAPE } from "../src/physics/physics.ts";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { ReplayRecorder } from "../src/replay/recorder.ts";
 import { validateReplayDocument } from "../src/replay/types.ts";
-import { MatchEndReason } from "../src/rules/types.ts";
+import { MatchEndReason, RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem } from "../src/systems/WinningSystem.ts";
 
@@ -124,11 +124,11 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(replayB.getHandler().toSettings()).toEqual(replayA.getHandler().toSettings());
 
 		// --- The replay reproduces the authoritative simulation chain ---------------
-		// The live visual playback can drift from the authoritative sim by a single
-		// post-sync collision push per turn (PlaybackSystem hard-syncs before the
-		// physics system runs on the last playback tick). The replay re-runs the
-		// authoritative `resolveTurn` chain from `initialSettings`, so it must match
-		// a fresh server-style run of the recorded actions exactly.
+		// The live visual playback can drift from the authoritative sim (the
+		// PlaybackSystem hard-syncs at the end of the turn). The replay re-runs
+		// the authoritative `resolveTurn` chain from `initialSettings`, so its
+		// entity states must match a fresh server-style run of the recorded
+		// actions exactly.
 		const authoritative = new GameHandlerBuilder()
 			.defaultSystems()
 			.addSystem(new WinningSystem(2))
@@ -144,7 +144,15 @@ describe("AI Match Replay Lifecycle", () => {
 			const ents = authoritative.getEntityManager().getEntities();
 			perActionFinals.push(ents.map(entity => `${entity.getPos().x.toFixed(6)},${entity.getPos().y.toFixed(6)}`).join("|"));
 		}
-		expect(authoritative.toSettings()).toEqual(replayA.getHandler().toSettings());
+		expect(authoritative.getEntityManager().serialize()).toEqual(
+			replayA.getHandler().getEntityManager().serialize(),
+		);
+
+		// --- The replay reproduces the live match exactly, INCLUDING rule state -----
+		// The replay drives the same authoritative domain transitions as the
+		// live emitter: rule phase, turn number, active team, item economy, and
+		// match result match the live match's final engine snapshot.
+		expect(replayA.getHandler().toSettings()).toEqual(handler.toSettings());
 
 		// --- The replay reproduces the live match outcome (winner, deaths) ---------
 		const replayEntities = replayA.getHandler().getEntityManager().getEntities();
@@ -156,9 +164,11 @@ describe("AI Match Replay Lifecycle", () => {
 		const replayResult = replayA.getHandler().getMatchResult();
 		expect(replayResult?.winnerTeam).toBe(result?.winnerTeam);
 		expect(replayResult?.reason).toBe(result?.reason);
-		// The replay engine never advances turns; the live engine did (documented difference)
-		expect(replayResult?.turnNumber).toBe(0);
-		expect(result?.turnNumber).toBe(5);
+		// The replay advances turns exactly like the live match did.
+		expect(replayResult?.turnNumber).toBe(5);
+		expect(replayA.getHandler().getTurnNumber()).toBe(handler.getTurnNumber());
+		expect(replayA.getHandler().getActiveTeam()).toBe(handler.getActiveTeam());
+		expect(replayA.getHandler().getRuleState()).toEqual(handler.getRuleState());
 	});
 
 	test("AI-vs-AI matches are deterministic across match seeds", () => {
@@ -233,8 +243,16 @@ describe("AI Match Replay Lifecycle", () => {
 
 		// An item use for an undeclared item throws as well. The recorder and the
 		// player must share one settings object: default player ids are random
-		// UUIDs generated per `createDefaultGameSettings()` call.
+		// UUIDs generated per `createDefaultGameSettings()` call. The game mode
+		// starts in the item phase so the replay reaches the item validation.
 		const itemSettings = createDefaultGameSettings(2, 1);
+		itemSettings.gameMode = {
+			id: "item-replay",
+			phases: [RulePhase.Item, RulePhase.Physics],
+			maxItemsPerTurn: 1,
+			winCondition: WinCondition.LastTeamStanding,
+			itemEconomy: { fixedLoadouts: [], mapPickups: [] },
+		};
 		const itemRecorder = new ReplayRecorder(itemSettings, 42);
 		itemRecorder.recordItemUse(itemSettings.players[0]!.id, "undeclared-item", { type: "self" });
 		const itemPlayer = new ReplayPlayer(itemRecorder.getReplay());

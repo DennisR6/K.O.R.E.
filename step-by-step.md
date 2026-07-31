@@ -614,13 +614,14 @@
   - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
   - **Commit:** `fix: complete accepted turns before match finalization`
   - **Note:** `WinningSystem` now pends wins detected while `Playing` (capturing the detection turn). `PlaybackSystem.flush` transitions to `Playing_done` after the hard sync; `WinningSystem.flush` (registered after Playback) then finalizes with the captured turn. The playback completion callback was split into `flush` (sync) + `drainCompletion()` (fired by the handler after all flush hooks), so the rule state is never advanced past a decided match. Post-completion physics freezing is 12.8's scope.
-- [ ] **Task [12.6]: Restore Rule-State Orchestration For Replays**
+- [x] **Task [12.6]: Restore Rule-State Orchestration For Replays**
   - **Goal:** Prove replay playback restores and advances turn number, rule phase, item economy, and active-team state exactly as the live match did, including turn/phase ordering assertions across the full replay lifecycle.
   - **Constraint:** `ReplayPlayer` must invoke the same authoritative domain transitions as the original action path. It must not manually increment turn numbers, phases, active teams, or item counters as a parallel replay-only rules implementation.
   - **Target Files:** `src/replay/player.ts`, `src/rules/RuleInterpreter.ts`
   - **Test File:** `tests/replay_rule_state_orchestration.test.ts`
   - **Allowed Context:** `src/replay/*.ts`, `src/rules/*.ts`, `src/emitter/EngineEmitter.ts`
   - **Commit:** `fix: restore rule-state orchestration for replays`
+  - **Note:** `ReplayPlayer` now drives a `GameEmitter` (built from the recorded game mode, team count, and seed) through `sendShot`/`sendItemUse` + `skipCurrentPhase`, so turn numbers, rule phases, item economy, and active-team progression come from the authoritative emitter path only. `ai_replay_lifecycle` now asserts full `toSettings()` equality between live and replayed matches, and `replay_rule_state_orchestration` proves per-action rule-state equality (phase, turn, team, item uses) plus full item-mode match reproduction incl. `Game_over` results. Test arena uses mid-field shots because resting players near an arena edge are deterministically pushed out by the interior depenetration of `containment_structure_role`.
 - [ ] **Task [12.7]: Model Explicit Match Status Results**
   - **Goal:** Replace winner/draw ambiguity with an explicit `{ status: "ongoing" | "winner" | "draw" }` match-status model that never invents fake team IDs for draws.
   - **Target Files:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
