@@ -553,7 +553,7 @@
   - **Test File:** `tests/persisted_match_continuation.test.ts`
   - **Allowed Context:** `src/server/db.ts`, `src/server/gameRegistry.ts`, `src/engine/Handler.ts`
   - **Commit:** `test: validate persisted match continuation`
-- **Task [11.7]: Validate Winning Lifecycle Composition**
+- [x] **Task [11.7]: Validate Winning Lifecycle Composition**
   - **Goal:** Prove the winning evaluation composes with boundary elimination, sets the match result once, and survives snapshot restoration.
   - **Target Files:** `src/systems/WinningSystem.ts`
   - **Test File:** `tests/winning_lifecycle_validation.test.ts`
