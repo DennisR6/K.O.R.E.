@@ -536,7 +536,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
 		}
-		this.saveSettings(settings)
+		// The export stays a pure snapshot: only a detached copy is retained,
+		// so caller mutations of the returned settings can never leak into
+		// the stored settings or change later exports.
+		this.saveSettings(JSON.parse(JSON.stringify(settings)))
 		return settings
 	}
 	public getTeam(): number[] { return this.team }

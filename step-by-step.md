@@ -643,12 +643,13 @@
   - **Allowed Context:** `src/systems/WinningSystem.ts`, `src/engine/Handler.ts`
   - **Commit:** `refactor: unify winner state with match result`
   - **Note:** `WinningSystem` no longer keeps a `winner` field or `getWinner()` (it had zero callers); `finalize` only stores the `MatchResult` through `ctx.setMatchResult`, so the live handler, restored snapshots, and replay playback share exactly one outcome state. `winner_state_unification` proves the result is the only winner state (no top-level snapshot key carries it), no outcome is observable mid-playback, restored and replayed handlers agree with the live `MatchResult`, and draws unify identically.
-- [ ] **Task [12.10]: Make Settings Export Pure**
+- [x] **Task [12.10]: Make Settings Export Pure**
   - **Goal:** Prove `handler.toSettings()` is a pure export that never mutates stored settings or internal state, with snapshot-equality assertions before and after repeated exports.
   - **Target Files:** `src/engine/Handler.ts`
   - **Test File:** `tests/settings_export_purity.test.ts`
   - **Allowed Context:** `src/engine/Handler.ts`
   - **Commit:** `refactor: make settings export pure`
+  - **Note:** `toSettings()` previously retained the returned object itself via `saveSettings`, so caller mutations of an export polluted the stored settings and all later exports. It now stores only a detached deep copy (keeping the existing "settings reflects the latest engine snapshot" contract for `getSettings()` consumers), and the export shares no references with internal state. `settings_export_purity` proves repeated exports are equal and mutation-free, caller pollution never leaks, the export is deep-detached from the live handler, item-economy/draw state only advances by consuming turns (never by exporting), and restored handlers export purely too.
 - [ ] **Task [12.11]: Harden The Effect Factory Against Unknown Types**
   - **Goal:** Make `MetaEffect` reject or explicitly handle unknown effect types instead of silently falling back to movement, and cover the missing freeze/shield/ghost/multi serialized cases with round-trip tests.
   - **Target Files:** `src/effects/effects.ts`
