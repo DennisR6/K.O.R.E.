@@ -1055,6 +1055,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `feat: integrate gameplay phases and items`
   - **Positive Tests:** available items are displayed, legal item use advances correctly, item phase can be skipped, used-item allowance updates, physics phase accepts a shot, turn transition updates active team and UI.
   - **Negative Tests:** second item beyond allowance, item not in inventory, item use in Physics phase, shot before required phase transition, stale item buttons after turn change.
+  - **Note:** `src/ui/ItemPhaseUI.ts` exposes detached available-item and phase state for the gameplay UI and routes item/skip actions through `IInputEmitter`. `GameEmitter` enforces active/dead actor validity, item allowance, phase skipping, and authoritative rule-state updates; the canonical match uses one fixed Power-Dash item per team in an Item -> Physics turn. Focused coverage is in `tests/gameplay_phase_integration.test.ts`.
 - [ ] **Task [14.8]: Add Turn, Aim, Power, And Error Feedback**
   - **Goal:** Show enough state for a first-time tester to understand who acts, what can be done, what is selected, and why an action was rejected.
   - **Target Files:** HUD, gameplay scene, feedback components

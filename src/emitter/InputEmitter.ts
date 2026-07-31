@@ -29,6 +29,10 @@ export class CombiEmitter implements IInputEmitter {
 		this.emitters.forEach(emitter => emitter.sendItemUse?.(actorId, itemId, target));
 	}
 
+	skipPhase = (): void => {
+		this.emitters.forEach(emitter => emitter.skipPhase?.());
+	}
+
 	/** Fügt zur Laufzeit einen weiteren Emitter hinzu. */
 	addEmitter(...emitter: IInputEmitter[]) {
 		for (const em of emitter) {

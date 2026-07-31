@@ -29,6 +29,8 @@ export class RuleInterpreter {
 		return { phase: this.phases[0], activeTeam, turnNumber, itemUses: 0 }
 	}
 
+	public getMaxItemsPerTurn(): number { return this.maxItemsPerTurn }
+
 	public advancePhase(state: RuleState): RuleState {
 		if (state.phase === RulePhase.Complete) return state
 		const phaseIndex = this.phases.indexOf(state.phase)

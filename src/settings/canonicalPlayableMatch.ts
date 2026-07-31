@@ -4,6 +4,7 @@ import { WinningSystem } from "../systems/WinningSystem.js";
 import { createDefaultGameSettings, validateGameSettings, type GameSettings } from "./settings.js";
 import { SHAPE } from "../physics/physics.js";
 import { FitWorldCamera } from "../ui/FitWorldCamera.js";
+import { powerDashItem } from "../item/officialItems.js";
 
 /** The supported two-human local reference match for the playable vertical slice. */
 export const CANONICAL_PLAYABLE_MATCH = {
@@ -13,7 +14,7 @@ export const CANONICAL_PLAYABLE_MATCH = {
 	figuresPerTeam: 1,
 	humanTeams: [0, 1],
 	camera: { mode: "fit-world", worldSize: { x: 800, y: 450 } },
-	items: "disabled",
+	items: "enabled",
 	result: "last-team-standing",
 } as const;
 
@@ -25,15 +26,15 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 	settings.allTeams = ["Local team 0", "Local team 1"];
 	settings.players[0]!.id = "00000000-0000-4000-8000-000000000140";
 	settings.players[1]!.id = "00000000-0000-4000-8000-000000000141";
-	settings.items = [];
+	settings.items = [powerDashItem];
 	settings.mapBoundarys = settings.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
 	settings.mapBoundarys.unshift({ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
 	settings.gameMode = {
 		id: CANONICAL_PLAYABLE_MATCH.id,
-		phases: [RulePhase.Physics],
-		maxItemsPerTurn: 0,
+		phases: [RulePhase.Item, RulePhase.Physics],
+		maxItemsPerTurn: 1,
 		winCondition: WinCondition.LastTeamStanding,
-		itemEconomy: { fixedLoadouts: [], mapPickups: [] },
+		itemEconomy: { fixedLoadouts: [{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }] }, { team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }] }], mapPickups: [] },
 	};
 	validateGameSettings(settings);
 	validateReferenceMapSettings(settings);

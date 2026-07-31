@@ -33,6 +33,7 @@ export interface TurnPacket {
 export interface IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number): void;
 	sendItemUse?(actorId: string, itemId: string, target: ItemTarget): void;
+	skipPhase?(): void;
 }
 
 /**

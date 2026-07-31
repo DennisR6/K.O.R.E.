@@ -63,9 +63,20 @@ export class GameEmitter implements IInputEmitter {
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
 		this.ruleState = this.handler.getRuleState()
 		if (this.ruleState.phase !== RulePhase.Item) throw new Error("Local item use is not in the item phase")
+		if (this.ruleState.itemUses >= this.rules.getMaxItemsPerTurn()) throw new Error("Item allowance has been exhausted")
+		const actor = this.handler.getEntityManager().getEntityById(actorId)
+		if (!actor || actor.isDead()) throw new Error("Actor is not active")
 		this.recorder.recordItemUse(actorId, itemId, target)
 		this.handler.useItem(actorId, itemId, target)
 		this.ruleState = this.rules.useItem(this.ruleState)
+		this.handler.setRuleState(this.ruleState)
+		this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
+	}
+
+	skipPhase(): void {
+		this.ruleState = this.handler.getRuleState()
+		if (this.ruleState.phase === RulePhase.Physics || this.ruleState.phase === RulePhase.Complete) throw new Error("The current phase cannot be skipped")
+		this.ruleState = this.rules.advancePhase(this.ruleState)
 		this.handler.setRuleState(this.ruleState)
 		this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 	}

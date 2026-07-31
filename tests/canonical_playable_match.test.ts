@@ -13,6 +13,7 @@ test("canonical playable match is stable, valid, actionable, and headlessly comp
 	expect(handler.getState()).toBe(GameState.Your_turn);
 	expect(handler.getActiveTeam()).toBe(0);
 	const emitter = new GameEmitter(handler, settings.gameMode!, 2, 14);
+	emitter.skipPhase();
 	emitter.sendShot(actor.getId(), 220, 10);
 	let ticks = 0;
 	while (handler.getState() === GameState.Playing && ticks++ < 500) handler.tick();
