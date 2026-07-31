@@ -112,6 +112,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private readonly gameplayRenderer = new AuthoritativeGameplayRenderer(this)
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
+	private disposed = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
 	/**
@@ -250,6 +251,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 */
 	public tick(dt: number = this.dt) {
+		if (this.disposed) return
 		// Completed matches are frozen: the accepted final turn has been
 		// synchronized and its result stored. No later tick may mutate
 		// entities, effects, structures, systems, inventories, or outcome
@@ -289,6 +291,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * @param renderer - Der Context, der das Zeichnen übernimmt (z.B. p5.js oder Canvas).
 		 */
 	public drawWorld(renderer: RenderContext): void {
+		if (this.disposed) return
 		renderer.clear()
 		this.preDrawers.forEach(d => d.draw(renderer))
 		this.gameplayRenderer.draw(renderer)
@@ -322,11 +325,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 * die man "ziehen" kann.
 	 */
 	public handleMousePressed() {
+		if (this.disposed) return
 		if (this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over) return
 		this.mouseHandler?.handleMousePressed()
 	}
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
 	public updateMouse(x: number, y: number) {
+		if (this.disposed) return
 		this.mouseHandler?.updateMouse(x, y)
 	}
 
@@ -335,11 +340,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 * Wandelt die Zieh-Bewegung in ein Input-Paket um und sendet es an den Server/Emitter.
 		 */
 	public handleMouseReleased() {
+		if (this.disposed) return
 		if (this.context.state !== GameState.Your_turn) return
 		this.mouseHandler?.handleMouseReleased()
 	}
 
 	public handleMouseWheel(event: WheelEvent): void {
+		if (this.disposed) return
 		this.mouseHandler?.handleMouseWheel(event);
 	}
 
@@ -451,6 +458,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	/** Restores the configured local match without replacing installed UI systems. */
 	public rematch(): this {
+		if (this.disposed) throw new Error("A disposed match cannot be rematched")
 		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
 		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
 		this.entityManager.applySettings(settings.players)
@@ -468,9 +476,23 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.startTurn({ phase: initialPhase, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
+		this.mouseHandler?.reset?.()
 		this.setState(GameState.Your_turn)
 		return this
 	}
+	/** Releases scene-owned callbacks and makes this handler inert. */
+	public dispose(): void {
+		if (this.disposed) return
+		this.disposed = true
+		this.mouseHandler?.reset?.()
+		this.mouseHandler = undefined
+		this.systems = []
+		this.preTickers = []
+		this.postTickers = []
+		this.preDrawers = []
+		this.postDrawers = []
+	}
+	public isDisposed(): boolean { return this.disposed }
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {

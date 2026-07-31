@@ -581,8 +581,7 @@ not desired design:
   segments are collision obstacles only. Leaving an inferred containment
   boundary kills a player; a last-team-standing evaluator exists but is not yet
   integrated into completed-match flow.
-- The p5 mouse-wheel handlers may lose `this`, and mouse tracking depends on a
-  browser-created `defaultCanvas0` global.
+- Mouse tracking depends on a browser-created `defaultCanvas0` global.
 - The editor stores one validated temporary draft in browser `localStorage` and
   restores it on startup; its embedded and popup previews use the current
   browser origin.

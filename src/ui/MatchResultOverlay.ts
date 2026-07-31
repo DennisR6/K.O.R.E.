@@ -15,11 +15,13 @@ export class MatchResultOverlay implements IDrawer, IMouse {
 	public constructor(
 		private readonly handler: GameHandler,
 		private readonly onAction: (action: MatchResultAction) => void,
+		private readonly gameplayInput?: IMouse,
 	) { }
 
 	public isVisible(): boolean {
 		return this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined;
 	}
+	public getGameplayInput(): IMouse | undefined { return this.gameplayInput; }
 
 	public handleMousePressed(): void {
 		if (!this.isVisible()) return;
@@ -29,15 +31,20 @@ export class MatchResultOverlay implements IDrawer, IMouse {
 
 	public updateMouse(x: number, y: number): void {
 		this.mouse = { x, y };
-		if (!this.isVisible()) this.handler.updateMouse(x, y);
+		if (!this.isVisible()) this.gameplayInput?.updateMouse(x, y);
 	}
 
 	public handleMouseReleased(): void {
-		if (!this.isVisible()) this.handler.handleMouseReleased();
+		if (!this.isVisible()) this.gameplayInput?.handleMouseReleased();
 	}
 
 	public handleMouseWheel(event: WheelEvent): void {
-		if (!this.isVisible()) this.handler.handleMouseWheel(event);
+		if (!this.isVisible()) this.gameplayInput?.handleMouseWheel(event);
+	}
+
+	public reset(): void {
+		this.mouse = { x: 0, y: 0 };
+		this.gameplayInput?.reset?.();
 	}
 
 	public draw(renderer: RenderContext): void {

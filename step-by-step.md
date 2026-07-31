@@ -1074,7 +1074,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Positive Tests:** winner result names the correct team, draw result never displays a fake winner, result appears only after final synchronization, rematch clears result and runtime state, return-to-menu disposes the match.
    - **Negative Tests:** no result before completion, no double result overlay, no action accepted behind the result overlay, no previous result leaks into the next match.
    - **Note:** Implemented `src/ui/MatchResultOverlay.ts` and wired it through `src/scenes/LocalMatchSceneRouter.ts`. The overlay renders authoritative winner/draw state only for a synchronized `Game_over`, consumes terminal input, and routes rematch through `GameHandler.rematch()` or return-to-menu through a fresh menu handler. Focused coverage is in `tests/match_end_ui_flow.test.ts`.
-- [ ] **Task [14.10]: Stabilize Rematch And Scene Teardown**
+- [x] **Task [14.10]: Stabilize Rematch And Scene Teardown**
   - **Goal:** Ensure repeated menu-to-match, rematch, and match-to-menu cycles do not leak handlers, event listeners, render loops, timers, replay recorders, or stale state.
   - **Target Files:** scene lifecycle, event registration, renderer teardown
   - **Test File:** `tests/gameplay_scene_lifecycle.test.ts`
@@ -1082,6 +1082,7 @@ Before each task, identify the actual existing menu, scene, rendering, and input
   - **Commit:** `fix: stabilize gameplay scene lifecycle`
   - **Required Test Cycle:** menu -> match -> rematch -> result -> menu (repeat multiple times).
   - **Negative Tests:** no duplicated input callback, no duplicate render loop, no old handler receiving actions, no replay action recorded twice, no increasing listener count, no stale selected actor.
+  - **Note:** `GameHandler.dispose()` now makes replaced scenes inert and releases their tick/draw/system/input registrations. `MatchResultOverlay` delegates safely to gameplay input after rematch and resets it; the local router disposes match scenes on menu transitions, and the shared render loop routes wheel input to the active handler. `tests/gameplay_scene_lifecycle.test.ts` repeats match -> result -> menu -> match -> rematch cycles three times and verifies teardown, callback isolation, and selection reset.
 - [ ] **Task [14.11]: Automate The Menu-To-Result Vertical Slice**
   - **Goal:** Add one end-to-end test that starts at the menu, launches the canonical match, performs legal actions, reaches winner or draw, and returns to a valid rematch or menu state.
   - **Target Files:** browser/e2e test configuration

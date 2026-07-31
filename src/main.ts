@@ -112,8 +112,9 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (canvasEl) {
 				canvasEl.addEventListener("wheel", (e) => {
-					if (h.handleMouseWheel) {
-						h.handleMouseWheel(e);
+				const active = getActiveHandler();
+				if (active.handleMouseWheel) {
+					active.handleMouseWheel(e);
 					}
 				});
 			}

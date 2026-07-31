@@ -123,6 +123,7 @@ export interface IMouse {
 	updateMouse(x: number, y: number): void;
 	handleMouseReleased(): void;
 	handleMouseWheel(event: WheelEvent): void;
+	reset?(): void;
 }
 
 /**

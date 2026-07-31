@@ -36,6 +36,7 @@ export class LocalMatchSceneRouter {
 		this.starting = true;
 		try {
 			const next = this.createLocalHandler();
+			this.handler.dispose();
 			this.handler = next;
 			this.installResultOverlay(next);
 			this.error = undefined;
@@ -49,7 +50,8 @@ export class LocalMatchSceneRouter {
 	}
 
 	private installResultOverlay(handler: GameHandler): void {
-		const overlay = new MatchResultOverlay(handler, action => this.handleResultAction(action));
+		const gameplayInput = handler.getMouseHandler();
+		const overlay = new MatchResultOverlay(handler, action => this.handleResultAction(action), gameplayInput);
 		this.overlay = overlay;
 		handler.setMouseHandler(overlay);
 		handler.addPostDrawer(overlay);
@@ -61,6 +63,7 @@ export class LocalMatchSceneRouter {
 			this.handler.rematch();
 			return;
 		}
+		this.handler.dispose();
 		this.overlay = undefined;
 		this.handler = this.createMenuHandler();
 	}
