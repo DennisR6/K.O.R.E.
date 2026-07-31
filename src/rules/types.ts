@@ -98,8 +98,26 @@ export const enum MatchEndReason {
 	Draw = "draw",
 }
 
+/**
+ * Explicit classification of a match outcome. `Ongoing` models the live
+ * evaluation state (no terminal result yet); a stored `MatchResult` is only
+ * ever created with `Winner` or `Draw`.
+ */
+export const enum MatchStatus {
+	Ongoing = "ongoing",
+	Winner = "winner",
+	Draw = "draw",
+}
+
 /** Serializable terminal outcome evaluated by game rules. */
 export interface MatchResult {
+	/**
+	 * Explicit status classification. Consumers must read `status` and must
+	 * never infer the outcome from `winnerTeam` or `reason` alone; a draw
+	 * never invents a fake team ID.
+	 */
+	status: MatchStatus;
+	/** Winning team id; always `null` unless `status` is `Winner`. */
 	winnerTeam: number | null;
 	reason: MatchEndReason;
 	turnNumber: number;

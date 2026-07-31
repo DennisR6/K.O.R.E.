@@ -19,7 +19,7 @@ import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
-import { RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
+import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import type { MatchResult } from "../rules/types.js";
@@ -291,7 +291,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		renderer.setFillColor("black")
 		if (this.context.state === GameState.Game_over) {
 			const result = this.getMatchResult()
-			const message = result?.winnerTeam === null ? "Match draw" : `Team ${result?.winnerTeam ?? "?"} wins`
+			const message = result?.status === MatchStatus.Draw ? "Match draw" : `Team ${result?.winnerTeam ?? "?"} wins`
 			renderer.drawText(message, renderer.WORLD_SIZE_X / 2 - 80, renderer.WORLD_SIZE_Y / 2, 24)
 			return
 		}

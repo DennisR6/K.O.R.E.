@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_ITEM_ECONOMY, MatchEndReason, RulePhase, WinCondition, type GameModeSettings, type MatchResult, type RuleState } from "../src/rules/types.ts";
+import { DEFAULT_ITEM_ECONOMY, MatchEndReason, MatchStatus, RulePhase, WinCondition, type GameModeSettings, type MatchResult, type RuleState } from "../src/rules/types.ts";
 
 test("game-mode, rule-state, and match-result contracts round-trip as JSON", () => {
 	const mode: GameModeSettings = {
@@ -10,7 +10,7 @@ test("game-mode, rule-state, and match-result contracts round-trip as JSON", () 
 		itemEconomy: DEFAULT_ITEM_ECONOMY,
 	}
 	const state: RuleState = { phase: RulePhase.Push, activeTeam: 1, turnNumber: 4, itemUses: 1 }
-	const result: MatchResult = { winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 12 }
+	const result: MatchResult = { status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 12 }
 
 	const restored = JSON.parse(JSON.stringify({ mode, state, result })) as {
 		mode: GameModeSettings;

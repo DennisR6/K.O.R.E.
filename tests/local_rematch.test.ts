@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
-import { MatchEndReason } from "../src/rules/types.ts";
+import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { GameSettings } from "../src/settings/settings.ts";
 
 test("local rematch restores configured players and fresh match state", () => {
@@ -12,7 +12,7 @@ test("local rematch restores configured players and fresh match state", () => {
 	player.setIsDead(true);
 	handler.setTurnNumber(4);
 	handler.setActiveTeam(1);
-	handler.setMatchResult({ winnerTeam: 1, reason: MatchEndReason.LastTeamStanding, turnNumber: 4 });
+	handler.setMatchResult({ status: MatchStatus.Winner, winnerTeam: 1, reason: MatchEndReason.LastTeamStanding, turnNumber: 4 });
 	handler.setState(GameState.Game_over);
 
 	handler.rematch();

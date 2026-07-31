@@ -4,7 +4,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { SHAPE } from "../src/physics/physics.ts";
-import { MatchEndReason } from "../src/rules/types.ts";
+import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem } from "../src/systems/WinningSystem.ts";
 
@@ -105,6 +105,7 @@ describe("playback match finalization", () => {
 		// the rule state was NOT advanced past it.
 		const result = handler.getMatchResult();
 		expect(result).toEqual({
+			status: MatchStatus.Winner,
 			winnerTeam: 0,
 			reason: MatchEndReason.LastTeamStanding,
 			turnNumber: 0,

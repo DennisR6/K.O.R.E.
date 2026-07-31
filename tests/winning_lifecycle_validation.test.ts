@@ -7,7 +7,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { SHAPE } from "../src/physics/physics.ts";
-import { MatchEndReason } from "../src/rules/types.ts";
+import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem, evaluateLastTeamStanding } from "../src/systems/WinningSystem.ts";
 
@@ -230,20 +230,20 @@ describe("Winning Lifecycle Composition", () => {
 		expect(restored.getMatchResult()?.reason).toBe(MatchEndReason.LastTeamStanding);
 	});
 
-	test("winning evaluation requires a sole surviving team", () => {
-		expect(evaluateLastTeamStanding([], 2)).toBeUndefined();
+	test("winning evaluation requires a sole surviving team or none", () => {
+		expect(evaluateLastTeamStanding([], 2)).toEqual({ status: MatchStatus.Draw });
 		expect(evaluateLastTeamStanding([
 			{ isDead: () => false, getTeam: () => [0] } as never,
 			{ isDead: () => false, getTeam: () => [1] } as never,
-		], 2)).toBeUndefined();
+		], 2)).toEqual({ status: MatchStatus.Ongoing });
 		expect(evaluateLastTeamStanding([
 			{ isDead: () => true, getTeam: () => [0] } as never,
 			{ isDead: () => false, getTeam: () => [1] } as never,
-		], 2)).toBe(1);
+		], 2)).toEqual({ status: MatchStatus.Winner, winnerTeam: 1 });
 		expect(evaluateLastTeamStanding([
 			{ isDead: () => true, getTeam: () => [0] } as never,
 			{ isDead: () => true, getTeam: () => [1] } as never,
-		], 2)).toBeUndefined();
+		], 2)).toEqual({ status: MatchStatus.Draw });
 		expect(() => evaluateLastTeamStanding([], 0)).toThrow();
 	});
 });

@@ -622,12 +622,13 @@
   - **Allowed Context:** `src/replay/*.ts`, `src/rules/*.ts`, `src/emitter/EngineEmitter.ts`
   - **Commit:** `fix: restore rule-state orchestration for replays`
   - **Note:** `ReplayPlayer` now drives a `GameEmitter` (built from the recorded game mode, team count, and seed) through `sendShot`/`sendItemUse` + `skipCurrentPhase`, so turn numbers, rule phases, item economy, and active-team progression come from the authoritative emitter path only. `ai_replay_lifecycle` now asserts full `toSettings()` equality between live and replayed matches, and `replay_rule_state_orchestration` proves per-action rule-state equality (phase, turn, team, item uses) plus full item-mode match reproduction incl. `Game_over` results. Test arena uses mid-field shots because resting players near an arena edge are deterministically pushed out by the interior depenetration of `containment_structure_role`.
-- [ ] **Task [12.7]: Model Explicit Match Status Results**
+- [x] **Task [12.7]: Model Explicit Match Status Results**
   - **Goal:** Replace winner/draw ambiguity with an explicit `{ status: "ongoing" | "winner" | "draw" }` match-status model that never invents fake team IDs for draws.
   - **Target Files:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
   - **Test File:** `tests/match_status_model.test.ts`
   - **Allowed Context:** `src/rules/types.ts`, `src/systems/WinningSystem.ts`
   - **Commit:** `feat: model explicit match status results`
+  - **Note:** `MatchResult` now carries an explicit `status: MatchStatus` (`ongoing` | `winner` | `draw`); draws store `winnerTeam: null` and `reason: Draw`, and consumers must branch on `status`. `evaluateLastTeamStanding` returns a discriminated `LastTeamStandingEvaluation` (Ongoing/Winner/Draw) so zero living teams is a first-class draw instead of an ambiguous `undefined`; `WinningSystem` pends and finalizes draws like wins (the latest pre-sync evaluation wins, so a team eliminated later in the same turn turns a pending win into a draw). `Handler.drawUI` branches on `status`. `match_status_model` proves evaluator discrimination, absent ongoing results, explicit winner results with snapshot round trips, and a simultaneous-elimination draw (both figures die in one turn) with `winnerTeam: null` that survives `toSettings()` round trips. The draw fixture needed the kill circle at reachable distance because the interior depenetration of `containment_structure_role` reverses a straight-down shot after ~69 frames.
 - [ ] **Task [12.8]: Freeze Gameplay After Final Match Completion**
   - **Goal:** Once the accepted final turn has completed, its authoritative final state has been synchronized, and the match result has been stored, prevent every later gameplay tick from mutating entities, effects, structures, rules, inventories, or outcome state.
   - **Target Files:** `src/engine/Handler.ts`, `src/systems/*.ts`
