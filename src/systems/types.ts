@@ -26,7 +26,15 @@ export interface IGameContext {
 	currTurn: number
 	activeTeam: number
 	myTeamNumber: number
-	setMatchResult?: (result: MatchResult | undefined) => void;
+	/**
+	 * Atomically completes the match with the given result.
+	 *
+	 * Transitions the game state to `GameState.Game_over` and stores the
+	 * `MatchResult` in a single operation owned by the handler. The invariant
+	 * `Game_over always implies a valid MatchResult` is enforced here: systems
+	 * must never set `state` or the result independently.
+	 */
+	finishMatch(result: MatchResult): void;
 }
 
 /**

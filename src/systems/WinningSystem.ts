@@ -88,10 +88,9 @@ export class WinningSystem implements ISystem {
 				reason: MatchEndReason.Draw,
 				turnNumber,
 			}
-		// The winner is never stored here: the handler's `MatchResult` is the
-		// single authoritative outcome state, shared by the live handler,
-		// snapshot restoration, and replay playback.
-		ctx.state = GameState.Game_over
-		ctx.setMatchResult?.(result)
+		// The handler owns the `Game_over => MatchResult` invariant.
+		// `finishMatch` sets both the state and the result atomically, so no
+		// partial completed-match snapshot is ever observable.
+		ctx.finishMatch(result)
 	}
 }

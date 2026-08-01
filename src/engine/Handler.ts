@@ -138,7 +138,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			currTurn: 0,
 			activeTeam: 0,
 			myTeamNumber: 0,
-			setMatchResult: (result) => this.setMatchResult(result),
+			finishMatch: (result) => this.finishMatch(result),
 		}
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
@@ -448,6 +448,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
 	public setMatchResult(result: MatchResult | undefined): void { this.matchResult = result && { ...result } }
+	/**
+	 * Atomically completes the match: stores the result and transitions to
+	 * `Game_over` in one operation so the invariant
+	 * `Game_over => MatchResult` is always upheld.
+	 */
+	public finishMatch(result: MatchResult): void {
+		this.matchResult = { ...result }
+		this.context.state = GameState.Game_over
+	}
 	public getAiSettings(): AiSettings | undefined {
 		return this.settings?.ai ? JSON.parse(JSON.stringify(this.settings.ai)) : undefined;
 	}
