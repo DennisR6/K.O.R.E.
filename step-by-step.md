@@ -1896,7 +1896,7 @@ in a browser.
     `hazard-control`). Gates at commit: full suite green, strict TypeScript
     clean, build clean.
 
-* [ ] **Task [17.6]: Add A Hazard-Control Map**
+* [x] **Task [17.6]: Add A Hazard-Control Map**
 
   * **Goal:** Create one map whose primary terminal pressure comes from existing
     declarative hazards while preserving meaningful player agency.
@@ -1921,6 +1921,35 @@ in a browser.
     retain the stock-AI result separately as a warning.
   * **Constraint:** Qualification must distinguish “map cannot terminate” from
     “the selected AI policy does not pursue the terminal mechanism.”
+  * **Note:** Hazard Control ships as `src/settings/hazardControlMap.ts`
+    (blueprint 800x450, tiles friction, drift 0): one containment rect and
+    two mirrored kill-zone hazards at (300,225) and (500,225) with radius 28,
+    no solids, spawns at (150,225)/(650,225). The zones sit directly on the
+    line between the spawns, so every straight crossing is self-eliminating
+    (the shooter's own puck dies in the near zone) and the opponent is
+    protected behind its own zone; the north and south flank lanes are the
+    non-lethal recovery routes, and elimination requires driving an opponent
+    into a hazard or its own misplay. Empirical probes: a straight power-6
+    shot dies deterministically at (260.0,225) inside the west zone; the
+    north flank (angle 335 power 4) crosses alive to (477,72) and the south
+    flank (angle 20 power 4) to (489,348), both clear of the hazard bands; a
+    drive from the east (shooter (700,225), defender (650,225), angle 175-185,
+    powers 4-8) pushes the defender into the east zone with the shooter
+    surviving. Verification: `tests/hazard_control_map.test.ts` (15 tests)
+    covers schema validation, settings round trip, mirrored hazard geometry
+    with spawn clearance >= 60 px, an initial-overlap scan, a full sweep
+    (87 safe openings, zero opponent eliminations), deterministic hazard
+    activation, hazard-avoidance and hazard-seeking fixtures, an explicit
+    winner path (scripted match ends with team 0 winning inside the east
+    kill zone), deterministic mirrored turns, side-swapped equality with
+    winners at both seeds, snapshot continuity and replay equality through
+    the full qualification matrix, and the browser-visible initial state.
+    Stock-AI note: the harness Easy AI plays a seeded random walk and
+    terminates the seeded games via containment-wall contact; hazard
+    terminal-path evidence comes from the deterministic fixtures, retained
+    separately as a warning (17.6 policy). The 17.2 inventory and 17.3
+    qualification gates gained hazard-control (planned set is now empty).
+    Gates at commit: full suite green, strict TypeScript clean, build clean.
 
 * [ ] **Task [17.7]: Qualify The Complete Map Matrix**
 

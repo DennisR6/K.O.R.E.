@@ -2,6 +2,7 @@ import { DOCUMENT_SCHEMA_VERSION, loadMapDocument, type MapDocument } from "../c
 import type { GameSettings } from "../settings/settings.js";
 import { createCueClashMap } from "../settings/cueClashMap.js";
 import { createFrostbiteArenaMap } from "../settings/frostbiteArenaMap.js";
+import { createHazardControlMap } from "../settings/hazardControlMap.js";
 import { createMagmaCradleMap } from "../settings/magmaCradleMap.js";
 import { createStructureControlMap } from "../settings/structureControlMap.js";
 import { createSymmetricDuelMap } from "../settings/symmetricDuelMap.js";
@@ -208,7 +209,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 0,
+		structureCount: 1,
 		hazardCount: 2,
 		hazardTypes: ["kill-zone"],
 		friction: "tiles",
@@ -217,8 +218,11 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		figuresPerTeam: [1],
 		browserAvailable: false,
 		status: "candidate",
-		plannedSource: "src/settings/hazardControlMap.ts (Task 17.6)",
-		knownLimitations: ["Planned Section 17 candidate; created and verified by Task 17.6"],
+		knownLimitations: [
+			"Two mirrored kill zones guard the center corridor: every straight crossing is self-eliminating, and the opponent is protected behind its own zone",
+			"The arena walls remain the containment kill boundary; strong shots into a wall are self-eliminating",
+			"Stock easy AI plays a random walk and terminates matches via wall contact; hazard terminal-path evidence comes from the deterministic fixtures (17.6)",
+		],
 	},
 ];
 
@@ -238,6 +242,7 @@ export function isMapLoadable(mapId: string): boolean {
 const mapFactories: Record<string, (worldSize: { x: number; y: number }) => MapDocument> = {
 	"cue-clash": createCueClashMap,
 	"frostbite-arena": createFrostbiteArenaMap,
+	"hazard-control": createHazardControlMap,
 	"magma-cradle": createMagmaCradleMap,
 	"structure-control": createStructureControlMap,
 	"symmetric-duel": createSymmetricDuelMap,

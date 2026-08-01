@@ -19,7 +19,7 @@ Classification values are defined by the map design contract:
 | magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
 | symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | candidate | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
 | structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | no | candidate | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
-| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` (planned, Task 17.6) | 1 | scalable | symmetric | 2 | pending | 2 kill-zones | tiles | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.6 |
+| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | no | candidate | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
 
 No map receives `technically-qualified` or higher before the Task 17.3
 qualification harness and the Task 17.7 matrix evidence are recorded here.
@@ -109,3 +109,29 @@ inventory work alone.
   Known character: the central blocker seals the direct corridor so
   first-turn contact is impossible; the arena walls remain the containment
   kill boundary, so strong shots into a wall are self-eliminating.
+- 17.6: hazard-control shipped as `src/settings/hazardControlMap.ts`,
+  promoted in `src/content/mapCatalog.ts` from planned to a loadable candidate
+  (1 containment rect, 2 mirrored kill-zone hazards, no solids) and joined the
+  17.3 qualification matrix. The map's primary terminal pressure is the
+  hazard pair at (300,225) and (500,225) with radius 28: the zones sit
+  directly on the line between the spawns, so every straight crossing is
+  self-eliminating and the opponent is protected behind its own zone; the
+  north and south flank lanes are the non-lethal recovery routes.
+  `tests/hazard_control_map.test.ts` (15 tests) verifies schema validation,
+  settings round trip, mirrored hazard geometry with spawns at least 60 px
+  clear of every zone, an initial-overlap scan with no lethal overlap, a full
+  360-angle x 10-power sweep proving no legal opening can eliminate the
+  opponent on turn 1 (87 safe openings, zero opponent eliminations),
+  deterministic hazard activation (a straight power-6 shot dies inside the
+  near zone at a fixed position, duplicate runs bit-identical), a
+  hazard-avoidance fixture (both flank lanes cross the arena alive with
+  clearance), a hazard-seeking fixture (a legal westbound shot drives the
+  defender into the east zone from powers 4-8 and angles 175-185), ordinary
+  actions moving pucks toward and away from danger, an explicit winner path
+  (a scripted match ends with team 0 winning inside the east kill zone,
+  deterministically), deterministic mirrored turns, side-swapped equality
+  with winners at both seeds, and snapshot continuity and replay equality
+  through the full qualification matrix. Stock-AI note (17.6 policy): the
+  harness Easy AI plays a seeded random walk and terminates the seeded games
+  via containment-wall contact; the hazard terminal-path evidence comes from
+  the deterministic fixtures above, retained separately as the task requires.
