@@ -101,7 +101,8 @@ browser detectors. It does not weaken them.
 
 ## 8. Qualification Classification
 
-Every map in the catalog must carry exactly one of:
+Every map in the catalog (`src/content/mapCatalog.ts`) must carry exactly one
+of:
 
 | Status | Meaning |
 | --- | --- |

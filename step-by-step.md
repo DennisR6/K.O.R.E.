@@ -1681,7 +1681,7 @@ in a browser.
     Full suite: 652 pass / 5 skip / 0 fail across 200 files (8,081
     assertions); TSC clean; `git diff --check` clean.
 
-* [ ] **Task [17.2]: Inventory Existing And Candidate Maps**
+* [x] **Task [17.2]: Inventory Existing And Candidate Maps**
 
   * **Goal:** Build one authoritative inventory of all existing shipped maps,
     experimental maps, editor fixtures, and planned Section 17 candidates.
@@ -1700,6 +1700,30 @@ in a browser.
     loader, or documentation claiming qualification without committed evidence.
   * **Constraint:** Existing maps must retain their real qualification status;
     inventory work must not silently promote experimental content.
+  * **Note:** New authoritative index `src/content/mapCatalog.ts` carries all
+    seven inventory entries (shipped: `ice-map-v1`, `cue-clash`,
+    `frostbite-arena`, `magma-cradle`; planned Section 17 candidates:
+    `symmetric-duel`, `structure-control`, `hazard-control`) with every
+    required field: stable map ID, display name, source file, schema version
+    (template or document v1), dimensions (fixed or scalable), explicit
+    symmetry classification (all symmetric), spawn region count (2), structure
+    count and hazard count/types derived from the real map data, friction
+    preset, drift, supported team layouts (2 teams, 1/2/6 figures), browser
+    availability, current status (all `candidate`), and known limitations.
+    `buildMapSettings()` loads every shipped map through
+    `loadMapDocument()`/`validateGameSettings()` and throws for planned
+    candidates until their task creates the source file, so no entry is
+    silently loadable before it exists. `docs/map-qualification-report.md`
+    gains the full inventory ledger (all 13 required report fields) and an
+    explicit rule that no map is promoted by inventory work alone.
+    `docs/map-design-contract.md` now names the catalog as the classification
+    authority. `tests/map_content_inventory.test.ts` (7 tests / 128
+    assertions) covers the negative cases: duplicate IDs, missing source
+    files, source data not reachable through the validated loader, unknown
+    IDs rejected, planned entries not loadable, catalog counts matching the
+    loaded map data, and the report claiming no qualification without
+    committed evidence. Full suite: 659 pass / 5 skip / 0 fail across 201
+    files (8,209 assertions); TSC clean; `git diff --check` clean.
 
 * [ ] **Task [17.3]: Add A Reusable Map Qualification Harness**
 
