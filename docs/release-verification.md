@@ -310,3 +310,61 @@ bun run desktop:build
    team ownership is enforced by the server registry, the AI turn emitter, and
    the UI system. The fuzz suite verifies the emitter boundary (points 9) and
    the AI boundary (point 10) separately.
+
+## Section 16 Browser Playable Verification
+
+Date: 2026-08-01. Section 16 real-browser E2E coverage (tasks 16.1-16.6) is
+complete. The browser always runs the generated `dist/main.js` bundle served by
+the real Bun HTTP/WebSocket server on an isolated test port; every interaction
+in the E2E tests is a real Playwright pointer event, never a direct engine call.
+
+### Required Command Record
+
+| Command | Result |
+| --- | --- |
+| `bun run test:browser:smoke` | PASS: 9 pass / 0 fail, 37 assertions across 1 file [17.88s] |
+| `bun run test:browser:full` | PASS: 15 pass / 0 fail, 143 assertions across 4 files [51.16s] |
+
+Both commands build the generated browser bundle (`ensureBrowserBuild` runs
+`bun run build`) and manage the Bun server lifecycle through the harness
+(isoated port, readiness poll, SIGTERM/SIGKILL teardown, leak accounting).
+
+### Required Report
+
+| Item | Value |
+| --- | --- |
+| Browser engine and version | Chromium 151.0.7922.34 (Playwright 1.62.1, headless; `BROWSER_HEADED=1` enables the documented local headed/debug mode, never the release gate) |
+| Viewport | 1280x720 |
+| Tested URL | `http://localhost:<isolated-port>/` (harness ports 4187+, `E2E_TEST_PORT` overridable) |
+| Build result | PASS (`bun run build` via harness; `dist/main.js` + vendored p5 loaded) |
+| Server readiness result | PASS (root URL HTTP 200; isolated `PORT` and temp `GAME_DB_PATH`) |
+| Menu startup result | PASS (landing -> main menu -> "Play Local Game" with real mouse clicks) |
+| Completed turns | 4 (2 in `tests/browser/local_turn.e2e.test.ts`, 2 kill turns in `tests/browser/local_match_flow.e2e.test.ts`) |
+| Completed matches | 2 (both reached explicit `winner` team 0 results via the result overlay) |
+| Console errors | 0 unexpected (empty console-policy allowlist; the diagnostics fixture asserts its own deliberately injected errors) |
+| Page exceptions | 0 unexpected (same policy; fixture-injected exception asserted in the fixture test) |
+| Screenshots/traces on failure | None needed (all runs passed); the `BrowserDiagnostics` capture writes git-ignored `.browser-diagnostics/` evidence (screenshot, bounded console, page errors, context, interaction log) on any failure |
+| Command duration | smoke 17.88s, full 51.16s |
+| Final status | PASS - browser-playable (smoke + complete local-match flow both pass) |
+
+### Section 16 Evidence Gate
+
+- Harness: `tests/browser/browserHarness.ts`; console policy:
+  `assertCleanConsole()` with an empty allowlist.
+- Startup/menu: `tests/browser/browser_startup.e2e.test.ts`.
+- Local turn: `tests/browser/local_turn.e2e.test.ts` (menu path and diagnostic
+  `?skipmenu=1` route).
+- Full match flow: `tests/browser/local_match_flow.e2e.test.ts` (item use and
+  skip through the visible panel, deterministic pixel-exact kill turn, result
+  overlay, rematch, menu exit, and item-phase rejection without mutation).
+- Failure diagnostics: `tests/browser/browser_diagnostics.test.ts` plus
+  `tests/browser/browserDiagnostics.ts` (deliberate-failure fixture proves the
+  bounded artifact set and identifies the failed step).
+- Release gate: `tests/browser/browser_release_gate.test.ts`; CI runs both
+  commands headless in the `browser` job of `.github/workflows/node.js.yml`.
+- Full suite at qualification: 640 pass / 5 skip / 0 fail across 198 files
+  (7,996 assertions), `npx tsc --noEmit` clean, `bun run build` clean.
+- Section 16 does not change the Section 15 gameplay qualification status:
+  automated browser verification passes, but the overall gameplay release
+  record remains `BLOCKED / NOT QUALIFIED` pending the external two-match
+  human playtest session.

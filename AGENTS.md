@@ -272,8 +272,10 @@ npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
-bun run test:browser   # Section 16 real-browser harness + startup/menu/local-turn/match-flow/diagnostics E2E
-bun run start          # run Bun HTTP/WebSocket server
+bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
+bun run test:browser:full   # Section 16 full browser gameplay verification (startup/menu/local turn/match flow/diagnostics)
+bun run test:browser        # alias for test:browser:full; runs in the normal `bun test` suite too
+bun run start               # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously
 bun run serve          # live-server only; no WebSocket backend
@@ -303,6 +305,12 @@ as part of an unrelated change.
 Browser failures leave bounded, git-ignored evidence under
 `.browser-diagnostics/` (screenshot, console, page errors, context, and an
 interaction log; see `tests/browser/browserDiagnostics.ts`).
+
+Browser E2E runs headless by default (the CI release gate). Set
+`BROWSER_HEADED=1` for a documented local headed/debug mode; headed execution
+is never the release gate. `test:browser:smoke` covers startup/menu, and
+`test:browser:full` covers the complete local browser match; both build the
+generated bundle and manage the Bun server lifecycle through the harness.
 
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:

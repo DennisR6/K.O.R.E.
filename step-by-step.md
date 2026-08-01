@@ -1542,7 +1542,7 @@ or synthetic handler-only tests do not satisfy this section.
     Gates: 640 pass / 5 skip / 0 fail across 198 files (2 new tests, 35 new
     assertions); TSC and production build clean.
 
-- [ ] **Task [16.6]: Wire Browser Gameplay Verification Into Release Checks**
+- [x] **Task [16.6]: Wire Browser Gameplay Verification Into Release Checks**
   - **Goal:** Add explicit package commands for focused browser smoke testing
     and full browser gameplay verification, then include their exact results in
     release documentation and the final release gate.
@@ -1563,6 +1563,32 @@ or synthetic handler-only tests do not satisfy this section.
     for local reproduction, but do not make headed execution the release gate.
   - **Acceptance:** A release candidate cannot be declared browser-playable
     unless the real browser smoke and complete local-match flow both pass.
+  - **Note:** `package.json` now exposes `test:browser:smoke` (startup/menu,
+    `tests/browser/browser_startup.e2e.test.ts`) and `test:browser:full`
+    (all four browser test files); `test:browser` is an alias for full, and
+    both commands build the generated bundle and manage the Bun server
+    lifecycle through the harness. The harness gained a documented headed/
+    debug mode (`BROWSER_HEADED=1`); CI stays headless via the new `browser`
+    job in `.github/workflows/node.js.yml` (installs Playwright Chromium with
+    deps, then runs smoke and full). `docs/release-verification.md` gains the
+    "Section 16 Browser Playable Verification" record with the required report
+    (Chromium 151.0.7922.34 / Playwright 1.62.1, 1280x720 viewport, isolated
+    test URL, build PASS, server readiness PASS, menu startup PASS, 4 completed
+    turns, 2 completed matches, 0 unexpected console errors/page exceptions,
+    diagnostics artifacts on failure, durations 17.88s/51.16s, FINAL STATUS:
+    PASS - browser-playable) while preserving the Section 15
+    `BLOCKED / NOT QUALIFIED` human-evidence status. `requirements.md` gains
+    row R-18, and AGENTS.md documents the commands plus the headed mode.
+    `tests/browser/browser_release_gate.test.ts` gates the wiring: package
+    scripts, CI job, the full report item set in the record, both command
+    results, all 16.1-16.6 evidence files, checklist completion, and the
+    requirements/AGENTS references. Recorded results: smoke 9 pass / 0 fail
+    (37 assertions) in 17.88s, full 15 pass / 0 fail (143 assertions) in
+    51.16s; full suite 647 pass / 5 skip / 0 fail across 199 files (8,042
+    assertions) with `npx tsc --noEmit` and `bun run build` clean. Chapter
+    complete: real browser builds, boots, plays local turns, completes matches
+    through the visible UI, rematches, returns to the menu, and gates the
+    release on both smoke and full browser verification.
 
 ### Section 16 Acceptance Criteria
 

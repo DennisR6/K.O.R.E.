@@ -45,6 +45,8 @@ be marked complete in `TODO.md` and `step-by-step.md`.
 
 | R-17 | Section 15 gameplay release qualification | [Gameplay Qualification](step-by-step.md#15-gameplay-qualification-and-human-playtest-validation) | `tests/gameplay_release_gate.test.ts` gates the matrix, softlock, pacing, fairness, agency, item, vertical-slice, package, and human-playtest evidence. The automated record is explicit, but the final status remains `BLOCKED / NOT QUALIFIED` until an external tester completes the two-match protocol. | Complete automated evidence record and actual human playtest evidence. |
 
+| R-18 | Section 16 real-browser gameplay verification | [Browser Verification](step-by-step.md#16-real-browser-gameplay-verification) | `tests/browser/browser_release_gate.test.ts` gates the Section 16 evidence: the harness (`tests/browser/browserHarness.ts`) builds the generated bundle and manages the Bun server lifecycle; startup/menu, local-turn, full match flow (item panel, deterministic kill, result overlay, rematch, menu exit), failure diagnostics, and the console policy are covered by the real-browser E2E suite; `bun run test:browser:smoke` (9 tests) and `bun run test:browser:full` (15 tests) both PASS and are wired into the `browser` CI job. Browser-playable status is recorded in `docs/release-verification.md` as PASS, while the Section 15 gameplay release record remains `BLOCKED / NOT QUALIFIED` pending the external human session. | Smoke and complete local-match flow must both pass headless in CI before a release candidate is declared browser-playable. |
+
 ## Update Rules
 
 - Add a concrete test path to `Current evidence` when a checklist item is

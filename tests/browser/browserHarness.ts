@@ -209,10 +209,18 @@ export async function startTestServer(options: StartTestServerOptions = {}): Pro
 	);
 }
 
-/** Launches the real Playwright Chromium browser; wraps launch failures. */
+/**
+ * Launches the real Playwright Chromium browser; wraps launch failures.
+ * Headless by default (CI release gate). Set `BROWSER_HEADED=1` for a
+ * documented local reproduction/debug mode - headed execution is never the
+ * release gate.
+ */
 export async function launchBrowser(options: { executablePath?: string } = {}): Promise<Browser> {
 	try {
-		return await chromium.launch({ headless: true, ...(options.executablePath ? { executablePath: options.executablePath } : {}) });
+		return await chromium.launch({
+			headless: process.env.BROWSER_HEADED !== "1",
+			...(options.executablePath ? { executablePath: options.executablePath } : {}),
+		});
 	} catch (error) {
 		throw new BrowserHarnessError(`browser launch failed: ${errorMessage(error)}`);
 	}
