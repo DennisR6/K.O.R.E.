@@ -1,16 +1,19 @@
 import type { RenderContext } from "../engine/RenderContext.js";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IMenu, IMenuPage } from "./MenuTypes.js";
+import { MAP_CATALOG, type MapCatalogEntry } from "../content/mapCatalog.js";
 
 
 const TimeFactorInSeconds = 60
 const MaxTimerSeconds = 10
 const playButton = { x: 270, y: 300, w: 260, h: 58 }
+const chooseMapButton = { x: 270, y: 380, w: 260, h: 58 }
 
 
 export const enum Pages {
 	LandingPage,
 	MainMenu,
+	ChooseMap,
 	Settings,
 	Choose_Server,
 	Choose_GameMode,
@@ -23,8 +26,12 @@ export class MainMenu implements IMenu {
 		new LandingPage((page: Pages) => this.activePage = page),
 		new MainMenuPage((page: Pages) => this.activePage = page),
 	]
-	constructor(onPlayLocal?: () => void, private readonly getStartError?: () => string | undefined) {
-		this.pages = [new LandingPage((page: Pages) => this.activePage = page), new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal)]
+	constructor(onPlayLocal?: () => void, onSelectMap?: (mapId: string) => void, private readonly getStartError?: () => string | undefined) {
+		this.pages = [
+			new LandingPage((page: Pages) => this.activePage = page),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap),
+			new MapSelectionPage((page: Pages) => this.activePage = page, onSelectMap ?? (() => { })),
+		]
 	}
 	private activePage: number = 0;
 	tick(deltatime: number, globalfriction: number): void { this.pages[this.activePage].tick(deltatime, globalfriction) }
@@ -83,28 +90,36 @@ export class MainMenuPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
 	private timer = 0
 	private cb: (page: Pages) => void
-	constructor(pageSwitcher: (page: Pages) => void, private readonly onPlayLocal?: () => void) { this.cb = pageSwitcher }
+	constructor(pageSwitcher: (page: Pages) => void, private readonly onPlayLocal?: () => void, private readonly onChooseMap?: () => void) { this.cb = pageSwitcher }
 	draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
 		ctx.setFillColor("#102a43")
 		ctx.drawRect(playButton.x, playButton.y, playButton.w, playButton.h)
+		ctx.drawRect(chooseMapButton.x, chooseMapButton.y, chooseMapButton.w, chooseMapButton.h)
 		ctx.setFillColor("white")
 		ctx.drawText("Play Local Game", playButton.x + 28, playButton.y + 38, 28)
+		ctx.drawText("Choose Map", chooseMapButton.x + 28, chooseMapButton.y + 38, 28)
 		ctx.pop()
 	}
 
 	handleMousePressed(): void {
 		const { x, y } = this.mouse
-		if (x < playButton.x || x > playButton.x + playButton.w || y < playButton.y || y > playButton.y + playButton.h) return
-		if (this.onPlayLocal) {
-			this.onPlayLocal()
+		if (x >= playButton.x && x <= playButton.x + playButton.w && y >= playButton.y && y <= playButton.y + playButton.h) {
+			if (this.onPlayLocal) {
+				this.onPlayLocal()
+				return
+			}
+			const url = new URL(window.location.href)
+			url.searchParams.set("skipmenu", "1")
+			url.searchParams.delete("url")
+			window.location.assign(url.toString())
 			return
 		}
-		const url = new URL(window.location.href)
-		url.searchParams.set("skipmenu", "1")
-		url.searchParams.delete("url")
-		window.location.assign(url.toString())
+		if (x >= chooseMapButton.x && x <= chooseMapButton.x + chooseMapButton.w && y >= chooseMapButton.y && y <= chooseMapButton.y + chooseMapButton.h) {
+			this.onChooseMap?.()
+			return
+		}
 	}
 	handleMouseReleased(): void { }
 	handleMouseWheel(_event: WheelEvent): void { }
@@ -113,6 +128,60 @@ export class MainMenuPage implements IMenuPage {
 		if (this.timer > (MaxTimerSeconds * TimeFactorInSeconds)) return;
 		this.timer += 1
 	}
+	updateMouse(x: number, y: number): void { this.mouse = { ...this.mouse, x, y } }
+	switchSite(page: Pages) { this.cb(page) }
+}
+
+/** Browser-visible map selection for every `browserAvailable` catalog map. */
+export class MapSelectionPage implements IMenuPage {
+	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
+	private cb: (page: Pages) => void
+	private readonly maps: readonly MapCatalogEntry[]
+	constructor(pageSwitcher: (page: Pages) => void, private readonly onSelectMap: (mapId: string) => void) {
+		this.cb = pageSwitcher
+		this.maps = MAP_CATALOG.filter(entry => entry.browserAvailable)
+	}
+	private rowRect(index: number) { return { x: 150, y: 80 + index * 50, w: 500, h: 40 } }
+	private backRect() { return { x: 150, y: 80 + this.maps.length * 50 + 8, w: 120, h: 34 } }
+
+	draw(ctx: RenderContext): void {
+		ctx.push()
+		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
+		ctx.setFillColor("white")
+		ctx.drawText("Choose Map", 320, 45, 34)
+		this.maps.forEach((entry, index) => {
+			const row = this.rowRect(index)
+			ctx.setFillColor("#102a43")
+			ctx.drawRect(row.x, row.y, row.w, row.h)
+			ctx.setFillColor("white")
+			ctx.drawText(`${entry.name} (${entry.id})`, row.x + 20, row.y + 30, 20)
+		})
+		const back = this.backRect()
+		ctx.setFillColor("#102a43")
+		ctx.drawRect(back.x, back.y, back.w, back.h)
+		ctx.setFillColor("white")
+		ctx.drawText("Back", back.x + 40, back.y + 25, 20)
+		ctx.pop()
+	}
+
+	handleMousePressed(): void {
+		const { x, y } = this.mouse
+		for (const [index, entry] of this.maps.entries()) {
+			const row = this.rowRect(index)
+			if (x >= row.x && x <= row.x + row.w && y >= row.y && y <= row.y + row.h) {
+				this.onSelectMap(entry.id)
+				return
+			}
+		}
+		const back = this.backRect()
+		if (x >= back.x && x <= back.x + back.w && y >= back.y && y <= back.y + back.h) {
+			this.cb(Pages.MainMenu)
+		}
+	}
+	handleMouseReleased(): void { }
+	handleMouseWheel(_event: WheelEvent): void { }
+
+	tick(_deltatime: number, _globalfriction: number): void { }
 	updateMouse(x: number, y: number): void { this.mouse = { ...this.mouse, x, y } }
 	switchSite(page: Pages) { this.cb(page) }
 }

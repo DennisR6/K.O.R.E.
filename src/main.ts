@@ -29,12 +29,13 @@ const ui = new UiSystem()
 // setUserUUUID(undefined)
 // let userid = getUserUUUID()!
 let handler: GameHandler
+let router: LocalMatchSceneRouter | undefined
 const builder = new GameHandlerBuilder()
 	.defaultSystems()
 if (!usersettings.skipmenu) {
-	const router = new LocalMatchSceneRouter()
+	router = new LocalMatchSceneRouter()
 	handler = router.getHandler()
-	startGame(handler, () => router.getHandler())
+	startGame(handler, () => router?.getHandler() ?? handler)
 	} else if (usersettings.url && usersettings.url !== "local") {
 	startNetworkGame(usersettings.url)
 } else {
@@ -160,6 +161,8 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		// The documented debug surface must always expose the active
 		// authoritative handler (menu -> match -> rematch -> menu switches).
 		get handler() { return getActiveHandler(); },
+		// The catalog map ID of the active local match, or null in the menu.
+		get mapId() { return router?.getMapId() ?? null; },
 		logs: [],
 		audio: new AudioManager()
 	};

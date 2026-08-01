@@ -270,8 +270,8 @@ describe("Section 17.4 symmetric duel map", () => {
 	test("catalog entry matches the shipped map and the report ledger", () => {
 		const entry = getMapCatalogEntry(MAP_ID);
 		expect(entry.source).toBe("src/settings/symmetricDuelMap.ts");
-		expect(entry.browserAvailable).toBe(false);
-		expect(entry.status).toBe("technically-qualified"); // 17.7 matrix evidence recorded
+		expect(entry.browserAvailable).toBe(true);
+		expect(entry.status).toBe("browser-qualified"); // 17.8 browser E2E evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
 		expect(entry.teamLayouts).toEqual([2]);
 		expect(entry.figuresPerTeam).toEqual([1]);

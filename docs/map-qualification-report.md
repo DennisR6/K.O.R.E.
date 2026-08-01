@@ -13,19 +13,20 @@ Classification values are defined by the map design contract:
 
 | Map ID | Name | Source | Schema | Dimensions | Symmetry | Spawns | Structures | Hazards | Friction | Drift | Team layouts | Browser | Status | Known limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ice-map-v1 | Ice Map | `src/settings/iceMap.ts` (template) + `src/settings/canonicalPlayableMatch.ts` | template | 800x450 | symmetric | 2 | 7 | 6 deadly-obstacle-circles | ice | 0 | 2 teams, 1/2/6 figures | yes (shipped local match) | technically-qualified | deadly circles at corners and top/bottom center; some kill corridors narrow (Section 16.4) |
-| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | no | technically-qualified | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
+| ice-map-v1 | Ice Map | `src/settings/iceMap.ts` (template) + `src/settings/canonicalPlayableMatch.ts` | template | 800x450 | symmetric | 2 | 7 | 6 deadly-obstacle-circles | ice | 0 | 2 teams, 1/2/6 figures | yes (shipped local match, menu selectable) | browser-qualified | deadly circles at corners and top/bottom center; some kill corridors narrow (Section 16.4) |
+| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | yes (menu selectable) | browser-qualified | terminal pressure via containment/obstacle elimination only |
 | frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | blocked | forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
-| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | technically-qualified | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
-| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | technically-qualified | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
-| structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | no | technically-qualified | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
-| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | no | technically-qualified | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
+| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | yes (menu selectable) | browser-qualified | stock hard AI may not seek lethal hazards (17.6 policy note) |
+| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
+| structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
+| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
 
 No map receives `technically-qualified` or higher before the Task 17.3
-qualification harness and the Task 17.7 matrix evidence are recorded here.
-Human qualification remains `PENDING` until external playtest evidence exists
-(Task 17.9). No map is promoted from its current content-registry status by
-inventory work alone.
+qualification harness and the Task 17.7 matrix evidence are recorded here,
+and no map receives `browser-qualified` before the Task 17.8 real-browser
+evidence is recorded. Human qualification remains `PENDING` until external
+playtest evidence exists (Task 17.9). No map is promoted from its current
+content-registry status by inventory work alone.
 
 ## Evidence Record
 
@@ -178,5 +179,29 @@ inventory work alone.
   reference snapshot is taken before any extra verification ticks (an ongoing
   turn-limited run at seed 2107 exposed that ticking a still-playing match
   had been misread as mutation and had shifted the snapshot). Ledger status:
-  the six qualifiable maps are `technically-qualified`; frostbite-arena is
-  `blocked`; browser-qualified/human-qualified remain unclaimed until 17.8/17.9.
+  the six qualifiable maps are `technically-qualified` at that point;
+  frostbite-arena is `blocked`; human-qualified remains unclaimed until
+  17.9.
+- 17.8: real-browser verification of every qualified map
+  (`tests/browser/map_catalog.e2e.test.ts`, production menu map-selection
+  path). The browser E2E walks the six qualified maps through the production
+  UI (landing -> main menu -> "Choose Map" -> map row), verifies the stable
+  map ID and finite visible entities, verifies expected structures/hazards
+  rendered via canvas pixel probes against the engine-drawn structure colors
+  (with open-floor contrast references), advances the item phase through the
+  visible panel, performs one real pointer-driven legal action per map
+  (deterministic weak opening, power ~1.2), observes bounded playback
+  (frames > 0 and <= 1200, then 0 after settle), and returns to the menu
+  through a fresh production boot with a clean console. The full-journey
+  case (hazard-control) completes menu -> map -> terminal result (team-1
+  drives itself into the east kill zone, the broad verified 17.6 route) ->
+  rematch -> second terminal match -> menu entirely through pointer input.
+  As part of the selection path, `loadMapDocument` now assigns the default
+  render color `#315b7d` to uncolored solid geometry (containment stays
+  invisible), so document maps are actually visible in the browser; the
+  matrix cache cells for document maps were recomputed once after this
+  settings-hash change (the recorded release attempt remains valid as
+  evidence of its snapshot). Ledger status: the six qualifiable maps are
+  `browser-qualified` and selectable in the production menu; frostbite-arena
+  is `blocked`; human-qualified remains `PENDING` until 17.9 external
+  playtest evidence exists.

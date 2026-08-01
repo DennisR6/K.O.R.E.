@@ -6,6 +6,7 @@ declare global {
 		p5: typeof p5;
 		game: {
 			handler: GameHandler
+			mapId: string | null
 			logs: {
 				timestamp,
 				level,

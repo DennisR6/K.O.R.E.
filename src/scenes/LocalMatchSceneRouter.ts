@@ -1,16 +1,19 @@
 import { CombiEmitter } from "../emitter/InputEmitter.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
-import { GameHandler } from "../engine/Handler.js";
+import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
 import { MainMenu } from "../menu/Menu.js";
-import { createCanonicalPlayableMatchHandler } from "../settings/canonicalPlayableMatch.js";
+import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
+import { validateGameSettings } from "../settings/settings.js";
+import { WinningSystem } from "../systems/WinningSystem.js";
 import { DirectionArrow } from "../systems/DirectionArrow.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { GameplayFeedback } from "../ui/GameplayFeedback.js";
 import { ItemPhaseControls } from "../ui/ItemPhaseControls.js";
 import { MatchResultOverlay, type MatchResultAction } from "../ui/MatchResultOverlay.js";
+import { buildMapSettings } from "../content/mapCatalog.js";
 
-export type LocalHandlerFactory = () => GameHandler;
+export type LocalHandlerFactory = (mapId: string) => GameHandler;
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
 export class LocalMatchSceneRouter {
@@ -18,27 +21,30 @@ export class LocalMatchSceneRouter {
 	private overlay: MatchResultOverlay | undefined;
 	private starting = false;
 	private error: string | undefined;
+	private mapId: string | null = null;
 
 	public constructor(private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler) {
 		this.handler = new GameHandler();
-		const menu = new MainMenu(() => this.startLocalMatch(), () => this.error);
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error);
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
 	}
 
 	public getHandler(): GameHandler { return this.handler; }
 	public getError(): string | undefined { return this.error; }
+	public getMapId(): string | null { return this.mapId; }
 	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === "local-ice-duel-v1"; }
 	public isResultVisible(): boolean { return this.overlay?.isVisible() ?? false; }
 
-	/** Starts exactly one canonical match; failures leave the menu handler usable. */
-	public startLocalMatch(): boolean {
+	/** Starts exactly one canonical match on the given map; failures leave the menu handler usable. */
+	public startLocalMatch(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		this.starting = true;
 		try {
-			const next = this.createLocalHandler();
+			const next = this.createLocalHandler(mapId);
 			this.handler.dispose();
 			this.handler = next;
+			this.mapId = mapId;
 			this.installResultOverlay(next);
 			this.error = undefined;
 			return true;
@@ -66,11 +72,12 @@ export class LocalMatchSceneRouter {
 		}
 		this.handler.dispose();
 		this.overlay = undefined;
+		this.mapId = null;
 		this.handler = this.createMenuHandler();
 	}
 
 	private createMenuHandler(): GameHandler {
-		const menu = new MainMenu(() => this.startLocalMatch(), () => this.error);
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error);
 		const handler = new GameHandler();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);
@@ -78,8 +85,15 @@ export class LocalMatchSceneRouter {
 	}
 }
 
-export function createLocalGameplayHandler(): GameHandler {
-	const handler = createCanonicalPlayableMatchHandler();
+/** Builds a local-match handler on any browser-available catalog map. */
+export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHandler {
+	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
+	validateGameSettings(settings);
+	const handler = new GameHandlerBuilder()
+		.defaultSystems()
+		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
+		.fromSettings(settings)
+		.build();
 	const ui = new UiSystem();
 	const arrow = new DirectionArrow(ui);
 	const emitters = new CombiEmitter();

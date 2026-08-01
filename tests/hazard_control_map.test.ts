@@ -319,8 +319,8 @@ describe("Section 17.6 hazard control map", () => {
 	test("catalog entry matches the shipped map and the report ledger", () => {
 		const entry = getMapCatalogEntry(MAP_ID);
 		expect(entry.source).toBe("src/settings/hazardControlMap.ts");
-		expect(entry.browserAvailable).toBe(false);
-		expect(entry.status).toBe("technically-qualified"); // 17.7 matrix evidence recorded
+		expect(entry.browserAvailable).toBe(true);
+		expect(entry.status).toBe("browser-qualified"); // 17.8 browser E2E evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
 		expect(entry.structureCount).toBe(1);
 		expect(entry.hazardCount).toBe(2);

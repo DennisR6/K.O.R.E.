@@ -2013,7 +2013,7 @@ in a browser.
     reference snapshot is taken before any extra verification ticks (an
     ongoing turn-limited run at seed 2107 exposed the mismatch).
 
-* [ ] **Task [17.8]: Verify Qualified Maps In The Real Browser**
+* [x] **Task [17.8]: Verify Qualified Maps In The Real Browser**
 
   * **Goal:** Load every technically-qualified map through the production
     browser UI and prove that a player can enter the map and perform one real
@@ -2041,6 +2041,34 @@ in a browser.
     interaction-log, seed, map ID, and viewport diagnostics from Section 16.
   * **Constraint:** Tests must not call `GameEmitter`, handler mutation methods,
     or gameplay APIs directly to manufacture a passing result.
+  * **Done:** the production menu gained a `Choose Map` page
+    (`src/menu/Menu.ts`, `MapSelectionPage`) listing exactly the
+    `browserAvailable` catalog entries; `LocalMatchSceneRouter`/
+    `createLocalGameplayHandler(mapId)` load any catalog map through
+    `buildMapSettings` while keeping the canonical `local-ice-duel-v1`
+    gameMode, and `window.game.mapId` exposes the stable map ID of the
+    active match (null in the menu). `loadMapDocument` now assigns the
+    default render color `#315b7d` to uncolored solid geometry (containment
+    stays invisible), which the pixel-probe evidence verified was required
+    for document maps to be visibly rendered; the matrix cache recomputed
+    the affected document-map cells once (the recorded release attempt
+    remains valid evidence of its snapshot). `tests/browser/map_catalog.e2e.test.ts`
+    walks all six qualified maps through real pointer input (landing ->
+    main menu -> choose map -> row), asserts the stable map ID, finite
+    entities, authoritative boundary counts, canvas pixel probes for
+    structures/hazards (with open-floor contrast references; the engine
+    template renders its walls in debug blue), item-phase skip through the
+    visible panel, one legal weak opening (power ~1.2 toward the team's own
+    side) with bounded playback observed (0 < frames <= 1200, then 0), a
+    clean return to the menu via fresh boot, and a full hazard-control
+    journey (menu -> map -> terminal result via the broad 17.6 kill-zone
+    drive -> rematch -> second terminal match -> menu) with zero console
+    errors. `test:browser:full` grew to 17 tests across 5 files (301
+    assertions, 71s). The six qualified maps are promoted to
+    `browser-qualified` with `browserAvailable: true` in the catalog, the
+    report ledger, and all per-map/inventory/harness/design-contract tests;
+    frostbite-arena stays `blocked`. The Section 16 release record and the
+    browser release gate were updated for the new full-suite count.
 
 * [ ] **Task [17.9]: Record Map Review And Human-Test Readiness**
 

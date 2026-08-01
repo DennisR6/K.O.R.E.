@@ -79,11 +79,10 @@ describe("Section 17.1 qualified map design contract", () => {
 
 	test("the report does not weaken the existing qualification boundary", () => {
 		const report = read("docs/map-qualification-report.md");
-		// 17.7 recorded the full matrix evidence, so the ledger now claims
-		// technically-qualified (and blocked for frostbite-arena) with that
-		// evidence; browser/human qualification remain unclaimed.
+		// 17.8 recorded the real-browser E2E evidence, so the ledger now
+		// claims browser-qualified (and blocked for frostbite-arena) with
+		// that evidence; human qualification remains unclaimed.
 		expect(report).toContain("17.7: complete shipped-map matrix qualified and recorded");
-		expect(report).not.toContain("browser-qualified |");
 		expect(report).not.toContain("human-qualified |");
 	});
 });

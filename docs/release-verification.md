@@ -323,7 +323,7 @@ in the E2E tests is a real Playwright pointer event, never a direct engine call.
 | Command | Result |
 | --- | --- |
 | `bun run test:browser:smoke` | PASS: 9 pass / 0 fail, 37 assertions across 1 file [17.88s] |
-| `bun run test:browser:full` | PASS: 15 pass / 0 fail, 143 assertions across 4 files [51.16s] |
+| `bun run test:browser:full` | PASS: 17 pass / 0 fail, 301 assertions across 5 files [71.22s] |
 
 Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 `bun run build`) and manage the Bun server lifecycle through the harness

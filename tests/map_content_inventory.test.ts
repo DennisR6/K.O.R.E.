@@ -32,10 +32,11 @@ describe("Section 17.2 map content inventory", () => {
 			expect(entry.name.length).toBeGreaterThan(0);
 			expect(entry.source.length).toBeGreaterThan(0);
 			expect(["symmetric", "asymmetric"]).toContain(entry.symmetry);
-			// 17.7: the six qualifiable maps are technically-qualified and
-			// frostbite-arena is blocked (evidence in the map qualification report).
+			// 17.8: the six qualifiable maps are browser-qualified (real-browser
+			// evidence) and frostbite-arena stays blocked (evidence in the
+			// map qualification report).
 			expect(["candidate", "technically-qualified", "browser-qualified", "human-qualified", "blocked", "rejected"]).toContain(entry.status);
-			expect(entry.status).toBe(entry.id === "frostbite-arena" ? "blocked" : "technically-qualified");
+			expect(entry.status).toBe(entry.id === "frostbite-arena" ? "blocked" : "browser-qualified");
 		}
 	});
 
@@ -93,13 +94,13 @@ describe("Section 17.2 map content inventory", () => {
 		for (const field of ["Source", "Schema", "Dimensions", "Symmetry", "Spawns", "Structures", "Hazards", "Friction", "Drift", "Team layouts", "Browser", "Status", "Known limitations"]) {
 			expect(report).toContain(field);
 		}
-		// 17.7: the six qualifiable maps carry technically-qualified in both
+		// 17.8: the six qualifiable maps carry browser-qualified in both
 		// the catalog and the report ledger; frostbite-arena is blocked.
 		for (const mapId of allMapIds) {
 			const status = getMapCatalogEntry(mapId).status;
 			expect(report).toMatch(new RegExp(`\\| ${mapId} \\| .* \\| ${status} \\|`));
 		}
-		expect(report).not.toMatch(/\| .* \| (browser-qualified|human-qualified) \|/);
+		expect(report).not.toMatch(/\| .* \| human-qualified \|/);
 	});
 
 	test("the catalog is named by the design contract and the report", () => {

@@ -209,11 +209,21 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 		friction: { ...map.friction },
 		drift: map.drift,
 		mapBoundarys: [
-			...map.arenaGeometry.map(boundary => ({ ...boundary, effects: boundary.effects.map(effect => ({ ...effect })) })),
+			...map.arenaGeometry.map(boundary => ({
+				...boundary,
+				// Uncolored solid geometry must stay render-visible in the
+				// production browser selection path (17.8); the invisible
+				// containment boundary keeps the engine template convention.
+				color: boundary.color ?? (boundary.role === "containment" ? undefined : DEFAULT_MAP_STRUCTURE_COLOR),
+				effects: boundary.effects.map(effect => ({ ...effect })),
+			})),
 			...map.hazards.map(hazardToBoundary),
 		],
 	}
 }
+
+/** Default render color for uncolored solid map geometry. */
+export const DEFAULT_MAP_STRUCTURE_COLOR = "#315b7d";
 
 /** Converts a validated standalone editor export into engine settings without merging their data models. */
 export function convertEditorMapDocument(editorMap: unknown, template: GameSettings): GameSettings {

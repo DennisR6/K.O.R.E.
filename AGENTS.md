@@ -213,7 +213,9 @@ After every change, check whether this guide still reflects the implementation a
   `EmitterSystem` around a canonical match.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- `src/menu/Menu.ts`: landing and menu pages.
+- `src/menu/Menu.ts`: landing and menu pages; the main menu offers
+  "Play Local Game" and a "Choose Map" page listing every
+  `browserAvailable` catalog map (`MapSelectionPage`).
 - `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.
@@ -273,7 +275,7 @@ bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
-bun run test:browser:full   # Section 16 full browser gameplay verification (startup/menu/local turn/match flow/diagnostics)
+bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full; runs in the normal `bun test` suite too
 bun run start               # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
@@ -309,8 +311,11 @@ interaction log; see `tests/browser/browserDiagnostics.ts`).
 Browser E2E runs headless by default (the CI release gate). Set
 `BROWSER_HEADED=1` for a documented local headed/debug mode; headed execution
 is never the release gate. `test:browser:smoke` covers startup/menu, and
-`test:browser:full` covers the complete local browser match; both build the
-generated bundle and manage the Bun server lifecycle through the harness.
+`test:browser:full` covers the complete local browser match and the
+Section 17.8 map-catalog E2E (every browser-available map opens through the
+production menu, renders its structures/hazards, resolves one legal pointer
+action, and returns to the menu); both build the generated bundle and manage
+the Bun server lifecycle through the harness.
 
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:
@@ -608,7 +613,9 @@ Be careful when running `bun run start`:
 
 `window.game.handler` is a getter over the active scene handler (menu -> match
 -> rematch -> menu), so the debug surface always reflects the authoritative
-handler. `window.game` also exposes the `logs` array and the `AudioManager`.
+handler. `window.game.mapId` exposes the stable catalog map ID of the active
+local match (null in the menu). `window.game` also exposes the `logs` array and
+the `AudioManager`.
 
 ## Known High-Impact Limitations
 
