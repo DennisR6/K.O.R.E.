@@ -68,19 +68,21 @@ describe("Section 17.1 qualified map design contract", () => {
 		]) expect(contract).toContain(detector);
 	});
 
-	test("the report ledger opens with every known map as candidate and no false evidence", () => {
+	test("the report ledger carries a status for every known map and no false evidence", () => {
 		const report = read("docs/map-qualification-report.md");
-		for (const mapId of ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle"]) {
+		for (const mapId of ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel", "structure-control", "hazard-control"]) {
 			expect(report).toContain(`| ${mapId} |`);
 		}
-		expect(report).toContain("| candidate |");
 		expect(report).toContain("No map receives `technically-qualified` or higher before the Task 17.3");
 		expect(report).toContain("Human qualification remains `PENDING`");
 	});
 
 	test("the report does not weaken the existing qualification boundary", () => {
 		const report = read("docs/map-qualification-report.md");
-		expect(report).not.toContain("technically-qualified |");
+		// 17.7 recorded the full matrix evidence, so the ledger now claims
+		// technically-qualified (and blocked for frostbite-arena) with that
+		// evidence; browser/human qualification remain unclaimed.
+		expect(report).toContain("17.7: complete shipped-map matrix qualified and recorded");
 		expect(report).not.toContain("browser-qualified |");
 		expect(report).not.toContain("human-qualified |");
 	});

@@ -1951,7 +1951,7 @@ in a browser.
     qualification gates gained hazard-control (planned set is now empty).
     Gates at commit: full suite green, strict TypeScript clean, build clean.
 
-* [ ] **Task [17.7]: Qualify The Complete Map Matrix**
+* [x] **Task [17.7]: Qualify The Complete Map Matrix**
 
   * **Goal:** Run every shipped and Section 17 candidate map through the shared
     technical qualification matrix and record comparable evidence.
@@ -1984,6 +1984,34 @@ in a browser.
     `bun run test:maps:matrix`.
   * **Constraint:** Small-sample fairness findings are warnings pending human
     review unless they expose an invariant or unavoidable elimination.
+  * **Note (17.7):** The matrix is a resumable, content-addressed cell cache
+    under gitignored `.matrix-cache/` (`tests/support/matrixCache.ts`): a cell
+    is keyed by resolved map settings, seed, variant, policy, policy limits,
+    qualification limits, cache-schema version, and a fingerprint of all
+    engine/physics/rule/AI/harness sources; records are stored atomically and
+    structurally validated on load, so malformed, incomplete, or failed cells
+    are never reused; provenance per cell shows cached vs freshly executed.
+    All tests share one loaded/computed matrix. `bun run test:maps` is the
+    dev smoke run (cache-backed, `MAP_MATRIX_CACHE=0` bypasses);
+    `bun run test:maps:matrix` is the release command: two genuinely fresh
+    complete executions (12 seeds x 7 maps x 3 variants x 2 policies = 504
+    cells each) persisted per attempt (`MAP_MATRIX_ATTEMPT_ID` resumes a
+    failed attempt, recomputing only invalidated cells) and compared
+    byte-for-byte; the dev repeat test reruns a deterministic representative
+    sample twice fresh and validates the cache against it (never
+    cached-vs-cached). Demonstrated: cold run stores 42/42 cells; warm run
+    reuses 42/42 (~11s vs ~41s); a map-source change invalidates only that
+    map's 6 cells; a tampered release cell is detected as a byte-for-byte
+    MISMATCH on resume; truncated/deleted cells are recomputed. The full
+    release matrix (attempt `release-2026-08-01`): 504+504 fresh cells,
+    byte-for-byte MATCH, 0 hard failures; metrics and the four expected
+    warning signals (first-turn advantage 0.44, frequent ongoing 0.51,
+    extreme duration outlier, policy-dependent termination easy 0.17 vs hard
+    0.86) are recorded in `docs/map-qualification-report.md`. The full-matrix
+    pass also caught and fixed a harness artifact: post-completion mutation
+    and replay-equality checks now apply to completed matches only, and the
+    reference snapshot is taken before any extra verification ticks (an
+    ongoing turn-limited run at seed 2107 exposed the mismatch).
 
 * [ ] **Task [17.8]: Verify Qualified Maps In The Real Browser**
 

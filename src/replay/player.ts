@@ -21,6 +21,7 @@ export class ReplayPlayer {
 	private handler: GameHandler;
 	private emitter: GameEmitter;
 	private replay: ReplayDocument;
+	private tickCount = 0;
 
 	public constructor(replay: ReplayDocument) {
 		validateReplayDocument(replay);
@@ -59,6 +60,7 @@ export class ReplayPlayer {
 				while (this.handler.getState() === GameState.Playing && guard < 10_000) {
 					this.handler.tick();
 					guard++;
+					this.tickCount++;
 				}
 				if (guard >= 10_000) throw new Error("Replay playback did not settle within 10,000 ticks")
 			} else {
@@ -70,5 +72,10 @@ export class ReplayPlayer {
 
 	public getHandler(): GameHandler {
 		return this.handler;
+	}
+
+	/** Total engine ticks consumed while replaying the recorded actions. */
+	public getTickCount(): number {
+		return this.tickCount;
 	}
 }

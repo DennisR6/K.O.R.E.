@@ -32,7 +32,10 @@ describe("Section 17.2 map content inventory", () => {
 			expect(entry.name.length).toBeGreaterThan(0);
 			expect(entry.source.length).toBeGreaterThan(0);
 			expect(["symmetric", "asymmetric"]).toContain(entry.symmetry);
-			expect(entry.status).toBe("candidate");
+			// 17.7: the six qualifiable maps are technically-qualified and
+			// frostbite-arena is blocked (evidence in the map qualification report).
+			expect(["candidate", "technically-qualified", "browser-qualified", "human-qualified", "blocked", "rejected"]).toContain(entry.status);
+			expect(entry.status).toBe(entry.id === "frostbite-arena" ? "blocked" : "technically-qualified");
 		}
 	});
 
@@ -90,7 +93,12 @@ describe("Section 17.2 map content inventory", () => {
 		for (const field of ["Source", "Schema", "Dimensions", "Symmetry", "Spawns", "Structures", "Hazards", "Friction", "Drift", "Team layouts", "Browser", "Status", "Known limitations"]) {
 			expect(report).toContain(field);
 		}
-		expect(report).not.toMatch(/\| (ice-map-v1|cue-clash|frostbite-arena|magma-cradle) \| .* \| technically-qualified \|/);
+		// 17.7: the six qualifiable maps carry technically-qualified in both
+		// the catalog and the report ledger; frostbite-arena is blocked.
+		for (const mapId of allMapIds) {
+			const status = getMapCatalogEntry(mapId).status;
+			expect(report).toMatch(new RegExp(`\\| ${mapId} \\| .* \\| ${status} \\|`));
+		}
 		expect(report).not.toMatch(/\| .* \| (browser-qualified|human-qualified) \|/);
 	});
 

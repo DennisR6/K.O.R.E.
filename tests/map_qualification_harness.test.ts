@@ -208,7 +208,10 @@ describe("Section 17.3 map qualification harness", () => {
 		for (const mapId of shippedMaps) {
 			const result = qualifyMap(mapId, { seed: 1503 });
 			expect(result.mapId).toBe(mapId);
-			expect(MAP_CATALOG.find(entry => entry.id === mapId)?.status).toBe("candidate");
+			// 17.7: the six qualifiable maps are technically qualified by the
+			// matrix; frostbite-arena is the documented expected-blocked map.
+			const status = MAP_CATALOG.find(entry => entry.id === mapId)?.status;
+			expect(status).toBe(mapId === "frostbite-arena" ? "blocked" : "technically-qualified");
 		}
 		expect(template.players.length).toBe(2);
 	});

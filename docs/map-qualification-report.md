@@ -13,13 +13,13 @@ Classification values are defined by the map design contract:
 
 | Map ID | Name | Source | Schema | Dimensions | Symmetry | Spawns | Structures | Hazards | Friction | Drift | Team layouts | Browser | Status | Known limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ice-map-v1 | Ice Map | `src/settings/iceMap.ts` (template) + `src/settings/canonicalPlayableMatch.ts` | template | 800x450 | symmetric | 2 | 7 | 6 deadly-obstacle-circles | ice | 0 | 2 teams, 1/2/6 figures | yes (shipped local match) | candidate | Section 17 evidence pending 17.3/17.7; deadly circles at corners and top/bottom center; some kill corridors narrow (Section 16.4) |
-| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
-| frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
-| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
-| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | candidate | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
-| structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | no | candidate | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
-| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | no | candidate | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
+| ice-map-v1 | Ice Map | `src/settings/iceMap.ts` (template) + `src/settings/canonicalPlayableMatch.ts` | template | 800x450 | symmetric | 2 | 7 | 6 deadly-obstacle-circles | ice | 0 | 2 teams, 1/2/6 figures | yes (shipped local match) | technically-qualified | deadly circles at corners and top/bottom center; some kill corridors narrow (Section 16.4) |
+| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | no | technically-qualified | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
+| frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | blocked | forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
+| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | technically-qualified | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
+| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | technically-qualified | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
+| structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | no | technically-qualified | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
+| hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | no | technically-qualified | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
 
 No map receives `technically-qualified` or higher before the Task 17.3
 qualification harness and the Task 17.7 matrix evidence are recorded here.
@@ -131,7 +131,52 @@ inventory work alone.
   (a scripted match ends with team 0 winning inside the east kill zone,
   deterministically), deterministic mirrored turns, side-swapped equality
   with winners at both seeds, and snapshot continuity and replay equality
-  through the full qualification matrix. Stock-AI note (17.6 policy): the
+  through the full qualification matrix.   Stock-AI note (17.6 policy): the
   harness Easy AI plays a seeded random walk and terminates the seeded games
   via containment-wall contact; the hazard terminal-path evidence comes from
   the deterministic fixtures above, retained separately as the task requires.
+- 17.7: complete shipped-map matrix qualified and recorded. The matrix is a
+  resumable, content-addressed cell cache (`tests/support/matrixCache.ts`,
+  gitignored `.matrix-cache/`): a cell is keyed by resolved map settings,
+  seed, variant, policy, policy limits, qualification limits, cache-schema
+  version, and a fingerprint of every engine/physics/rule/AI/harness source;
+  records are stored atomically and structurally validated on load, so
+  malformed, incomplete, or failed cells are never reused; provenance per
+  cell shows cached vs freshly executed. `tests/shipped_map_matrix.test.ts`
+  shares one loaded/computed matrix. `bun run test:maps` runs the cache-backed
+  dev matrix (12 seeds x 7 maps x 3 variants x 2 policies = 504 cells at full
+  depth, smoke seed by default; `MAP_MATRIX_CACHE=0` bypasses the cache) and
+  reruns a deterministic representative sample twice fresh to validate
+  repeatability and the cache contents without ever comparing cached data
+  with itself. `bun run test:maps:matrix` runs two genuinely fresh complete
+  executions persisted per attempt (`MAP_MATRIX_ATTEMPT_ID` resumes a failed
+  attempt, recomputing only invalidated cells) and compares them byte-for-byte.
+  Demonstrated cache behavior: cold run stores 42/42 cells, warm run reuses
+  42/42 (41s -> 11s), a map-source change invalidates only that map's 6
+  cells, a tampered release cell is detected as a byte-for-byte MISMATCH on
+  resume, and truncated/deleted cells are recomputed.
+  Full release matrix (attempt `release-2026-08-01`, 504 + 504 fresh cells,
+  byte-for-byte MATCH, 0 hard failures): 245 terminal (48.6%), 1 draw (0.2%),
+  258 ongoing/turn-limited (51.2%), 118 instant-death (23.4%), turn-limit
+  51.2%; turns min 0 / median 3 / p90 24 / p95 24 / max 24; 5,349 accepted
+  actions, 1,093,681 simulated frames, 2,189,822 engine ticks; left 145 vs
+  right 100 wins, team-0 112 vs team-1 133, opening team 68 vs second team
+  177, first-turn wins 118; invariant and replay/restore failures 0 across
+  all qualifiable cells. Per map: ice-map-v1 33 terminal / 39 ongoing,
+  cue-clash 33/39, magma-cradle 35 terminal + 1 draw / 36 ongoing,
+  symmetric-duel 36/36, structure-control 36/36, hazard-control 72 terminal /
+  0 ongoing, frostbite-arena 72/72 blocked with the documented Section 13
+  evidence. Warning signals recorded (all expected stock-AI character, none
+  exposing an invariant or unavoidable elimination): first-turn advantage
+  opening 68 vs second 177 (imbalance 0.44, driven by the random-walk easy
+  policy self-eliminating its own opening puck), frequent ongoing matches
+  0.51 (hard policy rarely terminates within 24 turns on obstacle maps),
+  extreme duration outlier (max 24 vs median 3 turns), and policy-dependent
+  termination (ongoing easy 0.17 vs hard 0.86). The full-matrix pass also
+  caught a harness artifact and fixed it: the post-completion-mutation and
+  replay-equality checks now apply to completed matches only, and the
+  reference snapshot is taken before any extra verification ticks (an ongoing
+  turn-limited run at seed 2107 exposed that ticking a still-playing match
+  had been misread as mutation and had shifted the snapshot). Ledger status:
+  the six qualifiable maps are `technically-qualified`; frostbite-arena is
+  `blocked`; browser-qualified/human-qualified remain unclaimed until 17.8/17.9.

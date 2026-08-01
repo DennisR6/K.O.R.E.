@@ -35,3 +35,6 @@ src-tauri/gen
 src-tauri/.libs
 src-tauri/Cargo.lock
 .mailmap
+
+# Section 17.7 resumable shipped-map matrix cell cache
+.matrix-cache

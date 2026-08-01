@@ -18,6 +18,8 @@
 		"test:physics-fuzz:rc": "PHYSICS_FUZZ_CASES=5000 bun test tests/physics_fuzz.test.ts",
 		"test:physics-fuzz:soak": "PHYSICS_FUZZ_CASES=25000 bun test tests/physics_fuzz.test.ts",
 		"test:gameplay-matrix": "GAMEPLAY_MATRIX=1 bun test tests/gameplay_content_matrix.test.ts",
+		"test:maps": "bun test tests/shipped_map_matrix.test.ts",
+		"test:maps:matrix": "MAP_MATRIX_FRESH=1 bun test tests/shipped_map_matrix.test.ts",
 		"test:gameplay-pacing": "bun test tests/match_length_distribution.test.ts",
 		"test:gameplay-tournament": "bun test tests/gameplay_fairness_tournament.test.ts",
 		"test:browser:smoke": "bun test tests/browser/browser_startup.e2e.test.ts",

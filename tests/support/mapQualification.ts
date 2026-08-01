@@ -1,5 +1,6 @@
 import { AiTurnEmitter } from "../../src/ai/aiEmitter.js";
 import { EasyAi } from "../../src/ai/easyAi.js";
+import { HardAi } from "../../src/ai/hardAi.js";
 import type { AiDifficulty, AiSettings } from "../../src/ai/types.js";
 import { buildMapSettings } from "../../src/content/mapCatalog.js";
 import { GameEmitter } from "../../src/emitter/EngineEmitter.js";
@@ -29,13 +30,22 @@ export const MAP_PLAYBACK_BOUND = 1200;
 export const MAP_DEFAULT_MAX_TURNS = 24;
 export const MAP_QUALIFICATION_SEEDS = [1503, 1504];
 
-export type MapVariant = "original" | "side-swapped";
+export type MapVariant = "original" | "side-swapped" | "first-turn-swapped";
+export type MatrixPolicy = "easy" | "hard";
+
+export interface MatrixPolicyLimits { maxSimulations: number; maxAngleSamples: number; maxForceSamples: number }
+
+export const MATRIX_POLICY_LIMITS: Record<MatrixPolicy, MatrixPolicyLimits> = {
+	easy: { maxSimulations: 1, maxAngleSamples: 1, maxForceSamples: 1 },
+	hard: { maxSimulations: 12, maxAngleSamples: 4, maxForceSamples: 3 },
+};
 
 export interface MapQualificationOptions {
 	seed: number;
 	variant?: MapVariant;
 	maxTurns?: number;
 	maxPlaybackFrames?: number;
+	policy?: MatrixPolicy;
 }
 
 export interface SpawnInspection {
@@ -62,6 +72,9 @@ export interface MapQualificationOutput {
 	mapId: string;
 	seed: number;
 	variant: MapVariant;
+	policy: MatrixPolicy;
+	firstTeam: number;
+	winnerTeam: number | null;
 	acceptedActions: number;
 	turns: number;
 	simulatedFrames: number;
@@ -75,8 +88,6 @@ export interface MapQualificationOutput {
 	checks: MapQualificationChecks;
 }
 
-const AI_LIMITS = { maxSimulations: 1, maxAngleSamples: 1, maxForceSamples: 1 };
-const AI_DIFFICULTY: AiDifficulty = "easy";
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
 
@@ -146,6 +157,24 @@ export function mirrorSettings(settings: GameSettings): GameSettings {
 		}
 	}
 	return out;
+}
+
+/**
+ * Produces a complete engine snapshot in which team 1 opens the match on the
+ * first turn instead of team 0. Built from a freshly started handler's
+ * `toSettings()` so the inventory, loadout, item-draw, pickup, and physics
+ * state match a real fresh match exactly; only the opening team and the
+ * serialized state fields are rewritten.
+ */
+export function swapFirstTurn(settings: GameSettings): ReturnType<GameHandler["toSettings"]> {
+	const fresh = build(clone(settings));
+	const snapshot = fresh.toSettings();
+	snapshot.state = "GameState.Your_turn";
+	snapshot.turnNumber = 0;
+	snapshot.activeTeam = 1;
+	snapshot.ruleState = { ...snapshot.ruleState, phase: snapshot.ruleState.phase, activeTeam: 1, turnNumber: 0, itemUses: 0 };
+	snapshot.matchResult = undefined;
+	return snapshot;
 }
 
 function containmentRect(settings: GameSettings): { x: number; y: number; w: number; h: number } {
@@ -260,6 +289,8 @@ export interface RunResult {
 	engineWork: number;
 	result: "winner" | "draw" | "ongoing";
 	acceptedActions: number;
+	firstTeam: number;
+	winnerTeam: number | null;
 	legalFirstAction: boolean;
 	playbackBounded: boolean;
 	invariantFindings: string[];
@@ -273,7 +304,7 @@ function runOnce(settings: GameSettings, options: MapQualificationOptions): RunR
 	const inspection = inspectMapSettings(settings);
 	const invariantFindings: string[] = [];
 	if (!inspection.schemaValid) return {
-		ok: true, inspection, fingerprint: "", turns: 0, simulatedFrames: 0, engineWork: 0, result: "ongoing", acceptedActions: 0,
+		ok: true, inspection, fingerprint: "", turns: 0, simulatedFrames: 0, engineWork: 0, result: "ongoing", acceptedActions: 0, firstTeam: 0, winnerTeam: null,
 		legalFirstAction: false, playbackBounded: false, invariantFindings, replayRestoreStatus: "failed", snapshotRestore: false, replayEquality: false, postCompletionMutation: false,
 	};
 	// Each run builds from a fresh copy: the handler retains references into the
@@ -288,15 +319,19 @@ function runOnce(settings: GameSettings, options: MapQualificationOptions): RunR
 	let result: "winner" | "draw" | "ongoing" = "ongoing";
 	let playbackBounded = true;
 	let legalFirstAction = true;
-	let postCompletionMutation = false;
+	let firstTeam = handler.getActiveTeam();
+	let winnerTeam: number | null = null;
 	const maxTurns = options.maxTurns ?? MAP_DEFAULT_MAX_TURNS;
 	const maxFrames = options.maxPlaybackFrames ?? MAP_PLAYBACK_BOUND;
+	const policy = options.policy ?? "easy";
+	const policyLimits = MATRIX_POLICY_LIMITS[policy];
+	const aiProducer = policy === "hard" ? new HardAi() : new EasyAi();
 
 	let firstAction = true;
 	while (handler.getState() !== GameState.Game_over && turns < maxTurns) {
 		if (handler.getRuleState().phase === RulePhase.Item) emitter.skipPhase();
-		const ai: AiSettings = { difficulty: AI_DIFFICULTY, seed: options.seed + handler.getActiveTeam(), team: handler.getActiveTeam(), decisionLimits: AI_LIMITS };
-		const accepted = quiet(() => new AiTurnEmitter(new EasyAi()).executeTurn(handler, ai, emitter));
+		const ai: AiSettings = { difficulty: policy as AiDifficulty, seed: options.seed + handler.getActiveTeam(), team: handler.getActiveTeam(), decisionLimits: policyLimits };
+		const accepted = quiet(() => new AiTurnEmitter(aiProducer).executeTurn(handler, ai, emitter));
 		if (!accepted) {
 			if (firstAction) {
 				legalFirstAction = false;
@@ -329,13 +364,13 @@ function runOnce(settings: GameSettings, options: MapQualificationOptions): RunR
 	result = handler.getState() === GameState.Game_over
 		? handler.getMatchResult()?.status === "draw" ? "draw" : "winner"
 		: "ongoing";
+	winnerTeam = handler.getMatchResult()?.winnerTeam ?? null;
 
-	// No post-completion mutation: a completed/bounded run must not change via ticking.
-	const fingerprintBefore = makeFingerprint(handler);
-	for (let i = 0; i < 10; i++) quiet(() => handler.tick());
-	postCompletionMutation = makeFingerprint(handler) !== fingerprintBefore;
-	if (postCompletionMutation) invariantFindings.push("post-completion ticking mutated the match state");
-
+	// The reference snapshot is taken immediately after the bounded run so a
+	// replay of the recorded actions reproduces it exactly. The
+	// post-completion mutation check only applies to COMPLETED matches: for
+	// ongoing (turn-limited) runs the engine legitimately keeps simulating,
+	// so ticking must not be misread as mutation.
 	const snapshot = handler.toSettings();
 	const restored = build(snapshot);
 	const snapshotRestore = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
@@ -347,13 +382,26 @@ function runOnce(settings: GameSettings, options: MapQualificationOptions): RunR
 		quiet(() => replay.playAll());
 		replayEquality = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
 		if (replayEquality) replayRestoreStatus = "ok";
+		// Engine work counts every tick the qualification pass drove through the
+		// engine: match simulation, post-completion verification, and replay.
+		engineWork += replay.getTickCount();
 	} catch (error) {
 		invariantFindings.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
 	if (!replayEquality) invariantFindings.push("replay did not reproduce the live snapshot");
 
+	let postCompletionMutation = false;
+	const fingerprintBefore = makeFingerprint(handler);
+	if (handler.getState() === GameState.Game_over) {
+		const fingerprintBefore = makeFingerprint(handler);
+		for (let i = 0; i < 10; i++) quiet(() => handler.tick());
+		postCompletionMutation = makeFingerprint(handler) !== fingerprintBefore;
+		if (postCompletionMutation) invariantFindings.push("post-completion ticking mutated the match state");
+		engineWork += 10;
+	}
+
 	return {
-		ok: true, inspection, fingerprint: fingerprintBefore, turns, simulatedFrames, engineWork, result, acceptedActions,
+		ok: true, inspection, fingerprint: fingerprintBefore, turns, simulatedFrames, engineWork, result, acceptedActions, firstTeam, winnerTeam,
 		legalFirstAction, playbackBounded, invariantFindings, replayRestoreStatus, snapshotRestore, replayEquality, postCompletionMutation,
 	};
 }
@@ -379,7 +427,7 @@ function tryRunOnce(settings: GameSettings, options: MapQualificationOptions): R
 		const message = error instanceof Error ? error.message : String(error);
 		return {
 			ok: false, inspection,
-			fingerprint: "", turns: 0, simulatedFrames: 0, engineWork: 0, result: "ongoing", acceptedActions: 0,
+			fingerprint: "", turns: 0, simulatedFrames: 0, engineWork: 0, result: "ongoing", acceptedActions: 0, firstTeam: 0, winnerTeam: null,
 			legalFirstAction: false, playbackBounded: false, invariantFindings: [message],
 			replayRestoreStatus: "failed", snapshotRestore: false, replayEquality: false, postCompletionMutation: false,
 		};
@@ -389,7 +437,7 @@ function tryRunOnce(settings: GameSettings, options: MapQualificationOptions): R
 /** Qualifies pre-built settings; used directly by negative-case tests. */
 export function qualifyMapSettings(settings: GameSettings, options: MapQualificationOptions, mapId: string = "custom-settings"): MapQualificationOutput {
 	const variant = options.variant ?? "original";
-	const input = variant === "side-swapped" ? mirrorSettings(settings) : settings;
+	const input = variant === "side-swapped" ? mirrorSettings(settings) : variant === "first-turn-swapped" ? swapFirstTurn(settings) : settings;
 	const first = tryRunOnce(input, options);
 	const second = tryRunOnce(input, options);
 	// Duplicate runs are deterministic when both pass with identical
@@ -420,7 +468,10 @@ export function qualifyMapSettings(settings: GameSettings, options: MapQualifica
 		mapId,
 		seed: options.seed,
 		variant,
-		acceptedActions: first.acceptedActions,
+	policy: options.policy ?? "easy",
+	firstTeam: first.firstTeam,
+	winnerTeam: first.winnerTeam,
+	acceptedActions: first.acceptedActions,
 		turns: first.turns,
 		simulatedFrames: first.simulatedFrames,
 		engineWork: first.engineWork,

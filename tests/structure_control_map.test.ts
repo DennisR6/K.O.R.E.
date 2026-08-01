@@ -286,7 +286,7 @@ describe("Section 17.5 structure control map", () => {
 		const entry = getMapCatalogEntry(MAP_ID);
 		expect(entry.source).toBe("src/settings/structureControlMap.ts");
 		expect(entry.browserAvailable).toBe(false);
-		expect(entry.status).toBe("candidate");
+		expect(entry.status).toBe("technically-qualified"); // 17.7 matrix evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
 		expect(entry.structureCount).toBe(6);
 		expect(entry.hazardCount).toBe(0);

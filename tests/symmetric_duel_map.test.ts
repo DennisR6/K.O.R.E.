@@ -271,7 +271,7 @@ describe("Section 17.4 symmetric duel map", () => {
 		const entry = getMapCatalogEntry(MAP_ID);
 		expect(entry.source).toBe("src/settings/symmetricDuelMap.ts");
 		expect(entry.browserAvailable).toBe(false);
-		expect(entry.status).toBe("candidate");
+		expect(entry.status).toBe("technically-qualified"); // 17.7 matrix evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
 		expect(entry.teamLayouts).toEqual([2]);
 		expect(entry.figuresPerTeam).toEqual([1]);
