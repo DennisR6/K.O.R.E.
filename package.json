@@ -20,7 +20,7 @@
 		"test:gameplay-matrix": "GAMEPLAY_MATRIX=1 bun test tests/gameplay_content_matrix.test.ts",
 		"test:gameplay-pacing": "bun test tests/match_length_distribution.test.ts",
 		"test:gameplay-tournament": "bun test tests/gameplay_fairness_tournament.test.ts",
-		"test:browser": "bun test tests/browser/browser_startup.e2e.test.ts tests/browser/local_turn.e2e.test.ts",
+		"test:browser": "bun test tests/browser/browser_startup.e2e.test.ts tests/browser/local_turn.e2e.test.ts tests/browser/local_match_flow.e2e.test.ts",
 		"bench:physics": "bun test tests/physics_performance.test.ts",
 		"createAssets": "bun run scripts/createAssetPack.ts",
 		"desktop": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri dev",

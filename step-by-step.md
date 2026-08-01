@@ -1467,7 +1467,7 @@ or synthetic handler-only tests do not satisfy this section.
     files (2 new browser tests, 31 new assertions); TSC and production build
     clean.
 
-- [ ] **Task [16.4]: Verify Browser Gameplay Controls And Result Flow**
+- [x] **Task [16.4]: Verify Browser Gameplay Controls And Result Flow**
   - **Goal:** Exercise the browser-visible gameplay controls needed for a
     complete local match, including item-phase interaction where enabled,
     result display, rematch, and return to menu.
@@ -1482,6 +1482,27 @@ or synthetic handler-only tests do not satisfy this section.
     overlay is visible; rematch restores a fresh playable state; menu exit
     returns to the landing page.
   - **Determinism:** Use a fixed test configuration and deterministic input
+  - **Note:** No production changes were needed; the browser tests exposed the
+    deterministic match-end path through the real runtime. Chromium floors
+    fractional mouse coordinates to integer pixels, which quantizes world
+    coordinates to a 0.625 grid (1/1.6 scale at 1280x720) and shifts drag
+    angles by up to ~0.4 degrees - far wider than the chaotic kill-angle
+    margins of the ice arena (all < 0.25 degrees). The kill shot is therefore
+    pixel-exact: the drag vector (175.625, -2.5) from the quantized shooter
+    spawn (131.875,131.875) reproduces the verified kill angle 179.1849 at
+    power 10 exactly (drag end (307.5,129.375) lands on integer pixels), and
+    the team-1 figure ends dead in the authoritative simulation and in the
+    real browser. Two tests in `tests/browser/local_match_flow.e2e.test.ts`:
+    the full flow (menu -> item use through the visible panel (allowance 0->1)
+    -> item-phase skip -> kill turn -> result `winner`/team 0 with reason
+    `last-team-standing` and the overlay condition -> rematch restores turn 0 /
+    item phase / both figures alive / fresh inventory -> second kill turn ->
+    menu exit returns to the landing state) and a no-mutation guard (a
+    drag-to-shoot during the item phase is rejected by the shared validation
+    without starting a turn or moving figures). `test:browser` now runs all
+    three browser test files. Gates: 638 pass / 5 skip / 0 fail across 197
+    files (2 new browser tests, 40 new assertions); TSC and production build
+    clean.
     sequence. Record the seed and relevant configuration in failure output.
   - **Acceptance:** The browser test proves a complete player journey from menu
     to match result and through both post-match actions without developer tools.
