@@ -1,3 +1,6 @@
+# Browser failure diagnostics (Section 16.5)
+.browser-diagnostics
+
 # Logs
 logs
 *.log

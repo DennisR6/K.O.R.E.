@@ -1507,7 +1507,7 @@ or synthetic handler-only tests do not satisfy this section.
   - **Acceptance:** The browser test proves a complete player journey from menu
     to match result and through both post-match actions without developer tools.
 
-- [ ] **Task [16.5]: Add Browser Failure Artifacts And Diagnostics**
+- [x] **Task [16.5]: Add Browser Failure Artifacts And Diagnostics**
   - **Goal:** Make browser failures reproducible by preserving concise evidence
     from the failing run.
   - **Target Files:** browser test configuration, browser diagnostics helper,
@@ -1523,6 +1523,24 @@ or synthetic handler-only tests do not satisfy this section.
     unbounded logs.
   - **Acceptance:** A deliberately failing fixture proves that the expected
     artifacts are generated and identifies the failed browser step.
+  - **Note:** New `tests/browser/browserDiagnostics.ts` provides
+    `BrowserDiagnostics` (bounded interaction step log of 200 entries,
+    allowlisted metadata records, and `capture()` writing a timestamped
+    artifact directory under `.browser-diagnostics/`, which is now
+    git-ignored) plus `runWithDiagnostics()` for capture-on-failure without
+    masking the original error. Each capture writes `screenshot.png`,
+    bounded `console.txt` (newest 500 lines), `page-errors.txt`,
+    `context.txt` (reason, run name, URL, viewport, chromium version, and
+    recorded configuration only - never env/credentials/database contents),
+    and `interaction.log`; a second capture is a no-op so evidence is never
+    overwritten. The fixture test deliberately fails a `waitFor` step after
+    injecting a console error, an uncaught page exception, and a 550-line
+    console flood, then proves every artifact exists with the failed step
+    identified (`diagnostic-failing-step`), the oldest flood lines dropped
+    (bounded output), a planted secret marker absent from `context.txt`, and
+    idempotent capture. A second test proves a clean run captures nothing.
+    Gates: 640 pass / 5 skip / 0 fail across 198 files (2 new tests, 35 new
+    assertions); TSC and production build clean.
 
 - [ ] **Task [16.6]: Wire Browser Gameplay Verification Into Release Checks**
   - **Goal:** Add explicit package commands for focused browser smoke testing

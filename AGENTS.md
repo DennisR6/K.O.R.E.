@@ -272,7 +272,7 @@ npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
-bun run test:browser   # Section 16 real-browser harness + startup/menu E2E
+bun run test:browser   # Section 16 real-browser harness + startup/menu/local-turn/match-flow/diagnostics E2E
 bun run start          # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously
@@ -299,6 +299,10 @@ The browser always runs generated `dist/main.js`, not `src/main.ts` directly.
 After source changes, run `bun run build` or use `bun run dev`. Because `tsc`
 does not clean `dist`, remove stale output only when explicitly safe and never
 as part of an unrelated change.
+
+Browser failures leave bounded, git-ignored evidence under
+`.browser-diagnostics/` (screenshot, console, page errors, context, and an
+interaction log; see `tests/browser/browserDiagnostics.ts`).
 
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:
