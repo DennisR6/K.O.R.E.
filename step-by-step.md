@@ -1328,3 +1328,167 @@ Section 15
 Do not declare the game gameplay-qualified merely because the engine release candidate is stable.
 
 Do not begin final human qualification before the Section 14 build allows a tester to complete the canonical match from menu to result without developer tools.
+
+## 16. Real Browser Gameplay Verification
+
+This section adds a real browser-driven verification layer. It must exercise the
+built application through the same generated assets, HTTP server, DOM events,
+canvas, and browser runtime used by a player. Direct calls into engine classes
+or synthetic handler-only tests do not satisfy this section.
+
+- [ ] **Task [16.1]: Add Browser Test Tooling And Server Harness**
+  - **Goal:** Add a browser automation test runner and a deterministic harness
+    that builds the game, starts the Bun HTTP/WebSocket server on an isolated
+    test port, waits for readiness, and always terminates the server after the
+    test run.
+  - **Target Files:** `package.json`, browser test configuration, browser test
+    server helper
+  - **Test File:** `tests/browser/browser_startup.e2e.test.ts`
+  - **Allowed Context:** `package.json`, `server.ts`, `index.html`, `AGENTS.md`
+  - **Commit:** `test: add real browser test harness`
+  - **Required Runtime:** Use the repository's Bun server rather than
+    `bun run serve`, because network-capable gameplay depends on the HTTP and
+    WebSocket runtime. Do not assume port 3000; read the configured port or set
+    an isolated test port explicitly.
+  - **Required Build:** Run `bun run build` before opening the page. The browser
+    must load generated `dist/main.js`; importing `src/main.ts` directly is not
+    an acceptable substitute.
+  - **Acceptance:** The harness fails on build errors, server startup errors,
+    readiness timeout, browser launch failure, or leaked server processes.
+
+- [ ] **Task [16.2]: Verify Browser Boot And Menu Rendering**
+  - **Goal:** Open the root URL in a real browser and prove that the generated
+    game bundle, vendored p5 runtime, menu, and canvas initialize without fatal
+    browser errors.
+  - **Target Files:** browser E2E test and only the smallest production fix
+    required by a confirmed failure
+  - **Test File:** `tests/browser/browser_startup.e2e.test.ts`
+  - **Allowed Context:** `index.html`, `src/main.ts`, `src/menu/Menu.ts`,
+    `public/p5.min.js`, `dist/main.js`
+  - **Commit:** `test: verify browser startup and menu`
+  - **Required Assertions:** HTTP response succeeds; the page title is present;
+    the game canvas becomes visible with non-zero dimensions; the menu exposes
+    its local-play action; `window.game` or the current documented debug surface
+    is initialized where applicable; no uncaught page exception occurs.
+  - **Console Policy:** Fail on uncaught exceptions and unexpected console
+    `error` messages. Maintain a narrow documented allowlist only for known,
+    reviewed third-party noise; never blanket-ignore browser console errors.
+  - **Acceptance:** A clean repository can build, start, open the default menu,
+    and render the browser game without manual interaction.
+
+- [ ] **Task [16.3]: Play A Local Turn Through Browser Input**
+  - **Goal:** Start local play through the visible menu, select an active-team
+    figure on the canvas, perform a drag-to-shoot gesture using real browser
+    pointer events, and observe the complete simulation/playback transition.
+  - **Target Files:** browser E2E test and focused browser-input fixes only
+  - **Test File:** `tests/browser/local_turn.e2e.test.ts`
+  - **Allowed Context:** `src/main.ts`, `src/scenes/LocalMatchSceneRouter.ts`,
+    `src/systems/UiSystem.ts`, `src/systems/Emitter.ts`,
+    `src/systems/PlayBackSystem.ts`, `src/engine/Handler.ts`
+  - **Commit:** `test: play local turn in browser`
+  - **Required Path:** Enter through the visible menu first. A second focused
+    case may open `http://localhost:<port>/?skipmenu=1` to diagnose or verify
+    the direct gameplay route, but `skipmenu` must not replace menu coverage.
+  - **Required Assertions:** The game changes from menu to match; an active
+    figure can be selected; the drag creates a valid shot; input is locked
+    during simulation/playback; playback completes; the turn number or active
+    team advances exactly once; entity state remains finite.
+  - **Constraint:** Do not set handler state, inject a `TurnPacket`, invoke an
+    emitter directly, or call gameplay methods from the test to manufacture a
+    passing result. Browser input must cause the turn.
+  - **Acceptance:** One player-visible browser interaction completes one real
+    deterministic turn through the production UI and runtime path.
+
+- [ ] **Task [16.4]: Verify Browser Gameplay Controls And Result Flow**
+  - **Goal:** Exercise the browser-visible gameplay controls needed for a
+    complete local match, including item-phase interaction where enabled,
+    result display, rematch, and return to menu.
+  - **Target Files:** browser E2E tests and focused UI/runtime fixes only
+  - **Test File:** `tests/browser/local_match_flow.e2e.test.ts`
+  - **Allowed Context:** `src/main.ts`, `src/menu/Menu.ts`,
+    `src/item/ItemPhaseUI.ts`, `src/engine/Handler.ts`, local scene routing
+  - **Commit:** `test: cover browser local match flow`
+  - **Required Assertions:** Visible state indicators agree with the active
+    team, rule phase, and turn; legal item use or item-phase skip works through
+    browser controls; the match reaches an explicit winner or draw; the result
+    overlay is visible; rematch restores a fresh playable state; menu exit
+    returns to the landing page.
+  - **Determinism:** Use a fixed test configuration and deterministic input
+    sequence. Record the seed and relevant configuration in failure output.
+  - **Acceptance:** The browser test proves a complete player journey from menu
+    to match result and through both post-match actions without developer tools.
+
+- [ ] **Task [16.5]: Add Browser Failure Artifacts And Diagnostics**
+  - **Goal:** Make browser failures reproducible by preserving concise evidence
+    from the failing run.
+  - **Target Files:** browser test configuration, browser diagnostics helper,
+    `.gitignore`
+  - **Test File:** `tests/browser/browser_diagnostics.test.ts`
+  - **Allowed Context:** browser E2E configuration and test helpers
+  - **Commit:** `test: capture browser failure diagnostics`
+  - **Required Artifacts On Failure:** Screenshot, browser console output,
+    uncaught page errors, current URL, viewport, test seed/configuration, and a
+    bounded trace or equivalent interaction log.
+  - **Constraint:** Generated diagnostics must be ignored by Git and must not
+    include credentials, private environment values, database contents, or
+    unbounded logs.
+  - **Acceptance:** A deliberately failing fixture proves that the expected
+    artifacts are generated and identifies the failed browser step.
+
+- [ ] **Task [16.6]: Wire Browser Gameplay Verification Into Release Checks**
+  - **Goal:** Add explicit package commands for focused browser smoke testing
+    and full browser gameplay verification, then include their exact results in
+    release documentation and the final release gate.
+  - **Target Files:** `package.json`, CI configuration,
+    `docs/release-verification.md`, `requirements.md`, `AGENTS.md`,
+    `step-by-step.md`
+  - **Test File:** `tests/browser/browser_release_gate.test.ts`
+  - **Allowed Context:** completed Tasks 16.1-16.5 and existing release gates
+  - **Commit:** `test: gate release on browser gameplay`
+  - **Required Commands:** Provide one fast browser smoke command for startup
+    plus one full command for the complete local browser match. Both commands
+    must build the generated browser bundle and manage the Bun server lifecycle.
+  - **Required Report:** Browser engine and version, viewport, tested URL,
+    build result, server readiness result, menu startup result, completed turns,
+    completed matches, console errors, page exceptions, screenshots/traces on
+    failure, command duration, and final pass/fail status.
+  - **CI Constraint:** Run headless in CI. Keep a documented headed/debug mode
+    for local reproduction, but do not make headed execution the release gate.
+  - **Acceptance:** A release candidate cannot be declared browser-playable
+    unless the real browser smoke and complete local-match flow both pass.
+
+### Section 16 Acceptance Criteria
+
+```text
+browser verification
+→ builds and loads generated dist/main.js
+```
+
+```text
+real page startup
+→ Bun HTTP/WebSocket server + vendored p5 + visible canvas
+```
+
+```text
+player action
+→ real pointer events through UI → emitter → simulation → playback
+```
+
+```text
+complete browser journey
+→ menu → local match → result → rematch → menu
+```
+
+```text
+browser failure
+→ screenshot + console + page error + reproducible seed/configuration
+```
+
+```text
+browser-playable release
+→ smoke test and complete gameplay E2E both pass
+```
+
+Do not treat engine-only integration tests, DOM emulation, direct calls through
+`window.game`, or successful TypeScript compilation as proof that the game works
+in a browser.
