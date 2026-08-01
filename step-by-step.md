@@ -1843,7 +1843,7 @@ in a browser.
     defect): strong shots into a wall self-eliminate, and the stock easy AI
     frequently eliminates itself, keeping the harness games short.
 
-* [ ] **Task [17.5]: Add A Structure-Control Map**
+* [x] **Task [17.5]: Add A Structure-Control Map**
 
   * **Goal:** Create one map centered on positioning around solid structures,
     rebounds, protected regions, and multiple approach paths.
@@ -1865,6 +1865,36 @@ in a browser.
     replay/restore equality, and no softlock under the map qualification harness.
   * **Constraint:** Do not modify the global physics contract merely to make the
     candidate map pass; reject or redesign invalid geometry instead.
+  * **Note:** Structure Control ships as `src/settings/structureControlMap.ts`
+    (blueprint 800x450, billiards friction, drift 0, no hazards): explicit
+    containment rect (0,0,800,450), four mirrored columns
+    (300,70,16,80)/(300,300,16,80)/(484,70,16,80)/(484,300,16,80), and a
+    central blocker (392,213,16,24), with spawns at (150,225)/(650,225)
+    (region x 138/638, y 213, w 200, h 350) landing exactly on the
+    horizontal symmetry axis. Empirical facts established before the final
+    design: the arena walls are the containment kill boundary (any puck whose
+    full circle leaves the world rect dies), puck-structure collisions are
+    elastic, and map-level friction settings are decorative because each
+    player carries baked default ice `EffectPhysics` (power 2 stops at ~123
+    px, power 10 at ~1285 px). The blocker seals the direct spawn corridor
+    (first-turn contact impossible), leaving three safe routes: the upper
+    corridor gap (y 150..213), the lower corridor gap (y 237..300), and the
+    flanking top/bottom lanes; columns 16 px wide with 63 px gaps create
+    deterministic corner grazes (angle 348 power 6 deflects off the right-top
+    column corner into the bottom-left pocket, reproducing bit-identically).
+    Verification: `tests/structure_control_map.test.ts` (16 tests) covers
+    schema validation, settings round trip, mirrored spawns with every
+    structure >= 100 px away, geometric lane widths (all three routes >= 2 x
+    radius), no single permanent partition, a full 360-angle x 10-power sweep
+    with zero opponent eliminations (259 strong shots self-eliminate in the
+    kill ring), deterministic line and corner fixtures, bounded multi-contact
+    resolution under the 1200-frame bound, both lanes crossing alive (upper
+    to (787,113), lower to (787,337)), +/-3 degree corridor-tap margins,
+    deterministic mirrored turns, side-swapped equality with winners at both
+    seeds, and the browser-visible initial state. The 17.2 inventory and 17.3
+    qualification gates gained structure-control (planned set reduced to
+    `hazard-control`). Gates at commit: full suite green, strict TypeScript
+    clean, build clean.
 
 * [ ] **Task [17.6]: Add A Hazard-Control Map**
 

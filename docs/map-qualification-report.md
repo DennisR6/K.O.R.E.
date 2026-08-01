@@ -18,7 +18,7 @@ Classification values are defined by the map design contract:
 | frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
 | magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
 | symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | candidate | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
-| structure-control | Structure Control | `src/settings/structureControlMap.ts` (planned, Task 17.5) | 1 | scalable | symmetric | 2 | pending | none | billiards | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.5 |
+| structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | no | candidate | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
 | hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` (planned, Task 17.6) | 1 | scalable | symmetric | 2 | pending | 2 kill-zones | tiles | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.6 |
 
 No map receives `technically-qualified` or higher before the Task 17.3
@@ -85,3 +85,27 @@ inventory work alone.
   double as the containment kill boundary, so strong shots into a wall are
   self-eliminating; the stock easy AI frequently eliminates itself this way,
   which keeps the harness games deterministic but short.
+- 17.5: structure-control shipped as `src/settings/structureControlMap.ts`,
+  promoted in `src/content/mapCatalog.ts` from planned to a loadable candidate
+  (6 structures: 1 containment rect + 4 mirrored columns + 1 central blocker,
+  no hazards) and joined the 17.3 qualification matrix.
+  `tests/structure_control_map.test.ts` (16 tests) verifies schema
+  validation, settings round trip, mirrored spawn geometry (150,225)/(650,225)
+  with every structure at least 100 px away, geometric lane widths for all
+  three routes (top lane, bottom lane, and both central-corridor gaps are at
+  least 2 x radius wide), no single structure partitioning the arena, a full
+  360-angle x 10-power sweep proving no legal opening can eliminate the
+  opponent on turn 1 (the central blocker seals the direct spawn corridor),
+  deterministic line interaction (duplicate corridor taps bit-identical with
+  meaningful positional change), deterministic corner interaction (an
+  angle-348 power-6 shot grazes the right-top column corner, deflects into
+  the bottom-left pocket, and reproduces exactly), bounded multi-contact
+  resolution (corner-pocket shots settle within 1200 frames, duplicate runs
+  identical), both navigable lanes carrying a puck across the arena alive
+  (upper corridor to (787,113), lower corridor to (787,337)), broad action
+  margins (corridor taps tolerate +/-3 degrees at power 3), deterministic
+  mirrored turns, side-swapped equality with winners at both seeds, and a
+  browser-visible initial state through the canonical `FitWorldCamera`.
+  Known character: the central blocker seals the direct corridor so
+  first-turn contact is impossible; the arena walls remain the containment
+  kill boundary, so strong shots into a wall are self-eliminating.

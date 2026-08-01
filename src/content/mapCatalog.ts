@@ -3,6 +3,7 @@ import type { GameSettings } from "../settings/settings.js";
 import { createCueClashMap } from "../settings/cueClashMap.js";
 import { createFrostbiteArenaMap } from "../settings/frostbiteArenaMap.js";
 import { createMagmaCradleMap } from "../settings/magmaCradleMap.js";
+import { createStructureControlMap } from "../settings/structureControlMap.js";
 import { createSymmetricDuelMap } from "../settings/symmetricDuelMap.js";
 
 /**
@@ -188,7 +189,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 0,
+		structureCount: 6,
 		hazardCount: 0,
 		hazardTypes: [],
 		friction: "billiards",
@@ -197,8 +198,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		figuresPerTeam: [1],
 		browserAvailable: false,
 		status: "candidate",
-		plannedSource: "src/settings/structureControlMap.ts (Task 17.5)",
-		knownLimitations: ["Planned Section 17 candidate; created and verified by Task 17.5"],
+		knownLimitations: ["One containment rect, four mirrored columns, and one central blocker; the blocker seals the direct spawn corridor so first-turn contact is impossible, and the arena walls remain the containment kill boundary."],
 	},
 	{
 		id: "hazard-control",
@@ -239,6 +239,7 @@ const mapFactories: Record<string, (worldSize: { x: number; y: number }) => MapD
 	"cue-clash": createCueClashMap,
 	"frostbite-arena": createFrostbiteArenaMap,
 	"magma-cradle": createMagmaCradleMap,
+	"structure-control": createStructureControlMap,
 	"symmetric-duel": createSymmetricDuelMap,
 };
 
