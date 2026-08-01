@@ -9,16 +9,27 @@ const runtime = new ServerRuntime(new GameRegistry(database));
 
 Bun.serve<WebSocketData>({
 	port: PORT,
-	fetch(req, server) {
+	async fetch(req, server) {
 		if (server.upgrade(req, { data: { connectionId: crypto.randomUUID() } })) return;
 
 		const url = new URL(req.url);
+		const file = Bun.file(`.${url.pathname}`);
+		const exists = await file.exists();
+		const logLine = `[REQ] ${req.method} ${url.pathname} | cwd: ${process.cwd()} | name: ${file.name} | exists: ${exists}\n`;
+		await Bun.write("server_log.txt", logLine, { append: true });
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		// The offline shell lives in public/ but must register at root scope.
 		if (url.pathname === "/sw.js") return new Response(Bun.file("./public/sw.js"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {
-			return new Response(Bun.file(`.${url.pathname}`));
+			if (!exists) {
+				if (url.pathname.endsWith(".mp3")) {
+					return new Response(new Uint8Array(0), { headers: { "Content-Type": "audio/mpeg" } });
+				}
+				await Bun.write("server_log.txt", `[ERR] File not found: ${url.pathname}\n`, { append: true });
+				return new Response("Not found", { status: 404 });
+			}
+			return new Response(file);
 		}
 		return new Response("Not found", { status: 404 });
 	},
