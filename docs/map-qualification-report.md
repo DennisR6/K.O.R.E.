@@ -17,7 +17,7 @@ Classification values are defined by the map design contract:
 | cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
 | frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
 | magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
-| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` (planned, Task 17.4) | 1 | scalable | symmetric | 2 | pending | none | ice | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.4 |
+| symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | no | candidate | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
 | structure-control | Structure Control | `src/settings/structureControlMap.ts` (planned, Task 17.5) | 1 | scalable | symmetric | 2 | pending | none | billiards | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.5 |
 | hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` (planned, Task 17.6) | 1 | scalable | symmetric | 2 | pending | 2 kill-zones | tiles | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.6 |
 
@@ -67,3 +67,21 @@ inventory work alone.
   blocked classification, side-swapped mirroring, and the negative cases
   (malformed data, lethal spawn, dead spawn, playback stall, playback bound
   exposure, custom labels).
+- 17.4: symmetric-duel shipped as `src/settings/symmetricDuelMap.ts`, promoted
+  in `src/content/mapCatalog.ts` from planned to a loadable candidate (2
+  structures: containment rect + central wall, no hazards) and joined the
+  17.3 qualification matrix. `tests/symmetric_duel_map.test.ts` (12 tests)
+  verifies schema validation, settings round trip, mirrored spawn geometry
+  with equal distances (198 px to the central wall, 138 px to the arena walls
+  on both sides), a full 360-angle x 10-power sweep proving no legal opening
+  can eliminate the opponent on turn 1 (the wall covers the whole corridor
+  band), two materially different legal openings, a terminal route that does
+  not require pixel-exact input (an off-axis drive sends the defender's puck
+  into the outer wall at powers 6-10), no new engine behavior, deterministic
+  first turns from both sides (duplicate runs bit-identical; the team-1
+  mirrored shot mirrors the team-0 result), side-swapped equality, bounded
+  playback with winners at both seeds, and a browser-visible initial state
+  through the canonical `FitWorldCamera`. Known character: the arena walls
+  double as the containment kill boundary, so strong shots into a wall are
+  self-eliminating; the stock easy AI frequently eliminates itself this way,
+  which keeps the harness games deterministic but short.

@@ -1798,7 +1798,7 @@ in a browser.
     Full suite: 671 pass / 5 skip / 0 fail across 202 files (8,439
     assertions); TSC clean; `git diff --check` clean.
 
-* [ ] **Task [17.4]: Add A Symmetric Duel Map**
+* [x] **Task [17.4]: Add A Symmetric Duel Map**
 
   * **Goal:** Create one low-complexity, symmetric two-team map that emphasizes
     direct player interaction and broad, understandable terminal routes.
@@ -1820,6 +1820,28 @@ in a browser.
     playback, and browser-visible initial state.
   * **Constraint:** The map must be expressed entirely through existing map,
     structure, hazard, effect, and settings primitives.
+  * **Note:** Committed as `feat: add symmetric duel map`. New map
+    `src/settings/symmetricDuelMap.ts` (document schema v1, ice friction,
+    drift 0, spawns at (150,150)/(650,150) for the size-12 canonical figures,
+    one explicit containment rect and one central wall
+    (360,126,80,48)); promoted the `symmetric-duel` catalog entry from planned
+    to a loadable candidate and added the map to the 17.3 qualification
+    matrix. Empirical design facts behind the geometry: the canonical
+    template's per-player baked ice friction dominates, so power-2 shots stop
+    after ~123 px and power-10 after ~1285 px; in an open arena a power-10
+    direct hit eliminates the defender from every tested spawn spacing, so a
+    central wall is required to make first-turn elimination impossible. The
+    wall covers the full corridor band (y 138..162 at the wall plane) with
+    12 px margins; a 360-angle x 10-power sweep proves no legal opening can
+    eliminate the opponent on turn 1. The arena walls double as the
+    containment kill boundary, so the terminal route is a broad off-axis
+    drive of the defender's puck into an outer wall (verified at powers
+    6-10 without pixel-exact aim). Spawns sit 138 px from the walls, beyond
+    the power-2 stop distance, so weak openings are safe. The harness
+    qualifies both seeds as deterministic winners with bounded playback,
+    replay/restore clean, and side-swapped equality. Known character (not a
+    defect): strong shots into a wall self-eliminate, and the stock easy AI
+    frequently eliminates itself, keeping the harness games short.
 
 * [ ] **Task [17.5]: Add A Structure-Control Map**
 

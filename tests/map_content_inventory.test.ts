@@ -18,8 +18,8 @@ import { createDefaultGameSettings, validateGameSettings } from "../src/settings
 const ROOT = process.cwd();
 const read = (file: string) => readFileSync(resolve(ROOT, file), "utf8");
 
-const shippedMapIds = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle"];
-const plannedMapIds = ["symmetric-duel", "structure-control", "hazard-control"];
+const shippedMapIds = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel"];
+const plannedMapIds = ["structure-control", "hazard-control"];
 const allMapIds = [...shippedMapIds, ...plannedMapIds];
 
 describe("Section 17.2 map content inventory", () => {

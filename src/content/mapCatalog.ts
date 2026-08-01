@@ -3,6 +3,7 @@ import type { GameSettings } from "../settings/settings.js";
 import { createCueClashMap } from "../settings/cueClashMap.js";
 import { createFrostbiteArenaMap } from "../settings/frostbiteArenaMap.js";
 import { createMagmaCradleMap } from "../settings/magmaCradleMap.js";
+import { createSymmetricDuelMap } from "../settings/symmetricDuelMap.js";
 
 /**
  * Authoritative inventory of every shipped and Section 17 candidate map
@@ -168,7 +169,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 0,
+		structureCount: 2,
 		hazardCount: 0,
 		hazardTypes: [],
 		friction: "ice",
@@ -177,8 +178,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		figuresPerTeam: [1],
 		browserAvailable: false,
 		status: "candidate",
-		plannedSource: "src/settings/symmetricDuelMap.ts (Task 17.4)",
-		knownLimitations: ["Planned Section 17 candidate; created and verified by Task 17.4"],
+		knownLimitations: ["One containment rect plus one central wall; the central wall blocks every straight first-turn line, so early elimination is only reachable through banked or flanking shots."],
 	},
 	{
 		id: "structure-control",
@@ -239,6 +239,7 @@ const mapFactories: Record<string, (worldSize: { x: number; y: number }) => MapD
 	"cue-clash": createCueClashMap,
 	"frostbite-arena": createFrostbiteArenaMap,
 	"magma-cradle": createMagmaCradleMap,
+	"symmetric-duel": createSymmetricDuelMap,
 };
 
 /** Loads a catalog map into validated engine settings through the shared loader. */

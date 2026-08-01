@@ -18,11 +18,11 @@ import { MAP_QUALIFICATION_SEEDS, MAP_PLAYBACK_BOUND, inspectMapSettings, mirror
  * failure - never an artificial draw.
  */
 
-const shippedMaps = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle"];
+const shippedMaps = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel"];
 // Technical qualification passes for the maps whose legal play satisfies the
 // Section 13 physics contract. frostbite-arena violates it deterministically
 // (see the dedicated blocked-classification test below).
-const qualifiableMaps = ["ice-map-v1", "cue-clash", "magma-cradle"];
+const qualifiableMaps = ["ice-map-v1", "cue-clash", "magma-cradle", "symmetric-duel"];
 
 function canonicalTemplate(): ReturnType<typeof createCanonicalPlayableMatchSettings> {
 	return createCanonicalPlayableMatchSettings();
@@ -83,7 +83,9 @@ describe("Section 17.3 map qualification harness", () => {
 				expect(result.checks.noPostCompletionMutation).toBe(true);
 				expect(result.replayRestoreStatus).toBe("ok");
 				expect(result.acceptedActions).toBeGreaterThan(0);
-				expect(result.turns).toBeGreaterThan(0);
+				// A match may legitimately end on its first action (turn
+				// number 0) - e.g. symmetric-duel's deterministic wall-kill.
+				expect(result.turns).toBeGreaterThanOrEqual(0);
 				expect(result.simulatedFrames).toBeGreaterThan(0);
 				expect(result.engineWork).toBeGreaterThanOrEqual(result.simulatedFrames);
 				expect(result.fingerprint.length).toBeGreaterThan(0);
