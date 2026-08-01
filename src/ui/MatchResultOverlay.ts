@@ -24,7 +24,13 @@ export class MatchResultOverlay implements IDrawer, IMouse {
 	public getGameplayInput(): IMouse | undefined { return this.gameplayInput; }
 
 	public handleMousePressed(): void {
-		if (!this.isVisible()) return;
+		// While the result screen is hidden the overlay must behave as a pure
+		// pass-through: swallowing mousedown here blocks every gameplay input
+		// (figure selection, drag-to-shoot, item phase actions) in the browser.
+		if (!this.isVisible()) {
+			this.gameplayInput?.handleMousePressed();
+			return;
+		}
 		if (this.inside(this.mouse, rematchButton)) this.onAction("rematch");
 		else if (this.inside(this.mouse, menuButton)) this.onAction("menu");
 	}

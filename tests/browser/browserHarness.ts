@@ -293,3 +293,101 @@ export async function waitFor(predicate: () => boolean | Promise<boolean>, timeo
 	}
 	throw new BrowserHarnessError(`timed out waiting for ${what}`);
 }
+
+/** Canonical world size the adapted browser canvas maps to (GameSettings). */
+export const BROWSER_WORLD = { width: 800, height: 450 };
+
+export interface CanvasGeometry {
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
+/** Bounding box of the p5 game canvas in viewport pixels. */
+export async function canvasGeometry(page: Page): Promise<CanvasGeometry> {
+	return await page.evaluate(() => {
+		const canvas = document.querySelector("canvas");
+		if (!canvas) throw new Error("no canvas element");
+		const rect = canvas.getBoundingClientRect();
+		return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+	});
+}
+
+/** Converts world coordinates to viewport pixels for the fit-world canvas. */
+export function worldToPixel(geometry: CanvasGeometry, worldX: number, worldY: number): { x: number; y: number } {
+	const scale = Math.min(geometry.width / BROWSER_WORLD.width, geometry.height / BROWSER_WORLD.height);
+	const offsetX = (geometry.width - BROWSER_WORLD.width * scale) / 2;
+	const offsetY = (geometry.height - BROWSER_WORLD.height * scale) / 2;
+	return { x: geometry.left + offsetX + worldX * scale, y: geometry.top + offsetY + worldY * scale };
+}
+
+/** Performs a real mouse click at world coordinates on the game canvas. */
+export async function clickWorld(page: Page, worldX: number, worldY: number): Promise<void> {
+	const pixel = worldToPixel(await canvasGeometry(page), worldX, worldY);
+	await page.mouse.click(pixel.x, pixel.y);
+}
+
+/**
+ * Performs a real drag gesture (move -> down -> intermediate moves -> up)
+ * between world coordinates on the game canvas.
+ */
+export async function dragWorld(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, steps = 4): Promise<void> {
+	const geometry = await canvasGeometry(page);
+	const start = worldToPixel(geometry, from.x, from.y);
+	const end = worldToPixel(geometry, to.x, to.y);
+	await page.mouse.move(start.x, start.y);
+	await page.mouse.down();
+	for (let step = 1; step <= steps; step++) {
+		const t = step / steps;
+		await page.mouse.move(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t);
+	}
+	await page.mouse.up();
+}
+
+/** Reads the authoritative match state from the documented debug surface. */
+export async function readMatchState(page: Page): Promise<{
+	state: string;
+	turnNumber: number;
+	activeTeam: number;
+	phase: string;
+	itemUses: number;
+	playbackFrames: number;
+	entities: Array<{ id: string; x: number; y: number; vx: number; vy: number; dead: boolean; team: number[] }>;
+}> {
+	return await page.evaluate(() => {
+		const handler = (window as any).game.handler;
+		const entities = handler.getEntityManager().getEntities().map((entity: any) => ({
+			id: entity.getId(),
+			x: entity.getPos().x,
+			y: entity.getPos().y,
+			vx: entity.getVel?.()?.x ?? 0,
+			vy: entity.getVel?.()?.y ?? 0,
+			dead: entity.isDead(),
+			team: entity.getTeam(),
+		}));
+		const ruleState = handler.getRuleState();
+		return {
+			state: handler.getState(),
+			turnNumber: handler.getTurnNumber(),
+			activeTeam: handler.getActiveTeam(),
+			phase: ruleState.phase,
+			itemUses: ruleState.itemUses,
+			playbackFrames: handler.getPlaybackFramesRemaining?.(),
+			entities,
+		};
+	});
+}
+
+/** Reads the game mode id of the active handler (null outside a match). */
+export async function activeGameModeId(page: Page): Promise<string | null> {
+	return await page.evaluate(() => {
+		const handler = (window as any).game?.handler;
+		return handler?.getSettings?.()?.gameMode?.id ?? null;
+	});
+}
+
+/** True when every entity position/velocity is finite. */
+export function finiteEntities(state: { entities: Array<{ x: number; y: number; vx: number; vy: number }> }): boolean {
+	return state.entities.every(entity => Number.isFinite(entity.x) && Number.isFinite(entity.y) && Number.isFinite(entity.vx) && Number.isFinite(entity.vy));
+}

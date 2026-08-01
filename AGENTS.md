@@ -198,6 +198,19 @@ After every change, check whether this guide still reflects the implementation a
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
+- `src/ui/GameplayFeedback.ts`: shared input-rejection feedback for local
+  gameplay.
+- `src/ui/ItemPhaseControls.ts`: browser-visible item-phase panel (draws the
+  phase state and skip/use buttons, routes use/skip through the validated
+  `ItemPhaseUI` -> emitter -> `RuleInterpreter` chain, delegates presses
+  outside the panel to the gameplay input).
+- `src/ui/MatchResultOverlay.ts`: completed-match result screen with rematch
+  and menu actions; it passes mouse events through to the gameplay input while
+  hidden and resets the wrapped input surface on rematch/dispose.
+- `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
+  without retaining stale handlers; `createLocalGameplayHandler()` wires
+  `UiSystem`, `DirectionArrow`, `GameplayFeedback`, `ItemPhaseControls`, and
+  `EmitterSystem` around a canonical match.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - `src/menu/Menu.ts`: landing and menu pages.

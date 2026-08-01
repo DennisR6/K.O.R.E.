@@ -7,6 +7,7 @@ import { DirectionArrow } from "../systems/DirectionArrow.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { GameplayFeedback } from "../ui/GameplayFeedback.js";
+import { ItemPhaseControls } from "../ui/ItemPhaseControls.js";
 import { MatchResultOverlay, type MatchResultAction } from "../ui/MatchResultOverlay.js";
 
 export type LocalHandlerFactory = () => GameHandler;
@@ -84,11 +85,15 @@ export function createLocalGameplayHandler(): GameHandler {
 	const emitters = new CombiEmitter();
 	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2));
 	const feedback = new GameplayFeedback(handler, ui);
+	// Browser-visible item-phase panel; delegates to UiSystem outside the item
+	// phase and to shared validation inside it (ItemPhaseUI -> emitter -> rules).
+	const itemControls = new ItemPhaseControls(handler, emitters, ui);
 	handler.addSystem(ui);
-	handler.setMouseHandler(ui);
+	handler.setMouseHandler(itemControls);
 	handler.addSystem(arrow);
 	handler.addSystem(new EmitterSystem(emitters, error => feedback.setRejection(error)));
 	handler.addPostDrawer(arrow);
 	handler.addPostDrawer(feedback);
+	handler.addPostDrawer(itemControls);
 	return handler;
 }

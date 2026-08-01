@@ -1420,7 +1420,7 @@ or synthetic handler-only tests do not satisfy this section.
     error. Gates: 634 pass / 5 skip / 0 fail across 195 files (3 new browser
     tests, 18 new assertions); TSC and production build clean.
 
-- [ ] **Task [16.3]: Play A Local Turn Through Browser Input**
+- [x] **Task [16.3]: Play A Local Turn Through Browser Input**
   - **Goal:** Start local play through the visible menu, select an active-team
     figure on the canvas, perform a drag-to-shoot gesture using real browser
     pointer events, and observe the complete simulation/playback transition.
@@ -1442,6 +1442,30 @@ or synthetic handler-only tests do not satisfy this section.
     passing result. Browser input must cause the turn.
   - **Acceptance:** One player-visible browser interaction completes one real
     deterministic turn through the production UI and runtime path.
+  - **Note:** Real browser input exposed two defects fixed in this task.
+    `MatchResultOverlay.handleMousePressed()` returned early when the result
+    screen was hidden and never delegated to the gameplay input, so every
+    mousedown in a live match was swallowed and drag-to-shoot was impossible in
+    the browser; it now passes presses through while hidden. The item phase had
+    no browser-visible control (only unit-test paths used `ItemPhaseUI`), so
+    the local match could never advance past the first item phase: new
+    `src/ui/ItemPhaseControls.ts` (IDrawer + IMouse) draws the item panel and
+    skip/use buttons in world coordinates and routes use/skip through the
+    existing `ItemPhaseUI` -> emitter -> `RuleInterpreter` chain, delegating
+    presses outside the panel to `UiSystem`; it also exposes `selectedActorId`
+    and `reset()` so the scene input-surface contract (selection state visible
+    through the result overlay) stays intact. `createLocalGameplayHandler()`
+    installs the panel as mouse handler and post-drawer. Shared browser page
+    helpers moved into `browserHarness` (`canvasGeometry`, `worldToPixel`,
+    `clickWorld`, `dragWorld`, `readMatchState`, `activeGameModeId`,
+    `finiteEntities`); `test:browser` now runs both browser test files. Two new
+    tests: the menu path (visible menu -> canonical match -> skip item phase
+    through the panel -> real drag-to-shoot -> `Playing` with finite velocity
+    and input locked against a second drag -> turn 1 / team 1 with zero
+    playback frames remaining) and a diagnostic `?skipmenu=1` route that also
+    completes exactly one turn. Gates: 636 pass / 5 skip / 0 fail across 196
+    files (2 new browser tests, 31 new assertions); TSC and production build
+    clean.
 
 - [ ] **Task [16.4]: Verify Browser Gameplay Controls And Result Flow**
   - **Goal:** Exercise the browser-visible gameplay controls needed for a

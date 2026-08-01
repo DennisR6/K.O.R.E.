@@ -7,6 +7,8 @@ import {
 	activeBrowserServers,
 	assertCleanConsole,
 	captureConsole,
+	canvasGeometry,
+	clickWorld,
 	ensureBrowserBuild,
 	launchBrowser,
 	nextTestPort,
@@ -132,35 +134,6 @@ describe("Section 16.1 browser harness", () => {
  * unexpected console `error` messages fail the test; the allowlist stays
  * empty because all first-party startup errors were removed.
  */
-
-/** Canonical world size of the adapted browser canvas (GameSettings). */
-const WORLD_WIDTH = 800;
-const WORLD_HEIGHT = 450;
-
-interface CanvasGeometry {
-	left: number;
-	top: number;
-	width: number;
-	height: number;
-}
-
-async function canvasGeometry(page: import("playwright").Page): Promise<CanvasGeometry> {
-	return await page.evaluate(() => {
-		const canvas = document.querySelector("canvas");
-		if (!canvas) throw new Error("no canvas element");
-		const rect = canvas.getBoundingClientRect();
-		return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-	});
-}
-
-/** Converts world coordinates to viewport pixels for the fit-world canvas. */
-async function clickWorld(page: import("playwright").Page, worldX: number, worldY: number): Promise<void> {
-	const geometry = await canvasGeometry(page);
-	const scale = Math.min(geometry.width / WORLD_WIDTH, geometry.height / WORLD_HEIGHT);
-	const offsetX = (geometry.width - WORLD_WIDTH * scale) / 2;
-	const offsetY = (geometry.height - WORLD_HEIGHT * scale) / 2;
-	await page.mouse.click(geometry.left + offsetX + worldX * scale, geometry.top + offsetY + worldY * scale);
-}
 
 async function activeGameModeId(page: import("playwright").Page): Promise<string | null> {
 	return await page.evaluate(() => {
