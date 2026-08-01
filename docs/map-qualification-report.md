@@ -25,7 +25,8 @@ No map receives `technically-qualified` or higher before the Task 17.3
 qualification harness and the Task 17.7 matrix evidence are recorded here,
 and no map receives `browser-qualified` before the Task 17.8 real-browser
 evidence is recorded. Human qualification remains `PENDING` until external
-playtest evidence exists (Task 17.9). No map is promoted from its current
+playtest evidence exists (the Task 17.9 packet is recorded; no external
+session has been completed). No map is promoted from its current
 content-registry status by inventory work alone.
 
 ## Evidence Record
@@ -205,3 +206,18 @@ content-registry status by inventory work alone.
   `browser-qualified` and selectable in the production menu; frostbite-arena
   is `blocked`; human-qualified remains `PENDING` until 17.9 external
   playtest evidence exists.
+- 17.9: map review and human-test readiness recorded. The external-tester
+  packet `docs/map-playtest-protocol.md` covers the six browser-qualified
+  candidates (frostbite-arena excluded as blocked): exact build or deployed
+  browser revision verification, play from the visible "Choose Map" menu
+  page, per-tester rotated map order, verbatim first-confusion and
+  first-meaningful-strategy recording, the seven per-map ratings
+  (readability, navigation, hazard clarity, agency, pacing, fairness,
+  willingness to replay), and per-map evidence collection (map ID, settings
+  seed, screenshot, console/log export, blocker severity).
+  `.github/ISSUE_TEMPLATE/map-playtest-finding.md` is the map-specific issue
+  template with severity, map ID, seed, and evidence fields.
+  `tests/map_playtest_readiness.test.ts` qualifies the packet's readiness
+  without manufacturing human ratings. Human evidence remains `PENDING`
+  until a real external session is completed; map-level human qualification
+  stays separate from the Section 15 gameplay release blockers and does not change the Section 15 release record.

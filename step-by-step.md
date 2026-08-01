@@ -2070,7 +2070,24 @@ in a browser.
     frostbite-arena stays `blocked`. The Section 16 release record and the
     browser release gate were updated for the new full-suite count.
 
-* [ ] **Task [17.9]: Record Map Review And Human-Test Readiness**
+* [x] **Task [17.9]: Record Map Review And Human-Test Readiness**
+
+  * **Done:** Shipped the external-tester review packet: `docs/map-playtest-protocol.md`
+    (six browser-qualified candidates, frostbite-arena excluded; exact build
+    or deployed browser revision verification, play from the visible
+    "Choose Map" menu page, per-tester rotated map order, verbatim
+    first-confusion and first-meaningful-strategy recording, the seven
+    per-map ratings readability/navigation/hazard clarity/agency/pacing/
+    fairness/willingness to replay, and per-map evidence collection with
+    map ID, settings seed, screenshot, console/log export, and blocker
+    severity), the map-specific issue template
+    `.github/ISSUE_TEMPLATE/map-playtest-finding.md` (severity, map ID, seed,
+    evidence fields), and the readiness gate
+    `tests/map_playtest_readiness.test.ts` (6 tests) asserting every
+    required session element, the PENDING human-evidence status, and the
+    separation from Section 15 release blockers. The report ledger records
+    the 17.9 evidence bullet; human-qualified remains unclaimed for every
+    map.
 
   * **Goal:** Produce a map-specific review packet that allows external testers
     to compare the qualified candidates without repository access or developer
