@@ -156,7 +156,13 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 
 	//@ts-ignore
 	new window.p5(sketch)
-	window.game = { handler, logs: [], audio: new AudioManager() };
+	window.game = {
+		// The documented debug surface must always expose the active
+		// authoritative handler (menu -> match -> rematch -> menu switches).
+		get handler() { return getActiveHandler(); },
+		logs: [],
+		audio: new AudioManager()
+	};
 }
 
 const customCursor = document.getElementById('my-cursor')!;

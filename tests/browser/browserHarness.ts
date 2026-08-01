@@ -218,6 +218,61 @@ export async function launchBrowser(options: { executablePath?: string } = {}): 
 	}
 }
 
+export interface PageConsoleCapture {
+	/** All console messages (any level) with their type and text. */
+	entries: Array<{ type: string; text: string }>;
+	/** console `error`-level texts. */
+	errors: string[];
+	/** Uncaught page exception messages. */
+	pageErrors: string[];
+}
+
+/**
+ * Installs console/page-error capture on a page. `errors` collects console
+ * `error`-level text, `pageErrors` collects uncaught page exceptions.
+ */
+export function captureConsole(page: Page): PageConsoleCapture {
+	const capture: PageConsoleCapture = { entries: [], errors: [], pageErrors: [] };
+	page.on("console", (message) => {
+		const entry = { type: message.type(), text: message.text() };
+		capture.entries.push(entry);
+		if (message.type() === "error") capture.errors.push(message.text());
+	});
+	page.on("pageerror", (error) => capture.pageErrors.push(error.message));
+	return capture;
+}
+
+/** Human-readable snapshot of a page's console capture for failure output. */
+export function formatCapture(capture: PageConsoleCapture): string {
+	const lines = [
+		`console errors (${capture.errors.length}):`,
+		...capture.errors.map((line) => `  ${line}`),
+		`uncaught page errors (${capture.pageErrors.length}):`,
+		...capture.pageErrors.map((line) => `  ${line}`),
+	];
+	return lines.join("\n");
+}
+
+/**
+ * Console policy gate (Section 16.2): fails on uncaught page exceptions and
+ * unexpected console `error` messages. `allowlist` accepts exact strings or
+ * regexes only for known, reviewed noise; it must stay narrow and documented.
+ */
+export function assertCleanConsole(capture: PageConsoleCapture, allowlist: Array<string | RegExp> = []): void {
+	const unexpectedErrors = capture.errors.filter((text) =>
+		!allowlist.some((allowed) => (typeof allowed === "string" ? text === allowed : allowed.test(text))),
+	);
+	const unexpectedPageErrors = capture.pageErrors.slice();
+	if (unexpectedErrors.length === 0 && unexpectedPageErrors.length === 0) return;
+	throw new BrowserHarnessError(
+		`browser console policy violation\n${formatCapture({
+			entries: [],
+			errors: unexpectedErrors,
+			pageErrors: unexpectedPageErrors,
+		})}`,
+	);
+}
+
 /** Convenience: opens a page, navigates to `url`, waits for the load event. */
 export async function openPage(browser: Browser, url: string): Promise<Page> {
 	const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });

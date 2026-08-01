@@ -15,6 +15,8 @@ Bun.serve<WebSocketData>({
 		const url = new URL(req.url);
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
+		// The offline shell lives in public/ but must register at root scope.
+		if (url.pathname === "/sw.js") return new Response(Bun.file("./public/sw.js"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {
 			return new Response(Bun.file(`.${url.pathname}`));
 		}

@@ -575,11 +575,15 @@ by injecting `new GameDatabase(":memory:")`.
 
 Be careful when running `bun run start`:
 
-- The static handler serves only `index.html`, `public/`, and `dist/`; continue
-  to keep secrets out of this repository and do not broaden that allowlist
-  casually.
+- The static handler serves `index.html`, `/sw.js` (from `public/sw.js` for the
+  root-scope offline shell), `public/`, and `dist/`; continue to keep secrets
+  out of this repository and do not broaden that allowlist casually.
 - The production server writes `./data/kore.db` by default. `*.db` is ignored;
   do not commit database files. Set `GAME_DB_PATH` for another durable path.
+
+`window.game.handler` is a getter over the active scene handler (menu -> match
+-> rematch -> menu), so the debug surface always reflects the authoritative
+handler. `window.game` also exposes the `logs` array and the `AudioManager`.
 
 ## Known High-Impact Limitations
 

@@ -5,11 +5,14 @@ import { join } from "node:path";
 import {
 	BrowserHarnessError,
 	activeBrowserServers,
+	assertCleanConsole,
+	captureConsole,
 	ensureBrowserBuild,
 	launchBrowser,
 	nextTestPort,
 	openPage,
 	startTestServer,
+	waitFor,
 } from "./browserHarness.ts";
 
 /**
@@ -116,6 +119,175 @@ describe("Section 16.1 browser harness", () => {
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
+		expect(activeBrowserServers()).toBe(0);
+	}, 120_000);
+});
+
+/**
+ * Section 16.2: browser boot and menu rendering.
+ *
+ * Opens the root URL in a real browser and proves that the generated game
+ * bundle, the vendored p5 runtime, the menu, and the canvas initialize without
+ * fatal browser errors. Console policy: uncaught page exceptions and
+ * unexpected console `error` messages fail the test; the allowlist stays
+ * empty because all first-party startup errors were removed.
+ */
+
+/** Canonical world size of the adapted browser canvas (GameSettings). */
+const WORLD_WIDTH = 800;
+const WORLD_HEIGHT = 450;
+
+interface CanvasGeometry {
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
+async function canvasGeometry(page: import("playwright").Page): Promise<CanvasGeometry> {
+	return await page.evaluate(() => {
+		const canvas = document.querySelector("canvas");
+		if (!canvas) throw new Error("no canvas element");
+		const rect = canvas.getBoundingClientRect();
+		return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+	});
+}
+
+/** Converts world coordinates to viewport pixels for the fit-world canvas. */
+async function clickWorld(page: import("playwright").Page, worldX: number, worldY: number): Promise<void> {
+	const geometry = await canvasGeometry(page);
+	const scale = Math.min(geometry.width / WORLD_WIDTH, geometry.height / WORLD_HEIGHT);
+	const offsetX = (geometry.width - WORLD_WIDTH * scale) / 2;
+	const offsetY = (geometry.height - WORLD_HEIGHT * scale) / 2;
+	await page.mouse.click(geometry.left + offsetX + worldX * scale, geometry.top + offsetY + worldY * scale);
+}
+
+async function activeGameModeId(page: import("playwright").Page): Promise<string | null> {
+	return await page.evaluate(() => {
+		const handler = (window as any).game?.handler;
+		return handler?.getSettings?.()?.gameMode?.id ?? null;
+	});
+}
+
+describe("Section 16.2 browser boot and menu rendering", () => {
+	afterAll(() => {
+		expect(activeBrowserServers()).toBe(0);
+	});
+
+	test("boots the generated bundle, p5 canvas, and documented debug surface without fatal errors", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			const capture = captureConsole(page);
+
+			// The game canvas becomes visible with non-zero dimensions.
+			await waitFor(async () => {
+				const geometry = await canvasGeometry(page);
+				return geometry.width > 0 && geometry.height > 0;
+			}, 10_000, 100, "game canvas");
+
+			const info = await page.evaluate(() => {
+				const game = (window as any).game;
+				return {
+					title: document.title,
+					canvasCount: document.querySelectorAll("canvas").length,
+					gameSurface: typeof game,
+					gameKeys: game ? Object.keys(game).sort() : [],
+					handlerCtor: game?.handler?.constructor?.name ?? null,
+					settingsMode: game?.handler?.getSettings?.()?.gameMode?.id ?? null,
+				};
+			});
+
+			expect(info.title).toBe("KORE");
+			expect(info.canvasCount).toBeGreaterThan(0);
+			expect(info.gameSurface).toBe("object");
+			expect(info.gameKeys).toEqual(["audio", "handler", "logs"]);
+			expect(info.handlerCtor).toBe("GameHandler");
+			// Menu state: no match settings before the play action.
+			expect(info.settingsMode).toBeNull();
+
+			// The documented debug surface reflects the active handler.
+			const activeHandler = await page.evaluate(() => (window as any).game.handler.constructor.name);
+			expect(activeHandler).toBe("GameHandler");
+
+			// Console policy: no uncaught exceptions, no console errors.
+			assertCleanConsole(capture);
+		} finally {
+			await browser.close();
+			await server.stop();
+		}
+		expect(server.isAlive()).toBe(false);
+		expect(activeBrowserServers()).toBe(0);
+	}, 120_000);
+
+	test("menu exposes its local-play action and starts the canonical match through real clicks", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			const capture = captureConsole(page);
+			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
+
+			// The menu is active: mouse handler is the MainMenu, no match yet.
+			const menuHandler = await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.constructor?.name ?? null);
+			expect(menuHandler).toBe("MainMenu");
+			expect(await activeGameModeId(page)).toBeNull();
+
+			// Landing page: any press advances to the main menu page.
+			await clickWorld(page, 400, 100);
+			// Main menu page exposes "Play Local Game" at world (270..530, 300..358).
+			await clickWorld(page, 400, 325);
+
+			// The local-play action starts exactly one canonical match.
+			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
+			const matchInfo = await page.evaluate(() => {
+				const handler = (window as any).game.handler;
+				return {
+					settingsMode: handler?.getSettings?.()?.gameMode?.id ?? null,
+					entities: handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
+				};
+			});
+			expect(matchInfo.settingsMode).toBe("local-ice-duel-v1");
+			// Two figures (one per team) exist in the authoritative handler.
+			expect(matchInfo.entities).toBe(2);
+
+			assertCleanConsole(capture);
+		} finally {
+			await browser.close();
+			await server.stop();
+		}
+		expect(activeBrowserServers()).toBe(0);
+	}, 120_000);
+
+	test("console policy catches unexpected page errors and console errors", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			const capture = captureConsole(page);
+			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
+			// A clean page passes the policy gate.
+			assertCleanConsole(capture);
+			// Deliberately produce noise; the policy gate must fail on it.
+			await page.evaluate(() => {
+				console.error("kore deliberate console error");
+				// An async throw is a true uncaught page exception.
+				setTimeout(() => {
+					throw new Error("kore deliberate page error");
+				}, 0);
+			});
+			await waitFor(() => capture.pageErrors.length > 0, 5_000, 100, "page error capture");
+			expect(() => assertCleanConsole(capture)).toThrow(/console policy violation/);
+			expect(capture.errors).toContain("kore deliberate console error");
+			expect(capture.pageErrors).toContain("kore deliberate page error");
+		} finally {
+			await browser.close();
+			await server.stop();
+		}
 		expect(activeBrowserServers()).toBe(0);
 	}, 120_000);
 });

@@ -1379,7 +1379,7 @@ or synthetic handler-only tests do not satisfy this section.
     `test:browser`. Gates: 631 pass / 5 skip / 0 fail across 195 files (6 new
     browser tests, 19 new assertions); TSC and production build clean.
 
-- [ ] **Task [16.2]: Verify Browser Boot And Menu Rendering**
+- [x] **Task [16.2]: Verify Browser Boot And Menu Rendering**
   - **Goal:** Open the root URL in a real browser and prove that the generated
     game bundle, vendored p5 runtime, menu, and canvas initialize without fatal
     browser errors.
@@ -1398,6 +1398,27 @@ or synthetic handler-only tests do not satisfy this section.
     reviewed third-party noise; never blanket-ignore browser console errors.
   - **Acceptance:** A clean repository can build, start, open the default menu,
     and render the browser game without manual interaction.
+  - **Note:** `server.ts` now also serves `/sw.js` from `public/sw.js` (the
+    offline shell is designed for root scope, but the static allowlist only
+    covered `/public/` and `/dist/`, so the real browser logged
+    `A bad HTTP response code (404) was received when fetching the script.` on
+    every startup); `src/main.ts` now exposes `window.game.handler` as a getter
+    over the scene router's active handler so the documented debug surface no
+    longer goes stale after menu -> match transitions. `browserHarness` gained
+    `captureConsole()` (all console entries, error texts, uncaught page errors),
+    `formatCapture()`, and `assertCleanConsole()` (console policy gate with a
+    narrow documented allowlist that is currently empty). Three new tests in
+    `tests/browser/browser_startup.e2e.test.ts`: boot assertions (HTTP 200,
+    title `KORE`, visible non-zero canvas, `window.game` surface with
+    handler/logs/audio, `GameHandler` mouse handler in menu state, zero console
+    errors, zero page errors), the visible menu journey (landing click -> main
+    menu -> real mouse click on the "Play Local Game" button -> exactly one
+    canonical `local-ice-duel-v1` match with two entities), and a negative
+    console-policy test that deliberately injects a console error and an
+    uncaught page exception and proves the gate fails on both. Expected missing
+    audio (ignored `public/audio/` MP3s) is documented and produces no console
+    error. Gates: 634 pass / 5 skip / 0 fail across 195 files (3 new browser
+    tests, 18 new assertions); TSC and production build clean.
 
 - [ ] **Task [16.3]: Play A Local Turn Through Browser Input**
   - **Goal:** Start local play through the visible menu, select an active-team
