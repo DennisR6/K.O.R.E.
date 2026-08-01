@@ -24,6 +24,12 @@ jobs:
     - name: Test
       run: bun test
 
+    - name: Map matrix verification
+      run: bun run test:maps
+
+    - name: Map matrix fresh runs comparison
+      run: bun run test:maps:matrix
+
   # Section 16: real-browser verification is part of the release gate. Runs
   # headless Chromium (BROWSER_HEADED is only for local reproduction) against
   # the generated dist bundle and the isolated Bun test server lifecycle.

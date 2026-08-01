@@ -2114,7 +2114,7 @@ in a browser.
   * **Constraint:** Map-level human qualification must remain separate from the
     existing Section 15 gameplay release blockers.
 
-* [ ] **Task [17.10]: Gate Qualified Map Content**
+* [x] **Task [17.10]: Gate Qualified Map Content**
 
   * **Goal:** Add a final evidence gate that admits only maps backed by the
     required schema, technical, deterministic, browser, and documentation

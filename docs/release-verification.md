@@ -368,3 +368,50 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
   automated browser verification passes, but the overall gameplay release
   record remains `BLOCKED / NOT QUALIFIED` pending the external two-match
   human playtest session.
+
+## Section 17 Map Production And Verification
+
+### Required Command Record
+
+| Command | Result |
+| --- | --- |
+| `bun run test:maps` | PASS (cache-backed smoke check of shipped maps) |
+| `bun run test:maps:matrix` | PASS: 504 cells matched byte-for-byte in attempt `release-2026-08-01` |
+| `bun run test:browser:full` | PASS: 17 pass / 0 fail, 301 assertions across 5 files |
+| `bun test` | PASS: 780 tests across 209 files |
+| `npx tsc --noEmit` | PASS: 0 type errors |
+| `bun run build` | PASS: `dist/main.js` and browser assets compiled |
+| `git diff --check` | PASS: no git whitespace or format errors |
+
+### Required Report
+
+| Item | Value |
+| --- | --- |
+| Exact Commit | `3acd06ed222898036adfe40935275c5b05795604` |
+| Technically-qualified Map IDs | `ice-map-v1`, `cue-clash`, `magma-cradle`, `symmetric-duel`, `structure-control`, `hazard-control` |
+| Browser-qualified Map IDs | `ice-map-v1`, `cue-clash`, `magma-cradle`, `symmetric-duel`, `structure-control`, `hazard-control` |
+| Blocked Map IDs | `frostbite-arena` |
+| Rejected Map IDs | None |
+| Deterministic Seed Count | 12 seeds (smoke seed, 504 total combinations evaluated across variants and policies) |
+| Matrix Result | PASS: fresh execution matches byte-for-byte |
+| Pacing and Fairness Warnings | Imbalance: 0.44 (first-turn advantage 68 opening vs 276 second-turn wins), ongoing rate 0.51, extreme duration outlier (max 24 vs median 3 turns), policy-dependent termination (easy 0.17 vs hard 0.86) |
+| Browser Result | PASS (visible selection, entity count, rendering, item phase, pointer action, playback bound E2E) |
+| Console/page-error Totals | 0 unexpected console errors, 0 page exceptions |
+| Diagnostic Artifact Paths | None needed (all browser runs passed); failed browser E2E runs write artifacts to `.browser-diagnostics/` |
+| Known Limitations | `magma-cradle`: Easy AI may fail to seek lethal hazards (17.6 policy). `symmetric-duel`: Stock easy AI self-eliminates in walls. `frostbite-arena`: Drift 1.0 jams players in walls (unresolved penetration). |
+| Current Human-test Status | PENDING - no external human sessions completed |
+
+### Section 17 Evidence Gate
+
+- Design contract: `docs/map-design-contract.md`.
+- Status ledger: `docs/map-qualification-report.md`.
+- Authoritative inventory: `src/content/mapCatalog.ts`.
+- Qualification harness: `tests/support/mapQualification.ts`.
+- Symmetric duel map: `src/settings/symmetricDuelMap.ts` and `tests/symmetric_duel_map.test.ts`.
+- Structure-control map: `src/settings/structureControlMap.ts` and `tests/structure_control_map.test.ts`.
+- Hazard-control map: `src/settings/hazardControlMap.ts` and `tests/hazard_control_map.test.ts`.
+- Complete map matrix: `tests/shipped_map_matrix.test.ts` and command `bun run test:maps:matrix`.
+- Real browser E2E: `tests/browser/map_catalog.e2e.test.ts`.
+- Playtest readiness: `docs/map-playtest-protocol.md`, `.github/ISSUE_TEMPLATE/map-playtest-finding.md`, and `tests/map_playtest_readiness.test.ts`.
+- Release gate: `tests/map_release_gate.test.ts`.
+- Section 17 does not change the Section 15 gameplay qualification status: map matrix and browser E2E pass, but the overall gameplay release record remains `BLOCKED / NOT QUALIFIED` pending the external two-match playtest session.

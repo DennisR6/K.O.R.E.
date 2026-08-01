@@ -277,6 +277,8 @@ bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full; runs in the normal `bun test` suite too
+bun run test:maps           # Section 17 dev smoke map matrix run
+bun run test:maps:matrix    # Section 17 full release map matrix comparison
 bun run start               # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously
@@ -296,6 +298,10 @@ Section 15 gameplay release qualification is recorded in
 `tests/gameplay_release_gate.test.ts` as the evidence gate. The current final
 status is **BLOCKED / NOT QUALIFIED** because no external human playtest session
 has been completed; automated evidence does not substitute for human evidence.
+
+Section 17 map release qualification is recorded in
+`docs/map-qualification-report.md` and `docs/release-verification.md`, with
+`tests/map_release_gate.test.ts` as the evidence gate. Map-level human qualification remains pending (`PENDING`) while technical and browser qualifications pass.
 
 ## Browser Workflow
 
