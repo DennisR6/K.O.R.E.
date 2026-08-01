@@ -1628,7 +1628,7 @@ in a browser.
 
 ## 17. Qualified Map Production And Verification
 
-* [ ] **Task [17.1]: Define The Qualified Map Design Contract**
+* [x] **Task [17.1]: Define The Qualified Map Design Contract**
 
   * **Goal:** Define the technical and gameplay requirements that every newly
     shipped map must satisfy before it can enter the qualified map matrix.
@@ -1656,6 +1656,30 @@ in a browser.
     `browser-qualified`, `human-qualified`, `blocked`, or `rejected`.
   * **Constraint:** Existing gameplay, physics, softlock, fairness, and browser
     detectors must not be weakened to admit a map.
+  * **Note:** New `docs/map-design-contract.md` defines the nine contract
+    sections (data/schema, spawn, containment/geometry, action/playback,
+    terminal, symmetry/fairness, browser, classification, constraint) exactly
+    as specified: validators `validateMapDocument`/`loadMapDocument`/
+    `validateGameSettings` plus the editor boundary; finite/non-overlapping
+    spawns outside solid and lethal geometry; containment enclosing all legal
+    regions; first action through the production rule path with the shared
+    `isValidInput` boundary; playback within the 1,200-frame bound; at least
+    one technically reachable terminal mechanism; explicit symmetric/
+    asymmetric classification; no fairness inference from non-terminal
+    samples; no dependence on sub-pixel or extremely narrow angle corridors;
+    and the six-value classification (`candidate`, `technically-qualified`,
+    `browser-qualified`, `human-qualified`, `blocked`, `rejected`) with the
+    release rules (no `human-qualified` without human evidence; no
+    unqualified map shipped as qualified). New `docs/map-qualification-report.md`
+    opens the status ledger with every known map (`ice-map-v1`, `cue-clash`,
+    `frostbite-arena`, `magma-cradle`) honestly classified as `candidate` and
+    explicitly records that no map receives a qualification before the Task
+    17.3 harness and 17.7 matrix evidence. `tests/map_design_contract.test.ts`
+    (5 tests / 39 assertions) gates the contract document content, the exact
+    six-value classification table, the named existing detectors, the honest
+    candidate-only ledger, and the absence of premature qualification claims.
+    Full suite: 652 pass / 5 skip / 0 fail across 200 files (8,081
+    assertions); TSC clean; `git diff --check` clean.
 
 * [ ] **Task [17.2]: Inventory Existing And Candidate Maps**
 
