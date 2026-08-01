@@ -1625,3 +1625,342 @@ browser-playable release
 Do not treat engine-only integration tests, DOM emulation, direct calls through
 `window.game`, or successful TypeScript compilation as proof that the game works
 in a browser.
+
+## 17. Qualified Map Production And Verification
+
+* [ ] **Task [17.1]: Define The Qualified Map Design Contract**
+
+  * **Goal:** Define the technical and gameplay requirements that every newly
+    shipped map must satisfy before it can enter the qualified map matrix.
+  * **Target Files:** `docs/map-design-contract.md`,
+    `docs/map-qualification-report.md`
+  * **Test File:** `tests/map_design_contract.test.ts`
+  * **Allowed Context:** existing map schema, gameplay qualification contract,
+    physics contract, browser-playable release record
+  * **Commit:** `docs: define qualified map design contract`
+  * **Required Contract:**
+
+    * Map data must pass the existing schema and game-settings validators.
+    * Every configured player must have a finite, non-overlapping, legal spawn.
+    * Spawned figures must not begin inside solid geometry or lethal hazards.
+    * Containment geometry must enclose all legal spawn and gameplay regions.
+    * The first legal action must be reachable through the production rule path.
+    * Every accepted action must settle within the existing playback bound.
+    * The map must expose at least one technically reachable terminal mechanism.
+    * A map may be symmetric or intentionally asymmetric, but the classification
+      must be explicit.
+    * Map qualification must not infer fairness from non-terminal samples.
+    * Browser play must not depend exclusively on a sub-pixel or extremely
+      narrow angle corridor.
+  * **Required Classification:** `candidate`, `technically-qualified`,
+    `browser-qualified`, `human-qualified`, `blocked`, or `rejected`.
+  * **Constraint:** Existing gameplay, physics, softlock, fairness, and browser
+    detectors must not be weakened to admit a map.
+
+* [ ] **Task [17.2]: Inventory Existing And Candidate Maps**
+
+  * **Goal:** Build one authoritative inventory of all existing shipped maps,
+    experimental maps, editor fixtures, and planned Section 17 candidates.
+  * **Target Files:** `docs/map-qualification-report.md`,
+    map registry or canonical map index
+  * **Test File:** `tests/map_content_inventory.test.ts`
+  * **Allowed Context:** validated map loader, map registry, existing canonical
+    maps, editor-export fixtures
+  * **Commit:** `docs: inventory qualified map content`
+  * **Required Inventory Fields:** stable map ID, display name, source file,
+    schema version, dimensions, symmetry classification, spawn count, structure
+    count, hazard types, drift/friction settings, supported team layouts,
+    browser availability, current qualification status, and known limitations.
+  * **Negative Cases:** duplicate IDs, unregistered shipped files, registry
+    entries without source data, source data not reachable through the validated
+    loader, or documentation claiming qualification without committed evidence.
+  * **Constraint:** Existing maps must retain their real qualification status;
+    inventory work must not silently promote experimental content.
+
+* [ ] **Task [17.3]: Add A Reusable Map Qualification Harness**
+
+  * **Goal:** Add a deterministic harness that accepts validated map settings
+    and produces one structured technical qualification result.
+  * **Target Files:** `tests/support/mapQualification.ts`, map-loading helpers
+  * **Test File:** `tests/map_qualification_harness.test.ts`
+  * **Allowed Context:** gameplay qualification harness, fairness tournament,
+    AI match fuzz support, physics fixtures, validated map loader
+  * **Commit:** `test: add automated map qualification harness`
+  * **Required Checks:**
+
+    * schema and settings validation,
+    * finite and unique spawn state,
+    * no initial solid overlap,
+    * no initial lethal-hazard overlap,
+    * containment validity,
+    * legal first action,
+    * bounded playback,
+    * deterministic duplicate-run equality,
+    * snapshot and restore equality,
+    * replay equality,
+    * terminal result or explicit bounded ongoing classification,
+    * no post-completion mutation.
+  * **Required Output:** map ID, seed, variant, accepted actions, turns,
+    simulated frames, engine work, result, safety-limit status, spawn findings,
+    invariant findings, replay/restore status, and deterministic fingerprint.
+  * **Negative Cases:** malformed map data, impossible spawn, initial death,
+    no legal actor, no-op-only actions, playback stall, repeated full state,
+    non-finite physics state, and duplicate-run mismatch.
+  * **Constraint:** A safety-limit result remains a warning or failure according
+    to the existing qualification contract; it must never be converted into an
+    artificial draw.
+
+* [ ] **Task [17.4]: Add A Symmetric Duel Map**
+
+  * **Goal:** Create one low-complexity, symmetric two-team map that emphasizes
+    direct player interaction and broad, understandable terminal routes.
+  * **Target Files:** new validated map data file, canonical map registry
+  * **Test File:** `tests/symmetric_duel_map.test.ts`
+  * **Allowed Context:** existing map schema, canonical Ice Duel settings,
+    containment and solid-structure contracts
+  * **Commit:** `feat: add symmetric duel map`
+  * **Required Characteristics:**
+
+    * mirrored spawn geometry,
+    * equal initial distance to meaningful structures and hazards,
+    * no unavoidable first-turn elimination,
+    * at least two materially different legal opening actions,
+    * a terminal route that does not require pixel-exact browser input,
+    * no new engine behavior or map-only executable code.
+  * **Required Verification:** schema validation, settings round trip,
+    deterministic first turn from both sides, side-swapped equality, bounded
+    playback, and browser-visible initial state.
+  * **Constraint:** The map must be expressed entirely through existing map,
+    structure, hazard, effect, and settings primitives.
+
+* [ ] **Task [17.5]: Add A Structure-Control Map**
+
+  * **Goal:** Create one map centered on positioning around solid structures,
+    rebounds, protected regions, and multiple approach paths.
+  * **Target Files:** new validated map data file, canonical map registry
+  * **Test File:** `tests/structure_control_map.test.ts`
+  * **Allowed Context:** solid/containment roles, circle/rectangle/line
+    collision contracts, existing official maps
+  * **Commit:** `feat: add structure control map`
+  * **Required Characteristics:**
+
+    * at least two distinct navigable lanes,
+    * no spawn embedded in or trapped by solid geometry,
+    * no single structure that permanently partitions all opponents,
+    * deterministic line and corner interaction,
+    * meaningful positional change from ordinary legal actions,
+    * broad enough action margins for real pointer input.
+  * **Required Verification:** initial-overlap scan, representative collision
+    fixtures, deterministic mirrored turns, bounded multi-contact resolution,
+    replay/restore equality, and no softlock under the map qualification harness.
+  * **Constraint:** Do not modify the global physics contract merely to make the
+    candidate map pass; reject or redesign invalid geometry instead.
+
+* [ ] **Task [17.6]: Add A Hazard-Control Map**
+
+  * **Goal:** Create one map whose primary terminal pressure comes from existing
+    declarative hazards while preserving meaningful player agency.
+  * **Target Files:** new validated map data file, canonical map registry
+  * **Test File:** `tests/hazard_control_map.test.ts`
+  * **Allowed Context:** hazard registry, kill/force/rotation/slow/delayed
+    hazards, item and effect settings
+  * **Commit:** `feat: add hazard control map`
+  * **Required Characteristics:**
+
+    * hazards are visible and spatially understandable,
+    * no player begins within an active lethal region,
+    * ordinary actions can move opponents toward and away from danger,
+    * hazard placement does not make one physical side automatically terminal,
+    * delayed hazards restore deterministically from snapshots where used,
+    * at least one non-lethal recovery route remains available.
+  * **Required Verification:** deterministic hazard activation, hazard-seeking
+    fixture, hazard-avoidance fixture, no instant-death baseline, explicit
+    winner path, side-swapped run, snapshot continuity, and replay equality.
+  * **Known Limitation:** Stock hard AI may fail to seek lethal hazards. Use a
+    deterministic mode-appropriate hazard policy for terminal-path evidence and
+    retain the stock-AI result separately as a warning.
+  * **Constraint:** Qualification must distinguish “map cannot terminate” from
+    “the selected AI policy does not pursue the terminal mechanism.”
+
+* [ ] **Task [17.7]: Qualify The Complete Map Matrix**
+
+  * **Goal:** Run every shipped and Section 17 candidate map through the shared
+    technical qualification matrix and record comparable evidence.
+  * **Target Files:** map qualification harness,
+    `docs/map-qualification-report.md`, `package.json`
+  * **Test File:** `tests/shipped_map_matrix.test.ts`
+  * **Allowed Context:** Tasks 17.1–17.6, gameplay content matrix, softlock
+    detection, match-length distribution, fairness tournament
+  * **Commit:** `test: qualify shipped map matrix`
+  * **Required Method:**
+
+    * run multiple deterministic seeds per map,
+    * run original and side-swapped spawn variants,
+    * swap first turn where supported,
+    * use at least one direct-pressure policy,
+    * use a terminal-mechanism-aware policy where the map requires one,
+    * repeat the matrix byte-for-byte.
+  * **Required Metrics:** qualification counts, terminal rate, draw rate,
+    ongoing rate, instant-death rate, turn-limit rate, minimum/median/p90/p95/
+    maximum turns, accepted actions, simulated frames, engine work, left/right
+    wins, team-index wins, first-turn wins, invariant failures, and replay/
+    restore failures.
+  * **Hard Failures:** invalid map data, illegal spawn, non-finite state,
+    playback violation, deterministic mismatch, snapshot/replay mismatch,
+    post-completion mutation, or an undocumented shipped map.
+  * **Warning Signals:** side advantage, first-turn advantage, frequent ongoing
+    matches, narrow terminal corridor, extreme duration outlier, weak agency,
+    or policy-dependent termination.
+  * **Required Commands:** add `bun run test:maps` and
+    `bun run test:maps:matrix`.
+  * **Constraint:** Small-sample fairness findings are warnings pending human
+    review unless they expose an invariant or unavoidable elimination.
+
+* [ ] **Task [17.8]: Verify Qualified Maps In The Real Browser**
+
+  * **Goal:** Load every technically-qualified map through the production
+    browser UI and prove that a player can enter the map and perform one real
+    legal action with pointer input.
+  * **Target Files:** browser E2E tests, browser map-selection path, shared
+    browser harness only where reusable helpers are missing
+  * **Test File:** `tests/browser/map_catalog.e2e.test.ts`
+  * **Allowed Context:** Section 16 browser harness, map registry, production
+    menu and local-match scene
+  * **Commit:** `test: verify qualified maps in browser`
+  * **Required Browser Flow:**
+
+    * start the real Bun server,
+    * open the visible menu,
+    * select each qualified map through production UI,
+    * verify its stable map ID and visible finite entities,
+    * verify expected structures or hazards are rendered,
+    * advance the item phase through visible controls where present,
+    * perform one real pointer-driven legal action,
+    * observe simulation and bounded playback,
+    * return to the menu without console or page errors.
+  * **Required Full-Journey Coverage:** At least one newly added map must also
+    complete `menu -> map -> terminal result -> rematch -> menu`.
+  * **Failure Evidence:** reuse bounded screenshot, console, page-error,
+    interaction-log, seed, map ID, and viewport diagnostics from Section 16.
+  * **Constraint:** Tests must not call `GameEmitter`, handler mutation methods,
+    or gameplay APIs directly to manufacture a passing result.
+
+* [ ] **Task [17.9]: Record Map Review And Human-Test Readiness**
+
+  * **Goal:** Produce a map-specific review packet that allows external testers
+    to compare the qualified candidates without repository access or developer
+    explanation.
+  * **Target Files:** `docs/map-playtest-protocol.md`,
+    `docs/map-qualification-report.md`,
+    `.github/ISSUE_TEMPLATE/map-playtest-finding.md`
+  * **Test File:** `tests/map_playtest_readiness.test.ts`
+  * **Allowed Context:** Section 15 human-playtest protocol, questionnaire,
+    Section 16 packaged/browser build evidence
+  * **Commit:** `docs: prepare structured map playtests`
+  * **Required Session:**
+
+    * verify the exact build or deployed browser revision,
+    * play each selected map from the visible menu,
+    * randomize or rotate map order between testers,
+    * record first confusion and first meaningful strategy,
+    * rate readability, navigation, hazard clarity, agency, pacing, fairness,
+      and willingness to replay,
+    * collect map ID, seed, screenshot/log evidence, and blocker severity.
+  * **Required Status:** Human evidence remains `PENDING` until a real external
+    session is completed. Automated tests may qualify readiness but must not
+    manufacture human ratings.
+  * **Constraint:** Map-level human qualification must remain separate from the
+    existing Section 15 gameplay release blockers.
+
+* [ ] **Task [17.10]: Gate Qualified Map Content**
+
+  * **Goal:** Add a final evidence gate that admits only maps backed by the
+    required schema, technical, deterministic, browser, and documentation
+    evidence.
+  * **Target Files:** `docs/release-verification.md`, `requirements.md`,
+    `AGENTS.md`, `package.json`, CI workflow, `step-by-step.md`
+  * **Test File:** `tests/map_release_gate.test.ts`
+  * **Allowed Context:** all Section 17 artifacts and existing release-gate
+    patterns
+  * **Commit:** `test: gate release on qualified maps`
+  * **Required Commands:**
+
+    * `bun run test:maps`
+    * `bun run test:maps:matrix`
+    * `bun run test:browser:full`
+    * `bun test`
+    * `npx tsc --noEmit`
+    * `bun run build`
+    * `git diff --check`
+  * **Required Evidence:** exact commit, qualified/blocked/rejected map IDs,
+    deterministic seed count, matrix result, pacing and fairness warnings,
+    browser result, console/page-error totals, diagnostic artifact paths when
+    applicable, known limitations, and current human-test status.
+  * **Release Rule:** A map may be marked `technically-qualified` and
+    `browser-qualified` without human evidence, but it must not be marked
+    `human-qualified`.
+  * **Chapter Rule:** Section 17 may be complete while individual candidates
+    remain blocked or rejected, provided every candidate has an explicit,
+    evidence-backed status and no unqualified map is shipped as qualified.
+
+### Section 17 Acceptance Criteria
+
+```text
+map candidate
+→ strict schema and settings validation
+```
+
+```text
+configured spawn
+→ finite, legal, visible, and non-overlapping
+```
+
+```text
+accepted action
+→ meaningful deterministic state change
+```
+
+```text
+map simulation
+→ bounded playback with no invariant violation
+```
+
+```text
+terminal mechanism
+→ technically reachable or explicitly blocked
+```
+
+```text
+mirrored tournament
+→ reproducible side, team, and first-turn evidence
+```
+
+```text
+qualified map
+→ snapshot and replay equality
+```
+
+```text
+real browser
+→ visible map selection and pointer-driven play
+```
+
+```text
+browser failure
+→ bounded screenshot, console, page-error, interaction, seed, and map evidence
+```
+
+```text
+map catalog
+→ every candidate classified as qualified, blocked, or rejected
+```
+
+```text
+human quality
+→ remains pending until external playtest evidence exists
+```
+
+```text
+map release
+→ only evidence-backed qualified content is exposed as qualified
+```
