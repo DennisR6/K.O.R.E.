@@ -240,10 +240,12 @@ After every change, check whether this guide still reflects the implementation a
 
 ## Toolchain And Setup
 
-The active toolchain is Bun, ESM, TypeScript 5.9, and p5.js. Install with:
+The active toolchain is Bun, ESM, TypeScript 5.9, p5.js, and Playwright
+(headless Chromium for real-browser E2E tests). Install with:
 
 ```sh
 bun install --frozen-lockfile
+bunx playwright install chromium   # once per machine for browser E2E tests
 ```
 
 Useful commands:
@@ -257,6 +259,7 @@ npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
+bun run test:browser   # Section 16 real-browser harness + startup/menu E2E
 bun run start          # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously

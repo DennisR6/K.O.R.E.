@@ -1336,7 +1336,7 @@ built application through the same generated assets, HTTP server, DOM events,
 canvas, and browser runtime used by a player. Direct calls into engine classes
 or synthetic handler-only tests do not satisfy this section.
 
-- [ ] **Task [16.1]: Add Browser Test Tooling And Server Harness**
+- [x] **Task [16.1]: Add Browser Test Tooling And Server Harness**
   - **Goal:** Add a browser automation test runner and a deterministic harness
     that builds the game, starts the Bun HTTP/WebSocket server on an isolated
     test port, waits for readiness, and always terminates the server after the
@@ -1355,6 +1355,29 @@ or synthetic handler-only tests do not satisfy this section.
     an acceptable substitute.
   - **Acceptance:** The harness fails on build errors, server startup errors,
     readiness timeout, browser launch failure, or leaked server processes.
+  - **Note:** Added `playwright` (1.62.1, headless Chromium) as the browser
+    automation devDependency and `tests/browser/browserHarness.ts` as the
+    shared Section 16 harness: `ensureBrowserBuild()` runs the real
+    `bun run build` once per worker (memoized) and throws on failure;
+    `startTestServer()` spawns the real `bun run server.ts` with an isolated
+    `PORT` (default base 4187, `E2E_TEST_PORT` override) and a fresh temp
+    `GAME_DB_PATH`, races one poll tick against the child `exited` promise so
+    early child exits are detected before readiness (Bun's `Subprocess.exitCode`
+    lags behind real process death and is not used for liveness), polls the
+    root URL for HTTP 200, and `stop()` terminates with SIGTERM then SIGKILL
+    and throws on a leaked process. A module-level set tracks active servers
+    with an `afterAll` assertion and a process-exit SIGKILL guard, so a server
+    can never outlive the test run. `launchBrowser()` wraps Playwright launch
+    failures as `BrowserHarnessError`; `openPage()` fails on non-200 loads.
+    `tests/browser/browser_startup.e2e.test.ts` (6 tests) proves the positive
+    chain (build -> isolated-port server -> readiness -> browser -> terminate;
+    temp DB removed, port free again) and all five harness failure modes:
+    startup error via a regular-file DB parent (deterministic `mkdir` EEXIST,
+    exit 1, no port race), readiness timeout against a never-listening child,
+    browser launch failure via a nonexistent executable, build failure via an
+    unknown tsc option, and no leaked server processes. `package.json` gains
+    `test:browser`. Gates: 631 pass / 5 skip / 0 fail across 195 files (6 new
+    browser tests, 19 new assertions); TSC and production build clean.
 
 - [ ] **Task [16.2]: Verify Browser Boot And Menu Rendering**
   - **Goal:** Open the root URL in a real browser and prove that the generated
