@@ -1725,7 +1725,7 @@ in a browser.
     committed evidence. Full suite: 659 pass / 5 skip / 0 fail across 201
     files (8,209 assertions); TSC clean; `git diff --check` clean.
 
-* [ ] **Task [17.3]: Add A Reusable Map Qualification Harness**
+* [x] **Task [17.3]: Add A Reusable Map Qualification Harness**
 
   * **Goal:** Add a deterministic harness that accepts validated map settings
     and produces one structured technical qualification result.
@@ -1757,6 +1757,46 @@ in a browser.
   * **Constraint:** A safety-limit result remains a warning or failure according
     to the existing qualification contract; it must never be converted into an
     artificial draw.
+  * **Note:** New harness `tests/support/mapQualification.ts` provides
+    `qualifyMapSettings(settings, options, mapId)` (per-run clone of the
+    settings because `GameHandlerBuilder.fromSettings` retains references into
+    the passed object), `qualifyMap(mapId, options)`, `inspectMapSettings()`,
+    and `mirrorSettings()` (mirror x + swap teams), with constants
+    `MAP_PLAYBACK_BOUND = 1200`, `MAP_DEFAULT_MAX_TURNS = 24`, and
+    `MAP_QUALIFICATION_SEEDS = [1503, 1504]`. Every required check is
+    implemented: schema/settings validation; finite, unique, solid-free and
+    lethal-free spawn state; explicit containment rect (or inferred solid
+    extents) enclosing all spawns and the world; legal first action through
+    the production AI/emitter rule path; per-turn bounded playback measured on
+    the live playback state; deterministic duplicate-run equality; snapshot
+    restore equality; replay equality via `ReplayPlayer`; terminal result or
+    explicit bounded ongoing classification; and a 10-tick no-post-completion
+    mutation probe. The engine's Section 13 explicit failure (thrown solver
+    errors) is converted into a structured failed run whose schema/spawn
+    checks keep their real values and whose failure message becomes the
+    invariant finding; duplicate runs failing identically remain
+    deterministic, so a deterministic blocked map is distinguishable from a
+    crash or an artificial draw. The three document maps
+    (`cue-clash`, `frostbite-arena`, `magma-cradle`) previously lacked
+    containment geometry and their players left the world: each now prepends
+    an explicit `{ type: SHAPE.RECTANGLE, x: 0, y: 0, w, h, role:
+    "containment", effects: [] }` rect as the first `arenaGeometry` element
+    (structure counts 7 -> 8 in the catalog/report). Harness evidence at both
+    seeds: `ice-map-v1`, `cue-clash`, and `magma-cradle` pass the full matrix
+    (winners, bounded playback, deterministic, snapshot/replay clean,
+    no post-completion mutation); `frostbite-arena` deterministically throws
+    "Unresolved penetration after max solver iterations" at both seeds - a
+    two-player wall jam under drift 1.0 that the Section 13 solver cannot
+    resolve - and is classified as a structured blocked result
+    (`safetyLimitStatus` "failure", never an artificial draw). The negative
+    cases cover malformed data (schema failure), lethal spawn, dead spawn/no
+    legal actor, a true playback stall (no structures, no handler or
+    per-player physics effects, friction 1/drag 0), playback bound exposure,
+    and custom settings labelling. `tests/map_qualification_harness.test.ts`
+    (12 tests / 230 assertions) gates the positive matrix, the deterministic
+    blocked classification, side-swapped mirroring, and all negative cases.
+    Full suite: 671 pass / 5 skip / 0 fail across 202 files (8,439
+    assertions); TSC clean; `git diff --check` clean.
 
 * [ ] **Task [17.4]: Add A Symmetric Duel Map**
 

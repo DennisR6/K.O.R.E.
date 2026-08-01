@@ -101,7 +101,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: cueClash.spawnRegions.length,
-		structureCount: countArenaGeometry(cueClash),
+		structureCount: countArenaGeometry(cueClash), // includes the containment rect (8)
 		hazardCount: cueClash.hazards.length,
 		hazardTypes: [],
 		friction: "billiards",
@@ -123,7 +123,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: frostbite.spawnRegions.length,
-		structureCount: countArenaGeometry(frostbite),
+		structureCount: countArenaGeometry(frostbite), // includes the containment rect (8)
 		hazardCount: frostbite.hazards.length,
 		hazardTypes: [],
 		friction: "ice",
@@ -145,7 +145,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: magma.spawnRegions.length,
-		structureCount: countArenaGeometry(magma),
+		structureCount: countArenaGeometry(magma), // includes the containment rect (8)
 		hazardCount: magma.hazards.length,
 		hazardTypes: ["force", "kill-zone"],
 		friction: "tiles",

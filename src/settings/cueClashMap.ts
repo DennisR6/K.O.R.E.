@@ -16,7 +16,7 @@ export function createCueClashMap(worldSize: Vector2D): MapDocument {
 		worldSize: { ...worldSize },
 		friction: { ...FRICTION_TABLE.billiards },
 		drift: 0,
-		arenaGeometry: [rect(66, 90, 10, 270), rect(100, 50, 270, 10), rect(425, 55, 270, 10), rect(100, 385, 270, 10), rect(425, 385, 270, 10), rect(725, 90, 10, 270), rect(400, 150, 10, 150)],
+		arenaGeometry: [{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: worldSize.x, h: worldSize.y, role: "containment", effects: [] }, rect(66, 90, 10, 270), rect(100, 50, 270, 10), rect(425, 55, 270, 10), rect(100, 385, 270, 10), rect(425, 385, 270, 10), rect(725, 90, 10, 270), rect(400, 150, 10, 150)],
 		spawnRegions: [{ team: 0, x: 120 * scaleX, y: 120 * scaleY, w: 200 * scaleX, h: 350 * scaleY }, { team: 1, x: 560 * scaleX, y: 120 * scaleY, w: 200 * scaleX, h: 350 * scaleY }],
 		hazards: [],
 	};

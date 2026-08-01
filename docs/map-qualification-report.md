@@ -14,9 +14,9 @@ Classification values are defined by the map design contract:
 | Map ID | Name | Source | Schema | Dimensions | Symmetry | Spawns | Structures | Hazards | Friction | Drift | Team layouts | Browser | Status | Known limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ice-map-v1 | Ice Map | `src/settings/iceMap.ts` (template) + `src/settings/canonicalPlayableMatch.ts` | template | 800x450 | symmetric | 2 | 7 | 6 deadly-obstacle-circles | ice | 0 | 2 teams, 1/2/6 figures | yes (shipped local match) | candidate | Section 17 evidence pending 17.3/17.7; deadly circles at corners and top/bottom center; some kill corridors narrow (Section 16.4) |
-| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 7 | none | billiards | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
-| frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 7 | none | ice | 1 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; forced drift blend 1.0; extreme low friction |
-| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 7 | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
+| cue-clash | Cue Clash | `src/settings/cueClashMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | billiards | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection in content registry; terminal pressure via containment/obstacle elimination only |
+| frostbite-arena | Frostbite Arena | `src/settings/frostbiteArenaMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | none | ice | 1 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; forced drift blend 1.0; extreme low friction; drift 1.0 can wedge two players into the same wall and trigger the Section 13 explicit solver failure (harness evidence 17.3, expected blocked at 17.7) |
+| magma-cradle | Magma Cradle | `src/settings/magmaCradleMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 8 (7 solids + 1 containment rect, Task 17.3) | 2 force-vents, 2 kill-zones | tiles | 0 | 2 teams, 1/2/6 figures | no | candidate | blocked-from-selection; stock hard AI may not seek lethal hazards (17.6 policy note) |
 | symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` (planned, Task 17.4) | 1 | scalable | symmetric | 2 | pending | none | ice | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.4 |
 | structure-control | Structure Control | `src/settings/structureControlMap.ts` (planned, Task 17.5) | 1 | scalable | symmetric | 2 | pending | none | billiards | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.5 |
 | hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` (planned, Task 17.6) | 1 | scalable | symmetric | 2 | pending | 2 kill-zones | tiles | 0 | 2 teams, 1 figure | no | candidate | planned Section 17 candidate; created and verified by Task 17.6 |
@@ -43,3 +43,27 @@ inventory work alone.
   `tests/map_content_inventory.test.ts` verifies the negative cases (duplicate
   IDs, missing source files, unreachable source data, unknown IDs, and
   documentation claiming qualification without committed evidence).
+- 17.3: deterministic qualification harness added as
+  `tests/support/mapQualification.ts` (`qualifyMapSettings()`,
+  `qualifyMap()`, `inspectMapSettings()`, `mirrorSettings()`) with the full
+  required check set (schema/spawn/containment/first-action/bounded-playback/
+  determinism/snapshot-restore/replay/terminal/no-post-completion-mutation),
+  the required structured output (map ID, seed, variant, accepted actions,
+  turns, simulated frames, engine work, result, safety-limit status, spawn
+  and invariant findings, replay/restore status, deterministic fingerprint),
+  and honest failure classification (a thrown engine error becomes a
+  structured failed run; duplicate runs failing identically remain
+  deterministic; a safety-limit result is never converted into an artificial
+  draw). The three document maps gained explicit containment rects (first
+  `arenaGeometry` element, structure counts 7 -> 8) because they previously
+  lacked containment geometry and players left the world. Harness evidence:
+  `ice-map-v1`, `cue-clash`, and `magma-cradle` pass the full matrix at seeds
+  1503/1504 (winners, bounded, deterministic, replay/restore clean);
+  `frostbite-arena` deterministically triggers the Section 13 explicit
+  failure "Unresolved penetration after max solver iterations" at both seeds
+  (a two-player wall jam under drift 1.0) and is classified as a structured
+  blocked result, never an artificial draw. `tests/map_qualification_harness.test.ts`
+  (12 tests / 230 assertions) covers the positive matrix, the deterministic
+  blocked classification, side-swapped mirroring, and the negative cases
+  (malformed data, lethal spawn, dead spawn, playback stall, playback bound
+  exposure, custom labels).
