@@ -19,7 +19,7 @@ describe("main menu online join", () => {
 		);
 		// Landing page: any press advances to the main menu page.
 		pressAt(menu, 400, 100);
-		// Play Online at world (270..530, 220..278).
+		// Play Online at world (270..530, 240..298).
 		pressAt(menu, 400, 250);
 		expect(online).toBe(1);
 		expect(local).toBe(0);
@@ -37,10 +37,10 @@ describe("main menu online join", () => {
 			() => { online++; },
 		);
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		// Play Local Game at world (270..530, 300..358).
+		// Play Local Game at world (270..530, 304..362).
 		pressAt(menu, 400, 325);
 		expect(local).toBe(1);
-		// Choose Map at world (270..530, 380..438) -> map selection page,
+		// Choose Map at world (270..530, 368..426) -> map selection page,
 		// where the first map row sits at world (150..650, 80..120).
 		pressAt(menu, 400, 409);
 		pressAt(menu, 400, 100);
@@ -53,7 +53,7 @@ describe("main menu online join", () => {
 		const menu = new MainMenu(undefined, undefined, undefined, () => { online++; });
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		pressAt(menu, 100, 250); // left of the button column
-		pressAt(menu, 400, 285); // gap between the online and play buttons
+		pressAt(menu, 400, 300); // gap between the online and play buttons
 		expect(online).toBe(0);
 	});
 });

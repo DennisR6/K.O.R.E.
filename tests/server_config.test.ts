@@ -11,7 +11,8 @@ describe("server online-play config", () => {
 		const config = readServerConfig({});
 		expect(config.baseUrl).toBe("https://lupricht.net/kore");
 		expect(config.wsUrl).toBe("wss://lupricht.net/kore");
-		expect(config.baseUrl).toBe(DEFAULT_KORE_BASE_URL);
+		// `readServerConfig` normalizes the trailing slash of the default.
+		expect(config.baseUrl).toBe(DEFAULT_KORE_BASE_URL.replace(/\/$/, ""));
 	});
 
 	test("reads KORE_BASE_URL from the environment", () => {
@@ -22,7 +23,7 @@ describe("server online-play config", () => {
 
 	test("treats an empty environment value as unset", () => {
 		const config = readServerConfig({ KORE_BASE_URL: "" });
-		expect(config.baseUrl).toBe(DEFAULT_KORE_BASE_URL);
+		expect(config.baseUrl).toBe(DEFAULT_KORE_BASE_URL.replace(/\/$/, ""));
 		expect(config.wsUrl).toBe("wss://lupricht.net/kore");
 	});
 

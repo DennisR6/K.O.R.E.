@@ -26,6 +26,7 @@ const evidenceFiles = [
 	"tests/browser/browserDiagnostics.ts",
 	"tests/browser/browser_diagnostics.test.ts",
 	"tests/browser/map_catalog.e2e.test.ts",
+	"tests/browser/browser_ai_battle.e2e.test.ts",
 	"tests/browser/browser_release_gate.test.ts",
 ];
 
@@ -69,7 +70,7 @@ describe("Section 16.6 browser gameplay release gate", () => {
 	test("the browser gate commands both pass in the record", () => {
 		const report = read("docs/release-verification.md");
 		expect(report).toMatch(/bun run test:browser:smoke.*PASS: 10 pass \/ 0 fail/);
-		expect(report).toMatch(/bun run test:browser:full.*PASS: 18 pass \/ 0 fail/);
+		expect(report).toMatch(/bun run test:browser:full.*PASS: 19 pass \/ 0 fail/);
 		expect(report).toContain("PASS - browser-playable");
 	});
 

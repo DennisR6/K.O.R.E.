@@ -322,8 +322,8 @@ in the E2E tests is a real Playwright pointer event, never a direct engine call.
 
 | Command | Result |
 | --- | --- |
-| `bun run test:browser:smoke` | PASS: 10 pass / 0 fail, 44 assertions across 1 file [21.64s] |
-| `bun run test:browser:full` | PASS: 18 pass / 0 fail, 308 assertions across 5 files [73.60s] |
+| `bun run test:browser:smoke` | PASS: 10 pass / 0 fail, 44 assertions across 1 file [21.50s] |
+| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files [80.29s] |
 
 Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 `bun run build`) and manage the Bun server lifecycle through the harness
@@ -380,8 +380,8 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 | --- | --- |
 | `bun run test:maps` | PASS (cache-backed smoke check of shipped maps) |
 | `bun run test:maps:matrix` | PASS: 504 cells matched byte-for-byte in attempt `release-2026-08-01` |
-| `bun run test:browser:full` | PASS: 18 pass / 0 fail, 308 assertions across 5 files |
-| `bun test` | PASS: 800 tests across 214 files |
+| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files |
+| `bun test` | PASS: 815 tests across 217 files |
 | `npx tsc --noEmit` | PASS: 0 type errors |
 | `bun run build` | PASS: `dist/main.js` and browser assets compiled |
 | `git diff --check` | PASS: no git whitespace or format errors |

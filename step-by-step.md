@@ -2245,3 +2245,40 @@ map release
     it; operators set the variable on the deployed server. Local multiplayer
     development keeps working through `?skipmenu=1&url=ws://localhost:4001` or
     a server-side `KORE_BASE_URL` override.
+
+## 19. KI-vs-KI Battle
+
+* [x] **Task [19.1]: Autonomous KI-vs-KI Battle From The Main Menu**
+
+  * **Goal:** Let the menu start a spectator battle in which both teams are
+    played by the AI automatically, without any pointer input.
+  * **Target Files:** `src/ai/AiBattleSystem.ts`, `src/menu/Menu.ts`,
+    `src/scenes/LocalMatchSceneRouter.ts`, `src/ai/aiEmitter.ts`
+  * **Test File:** `tests/ai_battle_menu.test.ts`,
+    `tests/ai_battle_match.test.ts`,
+    `tests/browser/browser_ai_battle.e2e.test.ts`
+  * **Allowed Context:** AI drivers, menu pages, local match scene wiring,
+    browser E2E harness
+  * **Commit:** `feat: add a KI vs KI battle to the main menu`
+  * **Required Contract:**
+
+    * The main menu offers a "KI vs KI" action (world rect
+      `(270..530, 176..234)`); the existing Play Online, Play Local Game, and
+      Choose Map rectangles stay reachable at their documented coordinates.
+    * The battle reuses the validated canonical settings, the winning
+      evaluator, and the local `GameEmitter` turn flow; both teams are driven
+      through the shared `AiTurnEmitter` input boundary with bounded hard-AI
+      search limits.
+    * The `AiBattleSystem` skips the item phase (the stock AI never chooses
+      items) and submits exactly one legal shot per physics phase; it also
+      implements the passive mouse contract so the result overlay can wrap it
+      without accepting human input.
+    * A battle plays to a consistent terminal result (winner or draw),
+      survives persistence round trips, and rematches to a playable turn
+      zero.
+    * The browser bundle must not pull server-only modules: the AI path uses
+      the pure `src/input/validate.ts` boundary, not the `gameRegistry`
+      re-export.
+    * A real browser run proves the full flow: menu click, battle start with
+      the `AiBattleSystem` installed behind the result overlay, and at least
+      one completed turn without input.

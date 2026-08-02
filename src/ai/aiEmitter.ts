@@ -2,7 +2,10 @@ import type { GameHandler } from "../engine/Handler.js";
 import type { IInputEmitter } from "../engine/types.js";
 import type { ItemTarget } from "../item/target.js";
 import type { AiSettings } from "./types.js";
-import { isValidInput } from "../server/gameRegistry.js";
+// The pure shared input boundary: `server/gameRegistry` re-exports the same
+// function, but the AI path must not pull server-only modules into the
+// browser bundle.
+import { isValidInput } from "../input/validate.js";
 
 export interface AiDecision {
 	shot?: { actorId: string; angle: number; power: number };

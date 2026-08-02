@@ -7,9 +7,11 @@ import { buildOnlineJoinUrl } from "../utils/onlineConfig.js";
 
 const TimeFactorInSeconds = 60
 const MaxTimerSeconds = 10
-const playButton = { x: 270, y: 300, w: 260, h: 58 }
-const onlineButton = { x: 270, y: 220, w: 260, h: 58 }
-const chooseMapButton = { x: 270, y: 380, w: 260, h: 58 }
+// Four stacked menu actions: KI vs KI, Play Online, Play Local Game, Choose Map.
+const kiButton = { x: 270, y: 176, w: 260, h: 58 }
+const onlineButton = { x: 270, y: 240, w: 260, h: 58 }
+const playButton = { x: 270, y: 304, w: 260, h: 58 }
+const chooseMapButton = { x: 270, y: 368, w: 260, h: 58 }
 
 
 export const enum Pages {
@@ -33,10 +35,11 @@ export class MainMenu implements IMenu {
 		onSelectMap?: (mapId: string) => void,
 		private readonly getStartError?: () => string | undefined,
 		onPlayOnline?: () => void,
+		onPlayAiBattle?: () => void,
 	) {
 		this.pages = [
 			new LandingPage((page: Pages) => this.activePage = page),
-			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap, onPlayOnline),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap, onPlayOnline, onPlayAiBattle),
 			new MapSelectionPage((page: Pages) => this.activePage = page, onSelectMap ?? (() => { })),
 		]
 	}
@@ -102,15 +105,18 @@ export class MainMenuPage implements IMenuPage {
 		private readonly onPlayLocal?: () => void,
 		private readonly onChooseMap?: () => void,
 		private readonly onPlayOnline?: () => void,
+		private readonly onPlayAiBattle?: () => void,
 	) { this.cb = pageSwitcher }
 	draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
 		ctx.setFillColor("#102a43")
+		ctx.drawRect(kiButton.x, kiButton.y, kiButton.w, kiButton.h)
 		ctx.drawRect(onlineButton.x, onlineButton.y, onlineButton.w, onlineButton.h)
 		ctx.drawRect(playButton.x, playButton.y, playButton.w, playButton.h)
 		ctx.drawRect(chooseMapButton.x, chooseMapButton.y, chooseMapButton.w, chooseMapButton.h)
 		ctx.setFillColor("white")
+		ctx.drawText("KI vs KI", kiButton.x + 28, kiButton.y + 38, 28)
 		ctx.drawText("Play Online", onlineButton.x + 28, onlineButton.y + 38, 28)
 		ctx.drawText("Play Local Game", playButton.x + 28, playButton.y + 38, 28)
 		ctx.drawText("Choose Map", chooseMapButton.x + 28, chooseMapButton.y + 38, 28)
@@ -119,6 +125,10 @@ export class MainMenuPage implements IMenuPage {
 
 	handleMousePressed(): void {
 		const { x, y } = this.mouse
+		if (x >= kiButton.x && x <= kiButton.x + kiButton.w && y >= kiButton.y && y <= kiButton.y + kiButton.h) {
+			this.onPlayAiBattle?.()
+			return
+		}
 		if (x >= onlineButton.x && x <= onlineButton.x + onlineButton.w && y >= onlineButton.y && y <= onlineButton.y + onlineButton.h) {
 			if (this.onPlayOnline) {
 				this.onPlayOnline()

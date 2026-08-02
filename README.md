@@ -74,14 +74,17 @@ bun run docs
 ## Gameplay Modes
 
 1. **Local Hotseat Play:** Serve static client with `bun run serve` or open `index.html?skipmenu=1` in your browser.
-2. **Authoritative Network Multiplayer:** Run `bun run start`, open the page
+2. **KI vs KI Battle:** Press **KI vs KI** in the main menu to watch an
+   autonomous spectator battle: both teams are played by the bounded
+   hard-AI driver on the canonical arena, with no pointer input required.
+3. **Authoritative Network Multiplayer:** Run `bun run start`, open the page
    and press **Play Online** in the main menu. The server advertises its public
    base URL through `/config`; join a second browser tab to get matched into a
    game. The advertised URL defaults to `https://lupricht.net/kore` and is
    overridable with the `KORE_BASE_URL` environment variable. Manual override
    remains available: `http://localhost:4001/?skipmenu=1&url=ws://localhost:4001`.
-3. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
-4. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
+4. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
+5. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
 
 ## Environment Variables
 

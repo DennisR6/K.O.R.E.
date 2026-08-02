@@ -23,7 +23,7 @@
 		"test:gameplay-pacing": "bun test tests/match_length_distribution.test.ts",
 		"test:gameplay-tournament": "bun test tests/gameplay_fairness_tournament.test.ts",
 		"test:browser:smoke": "bun test tests/browser/browser_startup.e2e.test.ts",
-		"test:browser:full": "bun test tests/browser/browser_startup.e2e.test.ts tests/browser/local_turn.e2e.test.ts tests/browser/local_match_flow.e2e.test.ts tests/browser/browser_diagnostics.test.ts tests/browser/map_catalog.e2e.test.ts",
+		"test:browser:full": "bun test tests/browser/browser_startup.e2e.test.ts tests/browser/local_turn.e2e.test.ts tests/browser/local_match_flow.e2e.test.ts tests/browser/browser_diagnostics.test.ts tests/browser/map_catalog.e2e.test.ts tests/browser/browser_ai_battle.e2e.test.ts",
 		"test:browser": "bun run test:browser:full",
 		"bench:physics": "bun test tests/physics_performance.test.ts",
 		"createAssets": "bun run scripts/createAssetPack.ts",

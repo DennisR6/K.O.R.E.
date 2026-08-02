@@ -156,6 +156,22 @@ After every change, check whether this guide still reflects the implementation a
   validation and inventory tests, but item effects are not yet installed by
   `GameHandler.useItem()`.
 
+### AI drivers
+
+- `src/ai/aiEmitter.ts`: `AiTurnEmitter` executes a producer decision against
+  a target emitter and filters wrong-team/dead actors through the pure
+  `src/input/validate.ts` boundary (it must not import server modules, or the
+  browser bundle would pull in `bun:sqlite`).
+- `src/ai/easyAi.ts`, `mediumAi.ts`, and `hardAi.ts`: deterministic
+  shot-only producers; `HardAi` samples bounded simulations
+  (`decisionLimits`).
+- `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
+  `decisionLimits`) and `validateAiSettings`.
+- `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
+  skips the item phase, submits one legal shot per physics phase through
+  `AiTurnEmitter`, and implements the passive `IMouse` contract so the result
+  overlay can wrap it without accepting human input.
+
 ### Physics, structures, and systems
 
 - `src/physics/physics.ts`: vector and physics contracts plus numeric `SHAPE`
@@ -210,11 +226,13 @@ After every change, check whether this guide still reflects the implementation a
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
   without retaining stale handlers; `createLocalGameplayHandler()` wires
   `UiSystem`, `DirectionArrow`, `GameplayFeedback`, `ItemPhaseControls`, and
-  `EmitterSystem` around a canonical match.
+  `EmitterSystem` around a canonical match; `createAiBattleHandler()` builds an
+  autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- `src/menu/Menu.ts`: landing and menu pages; the main menu offers
-  "Play Online" (joins a match on the server advertised by `/config`), a
+- `src/menu/Menu.ts`: landing and menu pages; the main menu offers a
+  "KI vs KI" battle action (world rect `(270..530, 176..234)`), a "Play
+  Online" action (joins a match on the server advertised by `/config`), a
   "Play Local Game" button, and a "Choose Map" page listing every
   `browserAvailable` catalog map (`MapSelectionPage`).
 - `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
