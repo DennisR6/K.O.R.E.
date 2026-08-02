@@ -381,7 +381,7 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 | `bun run test:maps` | PASS (cache-backed smoke check of shipped maps) |
 | `bun run test:maps:matrix` | PASS: 504 cells matched byte-for-byte in attempt `release-2026-08-01` |
 | `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files |
-| `bun test` | PASS: 815 tests across 217 files |
+| `bun test` | PASS: 819 tests across 218 files |
 | `npx tsc --noEmit` | PASS: 0 type errors |
 | `bun run build` | PASS: `dist/main.js` and browser assets compiled |
 | `git diff --check` | PASS: no git whitespace or format errors |

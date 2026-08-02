@@ -164,7 +164,10 @@ After every change, check whether this guide still reflects the implementation a
   browser bundle would pull in `bun:sqlite`).
 - `src/ai/easyAi.ts`, `mediumAi.ts`, and `hardAi.ts`: deterministic
   shot-only producers; `HardAi` samples bounded simulations
-  (`decisionLimits`).
+  (`decisionLimits`) and resolves equal-scoring candidates through its seed
+  (seeded tie-break plus a rotated fallback angle grid), keeping killing
+  moves preferred and non-killing ties aimed at an enemy, so every battle
+  seed plays a different game while matches keep terminating.
 - `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
   `decisionLimits`) and `validateAiSettings`.
 - `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
@@ -228,6 +231,9 @@ After every change, check whether this guide still reflects the implementation a
   `UiSystem`, `DirectionArrow`, `GameplayFeedback`, `ItemPhaseControls`, and
   `EmitterSystem` around a canonical match; `createAiBattleHandler()` builds an
   autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
+  Every battle start and battle rematch draws a fresh battle seed (injectable
+  `battleSeedSource`, exposed as `getBattleSeed()`), so each battle is a new
+  game while remaining reproducible from its seed.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - `src/menu/Menu.ts`: landing and menu pages; the main menu offers a

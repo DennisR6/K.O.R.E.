@@ -27,8 +27,13 @@ export class LocalMatchSceneRouter {
 	private starting = false;
 	private error: string | undefined;
 	private mapId: string | null = null;
+	private aiBattle = false;
+	private battleSeed: number | undefined;
 
-	public constructor(private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler) {
+	public constructor(
+		private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler,
+		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
+	) {
 		this.handler = new GameHandler();
 		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, () => this.startAiBattle());
 		this.handler.setMouseHandler(menu);
@@ -40,6 +45,8 @@ export class LocalMatchSceneRouter {
 	public getMapId(): string | null { return this.mapId; }
 	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === "local-ice-duel-v1"; }
 	public isResultVisible(): boolean { return this.overlay?.isVisible() ?? false; }
+	/** The seed of the currently running KI battle, or undefined in the menu. */
+	public getBattleSeed(): number | undefined { return this.battleSeed; }
 
 	/** Starts exactly one canonical match on the given map; failures leave the menu handler usable. */
 	public startLocalMatch(mapId: string = "ice-map-v1"): boolean {
@@ -47,10 +54,19 @@ export class LocalMatchSceneRouter {
 		return this.startScene(() => this.createLocalHandler(mapId), mapId);
 	}
 
-	/** Starts one autonomous KI-vs-KI battle on the canonical arena. */
+	/**
+	 * Starts one autonomous KI-vs-KI battle on the canonical arena. Every
+	 * start draws a fresh battle seed so the AI plays a new game.
+	 */
 	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
-		return this.startScene(() => createAiBattleHandler(mapId), mapId);
+		const seed = this.battleSeedSource();
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed), mapId);
+		if (started) {
+			this.aiBattle = true;
+			this.battleSeed = seed;
+		}
+		return started;
 	}
 
 	private startScene(factory: () => GameHandler, mapId: string | null): boolean {
@@ -82,12 +98,22 @@ export class LocalMatchSceneRouter {
 	private handleResultAction(action: MatchResultAction): void {
 		if (!this.overlay?.isVisible()) return;
 		if (action === "rematch") {
+			if (this.aiBattle) {
+				// A battle rematch must be a fresh game: re-draw the battle
+				// seed instead of replaying the same seeded decisions.
+				const seed = this.battleSeedSource();
+				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed), this.mapId);
+				if (restarted) this.battleSeed = seed;
+				return;
+			}
 			this.handler.rematch();
 			return;
 		}
 		this.handler.dispose();
 		this.overlay = undefined;
 		this.mapId = null;
+		this.aiBattle = false;
+		this.battleSeed = undefined;
 		this.handler = this.createMenuHandler();
 	}
 
@@ -132,7 +158,8 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHa
  * the same validated settings and winning evaluator as the local match, but
  * replaces all human input with an `AiBattleSystem` that drives both teams
  * through the shared `AiTurnEmitter` boundary. The battle seed defaults to a
- * fresh random draw; pass an explicit seed for deterministic reproduction.
+ * fresh random draw and varies the hard-AI decisions deterministically, so
+ * every battle is a new game; pass an explicit seed for reproducible games.
  */
 export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
 	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());

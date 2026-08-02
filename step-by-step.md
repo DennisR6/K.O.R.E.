@@ -2282,3 +2282,31 @@ map release
     * A real browser run proves the full flow: menu click, battle start with
       the `AiBattleSystem` installed behind the result overlay, and at least
       one completed turn without input.
+
+* [x] **Task [19.2]: Seed-Varied Battles And Seed-Sensitive Hard AI**
+
+  * **Goal:** Every battle (start and rematch) must be a different game, while
+    every seed stays fully reproducible for replays and persistence.
+  * **Target Files:** `src/ai/hardAi.ts`,
+    `src/scenes/LocalMatchSceneRouter.ts`
+  * **Test File:** `tests/ai_battle_seed_variation.test.ts`
+  * **Commit:** included in `feat: add a KI vs KI battle to the main menu`
+  * **Required Contract:**
+
+    * `HardAi` resolves its bounded search deterministically from
+      `AiSettings.seed`: the fallback angle grid is rotated by a seeded offset
+      and equally-best candidates break ties through `SeededRandom`, so every
+      seed plays a different game. Killing moves stay preferred and
+      non-killing ties keep aiming at an enemy, so seeded matches still
+      terminate. Easy and medium AI already consume the seed.
+    * The scene draws a fresh battle seed for every menu battle start
+      (injectable `battleSeedSource`, exposed as `getBattleSeed()`) and
+      re-draws it on battle rematch; a battle rematch rebuilds the scene
+      instead of replaying the same seeded decisions, while the human local
+      rematch keeps replaying the identical settings.
+    * Different battle seeds produce different recorded shot sequences; the
+      same seed replays the identical game (shots, ticks, result).
+    * The deterministic Section 11 convergence arena recalibrated to the new
+      seed tie-break (52 turns / 53 actions for AI seeds 111/222); killing
+      moves stay preferred and non-killing ties keep aiming at an enemy, so
+      seeded matches still terminate.
