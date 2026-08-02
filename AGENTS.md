@@ -214,7 +214,8 @@ After every change, check whether this guide still reflects the implementation a
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - `src/menu/Menu.ts`: landing and menu pages; the main menu offers
-  "Play Local Game" and a "Choose Map" page listing every
+  "Play Online" (joins a match on the server advertised by `/config`), a
+  "Play Local Game" button, and a "Choose Map" page listing every
   `browserAvailable` catalog map (`MapSelectionPage`).
 - `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
@@ -229,6 +230,10 @@ After every change, check whether this guide still reflects the implementation a
 ### Networking and utilities
 
 - `src/server/types.ts`: JSON wire protocol and packet types.
+- `src/server/config.ts`: server-published online-play configuration; reads
+  `KORE_BASE_URL` (default `https://lupricht.net/kore`), derives the matching
+  WebSocket URL, and serves the `/config` JSON contract used by the browser
+  "Play Online" action.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
   `EngineSettings` snapshots and maintains player-to-game membership rows.
@@ -246,6 +251,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
   emitter composition, test capture, and replay-oriented helpers.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
+- `src/utils/onlineConfig.ts`: browser-side online-play config; fetches the
+  server's `/config` advertisement, falls back to the page origin and then to
+  the built-in default deployment, and builds the `skipmenu=1&url=...` join URL
+  used by the menu's "Play Online" action.
 - `src/utils/random.ts`: deterministic pseudo-random source for replayable
   gameplay decisions.
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
@@ -330,9 +339,12 @@ The default URL opens the menu. Local gameplay is selected with a non-empty
 http://localhost:4001/?skipmenu=1
 ```
 
-Query values are assigned as strings, so even `?skipmenu=false` is truthy.
+`skipmenu` is truthy only for the values `1` and `true` in `src/main.ts`.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed
-but currently unused.
+but currently unused. The main menu's "Play Online" button fetches the
+server's `/config` advertisement (base URL from `KORE_BASE_URL`) and navigates
+to `?skipmenu=1&url=<derived-ws-url>`; the manual `?url=` override still wins
+when present.
 
 The browser runtime is the vendored p5 file in `public/` (currently p5
 1.11.x), while `package.json` declares p5 2.x and the typings are 1.7.x.
@@ -603,6 +615,10 @@ authoritative `REMATCH` resets the handler and broadcasts fresh per-player
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
 from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
+The server advertises its public base URL through `/config`: `KORE_BASE_URL`
+(default `https://lupricht.net/kore`) is read at startup, the matching WebSocket
+URL is derived, and both are served as a never-cached JSON contract. The
+browser "Play Online" action reads that contract to build its join URL.
 
 Do not trust values from a `SHOOT` packet. `GameRegistry` must continue to
 validate finite angle/power ranges, actor ownership/activity, game membership,
@@ -612,8 +628,9 @@ by injecting `new GameDatabase(":memory:")`.
 Be careful when running `bun run start`:
 
 - The static handler serves `index.html`, `/sw.js` (from `public/sw.js` for the
-  root-scope offline shell), `public/`, and `dist/`; continue to keep secrets
-  out of this repository and do not broaden that allowlist casually.
+  root-scope offline shell), `public/`, `dist/`, and the `/config` JSON contract;
+  continue to keep secrets out of this repository and do not broaden that
+  allowlist casually.
 - The production server writes `./data/kore.db` by default. `*.db` is ignored;
   do not commit database files. Set `GAME_DB_PATH` for another durable path.
 

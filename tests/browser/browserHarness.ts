@@ -110,6 +110,8 @@ export interface StartTestServerOptions {
 	pollIntervalMs?: number;
 	/** SQLite database path; defaults to a fresh temp directory. */
 	dbPath?: string;
+	/** Extra environment variables for the spawned server (e.g. KORE_BASE_URL). */
+	env?: Record<string, string>;
 	/** Server command; defaults to the real `bun run server.ts`. */
 	command?: string[];
 }
@@ -130,7 +132,7 @@ export async function startTestServer(options: StartTestServerOptions = {}): Pro
 	const proc = Bun.spawn({
 		cmd: command,
 		cwd: REPO_ROOT,
-		env: { ...process.env, PORT: String(port), GAME_DB_PATH: dbPath },
+		env: { ...process.env, PORT: String(port), GAME_DB_PATH: dbPath, ...options.env },
 		stdout: "pipe",
 		stderr: "pipe",
 	});

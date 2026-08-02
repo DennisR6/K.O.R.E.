@@ -2,11 +2,13 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IMenu, IMenuPage } from "./MenuTypes.js";
 import { MAP_CATALOG, type MapCatalogEntry } from "../content/mapCatalog.js";
+import { buildOnlineJoinUrl } from "../utils/onlineConfig.js";
 
 
 const TimeFactorInSeconds = 60
 const MaxTimerSeconds = 10
 const playButton = { x: 270, y: 300, w: 260, h: 58 }
+const onlineButton = { x: 270, y: 220, w: 260, h: 58 }
 const chooseMapButton = { x: 270, y: 380, w: 260, h: 58 }
 
 
@@ -26,10 +28,15 @@ export class MainMenu implements IMenu {
 		new LandingPage((page: Pages) => this.activePage = page),
 		new MainMenuPage((page: Pages) => this.activePage = page),
 	]
-	constructor(onPlayLocal?: () => void, onSelectMap?: (mapId: string) => void, private readonly getStartError?: () => string | undefined) {
+	constructor(
+		onPlayLocal?: () => void,
+		onSelectMap?: (mapId: string) => void,
+		private readonly getStartError?: () => string | undefined,
+		onPlayOnline?: () => void,
+	) {
 		this.pages = [
 			new LandingPage((page: Pages) => this.activePage = page),
-			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap, onPlayOnline),
 			new MapSelectionPage((page: Pages) => this.activePage = page, onSelectMap ?? (() => { })),
 		]
 	}
@@ -90,14 +97,21 @@ export class MainMenuPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
 	private timer = 0
 	private cb: (page: Pages) => void
-	constructor(pageSwitcher: (page: Pages) => void, private readonly onPlayLocal?: () => void, private readonly onChooseMap?: () => void) { this.cb = pageSwitcher }
+	constructor(
+		pageSwitcher: (page: Pages) => void,
+		private readonly onPlayLocal?: () => void,
+		private readonly onChooseMap?: () => void,
+		private readonly onPlayOnline?: () => void,
+	) { this.cb = pageSwitcher }
 	draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
 		ctx.setFillColor("#102a43")
+		ctx.drawRect(onlineButton.x, onlineButton.y, onlineButton.w, onlineButton.h)
 		ctx.drawRect(playButton.x, playButton.y, playButton.w, playButton.h)
 		ctx.drawRect(chooseMapButton.x, chooseMapButton.y, chooseMapButton.w, chooseMapButton.h)
 		ctx.setFillColor("white")
+		ctx.drawText("Play Online", onlineButton.x + 28, onlineButton.y + 38, 28)
 		ctx.drawText("Play Local Game", playButton.x + 28, playButton.y + 38, 28)
 		ctx.drawText("Choose Map", chooseMapButton.x + 28, chooseMapButton.y + 38, 28)
 		ctx.pop()
@@ -105,6 +119,16 @@ export class MainMenuPage implements IMenuPage {
 
 	handleMousePressed(): void {
 		const { x, y } = this.mouse
+		if (x >= onlineButton.x && x <= onlineButton.x + onlineButton.w && y >= onlineButton.y && y <= onlineButton.y + onlineButton.h) {
+			if (this.onPlayOnline) {
+				this.onPlayOnline()
+				return
+			}
+			void buildOnlineJoinUrl(window.location.href)
+				.then(url => { window.location.assign(url) })
+				.catch(error => console.warn("Online join failed", error))
+			return
+		}
 		if (x >= playButton.x && x <= playButton.x + playButton.w && y >= playButton.y && y <= playButton.y + playButton.h) {
 			if (this.onPlayLocal) {
 				this.onPlayLocal()

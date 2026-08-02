@@ -2206,3 +2206,42 @@ human quality
 map release
 → only evidence-backed qualified content is exposed as qualified
 ```
+
+## 18. Online Join Configuration
+
+* [x] **Task [18.1]: Join Matches Through A Configurable Public Base URL**
+
+  * **Goal:** Let the browser menu join a multiplayer match on a configurable
+    server base URL instead of requiring a manually typed `?url=` query
+    parameter. The default is the canonical deployment at
+    `https://lupricht.net/kore`, and the value comes from the `KORE_BASE_URL`
+    environment variable on the server.
+  * **Target Files:** `server.ts`, `src/server/config.ts`,
+    `src/utils/onlineConfig.ts`, `src/menu/Menu.ts`,
+    `tests/browser/browserHarness.ts`
+  * **Test File:** `tests/server_config.test.ts`,
+    `tests/online_client_config.test.ts`, `tests/online_join_menu.test.ts`,
+    `tests/server_config.integration.test.ts`, and the Play Online action in
+    `tests/browser/browser_startup.e2e.test.ts`
+  * **Allowed Context:** server entry point, network protocol runtime,
+    browser startup branch, menu pages
+  * **Commit:** `feat: join online matches from a configurable base URL`
+  * **Required Contract:**
+
+    * The server reads `KORE_BASE_URL` (default `https://lupricht.net/kore`),
+      derives the matching WebSocket URL, and rejects malformed values at
+      startup.
+    * The server publishes `{ baseUrl, wsUrl }` as a never-cached `/config`
+      JSON contract without broadening the static-file allowlist for other
+      paths.
+    * The browser menu offers a "Play Online" action that reads `/config`,
+      falls back to the page origin and then to the built-in default
+      deployment, and navigates to `?skipmenu=1&url=<ws-url>` while preserving
+      the current path (path-prefix deployments).
+    * The manual `?url=` query override keeps working unchanged.
+    * A real browser run proves the full join flow: menu click, correct
+      navigation parameters, and two incognito tabs matched into one game.
+  * **Note:** `.env` is tracked, so `KORE_BASE_URL` intentionally stays out of
+    it; operators set the variable on the deployed server. Local multiplayer
+    development keeps working through `?skipmenu=1&url=ws://localhost:4001` or
+    a server-side `KORE_BASE_URL` override.
