@@ -172,6 +172,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
+		// Autonomous drivers are input adapters, not physics participants.  A
+		// simulated shot must not let an AI submit nested turns in its clone.
+		if (settings.systems && settings.systemOrder) {
+			settings.systems = settings.systems.filter((system: { systemId: string }) => system.systemId !== "ai.battle")
+			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle")
+		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
 		return g.resolveTurn({ actorId, angle, power })
 	}
