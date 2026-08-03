@@ -4,7 +4,7 @@ import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
 import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import type { MapRepository } from "./mapRepository.js";
-import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -61,6 +61,9 @@ export class ServerRuntime {
 			case NetworkMessageType.CREATE_REPLAY_SHARE:
 				this.createReplayShare(socket)
 				return
+			case NetworkMessageType.LEAVE_GAME:
+				this.leaveGame(socket)
+				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
@@ -100,6 +103,15 @@ export class ServerRuntime {
 		const result = this.games.createReplayShare(userId);
 		if (!result.ok) return this.sendError(socket, result.error);
 		socket.send(wrap<NetworkReplayShareCreated>({ type: NetworkMessageType.REPLAY_SHARE_CREATED, token: result.token }));
+	}
+
+	private leaveGame(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before leaving a game");
+		const record = this.games.endGameForUser(userId);
+		if (!record) return this.sendError(socket, "No active game for this user");
+		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" };
+		for (const user of record.users) this.socketForUser(user)?.send(wrap(ended));
 	}
 
 	private handleDiscordJoin(socket: ServerSocket, payload: unknown): void {

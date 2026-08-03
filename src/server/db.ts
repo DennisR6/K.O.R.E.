@@ -180,6 +180,11 @@ export class GameDatabase {
 		return row?.game_id;
 	}
 
+	/** Removes an abandoned match and all membership rows through SQLite cascades. */
+	public deleteGame(id: string): void {
+		this.db.query("DELETE FROM games WHERE id = ?1").run(id);
+	}
+
 	public hasGame(id: string): boolean {
 		return this.db.query("SELECT 1 AS found FROM games WHERE id = ?1").get(id) !== null;
 	}

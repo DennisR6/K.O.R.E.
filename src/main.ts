@@ -227,6 +227,15 @@ function installPauseMenu(socket: WebSocket): void {
 	leave.textContent = "Leave game"
 	const status = document.createElement("p")
 	status.textContent = ""
+	let leaving = false
+	const returnToMenu = () => {
+		socket.close()
+		const url = new URL(window.location.href)
+		url.searchParams.delete("skipmenu")
+		url.searchParams.delete("url")
+		url.searchParams.delete("map")
+		window.location.assign(url.toString())
+	}
 	pause.addEventListener("click", () => socket.send(wrap({ type: NetworkMessageType.PAUSE_REQUEST, action: pause.dataset.paused === "true" ? "resume" : "pause" })))
 	report.addEventListener("click", () => {
 		const text = window.prompt("Describe the issue (max 500 characters)")
@@ -234,12 +243,14 @@ function installPauseMenu(socket: WebSocket): void {
 		socket.send(wrap({ type: NetworkMessageType.REPORT_MATCH, category: "other", text }))
 	})
 	leave.addEventListener("click", () => {
-		socket.close()
-		const url = new URL(window.location.href)
-		url.searchParams.delete("skipmenu")
-		url.searchParams.delete("url")
-		url.searchParams.delete("map")
-		window.location.assign(url.toString())
+		if (leaving) return
+		if (socket.readyState !== WebSocket.OPEN) returnToMenu()
+		else {
+			leaving = true
+			leave.disabled = true
+			status.textContent = "Leaving game…"
+			socket.send(wrap({ type: NetworkMessageType.LEAVE_GAME }))
+		}
 	})
 	socket.addEventListener("message", event => {
 		try {
@@ -251,8 +262,10 @@ function installPauseMenu(socket: WebSocket): void {
 				status.textContent = state.waitingForOtherPlayer ? "Waiting for the other player…" : state.paused ? "Match paused" : "Match resumed"
 			}
 			if (message.type === NetworkMessageType.REPORT_SUBMITTED) status.textContent = "Report submitted"
+			if (message.type === NetworkMessageType.GAME_ENDED) returnToMenu()
 		} catch { /* protocol receiver handles malformed packets separately */ }
 	})
+	socket.addEventListener("close", () => { if (leaving) returnToMenu() })
 	menu.append(pause, report, leave, status)
 	document.body.append(menu)
 }

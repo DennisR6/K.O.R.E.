@@ -49,6 +49,8 @@ export const enum NetworkMessageType {
 	PAUSE_STATE = "PAUSE_STATE",
 	CREATE_REPLAY_SHARE = "CREATE_REPLAY_SHARE",
 	REPLAY_SHARE_CREATED = "REPLAY_SHARE_CREATED",
+	LEAVE_GAME = "LEAVE_GAME",
+	GAME_ENDED = "GAME_ENDED",
 }
 
 export function getNetworkPacketType(input: NetworkMessageType): string {
@@ -89,6 +91,8 @@ export type UnTypedNetworkMessage =
 	| NetworkPauseState
 	| NetworkCreateReplayShare
 	| NetworkReplayShareCreated
+	| NetworkLeaveGame
+	| NetworkGameEnded
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
@@ -138,5 +142,9 @@ export interface NetworkPauseRequest { type: NetworkMessageType.PAUSE_REQUEST, a
 export interface NetworkPauseState { type: NetworkMessageType.PAUSE_STATE, paused: boolean, waitingForOtherPlayer: boolean }
 export interface NetworkCreateReplayShare { type: NetworkMessageType.CREATE_REPLAY_SHARE }
 export interface NetworkReplayShareCreated { type: NetworkMessageType.REPLAY_SHARE_CREATED, token: string }
+/** Explicitly abandons the current match instead of preserving it for reconnect. */
+export interface NetworkLeaveGame { type: NetworkMessageType.LEAVE_GAME }
+/** Sent to every connected participant when a player abandons a match. */
+export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

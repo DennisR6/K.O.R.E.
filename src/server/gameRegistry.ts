@@ -114,6 +114,17 @@ export class GameRegistry {
 		}
 	}
 
+	/** Ends an abandoned match so none of its players can restore it on reconnect. */
+	public endGameForUser(userId: string): GameRecord | undefined {
+		const record = this.getForUser(userId);
+		if (!record) return undefined;
+		this.games.delete(record.id);
+		record.connectedUsers.clear();
+		record.handler.dispose();
+		this.database.deleteGame(record.id);
+		return record;
+	}
+
 	/** Drops inactive handlers only. Durable SQLite state remains available. */
 	public evictInactive(now: number = Date.now()): void {
 		for (const [id, record] of this.games) {
