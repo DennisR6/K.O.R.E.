@@ -23,7 +23,7 @@ const usersettings = {
 	url: uri.searchParams.get("url") ?? "",
 	mapbuilder: uri.searchParams.has("mapbuilder"),
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
-	replay: uri.searchParams.has("replay"),
+	replayToken: uri.searchParams.get("replay") ?? "",
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 }
 
@@ -34,7 +34,11 @@ let handler: GameHandler
 let router: LocalMatchSceneRouter | undefined
 const builder = new GameHandlerBuilder()
 	.defaultSystems()
-if (!usersettings.skipmenu) {
+if (usersettings.replayToken) {
+	handler = new GameHandler()
+	startReplayViewer(usersettings.replayToken)
+	startGame(handler, () => handler)
+} else if (!usersettings.skipmenu) {
 	router = new LocalMatchSceneRouter()
 	handler = router.getHandler()
 	startGame(handler, () => router?.getHandler() ?? handler)
@@ -113,11 +117,7 @@ function startNetworkGame(serverUrl: string) {
 		const init = message as NetworkInit
 		if (init.mapId) loading.setMessage(`Starting ${init.mapId}…`)
 		const settings = init.settings
-const ui = new UiSystem()
-if (usersettings.replay) {
-	const viewer = new ReplayViewer();
-	(window as any).replayViewer = viewer;
-}
+		const ui = new UiSystem()
 
 		const arrow = new DirectionArrow(ui)
 		const emitter = new NetworkEmitter(socket)
@@ -143,6 +143,42 @@ if (usersettings.replay) {
 		installReplayShareControls(socket)
 		startGame(handler)
 	})
+}
+
+const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
+
+/** A no-socket, read-only replay entry surface. Clipboard reads require a click. */
+function startReplayViewer(initialToken: string): void {
+	const viewer = new ReplayViewer();
+	(window as unknown as { replayViewer: ReplayViewer }).replayViewer = viewer;
+	const panel = document.createElement("section");
+	panel.id = "replay-viewer-controls";
+	const heading = document.createElement("h1"); heading.textContent = "Replay viewer";
+	const input = document.createElement("input"); input.setAttribute("aria-label", "Replay share ID"); input.value = initialToken;
+	const load = document.createElement("button"); load.type = "button"; load.textContent = "Load replay";
+	const paste = document.createElement("button"); paste.type = "button"; paste.textContent = "Paste from clipboard";
+	const status = document.createElement("p"); status.setAttribute("role", "status");
+	const loadToken = async () => {
+		const token = input.value.trim();
+		if (!REPLAY_TOKEN.test(token)) { status.textContent = "Enter a valid replay share ID."; return; }
+		status.textContent = "Loading replay…";
+		try {
+			const response = await fetch(`/replays/${token}`, { cache: "no-store" });
+			if (!response.ok) throw new Error("Replay unavailable");
+			const body = await response.json() as { replay?: unknown };
+			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? "Replay unavailable");
+			handler = viewer.getPlayer()!.getHandler();
+			status.textContent = "Replay loaded. Playback is read-only.";
+		} catch { status.textContent = "Replay unavailable. Check the share ID and try again."; }
+	};
+	load.addEventListener("click", () => { void loadToken(); });
+	paste.addEventListener("click", async () => {
+		try { input.value = await navigator.clipboard.readText(); status.textContent = "Pasted replay ID. Press Load replay."; }
+		catch { status.textContent = "Clipboard access was denied. Paste the replay ID into the field manually."; input.focus(); }
+	});
+	panel.append(heading, input, load, paste, status);
+	document.body.append(panel);
+	if (initialToken) void loadToken();
 }
 
 /** Share URLs are displayed first; clipboard access is an explicit second click. */

@@ -2670,7 +2670,11 @@ invent a zero for data the current server cannot establish.
     * **Test File:** `tests/shared_match_replay.test.ts`
     * **Commit:** `feat: add replay result actions`
 
-  * [ ] **Task [20.6.4]: Build The Isolated Share Viewer And Clipboard Entry**
+  * [x] **Task [20.6.4]: Build The Isolated Share Viewer And Clipboard Entry**
+    * **Done:** `?replay=<token>` starts a separate, socket-free read-only
+      viewer. Visitors can type an ID or press the explicit Paste button;
+      clipboard denial preserves their typed value and shows a manual-paste
+      recovery message. Viewer replay handlers have no mouse/network emitter.
     * **Goal:** Let visitors load a share URL, type a share token, or press an
       explicit paste button; replay playback is read-only and never connects to
       a live gameplay socket.

@@ -5,6 +5,7 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { servePublicReplayShare } from "../src/server/replayShares.ts";
+import { ReplayViewer } from "../src/menu/replayViewer.ts";
 
 function shareFixture() {
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings()).build();
@@ -35,5 +36,15 @@ test("public replay route uniformly rejects malformed and unsupported requests",
 		expect(servePublicReplayShare(new Request(`https://example.test${path}`), registry)!.status).toBe(404);
 	}
 	expect(servePublicReplayShare(new Request("https://example.test/replays/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", { method: "POST" }), registry)!.status).toBe(405);
+	db.close();
+});
+
+test("read-only replay viewer reconstructs public replay data without a socket emitter", () => {
+	const { db, registry, token } = shareFixture();
+	const viewer = new ReplayViewer();
+	const share = registry.getDatabase().getPublicReplayShare(token)!;
+	expect(viewer.loadReplay(share.replay)).toBe(true);
+	expect(viewer.getPlayer()).toBeDefined();
+	expect(viewer.getPlayer()!.getHandler().getMouseHandler()).toBeUndefined();
 	db.close();
 });
