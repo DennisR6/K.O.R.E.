@@ -1,7 +1,7 @@
 import { GameState } from "../engine/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import { MatchEndReason, MatchStatus, type MatchResult } from "../rules/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /**
  * Discriminated outcome of a last-team-standing evaluation. `Ongoing` covers
@@ -41,10 +41,12 @@ export function evaluateLastTeamStanding(entities: IEntity[], teamCount: number)
  * snapshot is exposed. The latest evaluation before the sync wins, so a
  * team eliminated later in the same turn can turn a pending win into a draw.
  */
-export class WinningSystem implements ISystem {
+export class WinningSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.winning";
 	private pending: { evaluation: LastTeamStandingEvaluation; turn: number } | undefined
 
 	public constructor(private readonly teamCount: number) { }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { teamCount: this.teamCount, pending: this.pending ? { ...this.pending } : null } }; }
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state === GameState.Game_over) return
 		const evaluation = evaluateLastTeamStanding(ctx.entities.getEntities(), this.teamCount)
