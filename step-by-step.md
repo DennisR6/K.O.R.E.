@@ -2630,7 +2630,11 @@ invent a zero for data the current server cannot establish.
         restored execution have equal final engine snapshots. Add a collision
         test for two classes with similar names to prove IDs remain unique.
 
-  * [ ] **Task [20.6.1]: Persist Frozen Replay Shares**
+  * [x] **Task [20.6.1]: Persist Frozen Replay Shares**
+    * **Done:** Completed authoritative matches can freeze a validated replay
+      document with its final completed snapshot/result in SQLite. The opaque
+      token and copied payload are immutable, and the persistence boundary
+      rejects non-completed matches and duplicate frozen shares.
     * **Goal:** Add a versioned SQLite share record which can be created only
       from a completed authoritative match and contains an immutable validated
       replay/final-result payload plus a revocable opaque token.

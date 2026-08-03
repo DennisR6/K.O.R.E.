@@ -7,7 +7,7 @@ import { TurnSystem } from "../systems/TurnSystem.js";
 import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
 import { ReplayRecorder } from "../replay/recorder.js";
-import type { ReplayDocument } from "../replay/types.js";
+import type { FrozenReplayDocument, ReplayDocument } from "../replay/types.js";
 import { isValidInput } from "../input/validate.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
 import type { AuthoritativeMatchStatus, MatchMetrics, PersistedMatchLifecycle } from "./types.js";
@@ -44,6 +44,7 @@ export type SubmitItemUseResult =
 	| { ok: true; record: GameRecord }
 	| { ok: false; error: string };
 export type SubmitReportResult = { ok: true; reportId: string } | { ok: false; error: string };
+export type CreateReplayShareResult = { ok: true; token: string } | { ok: false; error: string };
 export type PauseRequestResult = { ok: true; record: GameRecord; paused: boolean; waitingForOtherPlayer: boolean } | { ok: false; error: string };
 
 /**
@@ -236,6 +237,23 @@ export class GameRegistry {
 		catch { return { ok: false, error: "Report already submitted" }; }
 	}
 
+	/** Freezes a completed authoritative record; it never reads a live snapshot. */
+	public createReplayShare(userId: string): CreateReplayShareResult {
+		const record = this.getForUser(userId);
+		if (!record) return { ok: false, error: "No active game for this user" };
+		if (record.lifecycle.status !== "completed" || record.handler.getState() !== GameState.Game_over) return { ok: false, error: "Replay shares require a completed match" };
+		const result = record.handler.getMatchResult();
+		if (!result) return { ok: false, error: "Completed match has no result" };
+		const replay: FrozenReplayDocument = {
+			...record.recorder.getReplay(),
+			finalSettings: record.handler.toSettings(),
+			result,
+			completedAt: record.lifecycle.completedAt ?? Date.now(),
+		};
+		try { return { ok: true, token: this.database.createReplayShare(record.id, replay).token }; }
+		catch { return { ok: false, error: "Replay share already exists" }; }
+	}
+
 	public requestPause(userId: string, action: unknown): PauseRequestResult {
 		const record = this.getForUser(userId);
 		if (!record) return { ok: false, error: "No active game for this user" };
@@ -347,7 +365,9 @@ export class GameRegistry {
 	}
 
 	private buildAuthoritativeHandler(settings: GameSettings | EngineSettings, teamCount: number): GameHandler {
-		return new GameHandlerBuilder().defaultSystems().fromSettings(settings).addSystem(new WinningSystem(teamCount)).build();
+		const builder = new GameHandlerBuilder().defaultSystems().fromSettings(settings);
+		if (!("systems" in settings) || !settings.systems?.some(system => system.systemId === "core.winning")) builder.addSystem(new WinningSystem(teamCount));
+		return builder.build();
 	}
 }
 

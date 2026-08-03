@@ -4,7 +4,8 @@ import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { EngineSettings } from "../engine/types.js";
 import { GameState } from "../engine/types.js";
-import type { ReplayAction } from "../replay/types.js";
+import type { FrozenReplayDocument, ReplayAction } from "../replay/types.js";
+import { validateFrozenReplayDocument } from "../replay/types.js";
 import type { AuthoritativeMatchStatus, PersistedMatchLifecycle } from "./types.js";
 
 export type StoredGame = {
@@ -17,6 +18,7 @@ export type StoredGame = {
 	actions?: ReplayAction[];
 	lifecycle?: PersistedMatchLifecycle;
 };
+export type StoredReplayShare = { token: string; replay: FrozenReplayDocument; createdAt: number; revokedAt: number | null };
 
 type StoredGameRow = {
 	id: string;
@@ -85,6 +87,16 @@ export class GameDatabase {
 				text TEXT NOT NULL,
 				created_at INTEGER NOT NULL,
 				UNIQUE(game_id, reporter_user_id, category),
+				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS replay_shares (
+				token TEXT PRIMARY KEY NOT NULL,
+				game_id TEXT NOT NULL UNIQUE,
+				replay_json TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				revoked_at INTEGER,
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
@@ -179,6 +191,16 @@ export class GameDatabase {
 		this.db.query("INSERT INTO match_reports (id, game_id, reporter_user_id, category, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
 			.run(id, gameId, reporterUserId, category, text, now);
 		return id;
+	}
+
+	public createReplayShare(gameId: string, replay: FrozenReplayDocument, now: number = Date.now()): StoredReplayShare {
+		validateFrozenReplayDocument(replay);
+		const lifecycle = this.getLifecycle(gameId);
+		if (lifecycle?.status !== "completed") throw new Error("Replay shares require a completed match");
+		const token = crypto.randomUUID().replaceAll("-", "");
+		this.db.query("INSERT INTO replay_shares (token, game_id, replay_json, created_at) VALUES (?1, ?2, ?3, ?4)")
+			.run(token, gameId, JSON.stringify(replay), now);
+		return { token, replay: structuredClone(replay), createdAt: now, revokedAt: null };
 	}
 
 	public getCompressedSnapshotSize(id: string): number | undefined {
