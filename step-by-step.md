@@ -2733,72 +2733,37 @@ invent a zero for data the current server cannot establish.
     replay feature as qualified without the explicit tests, privacy review,
     and documented deployment configuration above.
 
-### Database-Backed Immutable Map Definitions
+### Database-Backed Immutable Map Definitions Checklist
 
-- Store approved maps in the server database as declarative `MapDocument` records.
-- Each map revision receives a new UUID.
-- Map IDs are immutable and append-only:
-  - never modify an approved map in place;
-  - never reuse a retired map ID;
-  - any changed map receives a new map ID.
-- Human review determines whether a map is approved for production use.
-- Human approval does not replace structural validation. The server must still validate schema version, allowed fields, finite and bounded numeric values, valid geometry and spawn regions, supported hazard types, valid team layouts, and content-hash integrity.
-- The database must never store or execute arbitrary code. Maps remain declarative data only.
-- New matchmaking requests may reference only an approved map ID.
-- The authoritative server expands the map ID through the database:
-  - `mapId`;
-  - approved database document;
-  - `validateMapDocument()`;
-  - `loadMapDocument()`;
-  - generated `GameSettings`;
-  - authoritative `GameHandler`/ECS state.
-- Clients may request or select a map ID, but they must not submit arbitrary `EngineSettings` or map documents as authoritative state.
-- Player IDs are assigned by the authenticated server during match construction.
-- A match must retain the immutable map reference:
+* [ ] Add a versioned `StoredMap` database schema with immutable UUID `id`,
+  declarative `MapDocument`, `draft`/`approved`/`retired` status, content hash,
+  and creation/approval timestamps. Commit: `feat: persist immutable map documents`
 
-  ```ts
-  {
-    mapId: string;
-    contentHash: string;
-  }
-  ```
+  * Do not store or execute arbitrary code. Every changed map receives a new
+    UUID; approved IDs are never modified, reused, or deleted.
 
-- The complete expanded map state must also be preserved in `EngineSettings` so reconnects, persistence, rollback, and replays remain deterministic.
-- Retired maps remain readable for existing matches, reconnect restoration, persistence, and replay playback, but are hidden from new matchmaking.
-- Adding a new approved map revision must not require an engine/framework restart. The server may refresh the database-backed map registry or invalidate its map cache.
-- Existing matches must never change when a new map revision is added.
-- Recommended data contract:
+* [ ] Add a `MapRepository` that loads only approved IDs for new matchmaking,
+  validates schema/fields/numbers/geometry/spawns/hazards/team layouts/hash,
+  and converts through `validateMapDocument()` then `loadMapDocument()`.
+  Commit: `feat: load approved database maps`
 
-  ```ts
-  interface StoredMap {
-    id: string;
-    document: MapDocument;
-    status: "draft" | "approved" | "retired";
-    contentHash: string;
-    createdAt: number;
-    approvedAt: number | null;
-  }
-  ```
+* [ ] Make authoritative matchmaking expand a requested map ID server-side into
+  `GameSettings` and a `GameHandler`/ECS runtime. Clients may request an ID but
+  may not submit authoritative map documents or `EngineSettings`; authenticated
+  server construction assigns player IDs. Commit: `feat: select authoritative database maps`
 
-- Recommended runtime flow:
+* [ ] Persist `{ mapId, contentHash }` and the expanded map state in every
+  `EngineSettings` match snapshot. Existing matches, reconnects, rollback, and
+  replays must retain their original immutable map even after a new revision is
+  approved. Retired maps remain readable for these old records but are hidden
+  from new matchmaking. Commit: `feat: retain immutable match map references`
 
-  ```text
-  SQLite approved map
-      -> MapRepository.getApproved(mapId)
-      -> validateMapDocument()
-      -> loadMapDocument()
-      -> GameSettings
-      -> GameHandlerBuilder.fromSettings()
-      -> complete authoritative ECS runtime
-  ```
+* [ ] Add cache revision/invalidation to expose newly approved database maps to
+  new matches without an engine/framework restart. Existing handlers must not
+  be mutated by refresh. Commit: `feat: refresh database map registry`
 
-- Required tests:
-  - approved maps load from the database;
-  - draft and retired maps cannot be selected for new matches;
-  - malformed documents are rejected;
-  - unsupported hazards are rejected;
-  - changing a map creates a new UUID;
-  - old matches continue using their original map;
-  - map-cache refresh exposes newly approved maps without restarting the server;
-  - persisted matches restore the same expanded map state and content hash;
-  - clients cannot replace authoritative map or ECS state.
+* [ ] Add focused coverage proving approved-map loading; draft/retired selection
+  rejection; malformed document, unsupported hazard, and hash rejection; UUID
+  replacement for revisions; cache refresh; immutable old matches; persisted
+  map reference restoration; and client map/ECS authority rejection.
+  Commit: `test: validate immutable database maps`
