@@ -3,6 +3,7 @@ import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
 import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
+import type { MapRepository } from "./mapRepository.js";
 import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -16,7 +17,7 @@ export class ServerRuntime {
 	private connectionByUser = new Map<string, string>();
 	private waitingUsers: Array<{ userId: string; mapPreference?: string }> = [];
 
-	constructor(private readonly games = new GameRegistry()) { }
+	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository) { }
 
 	public open(socket: ServerSocket): void {
 		this.sockets.set(socket.data.connectionId, socket)
@@ -79,8 +80,10 @@ export class ServerRuntime {
 		while (this.waitingUsers.length >= 2) {
 			const waiting = this.waitingUsers.splice(0, 2)
 			const users = waiting.map(entry => entry.userId)
-			const mapId = chooseMap(waiting[0].mapPreference, waiting[1].mapPreference)
-			const record = this.games.create(buildMapSettings(mapId, GameSettings), users, mapId)
+			const mapId = this.chooseMap(waiting[0].mapPreference, waiting[1].mapPreference)
+			const record = this.maps
+				? this.games.createFromApprovedMap(this.maps, mapId, GameSettings, users)
+				: this.games.create(buildMapSettings(mapId, GameSettings), users, mapId)
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
@@ -152,10 +155,25 @@ export class ServerRuntime {
 			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState }))
 			return
 		}
-		const preference = validateMapPreference(mapPreference)
+		const preference = this.validateMapPreference(mapPreference)
 		if (mapPreference !== undefined && !preference) return this.sendError(socket, "Invalid map preference")
 		if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId, mapPreference: preference })
 		socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
+	}
+
+	private validateMapPreference(value: unknown): string | undefined {
+		if (typeof value !== "string") return undefined;
+		if (this.maps) return this.maps.listApproved().some(map => map.id === value) ? value : undefined;
+		return validateMapPreference(value);
+	}
+
+	private chooseMap(first?: string, second?: string): string {
+		if (this.maps) {
+			const approved = this.maps.listApproved();
+			if (approved.length === 0) throw new Error("No approved database maps are available");
+			return first && first === second && approved.some(map => map.id === first) ? first : approved[0]!.id;
+		}
+		return chooseMap(first, second);
 	}
 
 	private shoot(socket: ServerSocket, message: NetworkShoot): void {

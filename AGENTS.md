@@ -296,7 +296,9 @@ After every change, check whether this guide still reflects the implementation a
   completed actions, persistence, metric aggregation, and lazy SQLite
   restoration. `now` metrics are explicitly scoped to this process's cache.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
-  matchmaking, input dispatch, and broadcasts.
+  matchmaking, input dispatch, and broadcasts. When configured with a
+  `MapRepository`, matchmaking accepts only approved database map UUIDs and
+  expands them server-side before match construction.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
   used by the active server runtime.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,

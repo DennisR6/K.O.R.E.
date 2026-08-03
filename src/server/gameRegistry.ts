@@ -11,6 +11,7 @@ import type { FrozenReplayDocument, ReplayDocument } from "../replay/types.js";
 import { isValidInput } from "../input/validate.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
 import type { AuthoritativeMatchStatus, MatchMetrics, PersistedMatchLifecycle } from "./types.js";
+import type { MapRepository } from "./mapRepository.js";
 export { isValidInput } from "../input/validate.js";
 
 export type GameRecord = {
@@ -73,6 +74,12 @@ export class GameRegistry {
 		this.games.set(id, record)
 		this.persist(record)
 		return record
+	}
+
+	/** Builds a new authoritative match from a server-approved map ID only. */
+	public createFromApprovedMap(repository: MapRepository, mapId: string, template: GameSettings, users: string[]): GameRecord {
+		const { map, settings } = repository.buildSettings(mapId, template);
+		return this.create(settings, users, map.id);
 	}
 
 	public get(gameId: string): GameRecord | undefined {

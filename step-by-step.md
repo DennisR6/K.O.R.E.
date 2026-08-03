@@ -2754,10 +2754,14 @@ invent a zero for data the current server cannot establish.
     documents and converts defensive copies through the canonical map loader;
     draft and retired IDs remain unreadable to new matchmaking.
 
-* [ ] Make authoritative matchmaking expand a requested map ID server-side into
+* [x] Make authoritative matchmaking expand a requested map ID server-side into
   `GameSettings` and a `GameHandler`/ECS runtime. Clients may request an ID but
   may not submit authoritative map documents or `EngineSettings`; authenticated
   server construction assigns player IDs. Commit: `feat: select authoritative database maps`
+
+  * **Done:** `ServerRuntime` optionally uses `MapRepository` for map
+    preference validation and fallback selection, while `GameRegistry` expands
+    the approved ID server-side before creating the authoritative handler.
 
 * [ ] Persist `{ mapId, contentHash }` and the expanded map state in every
   `EngineSettings` match snapshot. Existing matches, reconnects, rollback, and
