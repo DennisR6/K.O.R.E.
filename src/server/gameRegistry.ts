@@ -1,5 +1,5 @@
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
-import { type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
+import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase, type RuleState } from "../rules/types.js";
@@ -9,6 +9,8 @@ import { GameDatabase, type StoredGame } from "./db.js";
 import { ReplayRecorder } from "../replay/recorder.js";
 import type { ReplayDocument } from "../replay/types.js";
 import { isValidInput } from "../input/validate.js";
+import { WinningSystem } from "../systems/WinningSystem.js";
+import type { AuthoritativeMatchStatus, MatchMetrics, PersistedMatchLifecycle } from "./types.js";
 export { isValidInput } from "../input/validate.js";
 
 export type GameRecord = {
@@ -24,6 +26,7 @@ export type GameRecord = {
 	lastAccess: number;
 	connectedUsers: Set<string>;
 	recorder: ReplayRecorder;
+	lifecycle: PersistedMatchLifecycle;
 };
 
 export type SubmitTurnResult =
@@ -60,7 +63,7 @@ export class GameRegistry {
 			allTeams: [...users],
 			myTeam: [],
 		}
-		const record = this.createRecord(id, new GameHandlerBuilder().defaultSystems().fromSettings(gameSettings).build(), users, 0, 0)
+		const record = this.createRecord(id, this.buildAuthoritativeHandler(gameSettings, users.length), users, 0, 0)
 		this.games.set(id, record)
 		this.persist(record)
 		return record
@@ -92,18 +95,44 @@ export class GameRegistry {
 		const record = this.games.get(gameId)
 		if (!record) return
 		record.connectedUsers.delete(userId)
-		if (record.connectedUsers.size === 0 && !record.resolving) this.games.delete(gameId)
+		if (record.connectedUsers.size === 0 && !record.resolving) {
+			this.transition(record, record.lifecycle.status === "resident" ? "sleeping" : record.lifecycle.status)
+			this.games.delete(gameId)
+		}
 	}
 
 	/** Drops inactive handlers only. Durable SQLite state remains available. */
 	public evictInactive(now: number = Date.now()): void {
 		for (const [id, record] of this.games) {
-			if (!record.resolving && now - record.lastAccess >= this.idleTimeoutMs) this.games.delete(id)
+			if (!record.resolving && now - record.lastAccess >= this.idleTimeoutMs) {
+				this.transition(record, record.lifecycle.status === "resident" ? "sleeping" : record.lifecycle.status, now)
+				this.games.delete(id)
+			}
 		}
 	}
 
 	public isCached(gameId: string): boolean { return this.games.has(gameId) }
 	public getDatabase(): GameDatabase { return this.database }
+
+	/** Point-in-time metrics; `now` is intentionally scoped to this registry. */
+	public getMetrics(now: number = Date.now()): MatchMetrics {
+		const persisted = this.database.getMetricCounts();
+		return {
+			...persisted,
+			now: [...this.games.values()].filter(record => record.lifecycle.status === "resident").length,
+			measuredAt: now,
+			consistency: "now is scoped to this server process's resident registry cache",
+		};
+	}
+
+	/** Lifecycle primitive for the later mutually-agreed pause protocol. */
+	public setPaused(gameId: string, paused: boolean, now: number = Date.now()): GameRecord | undefined {
+		const record = this.get(gameId);
+		if (!record) return undefined;
+		if (record.lifecycle.status === "completed") return record;
+		this.transition(record, paused ? "paused" : "resident", now);
+		return record;
+	}
 
 	public getReplay(gameId: string): ReplayDocument | undefined {
 		const record = this.get(gameId)
@@ -128,6 +157,8 @@ export class GameRegistry {
 		const record = this.getForUser(userId)
 		if (!record) return { ok: false, error: "No active game for this user" }
 		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
+		if (record.lifecycle.status === "paused") return { ok: false, error: "The game is paused" }
+		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
 		const team = record.teamByUser.get(userId)
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
 		if (record.ruleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
@@ -141,11 +172,15 @@ export class GameRegistry {
 		try {
 			record.recorder.recordShoot(input.actorId, input.angle, input.power)
 			const packet = record.handler.resolveTurn(input)
-			const completedState = record.rules.advancePhase(record.ruleState)
-			record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
-			record.handler.startTurn(record.ruleState)
-			record.currentTeam = record.ruleState.activeTeam
-			record.turnNumber = record.ruleState.turnNumber
+			if (record.handler.getState() === GameState.Game_over) {
+				this.transition(record, "completed")
+			} else {
+				const completedState = record.rules.advancePhase(record.ruleState)
+				record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
+				record.handler.startTurn(record.ruleState)
+				record.currentTeam = record.ruleState.activeTeam
+				record.turnNumber = record.ruleState.turnNumber
+			}
 			this.persist(record)
 			return { ok: true, record, packet }
 		} finally {
@@ -158,6 +193,8 @@ export class GameRegistry {
 		const record = this.getForUser(userId)
 		if (!record) return { ok: false, error: "No active game for this user" }
 		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
+		if (record.lifecycle.status === "paused") return { ok: false, error: "The game is paused" }
+		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
 		const team = record.teamByUser.get(userId)
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
 		if (record.ruleState.phase !== RulePhase.Item) return { ok: false, error: "Items may only be used during the item phase" }
@@ -194,6 +231,7 @@ export class GameRegistry {
 		record.handler.setRuleState(record.ruleState)
 		record.currentTeam = 0
 		record.turnNumber = 0
+		this.transition(record, "resident")
 		this.persist(record)
 		return { ok: true, record }
 	}
@@ -201,11 +239,12 @@ export class GameRegistry {
 	private load(id: string): GameRecord | undefined {
 		const stored = this.database.loadGame(id)
 		if (!stored) return undefined
-		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(stored.settings).build()
+		const handler = this.buildAuthoritativeHandler(stored.settings, stored.users.length)
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle)
 		this.games.set(id, record)
+		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
 	}
 
@@ -218,6 +257,7 @@ export class GameRegistry {
 		lastAccess: number = Date.now(),
 		ruleState?: RuleState,
 		actions?: ReplayDocument["actions"],
+		lifecycle: PersistedMatchLifecycle = createLifecycle("resident", Date.now()),
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
@@ -235,6 +275,7 @@ export class GameRegistry {
 			lastAccess,
 			connectedUsers: new Set(),
 			recorder,
+			lifecycle,
 		}
 	}
 
@@ -247,6 +288,7 @@ export class GameRegistry {
 			turnNumber: record.turnNumber,
 			updatedAt: Date.now(),
 			actions: record.recorder.getReplay().actions,
+			lifecycle: record.lifecycle,
 		}
 		if (this.database.hasGame(record.id)) this.database.saveGame(game)
 		else this.database.createGame(game)
@@ -257,4 +299,25 @@ export class GameRegistry {
 		record.lastAccess = Date.now()
 		return record
 	}
+
+	private transition(record: GameRecord, status: AuthoritativeMatchStatus, now: number = Date.now()): void {
+		const current = record.lifecycle;
+		if (current.status === status) return;
+		record.lifecycle = {
+			version: 1,
+			status,
+			createdAt: current.createdAt,
+			statusChangedAt: now,
+			completedAt: status === "completed" ? now : null,
+		};
+		this.database.setLifecycle(record.id, record.lifecycle);
+	}
+
+	private buildAuthoritativeHandler(settings: GameSettings | EngineSettings, teamCount: number): GameHandler {
+		return new GameHandlerBuilder().defaultSystems().fromSettings(settings).addSystem(new WinningSystem(teamCount)).build();
+	}
+}
+
+function createLifecycle(status: AuthoritativeMatchStatus, now: number): PersistedMatchLifecycle {
+	return { version: 1, status, createdAt: now, statusChangedAt: now, completedAt: status === "completed" ? now : null };
 }

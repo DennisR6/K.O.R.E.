@@ -2,6 +2,33 @@ import type { UUID } from "crypto"
 import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
 import type { RuleState } from "../rules/types.js"
 import type { ItemTarget } from "../item/target.js"
+
+/**
+ * Server lifecycle state is deliberately separate from a rules `MatchStatus`.
+ * It describes durable residency/availability, not whether the engine winner
+ * is a draw or a team.
+ */
+export type AuthoritativeMatchStatus = "resident" | "paused" | "sleeping" | "completed";
+
+export type PersistedMatchLifecycle = {
+	version: 1;
+	status: AuthoritativeMatchStatus;
+	/** Null only for rows migrated from the legacy games table. */
+	createdAt: number | null;
+	statusChangedAt: number;
+	completedAt: number | null;
+};
+
+/** Aggregate dashboard facts. `now` is a point-in-time registry-cache count. */
+export type MatchMetrics = {
+	allTime: number;
+	now: number;
+	paused: number;
+	sleeping: number;
+	measuredAt: number;
+	consistency: "now is scoped to this server process's resident registry cache";
+};
+
 export const enum NetworkMessageType {
 	PING = "PING",
 	PONG = "PONG",

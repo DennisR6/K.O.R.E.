@@ -277,10 +277,13 @@ After every change, check whether this guide still reflects the implementation a
   "Play Online" action.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
-  `EngineSettings` snapshots and maintains player-to-game membership rows.
+  `EngineSettings` snapshots, maintains player-to-game membership rows, and
+  migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
+  `completed`) for durable aggregate match metrics.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
-  input checks, simulation commits, rule progression, persistence, and lazy
-  SQLite restoration.
+  input checks, simulation commits, rule progression, lifecycle-gated paused/
+  completed actions, persistence, metric aggregation, and lazy SQLite
+  restoration. `now` metrics are explicitly scoped to this process's cache.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
   matchmaking, input dispatch, and broadcasts.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not

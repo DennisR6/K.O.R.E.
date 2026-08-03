@@ -41,8 +41,8 @@ describe("Section 18 server /config endpoint integration", () => {
 			const response = await fetch(`${server.url}/config`);
 			expect(response.status).toBe(200);
 			expect(await response.json()).toEqual({
-				baseUrl: "https://lupricht.net/kore",
-				wsUrl: "wss://lupricht.net/kore",
+				baseUrl: "https://lupricht.net/kore/",
+				wsUrl: "wss://lupricht.net/kore/",
 			});
 		} finally {
 			await server.stop();

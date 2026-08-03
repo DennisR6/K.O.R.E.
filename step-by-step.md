@@ -2335,7 +2335,19 @@ in-memory registry; and "now" means a live cached game which is neither
 completed nor sleeping. Metrics must count these disjoint states and must not
 invent a zero for data the current server cannot establish.
 
-* [ ] **Task [20.1]: Define Authoritative Match Status And Dashboard Metrics**
+* [x] **Task [20.1]: Define Authoritative Match Status And Dashboard Metrics**
+
+  * **Done:** `game_lifecycle` migrates existing SQLite snapshots into a
+    versioned `resident`/`paused`/`sleeping`/`completed` lifecycle, normalizes
+    stale resident rows after process restart, and persists transitions with
+    snapshots. `GameRegistry.getMetrics()` uses SQLite for all-time/paused/
+    sleeping totals and its cache only for the explicitly process-scoped `now`
+    count. Authoritative handlers now install `WinningSystem`; terminal turns
+    transition to completed, paused/completed actions reject before mutation,
+    and rematch returns the same row to resident. Focused migration, restart,
+    metrics, idempotency, and pause-gating coverage is in
+    `tests/server_match_metrics.test.ts` and
+    `tests/persisted_match_status.test.ts` (serial SQLite lifecycle cases).
 
   * **Goal:** Define one persisted lifecycle/status model from which the server
     dashboard can report all-time games, games active now, paused games, and

@@ -286,7 +286,7 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			await waitFor(async () => (await pageA.url()).includes("skipmenu=1"), 10_000, 100, "online join navigation");
 			const joinedUrl = new URL(pageA.url());
 			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
-			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}`);
+			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
 
 			// Tab B joins the same match from a fresh incognito context.
 			const contextB = await browser.newContext({ viewport: { width: 1280, height: 720 } });

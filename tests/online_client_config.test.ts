@@ -50,7 +50,7 @@ describe("client online-play config", () => {
 		// No location and no config: the canonical deployment is the last resort.
 		expect(await resolveOnlineServerUrl({
 			fetchImpl: async () => { throw new Error("no config"); },
-		})).toBe("wss://lupricht.net/kore");
+		})).toBe("wss://lupricht.net/kore/");
 	});
 
 	test("builds the join URL with skipmenu and the configured server, preserving the path", async () => {
