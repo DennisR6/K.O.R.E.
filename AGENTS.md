@@ -39,6 +39,17 @@ Items, AI, winning and completed-round rules, out-of-bounds elimination are
 fully implemented and verified at their automated contract boundaries; this
 does not promote blocked gameplay configurations or pending human evidence.
 
+## Hybrid ECS/OOP Architecture
+
+The engine uses a hybrid Entity Component System (ECS) and Object-Oriented
+Programming (OOP) architecture. Serializable ECS data serves as the canonical
+state, while runtime objects provide a convenient, behavior-oriented API during
+execution. Every runtime object can be reconstructed from its serialized
+representation and converted back into a deterministic snapshot at any time.
+This bidirectional lifecycle enables save/load, multiplayer synchronization,
+replays, AI simulation, rollback, and deterministic state validation without
+coupling gameplay logic to serialization or networking.
+
 ## Source Of Truth
 
 - `src/` is the authoritative game, engine, and server-library source.
