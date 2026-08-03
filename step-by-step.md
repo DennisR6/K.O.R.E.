@@ -2557,7 +2557,8 @@ invent a zero for data the current server cannot establish.
   * **Allowed Context:** versioned replay document, authoritative accepted
     actions, existing replay viewer, completed-match result overlay, browser
     clipboard APIs
-  * **Commit:** `feat: share completed match replays`
+  * **Delivery:** Complete the following ordered atomic subtasks. The parent is
+    complete only after every subtask is `[x]`.
   * **Required Contract:**
 
     * Freeze the replay only after authoritative match completion and persist
@@ -2582,6 +2583,91 @@ invent a zero for data the current server cannot establish.
       deterministic playback, direct token navigation, manual typed ID, denied
       clipboard permission, invalid token, and verifies that viewer controls
       cannot send `SHOOT`, `USE_ITEM`, `REMATCH`, pause, or report packets.
+
+  * [ ] **Task [20.6.0]: Serialize Every Registered System With A Stable Identity**
+    * **Goal:** Before continuing replay sharing, make systems reconstructible
+      from snapshot data just like players: every system installed on a handler
+      has a stable unique ID and a versioned settings object, and
+      `new System(settings).toSettings()` is semantically identical to the
+      original system snapshot.
+    * **Target Files:** `src/systems/types.ts`, `src/engine/types.ts`,
+      `src/engine/Handler.ts`, all concrete `src/systems/*.ts`, system factory
+      registry, and snapshot contracts
+    * **Test File:** `tests/system_settings_roundtrip.test.ts`,
+      `tests/system_snapshot_restore.test.ts`,
+      `tests/system_id_stability.test.ts`
+    * **Commit:** `feat: serialize stable system settings`
+    * **Required Contract:**
+
+      * Define and export `ISettingsSerialize<T>` for systems, with
+        `toSettings(): T`, and require every registered system to expose a
+        stable `systemId` and schema version. IDs must be explicit stable
+        protocol constants (optionally documented with a name/constructor hash
+        for diagnostics), not runtime constructor names, minifier output, array
+        position, or random values.
+      * Add one allowlisted system settings union and factory. Unknown IDs,
+        duplicate IDs, wrong versions, malformed settings, and unsupported
+        executable values fail at the snapshot boundary; never silently replace
+        an unknown system with an unrelated default.
+      * Serialize all deterministic state that affects future ticks, including
+        playback counters/final sync, physics contact lifecycle, winning
+        pending state, AI decision state, and any map/system configuration.
+        Browser-only listener/canvas/DOM references remain non-serialized
+        adapters, but their deterministic configuration is serialized.
+      * `GameHandler.toSettings()` exports system settings in deterministic ID
+        order; `GameHandlerBuilder.fromSettings()` restores through the factory
+        without double-registering default systems. Preserve registration/tick
+        order as an explicit serialized order field while rejecting duplicate
+        IDs.
+      * Round-trip every concrete system alone and in a handler, restore a
+        mid-playback/mid-contact/mid-win snapshot, and prove uninterrupted and
+        restored execution have equal final engine snapshots. Add a collision
+        test for two classes with similar names to prove IDs remain unique.
+
+  * [v] **Task [20.6.1]: Persist Frozen Replay Shares**
+    * **Goal:** Add a versioned SQLite share record which can be created only
+      from a completed authoritative match and contains an immutable validated
+      replay/final-result payload plus a revocable opaque token.
+    * **Target Files:** `src/server/db.ts`, `src/server/gameRegistry.ts`,
+      `src/replay/types.ts`
+    * **Test File:** `tests/shared_match_replay.test.ts`
+    * **Commit:** `feat: persist immutable replay shares`
+
+
+  * [ ] **Task [20.6.2]: Expose Public Replay-Share Retrieval Safely**
+    * **Goal:** Add an exact public read-only token route that returns only the
+      replay payload/public metadata and rejects revoked, malformed, unknown,
+      oversized, or incompatible tokens without leaking game/report/player IDs.
+    * **Target Files:** `server.ts`, `src/server/runtime.ts`,
+      `src/server/types.ts`
+    * **Test File:** `tests/replay_share_security.test.ts`
+    * **Commit:** `feat: serve public replay shares`
+
+  * [ ] **Task [20.6.3]: Add Result Replay And Share Actions**
+    * **Goal:** Add explicit completed-result Replay/Share actions; Share asks
+      the authoritative server for a token and copies only the canonical viewer
+      URL after a user gesture, with a visible non-clipboard fallback.
+    * **Target Files:** `src/ui/MatchResultOverlay.ts`, `src/main.ts`,
+      network emitter/UI helpers
+    * **Test File:** `tests/shared_match_replay.test.ts`
+    * **Commit:** `feat: add replay result actions`
+
+  * [ ] **Task [20.6.4]: Build The Isolated Share Viewer And Clipboard Entry**
+    * **Goal:** Let visitors load a share URL, type a share token, or press an
+      explicit paste button; replay playback is read-only and never connects to
+      a live gameplay socket.
+    * **Target Files:** `src/menu/replayViewer.ts`, `src/main.ts`
+    * **Test File:** `tests/replay_share_security.test.ts`,
+      `tests/browser/shared_replay_viewer.e2e.test.ts`
+    * **Commit:** `feat: add replay share viewer`
+
+  * [ ] **Task [20.6.5]: Verify The Replay-Sharing Journey**
+    * **Goal:** Prove the completed-match -> share -> URL/manual/paste viewer
+      path, clipboard-denial recovery, revocation, and no-live-action boundary
+      in the production browser.
+    * **Target Files:** browser replay harness and `step-by-step.md`
+    * **Test File:** `tests/browser/shared_replay_viewer.e2e.test.ts`
+    * **Commit:** `test: verify replay sharing journey`
 
 * [ ] **Task [20.7]: Qualify The Online Operations Journey**
 
