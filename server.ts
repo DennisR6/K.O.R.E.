@@ -22,7 +22,7 @@ Bun.serve<WebSocketData>({
 
 		const url = new URL(req.url);
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
-		const dashboard = await serveDashboard(req, runtime.getRegistry(), dashboardConfig, database);
+		const dashboard = await serveDashboard(req, runtime.getRegistry(), dashboardConfig, database, serverConfig.baseUrl);
 		if (dashboard) return dashboard;
 		const replay = servePublicReplayShare(req, runtime.getRegistry());
 		if (replay) return replay;

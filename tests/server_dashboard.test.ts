@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
-import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
+import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 
 const secret = "0123456789abcdef0123456789abcdef";
 const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
@@ -92,14 +92,16 @@ test("operator login serves a browser form and redirects after a form submission
 	const database = new GameDatabase(":memory:");
 	const registry = new GameRegistry(database);
 	const config = { operatorSecret: secret };
-	const page = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_LOGIN_PATH}`), registry, config))!;
+	const publicBaseUrl = "https://operator.example/kore";
+	const page = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_LOGIN_PATH}`), registry, config, undefined, publicBaseUrl))!;
 	expect(page.status).toBe(200);
-	expect(await page.text()).toContain('name="password"');
+	expect(await page.text()).toContain(`action="${publicBaseUrl}/operator/login"`);
 	const form = new URLSearchParams({ password: secret });
-	const login = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_LOGIN_PATH}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" }, body: form }), registry, config))!;
+	const login = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_LOGIN_PATH}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" }, body: form }), registry, config, undefined, publicBaseUrl))!;
 	expect(login.status).toBe(303);
-	expect(login.headers.get("location")).toBe(DASHBOARD_PATH);
+	expect(login.headers.get("location")).toBe(`${publicBaseUrl}/operator/dashboard`);
 	expect(login.headers.get("set-cookie")).toContain("HttpOnly");
+	expect(dashboardUrl("https://operator.example/kore/?ignored=1", DASHBOARD_DATABASE_PATH)).toBe("https://operator.example/kore/operator/db");
 	database.close();
 });
 

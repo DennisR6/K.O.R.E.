@@ -38,10 +38,10 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot">): Promise<Response | undefined> {
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot">, publicBaseUrl?: string): Promise<Response | undefined> {
 	const pathname = new URL(request.url).pathname;
 	if (!isDashboardPath(pathname)) return undefined;
-	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret);
+	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret);
 	if (!isAuthorized(request, config.operatorSecret)) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
@@ -96,15 +96,15 @@ function isAuthorized(request: Request, secret: string | undefined): boolean {
 	return isSessionToken(readCookie(request.headers.get("cookie"), DASHBOARD_COOKIE), secret);
 }
 
-async function login(request: Request, secret: string | undefined): Promise<Response> {
+async function login(request: Request, secret: string | undefined, publicBaseUrl?: string): Promise<Response> {
 	if (!secret) return notFound();
-	if (request.method === "GET") return new Response(renderLogin(), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+	if (request.method === "GET") return new Response(renderLogin(publicBaseUrl), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "GET, POST", "cache-control": "no-store" } });
 	try {
 		const password = await loginPassword(request);
 		if (!password || !equalSecret(password, secret)) return notFound();
 		const headers = { "set-cookie": sessionCookie(secret), "cache-control": "no-store" };
-		if (request.headers.get("accept")?.includes("text/html")) return new Response(null, { status: 303, headers: { ...headers, location: DASHBOARD_PATH } });
+		if (request.headers.get("accept")?.includes("text/html")) return new Response(null, { status: 303, headers: { ...headers, location: dashboardUrl(publicBaseUrl, DASHBOARD_PATH) } });
 		return Response.json({ ok: true }, { headers });
 	} catch { return notFound(); }
 }
@@ -161,6 +161,15 @@ function renderDashboard(metrics: DashboardMetricsResponse): string {
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
 }
 
-function renderLogin(): string {
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator login</title></head><body><main><h1>KORE operator login</h1><form method="post" action="${DASHBOARD_LOGIN_PATH}"><label>Password <input type="password" name="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form></main></body></html>`;
+export function dashboardUrl(publicBaseUrl: string | undefined, path: string): string {
+	if (!publicBaseUrl) return path;
+	const base = new URL(publicBaseUrl);
+	base.search = "";
+	base.hash = "";
+	if (!base.pathname.endsWith("/")) base.pathname += "/";
+	return new URL(path.replace(/^\//, ""), base).toString();
+}
+
+function renderLogin(publicBaseUrl?: string): string {
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator login</title></head><body><main><h1>KORE operator login</h1><form method="post" action="${dashboardUrl(publicBaseUrl, DASHBOARD_LOGIN_PATH)}"><label>Password <input type="password" name="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form></main></body></html>`;
 }
