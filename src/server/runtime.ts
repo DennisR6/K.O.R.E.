@@ -1,4 +1,4 @@
-import { GameSettings, validateGameSettings } from "../settings/settings.js";
+import { GameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
@@ -65,7 +65,7 @@ export class ServerRuntime {
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
 			case "CREATE_GAME" as unknown as NetworkMessageType:
-				this.createCustomGame(socket, (message as any).settings)
+				this.sendError(socket, "Client-supplied game settings are not accepted")
 				return
 			case "DISCORD_JOIN" as unknown as NetworkMessageType:
 				this.handleDiscordJoin(socket, (message as any).payload)
@@ -100,28 +100,6 @@ export class ServerRuntime {
 		const result = this.games.createReplayShare(userId);
 		if (!result.ok) return this.sendError(socket, result.error);
 		socket.send(wrap<NetworkReplayShareCreated>({ type: NetworkMessageType.REPLAY_SHARE_CREATED, token: result.token }));
-	}
-
-	private createCustomGame(socket: ServerSocket, rawSettings: unknown): void {
-		const userId = this.userByConnection.get(socket.data.connectionId)
-		if (!userId) return this.sendError(socket, "Login is required before creating a game")
-		try {
-			validateGameSettings(rawSettings)
-			if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId })
-			if (this.waitingUsers.length >= 2) {
-				const users = this.waitingUsers.splice(0, 2).map(waiting => waiting.userId)
-				const record = this.games.create(rawSettings, users)
-				for (const user of users) {
-					this.games.connectUser(user)
-					const s = this.socketForUser(user)
-					if (s) s.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState }))
-				}
-			} else {
-				socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
-			}
-		} catch (error) {
-			this.sendError(socket, error instanceof Error ? error.message : "Invalid custom game settings")
-		}
 	}
 
 	private handleDiscordJoin(socket: ServerSocket, payload: unknown): void {

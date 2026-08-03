@@ -710,6 +710,9 @@ Do not trust values from a `SHOOT` packet. `GameRegistry` must continue to
 validate finite angle/power ranges, actor ownership/activity, game membership,
 and turn ownership before resolving a turn. Keep the registry/runtime testable
 by injecting `new GameDatabase(":memory:")`.
+Clients likewise cannot create an authoritative match from a raw settings or map
+payload: matchmaking accepts a server-approved map ID and expands it through
+`MapRepository`.
 
 Be careful when running `bun run start`:
 

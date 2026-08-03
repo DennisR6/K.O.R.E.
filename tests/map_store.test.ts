@@ -28,5 +28,8 @@ test("database map insertion rejects malformed documents and non-UUID identities
 	const malformed = createCueClashMap({ x: 800, y: 450 });
 	malformed.drift = 2;
 	expect(() => db.createMap({ id: "7d5a59aa-5726-4e3e-8627-627f8f247063", document: malformed })).toThrow(/map physics/);
+	const unsupportedHazard = createCueClashMap({ x: 800, y: 450 });
+	unsupportedHazard.hazards.push({ schemaVersion: 1, id: "unsupported", type: "teleport", trigger: { type: "collision" }, config: { x: 10, y: 10, r: 5 } });
+	expect(() => db.createMap({ id: "8d5a59aa-5726-4e3e-8627-627f8f247063", document: unsupportedHazard })).toThrow(/map hazard/);
 	db.close();
 });

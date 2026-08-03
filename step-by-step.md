@@ -2782,8 +2782,12 @@ invent a zero for data the current server cannot establish.
     become visible only to future lookups after refresh; already expanded match
     settings remain unchanged.
 
-* [ ] Add focused coverage proving approved-map loading; draft/retired selection
+* [x] Add focused coverage proving approved-map loading; draft/retired selection
   rejection; malformed document, unsupported hazard, and hash rejection; UUID
   replacement for revisions; cache refresh; immutable old matches; persisted
   map reference restoration; and client map/ECS authority rejection.
   Commit: `test: validate immutable database maps`
+
+  * **Done:** Store, repository, authoritative preference, cache, persistence,
+    and runtime-boundary tests cover these acceptance cases. Client `CREATE_GAME`
+    payloads no longer admit arbitrary authoritative settings.

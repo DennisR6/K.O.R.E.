@@ -23,6 +23,7 @@ test("persisted database-map matches retain expanded settings and immutable map 
 	const restored = registry.get(record.id)!;
 	expect(restored.handler.toSettings().mapReference).toEqual(initial.mapReference);
 	expect(restored.handler.toSettings().mapBoundarys).toEqual(initial.mapBoundarys);
+	repository.refresh();
 	expect(() => repository.buildSettings(MAP_ID, createCanonicalPlayableMatchSettings())).toThrow(/not approved/);
 	database.close();
 });
