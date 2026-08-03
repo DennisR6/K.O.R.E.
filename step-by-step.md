@@ -2542,7 +2542,10 @@ invent a zero for data the current server cannot establish.
       state. Operator access to reports is a separate authenticated endpoint
       and retention/export policy, not an extension of the public dashboard.
 
-* [ ] **Task [20.6]: Share And View Immutable Completed-Match Replays**
+* [x] **Task [20.6]: Share And View Immutable Completed-Match Replays**
+  * **Done:** Completed-match replay artifacts, opaque revocable public shares,
+    result actions, and an isolated no-socket browser viewer are delivered and
+    covered by server/security and production-browser tests.
 
   * **Goal:** After a completed match, offer replay and share actions that
     create a stable public viewer link; a visitor can open the link or paste a
