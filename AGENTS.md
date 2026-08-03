@@ -553,12 +553,28 @@ Treat registry order changes as data-contract changes.
 
 ## Testing Guidance
 
-Run at minimum after source changes:
+For each commit-sized checklist task, run the named focused test file(s), nearby
+subsystem coverage, and TypeScript validation:
+
+```sh
+npx tsc --noEmit
+```
+
+Run `bun run build` when browser/runtime code, exported contracts, or generated
+browser output changes. Run task-specific browser, server, fuzz, benchmark, or
+packaging commands when the checklist requires them.
+
+Run the complete serial suite only for a chapter's final qualification, release
+gate, or an explicitly requested repository-wide validation:
 
 ```sh
 bun test
-npx tsc --noEmit
 ```
+
+Do not use `bun test --parallel` or `bun test --changed` as a substitute for
+the final qualification suite. Use `test.serial(...)` for tests that share a
+process-global resource, mutate a common fixture, bind a fixed port, or require
+ordered lifecycle transitions; keep independent tests parallel-safe.
 
 Add focused Bun tests near the relevant behavior. Existing test names use both
 `*.test.ts` and `*_test.ts`, and imports inconsistently use `.ts`, `.js`, or no
@@ -727,7 +743,8 @@ Before finishing a change:
 2. Check `git status` and preserve unrelated modifications.
 3. Keep generated output and source changes clearly separated.
 4. Add or update tests for behavior and serialization boundaries.
-5. Run `bun test` and `npx tsc --noEmit`.
+5. Run focused task/subsystem tests and `npx tsc --noEmit`; reserve `bun test`
+   for the chapter-final qualification, release gate, or an explicit request.
 6. If browser behavior changed, build and test the generated `dist/main.js`
    path, including `?skipmenu=1` when gameplay is required.
 7. If server/editor/scripts changed, verify them separately because the main
