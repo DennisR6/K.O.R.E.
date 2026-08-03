@@ -19,6 +19,7 @@ export type StoredGame = {
 	lifecycle?: PersistedMatchLifecycle;
 };
 export type StoredReplayShare = { token: string; replay: FrozenReplayDocument; createdAt: number; revokedAt: number | null };
+export type PublicReplayShare = { token: string; replay: Omit<FrozenReplayDocument, "finalSettings">; createdAt: number };
 
 type StoredGameRow = {
 	id: string;
@@ -201,6 +202,24 @@ export class GameDatabase {
 		this.db.query("INSERT INTO replay_shares (token, game_id, replay_json, created_at) VALUES (?1, ?2, ?3, ?4)")
 			.run(token, gameId, JSON.stringify(replay), now);
 		return { token, replay: structuredClone(replay), createdAt: now, revokedAt: null };
+	}
+
+	/** Public lookup intentionally omits game IDs and the frozen final snapshot. */
+	public getPublicReplayShare(token: string): PublicReplayShare | undefined {
+		if (!/^[a-f0-9]{32}$/.test(token)) return undefined;
+		const row = this.db.query("SELECT replay_json, created_at, revoked_at FROM replay_shares WHERE token = ?1").get(token) as { replay_json: string; created_at: number; revoked_at: number | null } | null;
+		if (!row || row.revoked_at !== null || row.replay_json.length > 2_000_000) return undefined;
+		try {
+			const replay = JSON.parse(row.replay_json) as FrozenReplayDocument;
+			validateFrozenReplayDocument(replay);
+			const { finalSettings: _privateFinalSnapshot, ...publicReplay } = replay;
+			return { token, replay: publicReplay, createdAt: row.created_at };
+		} catch { return undefined; }
+	}
+
+	public revokeReplayShare(token: string, now: number = Date.now()): boolean {
+		if (!/^[a-f0-9]{32}$/.test(token)) return false;
+		return this.db.query("UPDATE replay_shares SET revoked_at = ?2 WHERE token = ?1 AND revoked_at IS NULL").run(token, now).changes > 0;
 	}
 
 	public getCompressedSnapshotSize(id: string): number | undefined {

@@ -2644,7 +2644,11 @@ invent a zero for data the current server cannot establish.
     * **Commit:** `feat: persist immutable replay shares`
 
 
-  * [ ] **Task [20.6.2]: Expose Public Replay-Share Retrieval Safely**
+  * [x] **Task [20.6.2]: Expose Public Replay-Share Retrieval Safely**
+    * **Done:** `GET /replays/<32-hex-token>` is an anonymous, read-only,
+      no-store route. It returns only public replay data and a uniform safe
+      error for malformed, unknown, revoked, oversized, or invalid payloads;
+      it omits database IDs, users, reports, and frozen final snapshots.
     * **Goal:** Add an exact public read-only token route that returns only the
       replay payload/public metadata and rejects revoked, malformed, unknown,
       oversized, or incompatible tokens without leaking game/report/player IDs.

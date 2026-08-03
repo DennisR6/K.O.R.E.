@@ -3,6 +3,7 @@ import { GameDatabase } from "./src/server/db.ts";
 import { GameRegistry } from "./src/server/gameRegistry.ts";
 import { readServerConfig, serveConfig } from "./src/server/config.ts";
 import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
+import { servePublicReplayShare } from "./src/server/replayShares.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -23,6 +24,8 @@ Bun.serve<WebSocketData>({
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		const dashboard = serveDashboard(req, runtime.getRegistry(), dashboardConfig);
 		if (dashboard) return dashboard;
+		const replay = servePublicReplayShare(req, runtime.getRegistry());
+		if (replay) return replay;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		// The offline shell lives in public/ but must register at root scope.
