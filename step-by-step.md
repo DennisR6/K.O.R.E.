@@ -2320,3 +2320,250 @@ map release
       seed tie-break (52 turns / 53 actions for AI seeds 111/222); killing
       moves stay preferred and non-killing ties keep aiming at an enemy, so
       seeded matches still terminate.
+
+## 20. Online Match Operations, Sharing, And Player Support
+
+This chapter adds an operational surface around the existing authoritative Bun
+server, SQLite snapshots, replay contracts, and browser scene lifecycle. It
+does not make a client authoritative: game state, match status, map selection,
+replay exports, report ownership, and dashboard totals remain server-derived.
+Each public identifier introduced here must be an opaque, unguessable share
+token rather than a sequential database or game ID. "Paused" means an
+authoritative, mutually agreed server pause (not a browser tab that stopped
+rendering); "sleeping" means a persisted, restorable game evicted from the
+in-memory registry; and "now" means a live cached game which is neither
+completed nor sleeping. Metrics must count these disjoint states and must not
+invent a zero for data the current server cannot establish.
+
+* [ ] **Task [20.1]: Define Authoritative Match Status And Dashboard Metrics**
+
+  * **Goal:** Define one persisted lifecycle/status model from which the server
+    dashboard can report all-time games, games active now, paused games, and
+    sleeping games without double-counting reconnecting, completed, or evicted
+    matches.
+  * **Target Files:** `src/server/types.ts`, `src/server/db.ts`,
+    `src/server/gameRegistry.ts`, server migration helpers
+  * **Test File:** `tests/server_match_metrics.test.ts`,
+    `tests/persisted_match_status.test.ts`
+  * **Allowed Context:** current SQLite game store, registry cache eviction,
+    reconnect restoration, completed-match rules
+  * **Commit:** `feat: track authoritative match lifecycle metrics`
+  * **Required Contract:**
+
+    * Persist an explicit, versioned status and timestamps for every created
+      match; migrate existing rows safely and retain completed rows for the
+      all-time count.
+    * Define and test mutually exclusive counts: `allTime` (every successfully
+      created game), `now` (live resident ongoing games), `paused` (ongoing
+      games in the authoritative paused state), and `sleeping` (ongoing
+      persisted games not resident in the registry). A completed game appears
+      only in `allTime`.
+    * Reconnect restoration, the final disconnect, idle eviction, rematch, and
+      completion must make exactly one status transition and remain idempotent
+      across repeated runtime events and process restart.
+    * A paused match accepts no turn or item actions. Do not treat a local
+      pause-menu overlay, a disconnected player, or a sleeping match as an
+      authoritative pause.
+    * Use database aggregation plus explicitly scoped registry facts rather
+      than process-local counters, so the all-time and sleeping values survive
+      restart. State the consistency boundary for the live `now` value in the
+      API response.
+
+* [ ] **Task [20.2]: Publish A Minimal Safe Server Dashboard**
+
+  * **Goal:** Provide a small operator dashboard that shows the four
+    authoritative match counts and enough freshness/status information to
+    understand them, without exposing players, snapshots, database IDs, or
+    replay data.
+  * **Target Files:** `server.ts`, `src/server/dashboard.ts`,
+    `src/server/gameRegistry.ts`, server configuration
+  * **Test File:** `tests/server_dashboard.test.ts`,
+    `tests/server_dashboard.integration.test.ts`
+  * **Allowed Context:** native Bun static/HTTP routing, `/config` hardening,
+    SQLite store, server runtime injection
+  * **Commit:** `feat: add minimal server match dashboard`
+  * **Required Contract:**
+
+    * Serve one documented JSON metrics endpoint and a minimal server-rendered
+      or static dashboard route. Keep the existing static-file allowlist
+      narrow; dashboard routes must not turn arbitrary repository files into
+      public assets.
+    * Protect the dashboard with an operator secret or equivalent deployment
+      authentication configured outside tracked source. The public metrics
+      endpoint, if one is deliberately retained, exposes aggregate counts only
+      and is rate-limited/cached appropriately.
+    * Return a schema-versioned response containing the four counts, server
+      timestamp, and a defined freshness/consistency note. Invalid credentials,
+      malformed configuration, and database failures fail closed without
+      leaking stack traces or internal paths.
+    * Cover empty, live, paused, sleeping, completed, restored, and rematched
+      matches; browser coverage verifies that the visible labels correspond to
+      the JSON contract.
+
+* [ ] **Task [20.3]: Make Online Matchmaking Loading Visible And Recoverable**
+
+  * **Goal:** Replace the apparent no-op after clicking "Play Online" with an
+    accessible loading/join screen that remains visible until authoritative
+    `INIT` establishes a match or a recoverable error is shown.
+  * **Target Files:** `src/menu/Menu.ts`, `src/main.ts`,
+    `src/utils/onlineConfig.ts`, network startup/UI helpers
+  * **Test File:** `tests/online_loading_state.test.ts`,
+    `tests/browser/online_join_loading.e2e.test.ts`
+  * **Allowed Context:** `/config` discovery, query URL override, browser
+    startup branch, menu scene lifecycle, browser diagnostics harness
+  * **Commit:** `feat: show online matchmaking loading state`
+  * **Required Contract:**
+
+    * Clicking Play Online immediately gives visible, keyboard-accessible
+      feedback for configuration fetch, WebSocket connection, matchmaking, and
+      match initialization. Disable duplicate joins while a request is pending.
+    * Keep the existing manual `?url=` override and path-prefix-safe config
+      behavior. Configuration, connection, timeout, and protocol errors show a
+      sanitized retry/back-to-menu action; retry cleans up the old socket and
+      cannot create duplicate handlers or lobby entries.
+    * Do not start gameplay, accept pointer actions, or show a selected map
+      until validated authoritative settings arrive. A completed join replaces
+      the loading scene exactly once and disposes it.
+    * Test slow config, delayed `INIT`, socket failure, retry, cancellation,
+      and two-tab matchmaking through the production browser route.
+
+* [ ] **Task [20.4]: Add A Non-Binding Online Map Preference Screen**
+
+  * **Goal:** Let an online player choose a map as a matchmaking preference,
+    not a final unilateral map decision. The UI must explicitly describe that
+    the server may select a compatible map or fall back to the default.
+  * **Target Files:** `src/menu/Menu.ts`, `src/server/types.ts`,
+    `src/server/runtime.ts`, `src/server/gameRegistry.ts`, map catalog helpers
+  * **Test File:** `tests/online_map_preference.test.ts`,
+    `tests/browser/online_map_preference.e2e.test.ts`
+  * **Allowed Context:** validated browser map catalog, matchmaking protocol,
+    authoritative settings construction, local/battle map selection
+  * **Commit:** `feat: add online map preferences`
+  * **Required Contract:**
+
+    * Reuse catalog map IDs only; the browser never supplies raw map settings.
+      Hide blocked, non-browser-available, and incompatible maps, and preserve
+      the current local and KI-vs-KI map-selection behavior.
+    * Send an optional preference before matchmaking. The server validates it,
+      records no untrusted map payload, and chooses a map only by a documented
+      compatible-preference policy (for example, both players choose the same
+      eligible map); otherwise it chooses the canonical fallback.
+    * The loading screen identifies the submitted preference and the final
+      initialized scene identifies the actual server-selected map. A changed
+      preference only affects a new matchmaking attempt; it cannot change an
+      existing game or a rematch without a new authoritative match setup.
+    * Treat this as a product experiment: record selection/fallback aggregates
+      without player identifiers, add a feature flag/default-off policy if
+      deployment needs it, and leave a documented removal path. Do not claim it
+      is final map voting or ranked-matchmaking policy.
+
+* [ ] **Task [20.5]: Add A Safe In-Match Pause Menu And Report Flow**
+
+  * **Goal:** Add a pause-menu surface during online play that lets a player
+    request a server pause when supported and submit a report tied to the
+    authoritative game ID, without client-side game mutation or disclosure of
+    other players' private data.
+  * **Target Files:** `src/ui/PauseMenu.ts`, `src/main.ts`,
+    `src/server/types.ts`, `src/server/runtime.ts`, `src/server/db.ts`,
+    `src/server/gameRegistry.ts`
+  * **Test File:** `tests/match_pause_protocol.test.ts`,
+    `tests/match_report_protocol.test.ts`,
+    `tests/browser/pause_report.e2e.test.ts`
+  * **Allowed Context:** authoritative ownership checks, completed-match
+    gating, network packet validation, SQLite persistence, scene input
+    delegation
+  * **Commit:** `feat: add match pause menu and reports`
+  * **Required Contract:**
+
+    * The local menu overlay stops only that browser's input; it must not imply
+      that network physics or the opponent has paused. If authoritative pause
+      is offered, require a documented request/accept/resume policy, broadcast
+      its status, persist it, and reject actions for all participants while it
+      is active.
+    * A report request derives the match reference from the authenticated
+      server-side socket/game membership, never from a client-provided database
+      ID. Persist an immutable report record with an opaque report ID, created
+      time, category, bounded sanitized text, reporter membership, and the
+      authoritative game reference.
+    * Validate lengths, enum/category values, rate limits, duplicate reports,
+      and finished/disconnected-match policy. Do not expose reporter identity,
+      raw socket/IP data, snapshots, or arbitrary report queries to players.
+    * Confirm success/failure in the pause menu without leaking moderation
+      state. Operator access to reports is a separate authenticated endpoint
+      and retention/export policy, not an extension of the public dashboard.
+
+* [ ] **Task [20.6]: Share And View Immutable Completed-Match Replays**
+
+  * **Goal:** After a completed match, offer replay and share actions that
+    create a stable public viewer link; a visitor can open the link or paste a
+    share ID manually to watch the deterministic replay without joining or
+    modifying the original game.
+  * **Target Files:** `src/replay/types.ts`, `src/replay/recorder.ts`,
+    `src/replay/player.ts`, `src/menu/replayViewer.ts`, `src/ui/MatchResultOverlay.ts`,
+    `src/server/db.ts`, `src/server/runtime.ts`, `src/server/types.ts`
+  * **Test File:** `tests/shared_match_replay.test.ts`,
+    `tests/replay_share_security.test.ts`,
+    `tests/browser/shared_replay_viewer.e2e.test.ts`
+  * **Allowed Context:** versioned replay document, authoritative accepted
+    actions, existing replay viewer, completed-match result overlay, browser
+    clipboard APIs
+  * **Commit:** `feat: share completed match replays`
+  * **Required Contract:**
+
+    * Freeze the replay only after authoritative match completion and persist
+      its initial settings, seed, accepted action history, version, and final
+      result as an immutable validated artifact. Replaying it must reproduce
+      the recorded final snapshot/result and must never attach to a live
+      `GameHandler` or accept live gameplay input.
+    * Generate a revocable opaque share token distinct from the internal game
+      ID. A public share URL resolves only that replay's deliberately public
+      metadata and replay payload; it reveals no reports, player account data,
+      socket data, database IDs, or active game state. Unknown, revoked,
+      malformed, oversized, and incompatible tokens render a safe error.
+    * The match-result overlay provides **Replay** and **Share**. Share copies
+      the canonical viewer URL only after an explicit user gesture, gives a
+      visible fallback when clipboard write is unavailable, and does not make
+      a completed replay public without the user's share action/policy consent.
+    * The replay viewer offers a visible share-ID input and a separate
+      user-gesture **Paste from clipboard** action. Clipboard permission
+      failures leave typed input intact and explain how to paste manually; no
+      automatic clipboard reads occur on page load.
+    * Browser E2E covers result -> share -> copied/manual URL -> viewer ->
+      deterministic playback, direct token navigation, manual typed ID, denied
+      clipboard permission, invalid token, and verifies that viewer controls
+      cannot send `SHOOT`, `USE_ITEM`, `REMATCH`, pause, or report packets.
+
+* [ ] **Task [20.7]: Qualify The Online Operations Journey**
+
+  * **Goal:** Prove the dashboard, online loading, tentative map preference,
+    pause/report, and shared replay features compose safely with authoritative
+    gameplay, reconnect persistence, and the existing browser diagnostics
+    workflow.
+  * **Target Files:** `docs/release-verification.md`, `requirements.md`,
+    `AGENTS.md`, `step-by-step.md`, server/browser test harnesses
+  * **Test File:** `tests/online_operations_gate.test.ts`,
+    `tests/browser/online_operations_journey.e2e.test.ts`
+  * **Allowed Context:** Sections 8, 12, 16, 18, and Tasks 20.1–20.6
+  * **Commit:** `test: qualify online operations journey`
+  * **Required Journey:**
+
+    * obtain protected dashboard metrics for created, live, paused, sleeping,
+      completed, evicted, and restored games;
+    * enter online play through a delayed loading state and a submitted map
+      preference, then verify the server-selected map;
+    * open/close the local pause menu, exercise the agreed authoritative pause
+      policy, submit one validated report, and prove invalid report attempts
+      do not alter game state;
+    * complete a match, create a share link, load it in an isolated browser
+      context by URL and manual/paste ID, and verify replay equality;
+    * verify that reports, dashboard authentication, share tokens, clipboard
+      failures, retries, reconnects, and malformed packets neither leak data
+      nor create duplicate matches/handlers.
+  * **Required Commands:** `bun test`, `npx tsc --noEmit`, `bun run build`,
+    `bun run test:browser:full`, and focused server/browser tests from this
+    chapter.
+  * **Release Rule:** Dashboard metrics, report records, and replay sharing are
+    operational features, not a substitute for the Section 15 human-playtest
+    evidence. Do not mark a map preference experiment, pause policy, or public
+    replay feature as qualified without the explicit tests, privacy review,
+    and documented deployment configuration above.
