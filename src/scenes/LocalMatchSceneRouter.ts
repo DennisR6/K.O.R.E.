@@ -1,7 +1,8 @@
 import { CombiEmitter } from "../emitter/InputEmitter.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
-import type { AiSettings } from "../ai/types.js";
+import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
+import type { AiDifficulty, AiSettings } from "../ai/types.js";
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
 import { MainMenu } from "../menu/Menu.js";
 import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
@@ -35,7 +36,7 @@ export class LocalMatchSceneRouter {
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
 	) {
 		this.handler = new GameHandler();
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId));
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId), (difficulty, mapId) => this.startAiOpponent(difficulty, mapId));
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
 	}
@@ -64,6 +65,18 @@ export class LocalMatchSceneRouter {
 		const started = this.startScene(() => createAiBattleHandler(mapId, seed), mapId);
 		if (started) {
 			this.aiBattle = true;
+			this.battleSeed = seed;
+		}
+		return started;
+	}
+
+	/** Starts one human-controlled team against a computer-controlled team. */
+	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		const seed = this.battleSeedSource();
+		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed), mapId);
+		if (started) {
+			this.aiBattle = false;
 			this.battleSeed = seed;
 		}
 		return started;
@@ -119,7 +132,7 @@ export class LocalMatchSceneRouter {
 	}
 
 	private createMenuHandler(): GameHandler {
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId));
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId), (difficulty, mapId) => this.startAiOpponent(difficulty, mapId));
 		const handler = new GameHandler();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);
@@ -181,5 +194,35 @@ export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number
 	// The passive battle input becomes the wrapped gameplay input of the
 	// result overlay; clicks are ignored while the battle plays.
 	handler.setMouseHandler(aiBattle);
+	return handler;
+}
+
+/** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
+export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
+	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
+	settings.myTeam = [0];
+	settings.allTeams = ["Human", `${difficulty} KI`];
+	const aiSettings: AiSettings = { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) };
+	settings.ai = aiSettings;
+	validateGameSettings(settings);
+	const handler = new GameHandlerBuilder()
+		.defaultSystems()
+		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
+		.fromSettings(settings)
+		.build();
+	const ui = new UiSystem();
+	const arrow = new DirectionArrow(ui);
+	const emitters = new CombiEmitter();
+	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2, seed));
+	const feedback = new GameplayFeedback(handler, ui);
+	const itemControls = new ItemPhaseControls(handler, emitters, ui);
+	handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings));
+	handler.addSystem(ui);
+	handler.setMouseHandler(itemControls);
+	handler.addSystem(arrow);
+	handler.addSystem(new EmitterSystem(emitters, error => feedback.setRejection(error)));
+	handler.addPostDrawer(arrow);
+	handler.addPostDrawer(feedback);
+	handler.addPostDrawer(itemControls);
 	return handler;
 }

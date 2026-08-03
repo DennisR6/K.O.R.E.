@@ -1,5 +1,6 @@
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
+import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import { BoundarySystem } from "./BoundarySystem.js";
 import { DirectionArrow } from "./DirectionArrow.js";
 import { EmitterSystem } from "./Emitter.js";
@@ -84,6 +85,7 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 			return system
 		}
 		case "ai.battle": return AiBattleSystem.fromSettings(state)
+		case "ai.opponent": return AiOpponentSystem.fromSettings(state)
 		case "ui.direction-arrow": {
 			if (Object.keys(state).length) throw new Error("Malformed direction arrow settings")
 			const input = restored.get("ui.pointer-input")

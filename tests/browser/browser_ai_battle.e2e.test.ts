@@ -88,4 +88,25 @@ describe("browser KI vs KI battle", () => {
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
 	}, 120_000);
+
+	test("starts a human 1-vs-KI match after difficulty and map selection", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
+			await clickWorld(page, 400, 100); // landing -> main menu
+			await clickWorld(page, 400, 141); // 1 vs KI
+			await clickWorld(page, 400, 214); // Medium KI
+			await clickWorld(page, 400, 100); // Ice Map
+			await waitFor(async () => (await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.ai?.difficulty ?? null)) === "medium", 10_000, 100, "human-vs-KI start");
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
+		expect(await page.evaluate(() => (window as any).game?.handler?.getTeam?.() ?? null)).toEqual([0]);
+		} finally {
+			await browser.close();
+			await server.stop();
+		}
+		expect(server.isAlive()).toBe(false);
+	}, 60_000);
 });

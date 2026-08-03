@@ -175,8 +175,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// Autonomous drivers are input adapters, not physics participants.  A
 		// simulated shot must not let an AI submit nested turns in its clone.
 		if (settings.systems && settings.systemOrder) {
-			settings.systems = settings.systems.filter((system: { systemId: string }) => system.systemId !== "ai.battle")
-			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle")
+			settings.systems = settings.systems.filter((system: { systemId: string }) => system.systemId !== "ai.battle" && system.systemId !== "ai.opponent")
+			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
 		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
 		return g.resolveTurn({ actorId, angle, power })
