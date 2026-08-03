@@ -1,5 +1,32 @@
 # Slipstrike (KORE) Release Verification Record
 
+## Section 20 Online Operations Qualification
+
+Date: 2026-08-03. Automated evidence is qualified independently from the
+Section 15 human-playtest release blocker.
+
+| Command | Result |
+| --- | --- |
+| `bun run test:fast` | PASS: 584 pass, 3 skip, 0 fail; 6,952 assertions across 156 files [8.35s] |
+| `npx tsc --noEmit` | PASS: 0 type errors |
+| `bun run build` | PASS: generated browser bundle and assets |
+| `bun run test:browser:full` | PASS: 19 pass, 0 fail; 331 assertions across 6 files [153.52s] |
+| `bun test tests/online_operations_gate.test.ts tests/browser/online_operations_journey.e2e.test.ts` | PASS: 3 pass, 0 fail; 27 assertions [5.09s] |
+
+- Dashboard bearer authentication and aggregate privacy: verified.
+- Online loading, submitted preference, authoritative map selection, and
+  unanimous pause behavior: verified.
+- Report validation/no-mutation, immutable replay shares, revoked-token safety,
+  clipboard recovery, manual/direct viewer entry, and no-live-action viewer
+  boundary: verified by focused protocol, security, and browser evidence.
+- `bun test` remains the raw all-discovered release/qualification command; it
+  intentionally includes long browser and fuzz workloads. The CI fast gate is
+  `bun run test:fast`, with browser and qualification suites run separately.
+
+**PASS - automated online operations.** This does not override the existing
+**BLOCKED / NOT QUALIFIED** Section 15 status pending external human playtest
+evidence.
+
 Date: 2026-07-31
 Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x (vendored 1.11.x in `public/`)
 Branch: `test` (Section 12 release-candidate qualification complete)

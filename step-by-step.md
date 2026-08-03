@@ -2698,7 +2698,13 @@ invent a zero for data the current server cannot establish.
     * **Test File:** `tests/browser/shared_replay_viewer.e2e.test.ts`
     * **Commit:** `test: verify replay sharing journey`
 
-* [ ] **Task [20.7]: Qualify The Online Operations Journey**
+* [x] **Task [20.7]: Qualify The Online Operations Journey**
+
+  * **Done:** Focused server and browser coverage verifies protected dashboard
+    access, authoritative online preference selection, unanimous pause, report
+    validation, immutable replay sharing, isolated replay playback, and the
+    no-live-action boundary. The automated operations record is qualified;
+    Section 15 human-playtest qualification remains independently blocked.
 
   * **Goal:** Prove the dashboard, online loading, tentative map preference,
     pause/report, and shared replay features compose safely with authoritative
@@ -2724,7 +2730,7 @@ invent a zero for data the current server cannot establish.
     * verify that reports, dashboard authentication, share tokens, clipboard
       failures, retries, reconnects, and malformed packets neither leak data
       nor create duplicate matches/handlers.
-  * **Required Commands:** `bun test`, `npx tsc --noEmit`, `bun run build`,
+  * **Required Commands:** `bun run test:fast`, `npx tsc --noEmit`, `bun run build`,
     `bun run test:browser:full`, and focused server/browser tests from this
     chapter.
   * **Release Rule:** Dashboard metrics, report records, and replay sharing are

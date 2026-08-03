@@ -17,7 +17,7 @@ test("Section 20 operational evidence and privacy boundaries are present", () =>
 		"tests/browser/online_operations_journey.e2e.test.ts",
 	]) expect(existsSync(resolve(root, file))).toBe(true);
 	const checklist = read("step-by-step.md");
-	for (const task of ["[20.1]", "[20.2]", "[20.3]", "[20.4]", "[20.5]", "[20.6.0]", "[20.6.1]", "[20.6.2]", "[20.6.3]", "[20.6.4]", "[20.6.5]"]) expect(checklist).toContain(`[x] **Task ${task}`);
+	for (const task of ["[20.1]", "[20.2]", "[20.3]", "[20.4]", "[20.5]", "[20.6.0]", "[20.6.1]", "[20.6.2]", "[20.6.3]", "[20.6.4]", "[20.6.5]", "[20.7]"]) expect(checklist).toContain(`[x] **Task ${task}`);
 	const replayRoute = read("src/server/replayShares.ts");
 	const replayStore = read("src/server/db.ts");
 	expect(replayStore).toContain("finalSettings");
@@ -27,4 +27,6 @@ test("Section 20 operational evidence and privacy boundaries are present", () =>
 test("release record preserves the human-playtest blocker", () => {
 	const report = read("docs/release-verification.md");
 	expect(report).toContain("BLOCKED / NOT QUALIFIED");
+	expect(report).toContain("Section 20 Online Operations Qualification");
+	expect(report).toContain("PASS - automated online operations");
 });
