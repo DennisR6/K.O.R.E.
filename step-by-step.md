@@ -2584,7 +2584,7 @@ invent a zero for data the current server cannot establish.
       clipboard permission, invalid token, and verifies that viewer controls
       cannot send `SHOOT`, `USE_ITEM`, `REMATCH`, pause, or report packets.
 
-  * [ ] **Task [20.6.0]: Serialize Every Registered System With A Stable Identity**
+  * [v] **Task [20.6.0]: Serialize Every Registered System With A Stable Identity**
     * **Goal:** Before continuing replay sharing, make systems reconstructible
       from snapshot data just like players: every system installed on a handler
       has a stable unique ID and a versioned settings object, and
@@ -2624,7 +2624,7 @@ invent a zero for data the current server cannot establish.
         restored execution have equal final engine snapshots. Add a collision
         test for two classes with similar names to prove IDs remain unique.
 
-  * [v] **Task [20.6.1]: Persist Frozen Replay Shares**
+  * [ ] **Task [20.6.1]: Persist Frozen Replay Shares**
     * **Goal:** Add a versioned SQLite share record which can be created only
       from a completed authoritative match and contains an immutable validated
       replay/final-result payload plus a revocable opaque token.

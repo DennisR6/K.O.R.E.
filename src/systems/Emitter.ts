@@ -1,13 +1,15 @@
 import { LogEmitter } from "../emitter/InputEmitter.js";
 import { GameState, type IInputEmitter } from "../engine/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
-export class EmitterSystem implements ISystem {
+export class EmitterSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.emitter";
 	emitter: IInputEmitter
 	constructor(em?: IInputEmitter, private readonly onError?: (error: unknown) => void) {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state !== GameState.Turn_done) return
