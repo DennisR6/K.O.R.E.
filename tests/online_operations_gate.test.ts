@@ -14,6 +14,7 @@ test("Section 20 operational evidence and privacy boundaries are present", () =>
 		"tests/shared_match_replay.test.ts",
 		"tests/replay_share_security.test.ts",
 		"tests/browser/shared_replay_viewer.e2e.test.ts",
+		"tests/browser/online_operations_journey.e2e.test.ts",
 	]) expect(existsSync(resolve(root, file))).toBe(true);
 	const checklist = read("step-by-step.md");
 	for (const task of ["[20.1]", "[20.2]", "[20.3]", "[20.4]", "[20.5]", "[20.6.0]", "[20.6.1]", "[20.6.2]", "[20.6.3]", "[20.6.4]", "[20.6.5]"]) expect(checklist).toContain(`[x] **Task ${task}`);
