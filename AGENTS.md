@@ -324,8 +324,9 @@ bunx playwright install chromium   # once per machine for browser E2E tests
 Useful commands:
 
 ```sh
-bun run test           # fast deterministic suite; excludes browser E2E
+bun run test           # ≤60s fast deterministic suite; excludes long qualifications/browser E2E
 bun test               # raw all Bun-discovered tests, including browser E2E
+bun run test:qualification # browser, fuzz, map, and gameplay release qualifications
 bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
 bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
 bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)

@@ -30,6 +30,14 @@ function drag(handler: ReturnType<typeof createInputFixture>["handler"], start: 
 	handler.handleMouseReleased();
 }
 
+/** Pointer position is serialized UI continuity, not authoritative gameplay. */
+function gameplaySnapshot(handler: ReturnType<typeof createInputFixture>["handler"]): string {
+	const settings = handler.toSettings();
+	delete settings.systems;
+	delete settings.systemOrder;
+	return JSON.stringify(settings);
+}
+
 test("mouse input selects the active actor and submits one legal shot", () => {
 	const { handler, active, emitter } = createInputFixture();
 	drag(handler, { x: 100, y: 100 }, { x: 200, y: 100 });
@@ -66,14 +74,14 @@ test("inactive, dead, non-finite, blocked, and terminal input leaves the handler
 		if (scenario === "dead") active.setIsDead(true);
 		if (scenario === "blocked") handler.setState(GameState.Playing);
 		if (scenario === "terminal") handler.setState(GameState.Game_over);
-		const before = JSON.stringify(handler.toSettings());
+		const before = gameplaySnapshot(handler);
 
 		const actor = scenario === "inactive" ? inactive : active;
 		const start = scenario === "non-finite" ? { x: Number.NaN, y: 100 } : actor.getPos();
 		drag(handler, start, { x: start.x + 100, y: start.y });
 		handler.tick();
 
-		expect(JSON.stringify(handler.toSettings())).toBe(before);
+		expect(gameplaySnapshot(handler)).toBe(before);
 		expect(handler.getState()).toBe(scenario === "blocked" ? GameState.Playing : scenario === "terminal" ? GameState.Game_over : GameState.Your_turn);
 	}
 });
