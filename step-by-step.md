@@ -2683,7 +2683,11 @@ invent a zero for data the current server cannot establish.
       `tests/browser/shared_replay_viewer.e2e.test.ts`
     * **Commit:** `feat: add replay share viewer`
 
-  * [ ] **Task [20.6.5]: Verify The Replay-Sharing Journey**
+  * [x] **Task [20.6.5]: Verify The Replay-Sharing Journey**
+    * **Done:** Production-browser coverage loads a frozen share by direct URL
+      and manual ID, proves denied-clipboard recovery and invalid-token safety,
+      and observes that the isolated viewer opens no WebSocket. Revocation and
+      public-payload privacy remain covered by the focused security suite.
     * **Goal:** Prove the completed-match -> share -> URL/manual/paste viewer
       path, clipboard-denial recovery, revocation, and no-live-action boundary
       in the production browser.

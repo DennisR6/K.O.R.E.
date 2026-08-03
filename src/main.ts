@@ -19,6 +19,7 @@ import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
 
 const uri = new URL(window.location.href)
+const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
 const usersettings = {
 	url: uri.searchParams.get("url") ?? "",
 	mapbuilder: uri.searchParams.has("mapbuilder"),
@@ -144,8 +145,6 @@ function startNetworkGame(serverUrl: string) {
 		startGame(handler)
 	})
 }
-
-const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
 
 /** A no-socket, read-only replay entry surface. Clipboard reads require a click. */
 function startReplayViewer(initialToken: string): void {
