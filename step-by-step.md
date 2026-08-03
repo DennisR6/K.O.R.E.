@@ -2773,9 +2773,14 @@ invent a zero for data the current server cannot establish.
     handler and SQLite snapshots. A retired revision remains restorable from an
     existing match snapshot but cannot create a new match.
 
-* [ ] Add cache revision/invalidation to expose newly approved database maps to
+* [x] Add cache revision/invalidation to expose newly approved database maps to
   new matches without an engine/framework restart. Existing handlers must not
   be mutated by refresh. Commit: `feat: refresh database map registry`
+
+  * **Done:** `MapRepository` caches defensive approved-map copies and exposes
+    an explicit monotonic `refresh()` revision. Newly approved/retired records
+    become visible only to future lookups after refresh; already expanded match
+    settings remain unchanged.
 
 * [ ] Add focused coverage proving approved-map loading; draft/retired selection
   rejection; malformed document, unsupported hazard, and hash rejection; UUID

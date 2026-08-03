@@ -30,3 +30,20 @@ test("repository rejects retired IDs while retaining their immutable stored revi
 	expect(() => repository.buildSettings(APPROVED_ID, createCanonicalPlayableMatchSettings())).toThrow(/not approved/);
 	database.close();
 });
+
+test("approved-map cache refresh reveals new revisions without changing existing settings", () => {
+	const database = new GameDatabase(":memory:");
+	const repository = new MapRepository(database);
+	expect(repository.listApproved()).toEqual([]);
+	database.createMap({ id: APPROVED_ID, document: createCueClashMap({ x: 800, y: 450 }), status: "approved" });
+	expect(repository.listApproved()).toEqual([]);
+	const before = repository.getRevision();
+	expect(repository.refresh()).toBe(before + 1);
+	const { settings } = repository.buildSettings(APPROVED_ID, createCanonicalPlayableMatchSettings());
+	database.retireMap(APPROVED_ID);
+	expect(settings.mapReference?.mapId).toBe(APPROVED_ID);
+	expect(repository.listApproved().map(map => map.id)).toEqual([APPROVED_ID]);
+	repository.refresh();
+	expect(repository.listApproved()).toEqual([]);
+	database.close();
+});

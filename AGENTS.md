@@ -290,7 +290,8 @@ After every change, check whether this guide still reflects the implementation a
 	validated and never updated in place.
 - `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
   `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
-  retired revisions for new matches while preserving them in storage.
+  retired revisions for new matches while preserving them in storage. Its
+  explicit revisioned cache refresh affects only future map lookups.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
   input checks, simulation commits, rule progression, lifecycle-gated paused/
   completed actions, persistence, metric aggregation, and lazy SQLite
