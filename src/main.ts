@@ -38,8 +38,8 @@ const builder = new GameHandlerBuilder()
 	.defaultSystems()
 if (usersettings.replayToken) {
 	handler = new GameHandler()
-	startReplayViewer(usersettings.replayToken)
-	startGame(handler, () => handler)
+	const viewer = startReplayViewer(usersettings.replayToken)
+	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
 	router = new LocalMatchSceneRouter()
 	handler = router.getHandler()
@@ -148,7 +148,7 @@ function startNetworkGame(serverUrl: string) {
 }
 
 /** A no-socket, read-only replay entry surface. Clipboard reads require a click. */
-function startReplayViewer(initialToken: string): void {
+function startReplayViewer(initialToken: string): ReplayViewer {
 	const viewer = new ReplayViewer();
 	(window as unknown as { replayViewer: ReplayViewer }).replayViewer = viewer;
 	const panel = document.createElement("section");
@@ -179,6 +179,7 @@ function startReplayViewer(initialToken: string): void {
 	panel.append(heading, input, load, paste, status);
 	document.body.append(panel);
 	if (initialToken) void loadToken();
+	return viewer;
 }
 
 /** Share URLs are displayed first; clipboard access is an explicit second click. */
@@ -298,7 +299,7 @@ function showNetworkLoading(initialMessage: string) {
 	}
 }
 
-function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h) {
+function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h, afterTick?: () => void) {
 	const sketch = (p: p5Types) => {
 		let ctx: RenderContext;
 		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
@@ -322,6 +323,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			if (!ctx) return
 			const active = getActiveHandler()
 			active.tick()
+			afterTick?.()
 			p.push()
 			active.drawWorld(ctx)
 			p.pop()
