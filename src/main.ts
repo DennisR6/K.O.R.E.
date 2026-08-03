@@ -17,6 +17,7 @@ import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
+import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -162,7 +163,7 @@ function startReplayViewer(initialToken: string): void {
 		if (!REPLAY_TOKEN.test(token)) { status.textContent = "Enter a valid replay share ID."; return; }
 		status.textContent = "Loading replay…";
 		try {
-			const response = await fetch(`/replays/${token}`, { cache: "no-store" });
+			const response = await fetch(buildReplayShareEndpoint(window.location.href, token), { cache: "no-store" });
 			if (!response.ok) throw new Error("Replay unavailable");
 			const body = await response.json() as { replay?: unknown };
 			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? "Replay unavailable");
@@ -203,10 +204,7 @@ function installReplayShareControls(socket: WebSocket): void {
 			const message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
 			if (message.type !== NetworkMessageType.REPLAY_SHARE_CREATED) return
 			const token = (message as { token: string }).token
-			const viewer = new URL(window.location.href)
-			viewer.search = ""
-			viewer.searchParams.set("replay", token)
-			url.value = viewer.toString()
+			url.value = buildReplayViewerUrl(window.location.href, token)
 			status.textContent = "Replay link ready. Copy it or select it manually."
 			panel.hidden = false
 		} catch { /* ignore malformed protocol input */ }
