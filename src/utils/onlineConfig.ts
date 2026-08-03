@@ -24,7 +24,9 @@ export function wsUrlFromLocation(location: { protocol: string; host: string }):
 /** Fetches the server-advertised online-play configuration. */
 export async function fetchOnlineServerConfig(
 	fetchImpl: typeof fetch = fetch,
-	configPath = "/config",
+	// Relative rather than origin-rooted: a page at /kore/ must ask its
+	// reverse-proxy mount for /kore/config, not an unrelated host-root /config.
+	configPath = "config",
 ): Promise<OnlineServerConfig> {
 	const response = await fetchImpl(configPath, { cache: "no-store" });
 	if (!response.ok) throw new Error(`Server config unavailable: HTTP ${response.status}`);

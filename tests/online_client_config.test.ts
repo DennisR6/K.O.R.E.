@@ -24,6 +24,15 @@ describe("client online-play config", () => {
 		expect(config).toEqual({ baseUrl: "https://lupricht.net/kore", wsUrl: "wss://lupricht.net/kore" });
 	});
 
+	test("uses a document-relative config endpoint for path-prefix deployments", async () => {
+		let requested = "";
+		await fetchOnlineServerConfig(async (input) => {
+			requested = String(input);
+			return jsonResponse({ baseUrl: "https://lupricht.net/kore/", wsUrl: "wss://lupricht.net/kore/" });
+		});
+		expect(requested).toBe("config");
+	});
+
 	test("rejects failing or malformed config responses", async () => {
 		await expect(
 			fetchOnlineServerConfig(async () => jsonResponse("nope", false, 404)),

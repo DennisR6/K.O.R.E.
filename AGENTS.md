@@ -349,7 +349,8 @@ There is no lint or formatting script. CI currently runs only
 branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
 scripts, and `src-website/` are not typechecked by `npx tsc --noEmit`.
 
-The root `.env` currently sets `PORT=4001`; the server fallback is 3000.
+The root `.env` currently sets `PORT=4001` and
+`KORE_BASE_URL=https://lupricht.net/kore/`; the server fallback is 3000.
 
 Section 15 gameplay release qualification is recorded in
 `docs/gameplay-balance-report.md` and `docs/release-verification.md`, with
