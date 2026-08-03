@@ -14,7 +14,6 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (ctx.state !== GameState.Turn_done) return
 		if (!ctx.mouse.turn) {
-			console.log("no turn data found!")
 			return
 		}
 		const { actorId, angle, power } = ctx.mouse.turn
@@ -25,7 +24,6 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 			ctx.state = GameState.Your_turn
 			return
 		}
-		console.log("sendShot")
 		// Network emitters are asynchronous. A local emitter may already have
 		// started playback, which must not be overwritten with a wait state.
 		if (ctx.state === GameState.Turn_done) ctx.state = GameState.Waiting_for_server

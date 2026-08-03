@@ -42,7 +42,6 @@ export class GameEmitter implements IInputEmitter {
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`)
 		this.recorder.recordShoot(actorId, angle, power)
-		console.log("Recieved Turn: ", JSON.stringify({ actorId, angle, power }))
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
 		this.handler.playTurn(sim, () => {

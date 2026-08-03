@@ -235,7 +235,6 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				this.setState(GameState.Playing_done)
 			}
 			onComplete?.()
-			console.log("done")
 		});
 	}
 
@@ -763,7 +762,7 @@ export class GameHandlerBuilder {
 		this.engine.setWorldSize(worldSize)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
 		const snapshot = gameSettings as EngineSettings
-		if (snapshot.systems !== undefined || snapshot.systemOrder !== undefined) {
+		if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
 			validateSystemSettingsList(snapshot.systems, snapshot.systemOrder)
 			const systemSettings = snapshot.systems as import("../systems/types.js").SystemSettings[]
 			const systemOrder = snapshot.systemOrder as string[]

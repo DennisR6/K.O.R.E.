@@ -324,7 +324,8 @@ bunx playwright install chromium   # once per machine for browser E2E tests
 Useful commands:
 
 ```sh
-bun test               # all Bun-discovered tests
+bun run test           # fast deterministic suite; excludes browser E2E
+bun test               # raw all Bun-discovered tests, including browser E2E
 bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
 bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
 bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)
@@ -334,7 +335,7 @@ bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
-bun run test:browser        # alias for test:browser:full; runs in the normal `bun test` suite too
+bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run
 bun run test:maps:matrix    # Section 17 full release map matrix comparison
 bun run start               # run Bun HTTP/WebSocket server
@@ -344,9 +345,9 @@ bun run serve          # live-server only; no WebSocket backend
 bun run createAssets   # intentionally regenerate registry and asset packs
 ```
 
-There is no lint or formatting script. CI currently runs only
-`bun install --frozen-lockfile` and `bun test`, and only targets the `main`
-branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
+There is no lint or formatting script. CI runs `bun install --frozen-lockfile`,
+`bun run test:fast`, map verification, and a separate browser job; it targets
+only the `main` branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
 scripts, and `src-website/` are not typechecked by `npx tsc --noEmit`.
 
 The root `.env` currently sets `PORT=4001` and
@@ -380,7 +381,9 @@ is never the release gate. `test:browser:smoke` covers startup/menu, and
 Section 17.8 map-catalog E2E (every browser-available map opens through the
 production menu, renders its structures/hazards, resolves one legal pointer
 action, and returns to the menu); both build the generated bundle and manage
-the Bun server lifecycle through the harness.
+the Bun server lifecycle through the harness. Browser E2E is intentionally
+excluded from `test:fast` because its server/Chromium lifecycle runs in its
+dedicated CI job.
 
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:
