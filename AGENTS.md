@@ -489,6 +489,10 @@ The canonical engine map/game model is `GameSettings` in
   the two-sided ice-map layout from them.
 - handler `effects`, `items`, teams, and player-count metadata
 
+Database-derived settings additionally preserve `{ mapId, contentHash }` in
+`mapReference`; the expanded geometry remains in the same snapshot so a retired
+map revision can still restore an existing match deterministically.
+
 Versioned game/map/item/hazard/AI/replay document contracts live in
 `src/contracts/documents.ts`; legacy documents without a version migrate to
 schema version one, while unknown versions are rejected.

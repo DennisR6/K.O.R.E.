@@ -2763,11 +2763,15 @@ invent a zero for data the current server cannot establish.
     preference validation and fallback selection, while `GameRegistry` expands
     the approved ID server-side before creating the authoritative handler.
 
-* [ ] Persist `{ mapId, contentHash }` and the expanded map state in every
+* [x] Persist `{ mapId, contentHash }` and the expanded map state in every
   `EngineSettings` match snapshot. Existing matches, reconnects, rollback, and
   replays must retain their original immutable map even after a new revision is
   approved. Retired maps remain readable for these old records but are hidden
   from new matchmaking. Commit: `feat: retain immutable match map references`
+
+  * **Done:** Database-map settings carry an immutable map reference through
+    handler and SQLite snapshots. A retired revision remains restorable from an
+    existing match snapshot but cannot create a new match.
 
 * [ ] Add cache revision/invalidation to expose newly approved database maps to
   new matches without an engine/framework restart. Existing handlers must not

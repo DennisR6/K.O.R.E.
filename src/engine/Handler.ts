@@ -577,6 +577,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			allTeamSize: this.teamSize,
 			playerCount: this.settings?.playerCount ?? 1,
 			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
+			...(this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {}),
 			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
 			...(this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {}),
 			turnNumber: this.getContext().currTurn,

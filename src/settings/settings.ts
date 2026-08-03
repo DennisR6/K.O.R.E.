@@ -37,6 +37,8 @@ export interface GameSettings {
 	minPlayers: number,
 	maxPlayers: number,
 	turn?: number
+	/** Immutable database-map identity retained with expanded runtime settings. */
+	mapReference?: { mapId: string; contentHash: string }
 }
 
 export interface SettingsScreenResolution {

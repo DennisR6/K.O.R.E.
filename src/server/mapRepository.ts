@@ -22,6 +22,12 @@ export class MapRepository {
 	/** Converts only a fresh, approved database document into match settings. */
 	public buildSettings(mapId: string, template: GameSettings): { map: StoredMap; settings: GameSettings } {
 		const map = this.getApproved(mapId);
-		return { map, settings: loadMapDocument(map.document, structuredClone(template)) };
+		return {
+			map,
+			settings: {
+				...loadMapDocument(map.document, structuredClone(template)),
+				mapReference: { mapId: map.id, contentHash: map.contentHash },
+			},
+		};
 	}
 }
