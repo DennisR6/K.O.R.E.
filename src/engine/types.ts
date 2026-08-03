@@ -2,7 +2,7 @@ import { EntityManager } from "../entity/EntityManager.js";
 import type { PlayerSettings } from "../entity/types.js";
 import type { PhysicsStrategy } from "../physics/physics.js";
 import { GameSettings } from "../settings/settings.js";
-import type { IGameContext, ISystem } from "../systems/types.js";
+import type { IGameContext, ISystem, SystemSettings } from "../systems/types.js";
 import type { RuleState } from "../rules/types.js";
 import type { MatchResult } from "../rules/types.js";
 import type { ItemTarget } from "../item/target.js";
@@ -172,6 +172,10 @@ export interface EngineSettings extends GameSettings {
 	/** Handler tick duration; defaults to one for legacy snapshots. */
 	tickRate?: number
 	players: PlayerSettings[];
+	/** Data-only engine-owned system snapshots, sorted by stable ID. */
+	systems?: SystemSettings[]
+	/** Runtime tick registration order, expressed using stable IDs. */
+	systemOrder?: string[]
 	// MapBoundarySettings: EngineSettingsMapBoundary[];
 }
 

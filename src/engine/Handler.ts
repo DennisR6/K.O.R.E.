@@ -4,7 +4,8 @@ import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { GameState } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, ItemDrawState, TurnPacket } from "./types.js"
-import type { IGameContext, ISystem } from "../systems/types.js";
+import type { IGameContext, ISerializableSystem, ISystem } from "../systems/types.js";
+import { createSystemFromSettings, validateSystemSettingsList } from "../systems/systemSettings.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../settings/settings.js"
 import type { IStructure } from "../structures/types.js";
@@ -400,6 +401,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 	public getContext(): IGameContext { return { ...this.context }; }
 	public addSystem(system: ISystem) { this.systems.push(system) }
+	/** Snapshot-only inspection; callers must not mutate the returned systems. */
+	public getSystems(): readonly ISystem[] { return this.systems }
+	/** Builder-only replacement used when restoring the serialized system graph. */
+	public replaceSystems(systems: ISystem[]): void { this.systems = systems }
 	public getEntityManager(): EntityManager { return this.entityManager }
 
 	public setState(state: GameState): void {
@@ -574,6 +579,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 			matchResult: this.getMatchResult(),
 			physicsState: this.getPhysicsState(),
+			systems: (() => {
+				const serialized = this.systems.map(system => {
+				if (!("systemId" in system) || !("toSettings" in system)) throw new Error("All registered systems must implement ISettingsSerialize")
+				return (system as ISerializableSystem).toSettings()
+				})
+				if (new Set(serialized.map(system => system.systemId)).size !== serialized.length) throw new Error("Duplicate system IDs are not serializable")
+				return serialized.sort((a, b) => a.systemId.localeCompare(b.systemId))
+			})(),
+			systemOrder: this.systems.map(system => {
+				if (!("systemId" in system)) throw new Error("All registered systems require a stable systemId")
+				return (system as ISerializableSystem).systemId
+			}),
 			tickRate: this.getTickRate(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
@@ -732,13 +749,27 @@ export class GameHandlerBuilder {
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
-		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, physicsState: _physicsState, tickRate: _tickRate, ...initialSettings } = gameSettings as EngineSettings
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, physicsState: _physicsState, tickRate: _tickRate, systems: _systems, systemOrder: _systemOrder, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
 		this.engine.setTickRate((gameSettings as EngineSettings).tickRate ?? 1)
 		this.engine.setWorldSize(worldSize)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
+		const snapshot = gameSettings as EngineSettings
+		if (snapshot.systems !== undefined || snapshot.systemOrder !== undefined) {
+			validateSystemSettingsList(snapshot.systems, snapshot.systemOrder)
+			const systemSettings = snapshot.systems as import("../systems/types.js").SystemSettings[]
+			const systemOrder = snapshot.systemOrder as string[]
+			const byId = new Map(systemSettings.map(system => [system.systemId, system]))
+			const restored = new Map<string, ISerializableSystem>()
+			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "ui.direction-arrow")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
+			if (byId.has("ui.direction-arrow")) restored.set("ui.direction-arrow", createSystemFromSettings(byId.get("ui.direction-arrow")!, restored))
+			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
+			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
+			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
+			restoredPhysics.strategy = this.engine.getPhysics()
+		}
 
 		// Adding Background
 		let backgroundSettings: IBackground = getBackgoundSystem(background)

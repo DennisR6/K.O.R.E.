@@ -1,12 +1,14 @@
 import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
 import { GameState } from "../engine/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import type { UiSystem } from "./UiSystem.js";
 
-export class DirectionArrow implements IDrawer, ISystem {
+export class DirectionArrow implements IDrawer, ISerializableSystem<SystemSettings> {
+	public readonly systemId = "ui.direction-arrow";
 	private context: IGameContext | undefined
 
 	constructor(private readonly input: UiSystem) { }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 
 	public draw(renderer: RenderContext): void {
 		const context = this.context
