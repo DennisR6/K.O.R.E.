@@ -78,7 +78,9 @@ After every change, check whether this guide still reflects the implementation a
 ### Runtime entry points
 
 - `index.html`: browser shell; loads vendored `public/p5.min.js` and generated `dist/main.js`.
-- `src/main.ts`: browser bootstrap, menu/game selection, p5 setup, render loop, DOM mouse events, keyboard audio controls, and `window.game` debug access.
+- `src/main.ts`: browser bootstrap, menu/game selection, accessible online
+  connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
+  mouse events, keyboard audio controls, and `window.game` debug access.
 - `server.ts`: Bun static-file and native WebSocket server, in-memory lobby, and matchmaking loop.
 - `src-website/index.html`: standalone map-editor page.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft

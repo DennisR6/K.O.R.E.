@@ -59,11 +59,31 @@ if (!usersettings.skipmenu) {
 // landingengine.draw = landingengine.drawWorld
 // handler.addPreDrawer(landingengine)
 function startNetworkGame(serverUrl: string) {
+	const loading = showNetworkLoading("Connecting to the match server…")
 	const socket = new WebSocket(serverUrl)
 	let started = false
+	let failed = false
+	const fail = (message: string) => {
+		if (started || failed) return
+		failed = true
+		loading.fail(message, () => {
+			socket.close()
+			window.location.reload()
+		}, () => {
+			socket.close()
+			const url = new URL(window.location.href)
+			url.searchParams.delete("skipmenu")
+			url.searchParams.delete("url")
+			window.location.assign(url.toString())
+		})
+	}
 	socket.addEventListener("open", () => {
+		loading.setMessage("Finding an opponent…")
 		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined }))
 	})
+	socket.addEventListener("error", () => fail("Could not connect to the match server."))
+	socket.addEventListener("close", () => fail("The match connection closed before setup completed."))
+	const timeout = window.setTimeout(() => fail("Matchmaking timed out. Please retry."), 20_000)
 	socket.addEventListener("message", event => {
 		let message: UnTypedNetworkMessage
 		try {
@@ -76,8 +96,18 @@ function startNetworkGame(serverUrl: string) {
 			setUserUUUID((message as NetworkNewUser).userid)
 			return
 		}
+		if (message.type === NetworkMessageType.WAITINGROOM) {
+			loading.setMessage("Waiting for an opponent…")
+			return
+		}
+		if (message.type === NetworkMessageType.ERROR) {
+			fail("The server could not start your match.")
+			return
+		}
 		if (message.type !== NetworkMessageType.INIT || started) return
 		started = true
+		window.clearTimeout(timeout)
+		loading.dispose()
 		const init = message as NetworkInit
 		const settings = init.settings
 const ui = new UiSystem()
@@ -85,6 +115,7 @@ if (usersettings.replay) {
 	const viewer = new ReplayViewer();
 	(window as any).replayViewer = viewer;
 }
+
 		const arrow = new DirectionArrow(ui)
 		handler = new GameHandlerBuilder()
 			.defaultSystems()
@@ -99,6 +130,36 @@ if (usersettings.replay) {
 		installTurnReceiver(socket, handler)
 		startGame(handler)
 	})
+}
+
+function showNetworkLoading(initialMessage: string) {
+	const root = document.createElement("section")
+	root.id = "network-loading"
+	root.setAttribute("role", "status")
+	root.setAttribute("aria-live", "polite")
+	const heading = document.createElement("h1")
+	heading.textContent = "Joining online game"
+	const message = document.createElement("p")
+	message.textContent = initialMessage
+	root.append(heading, message)
+	document.body.append(root)
+	return {
+		setMessage(value: string) { message.textContent = value },
+		fail(value: string, retry: () => void, back: () => void) {
+			root.setAttribute("role", "alert")
+			message.textContent = value
+			const retryButton = document.createElement("button")
+			retryButton.type = "button"
+			retryButton.textContent = "Retry"
+			retryButton.addEventListener("click", retry, { once: true })
+			const backButton = document.createElement("button")
+			backButton.type = "button"
+			backButton.textContent = "Back to menu"
+			backButton.addEventListener("click", back, { once: true })
+			root.append(retryButton, backButton)
+		},
+		dispose() { root.remove() },
+	}
 }
 
 function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h) {

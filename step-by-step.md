@@ -2422,7 +2422,16 @@ invent a zero for data the current server cannot establish.
       matches; browser coverage verifies that the visible labels correspond to
       the JSON contract.
 
-* [ ] **Task [20.3]: Make Online Matchmaking Loading Visible And Recoverable**
+* [x] **Task [20.3]: Make Online Matchmaking Loading Visible And Recoverable**
+
+  * **Done:** Network startup now creates an accessible `#network-loading`
+    status surface before opening the socket, reports connection,
+    matchmaking/waiting-room, and initialization progress, removes itself only
+    after validated `INIT`, and turns connection, server, close, or timeout
+    failures into retry/back-to-menu controls that close the old socket. The
+    production Play Online browser journey asserts the visible loading state
+    before the second tab matches; `tests/online_join_menu.test.ts` preserves
+    the documented button routing.
 
   * **Goal:** Replace the apparent no-op after clicking "Play Online" with an
     accessible loading/join screen that remains visible until authoritative
