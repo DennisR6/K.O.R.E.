@@ -20,6 +20,16 @@ test.serial("production server exposes only authenticated aggregate dashboard ro
 		expect(jsonDashboard.status).toBe(200);
 		expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
 		expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
+		const login = await fetch(`${server.url}/operator/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: secret }) });
+		expect(login.status).toBe(200);
+		const cookie = login.headers.get("set-cookie")!;
+		expect(cookie).toContain("HttpOnly");
+		const cookieDashboard = await fetch(`${server.url}/operator/dashboard?format=json`, { headers: { cookie: cookie.split(";")[0]! } });
+		expect(cookieDashboard.status).toBe(200);
+		const backup = await fetch(`${server.url}/operator/db`, { headers: { cookie: cookie.split(";")[0]! } });
+		expect(backup.status).toBe(200);
+		expect(backup.headers.get("content-disposition")).toContain("kore-backup.sqlite3");
+		expect(new TextDecoder().decode((await backup.arrayBuffer()).slice(0, 16))).toBe("SQLite format 3\u0000");
 		expect((await fetch(`${server.url}/operator/dashboard`, { method: "POST", headers: { authorization: `Bearer ${secret}` } })).status).toBe(405);
 		expect((await fetch(`${server.url}/src/server/dashboard.ts`)).status).toBe(404);
 	} finally {

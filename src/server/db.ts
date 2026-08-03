@@ -123,6 +123,11 @@ export class GameDatabase {
 			.run(Date.now());
 	}
 
+	/** Creates a consistent SQLite image for an authenticated operator backup. */
+	exportSnapshot(): Uint8Array {
+		return this.db.serialize();
+	}
+
 	public createGame(game: StoredGame): void {
 		const snapshot = compress({ settings: game.settings, actions: game.actions ?? [] });
 		const lifecycle = game.lifecycle ?? createLifecycle("resident", game.updatedAt, game.updatedAt);

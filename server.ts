@@ -17,12 +17,12 @@ const runtime = new ServerRuntime(new GameRegistry(database));
 
 Bun.serve<WebSocketData>({
 	port: PORT,
-	fetch(req, server) {
+	async fetch(req, server) {
 		if (server.upgrade(req, { data: { connectionId: crypto.randomUUID() } })) return;
 
 		const url = new URL(req.url);
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
-		const dashboard = serveDashboard(req, runtime.getRegistry(), dashboardConfig);
+		const dashboard = await serveDashboard(req, runtime.getRegistry(), dashboardConfig, database);
 		if (dashboard) return dashboard;
 		const replay = servePublicReplayShare(req, runtime.getRegistry());
 		if (replay) return replay;
