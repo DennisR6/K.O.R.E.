@@ -282,9 +282,12 @@ After every change, check whether this guide still reflects the implementation a
   disables the routes, and no player, snapshot, or game-ID data is exposed.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
-  `EngineSettings` snapshots, maintains player-to-game membership rows, and
-  migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
-  `completed`) for durable aggregate match metrics.
+	`EngineSettings` snapshots, maintains player-to-game membership rows, and
+	migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
+	`completed`) for durable aggregate match metrics. It also stores immutable
+	UUID-keyed declarative map revisions with canonical content hashes and
+	draft/approved/retired lifecycle state; map documents are always structurally
+	validated and never updated in place.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
   input checks, simulation commits, rule progression, lifecycle-gated paused/
   completed actions, persistence, metric aggregation, and lazy SQLite

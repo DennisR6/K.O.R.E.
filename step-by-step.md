@@ -2735,12 +2735,15 @@ invent a zero for data the current server cannot establish.
 
 ### Database-Backed Immutable Map Definitions Checklist
 
-* [ ] Add a versioned `StoredMap` database schema with immutable UUID `id`,
+* [x] Add a versioned `StoredMap` database schema with immutable UUID `id`,
   declarative `MapDocument`, `draft`/`approved`/`retired` status, content hash,
   and creation/approval timestamps. Commit: `feat: persist immutable map documents`
 
   * Do not store or execute arbitrary code. Every changed map receives a new
     UUID; approved IDs are never modified, reused, or deleted.
+  * **Done:** `GameDatabase` stores validated immutable map revisions, hashes
+    canonical document data, supports draft approval and retirement without
+    content mutation, and returns defensive document copies.
 
 * [ ] Add a `MapRepository` that loads only approved IDs for new matchmaking,
   validates schema/fields/numbers/geometry/spawns/hazards/team layouts/hash,
