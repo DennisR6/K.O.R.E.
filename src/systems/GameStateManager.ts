@@ -1,7 +1,9 @@
 import { GameState } from "../engine/types.js";
-import type { IGameContext, ISystem } from "./Systems.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
-export class GameStateManager implements ISystem {
+
+export class GameStateManager implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.game-state-manager";
 	constructor() { }
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		switch (ctx.state) {
@@ -31,5 +33,6 @@ export class GameStateManager implements ISystem {
 			case GameState.Error: break
 		}
 	}
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 
 }

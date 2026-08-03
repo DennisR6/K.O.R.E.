@@ -3,6 +3,18 @@ import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { MatchResult } from "../rules/types.js";
 import type { IStructure } from "../structures/types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+
+/** Versioned, data-only identity of a registered engine system. */
+export type SystemSettings = { systemId: string; schemaVersion: 1; state: Record<string, unknown> };
+
+/**
+ * Serializable system contract. IDs are explicit protocol constants; runtime
+ * constructor names are intentionally not part of persistence.
+ */
+export interface ISerializableSystem<T extends SystemSettings = SystemSettings> extends ISystem, ISettingsSerialize<T> {
+	readonly systemId: string;
+}
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.
