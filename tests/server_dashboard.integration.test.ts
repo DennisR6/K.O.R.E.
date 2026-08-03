@@ -16,6 +16,10 @@ test.serial("production server exposes only authenticated aggregate dashboard ro
 		expect(page.status).toBe(200);
 		expect(page.headers.get("cache-control")).toBe("no-store");
 		expect(await page.text()).toContain('data-metric="allTime">0');
+		const jsonDashboard = await fetch(`${server.url}/operator/dashboard?format=json`, { headers: { authorization: `Bearer ${secret}` } });
+		expect(jsonDashboard.status).toBe(200);
+		expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
+		expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
 		expect((await fetch(`${server.url}/operator/dashboard`, { method: "POST", headers: { authorization: `Bearer ${secret}` } })).status).toBe(405);
 		expect((await fetch(`${server.url}/src/server/dashboard.ts`)).status).toBe(404);
 	} finally {

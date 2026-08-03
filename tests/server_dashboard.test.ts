@@ -28,6 +28,9 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain("Sleeping matches");
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
+	const jsonDashboard = serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret })!;
+	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
+	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
 	database.close();
 });
 

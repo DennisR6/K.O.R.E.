@@ -26,7 +26,9 @@ export function isDashboardPath(pathname: string): boolean {
 }
 
 /**
- * Handles the two exact operator routes. Undefined means the caller should
+ * Handles the two exact operator routes. `/operator/dashboard?format=json`
+ * serves the complete dashboard payload as JSON while retaining the same
+ * authentication and no-store policy as the HTML representation. Undefined means the caller should
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
@@ -38,7 +40,7 @@ export function serveDashboard(request: Request, registry: Pick<GameRegistry, "g
 	try {
 		const metrics = registry.getMetrics();
 		const body = metricsResponse(metrics);
-		if (pathname === DASHBOARD_METRICS_PATH) {
+		if (pathname === DASHBOARD_METRICS_PATH || wantsJson(request)) {
 			return Response.json(body, { headers: { "cache-control": "no-store" } });
 		}
 		return new Response(renderDashboard(body), {
@@ -47,6 +49,11 @@ export function serveDashboard(request: Request, registry: Pick<GameRegistry, "g
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
 	}
+}
+
+function wantsJson(request: Request): boolean {
+	const url = new URL(request.url);
+	return url.searchParams.get("format") === "json" || request.headers.get("accept")?.includes("application/json") === true;
 }
 
 export function metricsResponse(metrics: MatchMetrics): DashboardMetricsResponse {

@@ -280,6 +280,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
   aggregate lifecycle metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
   disables the routes, and no player, snapshot, or game-ID data is exposed.
+  `GET /operator/dashboard?format=json` returns the same complete aggregate
+  dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
+  metrics alias.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
 	`EngineSettings` snapshots, maintains player-to-game membership rows, and
