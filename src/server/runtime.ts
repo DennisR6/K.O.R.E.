@@ -3,7 +3,7 @@ import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
 import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
-import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -57,6 +57,9 @@ export class ServerRuntime {
 			case NetworkMessageType.PAUSE_REQUEST:
 				this.pauseRequest(socket, message)
 				return
+			case NetworkMessageType.CREATE_REPLAY_SHARE:
+				this.createReplayShare(socket)
+				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
@@ -87,6 +90,14 @@ export class ServerRuntime {
 	}
 
 	public getRegistry(): GameRegistry { return this.games }
+
+	private createReplayShare(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before sharing a replay");
+		const result = this.games.createReplayShare(userId);
+		if (!result.ok) return this.sendError(socket, result.error);
+		socket.send(wrap<NetworkReplayShareCreated>({ type: NetworkMessageType.REPLAY_SHARE_CREATED, token: result.token }));
+	}
 
 	private createCustomGame(socket: ServerSocket, rawSettings: unknown): void {
 		const userId = this.userByConnection.get(socket.data.connectionId)

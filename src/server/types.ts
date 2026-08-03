@@ -47,6 +47,8 @@ export const enum NetworkMessageType {
 	REPORT_SUBMITTED = "REPORT_SUBMITTED",
 	PAUSE_REQUEST = "PAUSE_REQUEST",
 	PAUSE_STATE = "PAUSE_STATE",
+	CREATE_REPLAY_SHARE = "CREATE_REPLAY_SHARE",
+	REPLAY_SHARE_CREATED = "REPLAY_SHARE_CREATED",
 }
 
 export function getNetworkPacketType(input: NetworkMessageType): string {
@@ -85,6 +87,8 @@ export type UnTypedNetworkMessage =
 	| NetworkReportSubmitted
 	| NetworkPauseRequest
 	| NetworkPauseState
+	| NetworkCreateReplayShare
+	| NetworkReplayShareCreated
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
@@ -132,5 +136,7 @@ export interface NetworkReportMatch { type: NetworkMessageType.REPORT_MATCH, cat
 export interface NetworkReportSubmitted { type: NetworkMessageType.REPORT_SUBMITTED, reportId: string }
 export interface NetworkPauseRequest { type: NetworkMessageType.PAUSE_REQUEST, action: "pause" | "resume" }
 export interface NetworkPauseState { type: NetworkMessageType.PAUSE_STATE, paused: boolean, waitingForOtherPlayer: boolean }
+export interface NetworkCreateReplayShare { type: NetworkMessageType.CREATE_REPLAY_SHARE }
+export interface NetworkReplayShareCreated { type: NetworkMessageType.REPLAY_SHARE_CREATED, token: string }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

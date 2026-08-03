@@ -3,10 +3,12 @@ import type { RenderContext, IDrawer } from "../engine/RenderContext.js";
 import { GameState, type IMouse } from "../engine/types.js";
 import { MatchStatus } from "../rules/types.js";
 
-export type MatchResultAction = "rematch" | "menu";
+export type MatchResultAction = "rematch" | "menu" | "replay" | "share";
 
 const rematchButton = { x: 245, y: 300, width: 145, height: 48 };
 const menuButton = { x: 410, y: 300, width: 145, height: 48 };
+const replayButton = { x: 245, y: 355, width: 145, height: 32 };
+const shareButton = { x: 410, y: 355, width: 145, height: 32 };
 
 /** Draws and owns input for the completed-match result screen. */
 export class MatchResultOverlay implements IDrawer, IMouse {
@@ -33,6 +35,8 @@ export class MatchResultOverlay implements IDrawer, IMouse {
 		}
 		if (this.inside(this.mouse, rematchButton)) this.onAction("rematch");
 		else if (this.inside(this.mouse, menuButton)) this.onAction("menu");
+		else if (this.inside(this.mouse, replayButton)) this.onAction("replay");
+		else if (this.inside(this.mouse, shareButton)) this.onAction("share");
 	}
 
 	public updateMouse(x: number, y: number): void {
@@ -70,6 +74,12 @@ export class MatchResultOverlay implements IDrawer, IMouse {
 		renderer.setFillColor("white");
 		renderer.drawText("Rematch", rematchButton.x + 32, rematchButton.y + 30, 18);
 		renderer.drawText("Menu", menuButton.x + 48, menuButton.y + 30, 18);
+		renderer.setFillColor("#475569");
+		renderer.drawRect(replayButton.x, replayButton.y, replayButton.width, replayButton.height);
+		renderer.drawRect(shareButton.x, shareButton.y, shareButton.width, shareButton.height);
+		renderer.setFillColor("white");
+		renderer.drawText("Replay", replayButton.x + 42, replayButton.y + 22, 14);
+		renderer.drawText("Share", shareButton.x + 45, shareButton.y + 22, 14);
 		renderer.pop();
 	}
 

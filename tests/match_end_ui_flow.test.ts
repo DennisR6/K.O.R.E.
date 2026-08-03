@@ -44,6 +44,11 @@ test("result overlay renders the authoritative winner or draw only after game ov
 	overlay.updateMouse(250, 310);
 	overlay.handleMousePressed();
 	expect(actions).toEqual(["rematch"]);
+	overlay.updateMouse(250, 365);
+	overlay.handleMousePressed();
+	overlay.updateMouse(420, 365);
+	overlay.handleMousePressed();
+	expect(actions).toEqual(["rematch", "replay", "share"]);
 });
 
 test("router rematch clears the result and menu action disposes the match handler", () => {

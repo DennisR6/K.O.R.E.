@@ -16,6 +16,7 @@ import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNe
 import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
+import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
 
 const uri = new URL(window.location.href)
 const usersettings = {
@@ -119,19 +120,61 @@ if (usersettings.replay) {
 }
 
 		const arrow = new DirectionArrow(ui)
+		const emitter = new NetworkEmitter(socket)
 		handler = new GameHandlerBuilder()
 			.defaultSystems()
 			.fromSettings(settings)
 			.addSystem(ui)
 			.addUIMouse(ui)
 			.addSystem(arrow)
-			.addSystem(new EmitterSystem(new NetworkEmitter(socket)))
+			.addSystem(new EmitterSystem(emitter))
 			.build()
 		handler.setRuleState(init.ruleState)
 		handler.addPostDrawer(arrow)
+		const overlay = new MatchResultOverlay(handler, action => {
+			if (action === "share" || action === "replay") emitter.requestReplayShare()
+			else if (action === "rematch") socket.send(wrap({ type: NetworkMessageType.REMATCH }))
+			else window.location.assign(window.location.pathname)
+		}, ui)
+		handler.setMouseHandler(overlay)
+		handler.addPostDrawer(overlay)
 		installTurnReceiver(socket, handler)
 		installPauseMenu(socket)
+		installReplayShareControls(socket)
 		startGame(handler)
+	})
+}
+
+/** Share URLs are displayed first; clipboard access is an explicit second click. */
+function installReplayShareControls(socket: WebSocket): void {
+	const panel = document.createElement("aside")
+	panel.id = "replay-share-controls"
+	panel.hidden = true
+	const status = document.createElement("p")
+	const url = document.createElement("input")
+	url.readOnly = true
+	url.setAttribute("aria-label", "Replay share URL")
+	const copy = document.createElement("button")
+	copy.type = "button"
+	copy.textContent = "Copy replay URL"
+	copy.addEventListener("click", async () => {
+		try { await navigator.clipboard.writeText(url.value); status.textContent = "Replay URL copied" }
+		catch { status.textContent = "Copy unavailable. Select and copy the URL manually."; url.focus(); url.select() }
+	})
+	panel.append(status, url, copy)
+	document.body.append(panel)
+	socket.addEventListener("message", event => {
+		try {
+			const message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
+			if (message.type !== NetworkMessageType.REPLAY_SHARE_CREATED) return
+			const token = (message as { token: string }).token
+			const viewer = new URL(window.location.href)
+			viewer.search = ""
+			viewer.searchParams.set("replay", token)
+			url.value = viewer.toString()
+			status.textContent = "Replay link ready. Copy it or select it manually."
+			panel.hidden = false
+		} catch { /* ignore malformed protocol input */ }
 	})
 }
 

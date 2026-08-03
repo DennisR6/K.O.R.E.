@@ -97,6 +97,7 @@ export class LocalMatchSceneRouter {
 
 	private handleResultAction(action: MatchResultAction): void {
 		if (!this.overlay?.isVisible()) return;
+		if (action === "replay" || action === "share") return;
 		if (action === "rematch") {
 			if (this.aiBattle) {
 				// A battle rematch must be a fresh game: re-draw the battle

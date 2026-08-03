@@ -2657,7 +2657,11 @@ invent a zero for data the current server cannot establish.
     * **Test File:** `tests/replay_share_security.test.ts`
     * **Commit:** `feat: serve public replay shares`
 
-  * [ ] **Task [20.6.3]: Add Result Replay And Share Actions**
+  * [x] **Task [20.6.3]: Add Result Replay And Share Actions**
+    * **Done:** Completed result overlays expose Replay and Share actions. They
+      request an authenticated completed-match share token, then display the
+      canonical viewer URL with an explicit Copy button and selectable manual
+      fallback; clipboard writes are never attempted until that button gesture.
     * **Goal:** Add explicit completed-result Replay/Share actions; Share asks
       the authoritative server for a token and copies only the canonical viewer
       URL after a user gesture, with a visible non-clipboard fallback.
