@@ -279,7 +279,8 @@ After every change, check whether this guide still reflects the implementation a
   WebSocket URL, and serves the `/config` JSON contract used by the browser
   "Play Online" action.
 - `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
-  aggregate lifecycle metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
+  aggregate lifecycle metrics plus durable map usage/count/percentage and
+  most-played-map metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
   disables the routes, and the dashboard representations expose no player,
   snapshot, or game-ID data.
   `GET /operator/dashboard?format=json` returns the same complete aggregate

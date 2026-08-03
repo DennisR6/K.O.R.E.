@@ -141,10 +141,13 @@ export class GameRegistry {
 	/** Point-in-time metrics; `now` is intentionally scoped to this registry. */
 	public getMetrics(now: number = Date.now()): MatchMetrics {
 		const persisted = this.database.getMetricCounts();
+		const mapUsage = this.database.getMapUsageMetrics();
 		return {
 			...persisted,
 			now: [...this.games.values()].filter(record => record.lifecycle.status === "resident").length,
 			measuredAt: now,
+			mapUsage,
+			mostPlayedMap: mapUsage[0] ?? null,
 			consistency: "now is scoped to this server process's resident registry cache",
 		};
 	}
@@ -307,7 +310,7 @@ export class GameRegistry {
 		const handler = this.buildAuthoritativeHandler(stored.settings, stored.users.length)
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId)
 		this.games.set(id, record)
 		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
@@ -358,6 +361,7 @@ export class GameRegistry {
 			updatedAt: Date.now(),
 			actions: record.recorder.getReplay().actions,
 			lifecycle: record.lifecycle,
+			mapId: record.mapId,
 		}
 		if (this.database.hasGame(record.id)) this.database.saveGame(game)
 		else this.database.createGame(game)

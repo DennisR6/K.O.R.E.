@@ -18,6 +18,8 @@ export type DashboardMetricsResponse = {
 	schemaVersion: 1;
 	measuredAt: number;
 	counts: Pick<MatchMetrics, "allTime" | "now" | "paused" | "sleeping">;
+	mapUsage: MatchMetrics["mapUsage"];
+	mostPlayedMap: MatchMetrics["mostPlayedMap"];
 	freshness: typeof FRESHNESS;
 };
 
@@ -85,6 +87,8 @@ export function metricsResponse(metrics: MatchMetrics): DashboardMetricsResponse
 			paused: metrics.paused,
 			sleeping: metrics.sleeping,
 		},
+		mapUsage: metrics.mapUsage.map(metric => ({ ...metric })),
+		mostPlayedMap: metrics.mostPlayedMap && { ...metrics.mostPlayedMap },
 		freshness: FRESHNESS,
 	};
 }
@@ -158,7 +162,9 @@ function notFound(): Response {
 }
 
 function renderDashboard(metrics: DashboardMetricsResponse): string {
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
+	const mostPlayed = metrics.mostPlayedMap ? `${metrics.mostPlayedMap.mapId} (${metrics.mostPlayedMap.games} games, ${metrics.mostPlayedMap.percentage}%)` : "No matches yet";
+	const rows = metrics.mapUsage.map(metric => `<tr><td>${metric.mapId}</td><td>${metric.games}</td><td>${metric.percentage}%</td></tr>`).join("") || "<tr><td colspan=\"3\">No matches yet</td></tr>";
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Most played map</dt><dd data-metric="mostPlayedMap">${mostPlayed}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><table><caption>Map usage</caption><thead><tr><th>Map</th><th>Games</th><th>Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
 }
 
 export function dashboardUrl(publicBaseUrl: string | undefined, path: string): string {

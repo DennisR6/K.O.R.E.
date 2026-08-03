@@ -19,14 +19,16 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 		now: 0,
 		paused: 0,
 		sleeping: 0,
+		mapUsage: [],
+		mostPlayedMap: null,
 		measuredAt: 10,
 		consistency: "now is scoped to this server process's resident registry cache",
 	});
 
 	const live = registry.create(createDefaultGameSettings(2, 1), users.slice(0, 2));
-	const paused = registry.create(createDefaultGameSettings(2, 1), users.slice(2, 4));
-	const sleeping = registry.create(createDefaultGameSettings(2, 1), users.slice(4, 6));
-	const completed = registry.create(settingsWithOneDeadTeam(), users.slice(6, 8));
+	const paused = registry.create(createDefaultGameSettings(2, 1), users.slice(2, 4), "cue-clash");
+	const sleeping = registry.create(createDefaultGameSettings(2, 1), users.slice(4, 6), "cue-clash");
+	const completed = registry.create(settingsWithOneDeadTeam(), users.slice(6, 8), "frostbite-arena");
 	registry.setPaused(paused.id, true, 20);
 	registry.connectUser(users[4]);
 	registry.connectUser(users[5]);
@@ -41,6 +43,12 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 		now: 1,
 		paused: 1,
 		sleeping: 1,
+		mapUsage: [
+			{ mapId: "cue-clash", games: 2, percentage: 50 },
+			{ mapId: "frostbite-arena", games: 1, percentage: 25 },
+			{ mapId: "ice-map-v1", games: 1, percentage: 25 },
+		],
+		mostPlayedMap: { mapId: "cue-clash", games: 2, percentage: 50 },
 		measuredAt: 30,
 		consistency: "now is scoped to this server process's resident registry cache",
 	});

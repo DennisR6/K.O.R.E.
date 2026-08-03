@@ -7,7 +7,7 @@ import type { EngineSettings } from "../engine/types.js";
 import { GameState } from "../engine/types.js";
 import type { FrozenReplayDocument, ReplayAction } from "../replay/types.js";
 import { validateFrozenReplayDocument } from "../replay/types.js";
-import type { AuthoritativeMatchStatus, PersistedMatchLifecycle } from "./types.js";
+import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 
 export type StoredGame = {
@@ -17,6 +17,7 @@ export type StoredGame = {
 	currentTeam: number;
 	turnNumber: number;
 	updatedAt: number;
+	mapId?: string;
 	actions?: ReplayAction[];
 	lifecycle?: PersistedMatchLifecycle;
 };
@@ -31,6 +32,7 @@ type StoredGameRow = {
 	current_team: number;
 	turn_number: number;
 	updated_at: number;
+	map_id: string;
 };
 
 type StoredLifecycleRow = {
@@ -62,9 +64,11 @@ export class GameDatabase {
 				snapshot BLOB NOT NULL,
 				current_team INTEGER NOT NULL,
 				turn_number INTEGER NOT NULL,
-				updated_at INTEGER NOT NULL
+				updated_at INTEGER NOT NULL,
+				map_id TEXT NOT NULL DEFAULT 'unknown'
 			)
 		`);
+		this.migrateGameMapIds();
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS game_players (
 				game_id TEXT NOT NULL,
@@ -133,9 +137,9 @@ export class GameDatabase {
 		const lifecycle = game.lifecycle ?? createLifecycle("resident", game.updatedAt, game.updatedAt);
 		this.db.transaction(() => {
 			this.db.query(`
-				INSERT INTO games (id, snapshot, current_team, turn_number, updated_at)
-				VALUES (?1, ?2, ?3, ?4, ?5)
-			`).run(game.id, snapshot, game.currentTeam, game.turnNumber, game.updatedAt);
+				INSERT INTO games (id, snapshot, current_team, turn_number, updated_at, map_id)
+				VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+			`).run(game.id, snapshot, game.currentTeam, game.turnNumber, game.updatedAt, game.mapId ?? "unknown");
 			this.writeLifecycle(game.id, lifecycle);
 			const insertPlayer = this.db.query("INSERT INTO game_players (game_id, user_id, team) VALUES (?1, ?2, ?3)");
 			game.users.forEach((user, team) => insertPlayer.run(game.id, user, team));
@@ -147,15 +151,15 @@ export class GameDatabase {
 		this.db.transaction(() => {
 			this.db.query(`
 			UPDATE games
-			SET snapshot = ?2, current_team = ?3, turn_number = ?4, updated_at = ?5
+			SET snapshot = ?2, current_team = ?3, turn_number = ?4, updated_at = ?5, map_id = ?6
 			WHERE id = ?1
-			`).run(game.id, snapshot, game.currentTeam, game.turnNumber, game.updatedAt);
+			`).run(game.id, snapshot, game.currentTeam, game.turnNumber, game.updatedAt, game.mapId ?? "unknown");
 			if (game.lifecycle) this.writeLifecycle(game.id, game.lifecycle);
 		})();
 	}
 
 	public loadGame(id: string): StoredGame | undefined {
-		const row = this.db.query("SELECT id, snapshot, current_team, turn_number, updated_at FROM games WHERE id = ?1")
+		const row = this.db.query("SELECT id, snapshot, current_team, turn_number, updated_at, map_id FROM games WHERE id = ?1")
 			.get(id) as StoredGameRow | null;
 		if (!row) return undefined;
 		const users = this.db.query("SELECT user_id FROM game_players WHERE game_id = ?1 ORDER BY team ASC")
@@ -171,6 +175,7 @@ export class GameDatabase {
 			currentTeam: row.current_team,
 			turnNumber: row.turn_number,
 			updatedAt: row.updated_at,
+			mapId: row.map_id,
 			lifecycle,
 		};
 	}
@@ -210,6 +215,14 @@ export class GameDatabase {
 		`).all() as Array<{ status: AuthoritativeMatchStatus; count: number }>;
 		const counts = new Map(statuses.map(row => [row.status, row.count]));
 		return { allTime: allTime.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
+	}
+
+	/** Durable map usage, sorted so equal counts have a stable dashboard order. */
+	public getMapUsageMetrics(): MapUsageMetric[] {
+		const rows = this.db.query("SELECT map_id, count(*) AS games FROM games GROUP BY map_id ORDER BY games DESC, map_id ASC")
+			.all() as Array<{ map_id: string; games: number }>;
+		const total = rows.reduce((sum, row) => sum + row.games, 0);
+		return rows.map(row => ({ mapId: row.map_id, games: row.games, percentage: total === 0 ? 0 : Number(((row.games / total) * 100).toFixed(2)) }));
 	}
 
 	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, now: number = Date.now()): string {
@@ -298,6 +311,11 @@ export class GameDatabase {
 	public getCompressedSnapshotSize(id: string): number | undefined {
 		const row = this.db.query("SELECT length(snapshot) AS size FROM games WHERE id = ?1").get(id) as { size: number } | null;
 		return row?.size;
+	}
+
+	private migrateGameMapIds(): void {
+		const columns = this.db.query("PRAGMA table_info(games)").all() as Array<{ name: string }>;
+		if (!columns.some(column => column.name === "map_id")) this.db.run("ALTER TABLE games ADD COLUMN map_id TEXT NOT NULL DEFAULT 'unknown'");
 	}
 
 	public close(): void { this.db.close() }

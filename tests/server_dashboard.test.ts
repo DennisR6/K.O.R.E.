@@ -51,6 +51,26 @@ test.serial("dashboard counts remain server-derived across lifecycle changes", a
 	database.close();
 });
 
+test.serial("dashboard exposes durable map counts, percentages, and the most played map", async () => {
+	const database = new GameDatabase(":memory:");
+	const registry = new GameRegistry(database);
+	registry.create(createDefaultGameSettings(2, 1), users, "cue-clash");
+	registry.create(createDefaultGameSettings(2, 1), ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-844444444444"], "cue-clash");
+	registry.create(createDefaultGameSettings(2, 1), ["55555555-5555-4555-8555-555555555555", "66666666-6666-4666-8666-666666666666"], "ice-map-v1");
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
+	expect(await response.json()).toMatchObject({
+		mostPlayedMap: { mapId: "cue-clash", games: 2, percentage: 66.67 },
+		mapUsage: [
+			{ mapId: "cue-clash", games: 2, percentage: 66.67 },
+			{ mapId: "ice-map-v1", games: 1, percentage: 33.33 },
+		],
+	});
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
+	expect(page).toContain('data-metric="mostPlayedMap">cue-clash (2 games, 66.67%)');
+	expect(page).toContain('data-metric="mapUsage"');
+	database.close();
+});
+
 test("dashboard routes fail closed and never expose errors", async () => {
 	let calls = 0;
 	const registry = { getMetrics: () => { calls++; throw new Error("/private/kore.db secret"); } } as unknown as GameRegistry;

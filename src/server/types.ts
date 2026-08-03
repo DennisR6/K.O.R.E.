@@ -19,12 +19,17 @@ export type PersistedMatchLifecycle = {
 	completedAt: number | null;
 };
 
+export type MapUsageMetric = { mapId: string; games: number; percentage: number };
+
 /** Aggregate dashboard facts. `now` is a point-in-time registry-cache count. */
 export type MatchMetrics = {
 	allTime: number;
 	now: number;
 	paused: number;
 	sleeping: number;
+	/** All durable matches grouped by their immutable/canonical map ID. */
+	mapUsage: MapUsageMetric[];
+	mostPlayedMap: MapUsageMetric | null;
 	measuredAt: number;
 	consistency: "now is scoped to this server process's resident registry cache";
 };
