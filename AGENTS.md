@@ -63,7 +63,8 @@ This bidirectional lifecycle guarantees that runtime state is always reproducibl
 - `gdd.md` describes product intent, and implementation is completed across all master phases.
 - `TODO.md` is a reconciled planning inventory; current source and verified tests remain authoritative.
 - `requirements.md` maps TODO/GDD requirements to implementation checklist sections and verified test evidence.
-- `step-by-step.md` is the current commit-sized execution checklist. Update its status in the same atomic commit as each completed task.
+- `step-by-step.md` is the compact completed-delivery record. Keep its milestone
+  summaries and commit links accurate when a material delivery changes them.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
 - `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
 - `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
@@ -634,7 +635,7 @@ For changes in these areas, explicitly cover:
 
 ### Section 11 Cross-System Validation Suite
 
-`step-by-step.md` section 11 is a commit-sized cross-system validation suite;
+`step-by-step.md` section 11 records the cross-system validation suite;
 each of its nine tasks ships one focused test plus the checklist flip. The
 suite proves deterministic engine snapshots (`handler_snapshot_isolation`,
 `simulate_turn_isolation`, `parallel_engine_instances`), hard-AI decision
@@ -653,7 +654,7 @@ update the smoke file.
 
 ### Section 12 Defect Hardening And Release Qualification
 
-`step-by-step.md` section 12 qualifies the release candidate after targeted
+`step-by-step.md` section 12 records release-candidate qualification after targeted
 defect hardening, each task shipped as one atomic commit with focused tests:
 match completion gating (`tests/match_completion_gate.test.ts`), the explicit
 match status model (`tests/match_status_model.test.ts`), winner-state

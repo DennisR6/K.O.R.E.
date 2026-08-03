@@ -7,8 +7,8 @@ Custom Engine · p5.js · data-driven · rotation + force physics
 - `[x]` is verified by current source and active tests.
 - `[ ]` is incomplete. Its `Current:` text describes only what exists now;
   its `Done when:` text is the acceptance criterion.
-- `step-by-step.md` is the ordered, commit-sized implementation plan. Source
-  and verified tests remain authoritative when this file becomes stale.
+- `step-by-step.md` is the compact completed-delivery record. Source and
+  verified tests remain authoritative when its summaries become stale.
 
 ---
 

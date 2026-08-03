@@ -41,12 +41,11 @@ describe("Section 15.1 gameplay qualification contract", () => {
 		expect(protocol).toContain("Median >= 4");
 	});
 
-	test("the checklist links Task 15.1 to both documents and its focused test", () => {
+	test("the completed delivery record links gameplay qualification to its documents and focused test", () => {
 		const plan = read("step-by-step.md");
-		const task = plan.slice(plan.indexOf("- [x] **Task [15.1]"), plan.indexOf("Task [15.2]"));
-		expect(task).toContain("[x]");
-		expect(task).toContain("docs/gameplay-qualification.md");
-		expect(task).toContain("docs/playtest-protocol.md");
-		expect(task).toContain("tests/gameplay_qualification_contract.test.ts");
+		expect(plan).toContain("## 15. Gameplay Qualification And Human Playtest Validation");
+		expect(plan).toContain("docs/gameplay-qualification.md");
+		expect(plan).toContain("docs/playtest-protocol.md");
+		expect(plan).toContain("tests/gameplay_qualification_contract.test.ts");
 	});
 });

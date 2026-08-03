@@ -25,9 +25,7 @@ describe("Section 15.11 playtest regression contract", () => {
 
 	test("links the empty contract to this focused test", () => {
 		const task = read("step-by-step.md");
-		const section = task.slice(task.indexOf("- [x] **Task [15.11]"), task.indexOf("- [ ] **Task [15.12]"));
-
-		expect(section).toContain("tests/playtest_regressions.test.ts");
-		expect(section).toContain("no confirmed technical or deterministic playtest defects");
+		expect(task).toContain("tests/playtest_regressions.test.ts");
+		expect(task).toContain("No confirmed technical or deterministic playtest defects");
 	});
 });
