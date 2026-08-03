@@ -31,13 +31,13 @@ export class MainMenu implements IMenu {
 		new MainMenuPage((page: Pages) => this.activePage = page),
 	]
 	/** Which mode consumes the next map selection on the Choose Map page. */
-	private pendingMapAction: "local" | "battle" | null = null
+	private pendingMapAction: "local" | "battle" | "online" | null = null
 	private readonly mapPage: MapSelectionPage
 	constructor(
 		onPlayLocal?: () => void,
 		onSelectMap?: (mapId: string) => void,
 		private readonly getStartError?: () => string | undefined,
-		onPlayOnline?: () => void,
+		onPlayOnline?: (mapId?: string) => void,
 		onPlayAiBattle?: (mapId: string) => void,
 	) {
 		this.mapPage = new MapSelectionPage(
@@ -54,17 +54,27 @@ export class MainMenu implements IMenu {
 					onPlayAiBattle?.(mapId)
 					return
 				}
+				if (action === "online") {
+					if (onPlayOnline) {
+						onPlayOnline(mapId)
+						return
+					}
+					void buildOnlineJoinUrl(window.location.href, { mapPreference: mapId })
+						.then(url => { window.location.assign(url) })
+						.catch(error => console.warn("Online join failed", error))
+					return
+				}
 				onSelectMap?.(mapId)
 			},
 		)
 		this.pages = [
 			new LandingPage((page: Pages) => this.activePage = page),
-			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.openMapSelection("local"), onPlayOnline, () => this.openMapSelection("battle")),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.openMapSelection("local"), onPlayOnline ? () => onPlayOnline() : () => this.openMapSelection("online"), () => this.openMapSelection("battle")),
 			this.mapPage,
 		]
 	}
 	/** Opens the map selection page for a pending local match or KI battle. */
-	private openMapSelection(action: "local" | "battle"): void {
+	private openMapSelection(action: "local" | "battle" | "online"): void {
 		this.mapPage.setSelectionMode(action)
 		this.pendingMapAction = action
 		this.activePage = Pages.ChooseMap
@@ -196,7 +206,7 @@ export class MainMenuPage implements IMenuPage {
 export class MapSelectionPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
 	private cb: (page: Pages) => void
-	private mode: "local" | "battle" = "local"
+	private mode: "local" | "battle" | "online" = "local"
 	private readonly allMaps: readonly MapCatalogEntry[]
 	constructor(pageSwitcher: (page: Pages) => void, private readonly onSelectMap: (mapId: string) => void) {
 		this.cb = pageSwitcher
@@ -206,7 +216,7 @@ export class MapSelectionPage implements IMenuPage {
 	 * Restricts the shown rows to maps whose autonomous KI battle terminates
 	 * (`battleAvailable`); local matches keep the full browser-visible list.
 	 */
-	setSelectionMode(mode: "local" | "battle"): void { this.mode = mode }
+	setSelectionMode(mode: "local" | "battle" | "online"): void { this.mode = mode }
 	private get maps(): readonly MapCatalogEntry[] {
 		return this.mode === "battle" ? this.allMaps.filter(entry => entry.battleAvailable) : this.allMaps
 	}
@@ -218,6 +228,7 @@ export class MapSelectionPage implements IMenuPage {
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
 		ctx.setFillColor("white")
 		ctx.drawText("Choose Map", 320, 45, 34)
+		if (this.mode === "online") ctx.drawText("Preference only — the server may choose Ice Map", 155, 70, 16)
 		this.maps.forEach((entry, index) => {
 			const row = this.rowRect(index)
 			ctx.setFillColor("#102a43")

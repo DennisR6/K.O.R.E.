@@ -281,12 +281,15 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			await clickWorld(pageA, 400, 100); // landing page -> main menu page
 			// "Play Online" at world (270..530, 220..278).
 			await clickWorld(pageA, 400, 250);
+			// The online map page expresses a non-binding preference before join.
+			await clickWorld(pageA, 400, 100);
 
 			// The join action navigates to the configured server with skipmenu.
 			await waitFor(async () => (await pageA.url()).includes("skipmenu=1"), 10_000, 100, "online join navigation");
 			const joinedUrl = new URL(pageA.url());
 			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
 			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
+			expect(joinedUrl.searchParams.get("map")).toBe("ice-map-v1");
 			await waitFor(async () => await pageA.locator("#network-loading").count() === 1, 10_000, 100, "online loading screen");
 			expect(await pageA.locator("#network-loading").textContent()).toContain("Joining online game");
 

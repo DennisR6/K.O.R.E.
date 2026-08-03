@@ -65,10 +65,12 @@ export async function buildOnlineJoinUrl(
 		fetchImpl?: typeof fetch;
 		location?: { protocol: string; host: string };
 		configPath?: string;
+		mapPreference?: string;
 	} = {},
 ): Promise<string> {
 	const url = new URL(pageUrl);
 	url.searchParams.set("skipmenu", "1");
 	url.searchParams.set("url", await resolveOnlineServerUrl(options));
+	if (options.mapPreference) url.searchParams.set("map", options.mapPreference);
 	return url.toString();
 }
