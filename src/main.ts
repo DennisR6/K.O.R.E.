@@ -222,6 +222,9 @@ function installPauseMenu(socket: WebSocket): void {
 	const report = document.createElement("button")
 	report.type = "button"
 	report.textContent = "Report match"
+	const leave = document.createElement("button")
+	leave.type = "button"
+	leave.textContent = "Leave game"
 	const status = document.createElement("p")
 	status.textContent = ""
 	pause.addEventListener("click", () => socket.send(wrap({ type: NetworkMessageType.PAUSE_REQUEST, action: pause.dataset.paused === "true" ? "resume" : "pause" })))
@@ -229,6 +232,14 @@ function installPauseMenu(socket: WebSocket): void {
 		const text = window.prompt("Describe the issue (max 500 characters)")
 		if (!text) return
 		socket.send(wrap({ type: NetworkMessageType.REPORT_MATCH, category: "other", text }))
+	})
+	leave.addEventListener("click", () => {
+		socket.close()
+		const url = new URL(window.location.href)
+		url.searchParams.delete("skipmenu")
+		url.searchParams.delete("url")
+		url.searchParams.delete("map")
+		window.location.assign(url.toString())
 	})
 	socket.addEventListener("message", event => {
 		try {
@@ -242,7 +253,7 @@ function installPauseMenu(socket: WebSocket): void {
 			if (message.type === NetworkMessageType.REPORT_SUBMITTED) status.textContent = "Report submitted"
 		} catch { /* protocol receiver handles malformed packets separately */ }
 	})
-	menu.append(pause, report, status)
+	menu.append(pause, report, leave, status)
 	document.body.append(menu)
 }
 

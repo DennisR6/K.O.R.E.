@@ -33,6 +33,9 @@ test.serial("online operations join honors map preference and pauses only after 
 		await pauseB.evaluate((button: HTMLButtonElement) => button.click());
 		await waitFor(async () => (await pageA.locator("#network-pause-menu p").textContent()) === "Match paused", 10_000, 50, "authoritative pause");
 		await waitFor(async () => (await pageB.locator("#network-pause-menu p").textContent()) === "Match paused", 10_000, 50, "authoritative pause broadcast");
+		await pageA.getByRole("button", { name: "Leave game" }).click();
+		await pageA.waitForURL(`${server.url}/`);
+		expect(await pageA.locator("#network-pause-menu").count()).toBe(0);
 		await contextA.close();
 		await contextB.close();
 	} finally {
