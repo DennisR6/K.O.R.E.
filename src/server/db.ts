@@ -76,6 +76,18 @@ export class GameDatabase {
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS match_reports (
+				id TEXT PRIMARY KEY NOT NULL,
+				game_id TEXT NOT NULL,
+				reporter_user_id TEXT NOT NULL,
+				category TEXT NOT NULL,
+				text TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				UNIQUE(game_id, reporter_user_id, category),
+				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)
+		`);
 		this.migrateLegacyLifecycleRows();
 		// A registry cache cannot survive a process restart. This repository is a
 		// single-server deployment, so any stale resident row is sleeping now.
@@ -160,6 +172,13 @@ export class GameDatabase {
 		`).all() as Array<{ status: AuthoritativeMatchStatus; count: number }>;
 		const counts = new Map(statuses.map(row => [row.status, row.count]));
 		return { allTime: allTime.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
+	}
+
+	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, now: number = Date.now()): string {
+		const id = crypto.randomUUID();
+		this.db.query("INSERT INTO match_reports (id, game_id, reporter_user_id, category, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+			.run(id, gameId, reporterUserId, category, text, now);
+		return id;
 	}
 
 	public getCompressedSnapshotSize(id: string): number | undefined {

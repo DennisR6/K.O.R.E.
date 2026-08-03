@@ -3,7 +3,7 @@ import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
 import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
-import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -50,6 +50,12 @@ export class ServerRuntime {
 				return
 			case NetworkMessageType.REMATCH:
 				this.rematch(socket)
+				return
+			case NetworkMessageType.REPORT_MATCH:
+				this.reportMatch(socket, message)
+				return
+			case NetworkMessageType.PAUSE_REQUEST:
+				this.pauseRequest(socket, message)
 				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
@@ -187,6 +193,23 @@ export class ServerRuntime {
 			const recipient = this.socketForUser(user)
 			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState }))
 		}
+	}
+
+	private reportMatch(socket: ServerSocket, message: NetworkReportMatch): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before reporting");
+		const result = this.games.submitMatchReport(userId, message.category, message.text);
+		if (!result.ok) return this.sendError(socket, result.error);
+		socket.send(wrap<NetworkReportSubmitted>({ type: NetworkMessageType.REPORT_SUBMITTED, reportId: result.reportId }));
+	}
+
+	private pauseRequest(socket: ServerSocket, message: NetworkPauseRequest): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before pausing");
+		const result = this.games.requestPause(userId, message.action);
+		if (!result.ok) return this.sendError(socket, result.error);
+		const state: NetworkPauseState = { type: NetworkMessageType.PAUSE_STATE, paused: result.paused, waitingForOtherPlayer: result.waitingForOtherPlayer };
+		for (const user of result.record.users) this.socketForUser(user)?.send(wrap(state));
 	}
 
 	private socketForUser(userId: string): ServerSocket | undefined {

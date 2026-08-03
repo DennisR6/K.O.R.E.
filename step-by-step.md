@@ -2498,7 +2498,16 @@ invent a zero for data the current server cannot establish.
       deployment needs it, and leave a documented removal path. Do not claim it
       is final map voting or ranked-matchmaking policy.
 
-* [ ] **Task [20.5]: Add A Safe In-Match Pause Menu And Report Flow**
+* [x] **Task [20.5]: Add A Safe In-Match Pause Menu And Report Flow**
+
+  * **Done:** Online clients receive a small pause/report surface after `INIT`.
+    Pause and resume both require matching authenticated requests from every
+    current match member; the persisted lifecycle state blocks turns/items
+    while paused and `PAUSE_STATE` is broadcast to both clients. `REPORT_MATCH`
+    derives game membership server-side and writes an immutable UUID report with
+    validated category, bounded text, timestamp, and one-report-per-category
+    rate limit. Focused coverage: `tests/match_pause_protocol.test.ts` and
+    `tests/match_report_protocol.test.ts`.
 
   * **Goal:** Add a pause-menu surface during online play that lets a player
     request a server pause when supported and submit a report tied to the

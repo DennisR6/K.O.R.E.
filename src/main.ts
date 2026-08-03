@@ -130,8 +130,42 @@ if (usersettings.replay) {
 		handler.setRuleState(init.ruleState)
 		handler.addPostDrawer(arrow)
 		installTurnReceiver(socket, handler)
+		installPauseMenu(socket)
 		startGame(handler)
 	})
+}
+
+function installPauseMenu(socket: WebSocket): void {
+	const menu = document.createElement("aside")
+	menu.id = "network-pause-menu"
+	const pause = document.createElement("button")
+	pause.type = "button"
+	pause.textContent = "Request pause"
+	const report = document.createElement("button")
+	report.type = "button"
+	report.textContent = "Report match"
+	const status = document.createElement("p")
+	status.textContent = ""
+	pause.addEventListener("click", () => socket.send(wrap({ type: NetworkMessageType.PAUSE_REQUEST, action: pause.dataset.paused === "true" ? "resume" : "pause" })))
+	report.addEventListener("click", () => {
+		const text = window.prompt("Describe the issue (max 500 characters)")
+		if (!text) return
+		socket.send(wrap({ type: NetworkMessageType.REPORT_MATCH, category: "other", text }))
+	})
+	socket.addEventListener("message", event => {
+		try {
+			const message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
+			if (message.type === NetworkMessageType.PAUSE_STATE) {
+				const state = message as any
+				pause.dataset.paused = String(state.paused)
+				pause.textContent = state.paused ? "Request resume" : "Request pause"
+				status.textContent = state.waitingForOtherPlayer ? "Waiting for the other player…" : state.paused ? "Match paused" : "Match resumed"
+			}
+			if (message.type === NetworkMessageType.REPORT_SUBMITTED) status.textContent = "Report submitted"
+		} catch { /* protocol receiver handles malformed packets separately */ }
+	})
+	menu.append(pause, report, status)
+	document.body.append(menu)
 }
 
 function showNetworkLoading(initialMessage: string) {

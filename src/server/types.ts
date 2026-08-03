@@ -43,6 +43,10 @@ export const enum NetworkMessageType {
 	REMATCH = "REMATCH",
 	USE_ITEM = "USE_ITEM",
 	ITEM_USED = "ITEM_USED",
+	REPORT_MATCH = "REPORT_MATCH",
+	REPORT_SUBMITTED = "REPORT_SUBMITTED",
+	PAUSE_REQUEST = "PAUSE_REQUEST",
+	PAUSE_STATE = "PAUSE_STATE",
 }
 
 export function getNetworkPacketType(input: NetworkMessageType): string {
@@ -77,6 +81,10 @@ export type UnTypedNetworkMessage =
 	| NetworkRematch
 	| NetworkUseItem
 	| NetworkItemUsed
+	| NetworkReportMatch
+	| NetworkReportSubmitted
+	| NetworkPauseRequest
+	| NetworkPauseState
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
@@ -120,5 +128,9 @@ export interface NetworkItemUsed {
 	ruleState: RuleState,
 	players: EngineSettings["players"],
 }
+export interface NetworkReportMatch { type: NetworkMessageType.REPORT_MATCH, category: "conduct" | "technical" | "other", text: string }
+export interface NetworkReportSubmitted { type: NetworkMessageType.REPORT_SUBMITTED, reportId: string }
+export interface NetworkPauseRequest { type: NetworkMessageType.PAUSE_REQUEST, action: "pause" | "resume" }
+export interface NetworkPauseState { type: NetworkMessageType.PAUSE_STATE, paused: boolean, waitingForOtherPlayer: boolean }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

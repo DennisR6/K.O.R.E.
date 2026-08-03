@@ -28,6 +28,8 @@ export type GameRecord = {
 	recorder: ReplayRecorder;
 	lifecycle: PersistedMatchLifecycle;
 	mapId: string;
+	pauseRequests: Set<string>;
+	resumeRequests: Set<string>;
 };
 
 export type SubmitTurnResult =
@@ -41,6 +43,8 @@ export type RematchResult =
 export type SubmitItemUseResult =
 	| { ok: true; record: GameRecord }
 	| { ok: false; error: string };
+export type SubmitReportResult = { ok: true; reportId: string } | { ok: false; error: string };
+export type PauseRequestResult = { ok: true; record: GameRecord; paused: boolean; waitingForOtherPlayer: boolean } | { ok: false; error: string };
 
 /**
  * Authoritative games are persisted after creation and every accepted turn.
@@ -223,6 +227,30 @@ export class GameRegistry {
 		}
 	}
 
+	public submitMatchReport(userId: string, category: unknown, text: unknown): SubmitReportResult {
+		const record = this.getForUser(userId);
+		if (!record) return { ok: false, error: "No active game for this user" };
+		if (category !== "conduct" && category !== "technical" && category !== "other") return { ok: false, error: "Invalid report category" };
+		if (typeof text !== "string" || text.trim().length < 1 || text.length > 500) return { ok: false, error: "Invalid report text" };
+		try { return { ok: true, reportId: this.database.createMatchReport(record.id, userId, category, text.trim()) }; }
+		catch { return { ok: false, error: "Report already submitted" }; }
+	}
+
+	public requestPause(userId: string, action: unknown): PauseRequestResult {
+		const record = this.getForUser(userId);
+		if (!record) return { ok: false, error: "No active game for this user" };
+		if (action !== "pause" && action !== "resume") return { ok: false, error: "Invalid pause action" };
+		if (record.lifecycle.status === "completed") return { ok: false, error: "The game is completed" };
+		const requests = action === "pause" ? record.pauseRequests : record.resumeRequests;
+		if ((action === "pause") !== (record.lifecycle.status !== "paused")) return { ok: false, error: action === "pause" ? "The game is already paused" : "The game is not paused" };
+		requests.add(userId);
+		if (requests.size < record.users.length) return { ok: true, record, paused: record.lifecycle.status === "paused", waitingForOtherPlayer: true };
+		this.setPaused(record.id, action === "pause");
+		record.pauseRequests.clear();
+		record.resumeRequests.clear();
+		return { ok: true, record, paused: action === "pause", waitingForOtherPlayer: false };
+	}
+
 	public rematch(userId: string): RematchResult {
 		const record = this.getForUser(userId)
 		if (!record) return { ok: false, error: "No active game for this user" }
@@ -279,6 +307,8 @@ export class GameRegistry {
 			recorder,
 			lifecycle,
 			mapId,
+			pauseRequests: new Set(),
+			resumeRequests: new Set(),
 		}
 	}
 
