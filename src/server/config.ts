@@ -19,7 +19,7 @@ export function wsUrlForBaseUrl(baseUrl: string): string {
 	const url = new URL(baseUrl);
 	if (url.protocol === "https:") url.protocol = "wss:";
 	else if (url.protocol === "http:") url.protocol = "ws:";
-	return url.toString().replace(/\/$/, "");
+	return url.toString()
 }
 
 /** Reads and validates the online-play configuration from the environment. */
@@ -34,7 +34,7 @@ export function readServerConfig(env: Record<string, string | undefined> = proce
 	if (url.protocol !== "http:" && url.protocol !== "https:") {
 		throw new Error(`KORE_BASE_URL must be an http(s) URL, got: "${raw}"`);
 	}
-	const baseUrl = url.toString().replace(/\/$/, "");
+	const baseUrl = url.toString()
 	return { baseUrl, wsUrl: wsUrlForBaseUrl(baseUrl) };
 }
 
