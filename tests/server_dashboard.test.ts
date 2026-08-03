@@ -100,6 +100,7 @@ test("operator login serves a browser form and redirects after a form submission
 	const login = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_LOGIN_PATH}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" }, body: form }), registry, config, undefined, publicBaseUrl))!;
 	expect(login.status).toBe(303);
 	expect(login.headers.get("location")).toBe(`${publicBaseUrl}/operator/dashboard`);
+	expect(login.headers.get("set-cookie")).toContain("Path=/kore/operator");
 	expect(login.headers.get("set-cookie")).toContain("HttpOnly");
 	expect(dashboardUrl("https://operator.example/kore/?ignored=1", DASHBOARD_DATABASE_PATH)).toBe("https://operator.example/kore/operator/db");
 	database.close();

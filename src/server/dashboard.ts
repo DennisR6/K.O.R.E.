@@ -42,7 +42,7 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	const pathname = new URL(request.url).pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
-	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret);
+	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
 	if (!isAuthorized(request, config.operatorSecret)) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
@@ -103,7 +103,7 @@ async function login(request: Request, secret: string | undefined, publicBaseUrl
 	try {
 		const password = await loginPassword(request);
 		if (!password || !equalSecret(password, secret)) return notFound();
-		const headers = { "set-cookie": sessionCookie(secret), "cache-control": "no-store" };
+		const headers = { "set-cookie": sessionCookie(secret, publicBaseUrl), "cache-control": "no-store" };
 		if (request.headers.get("accept")?.includes("text/html")) return new Response(null, { status: 303, headers: { ...headers, location: dashboardUrl(publicBaseUrl, DASHBOARD_PATH) } });
 		return Response.json({ ok: true }, { headers });
 	} catch { return notFound(); }
@@ -119,10 +119,10 @@ async function loginPassword(request: Request): Promise<string | undefined> {
 	return typeof password === "string" ? password : undefined;
 }
 
-function logout(request: Request, secret: string | undefined): Response {
+function logout(request: Request, secret: string | undefined, publicBaseUrl?: string): Response {
 	if (!secret || !isAuthorized(request, secret)) return notFound();
 	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST", "cache-control": "no-store" } });
-	return Response.json({ ok: true }, { headers: { "set-cookie": `${DASHBOARD_COOKIE}=; Path=/operator; HttpOnly; Secure; SameSite=Strict; Max-Age=0`, "cache-control": "no-store" } });
+	return Response.json({ ok: true }, { headers: { "set-cookie": `${DASHBOARD_COOKIE}=; Path=${operatorCookiePath(publicBaseUrl)}; HttpOnly; Secure; SameSite=Strict; Max-Age=0`, "cache-control": "no-store" } });
 }
 
 function sessionToken(secret: string): string {
@@ -131,8 +131,8 @@ function sessionToken(secret: string): string {
 	return `${expiresAt}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
 }
 
-function sessionCookie(secret: string): string {
-	return `${DASHBOARD_COOKIE}=${sessionToken(secret)}; Path=/operator; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_MAX_AGE_SECONDS}`;
+function sessionCookie(secret: string, publicBaseUrl?: string): string {
+	return `${DASHBOARD_COOKIE}=${sessionToken(secret)}; Path=${operatorCookiePath(publicBaseUrl)}; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_MAX_AGE_SECONDS}`;
 }
 
 function isSessionToken(token: string, secret: string): boolean {
@@ -168,6 +168,13 @@ export function dashboardUrl(publicBaseUrl: string | undefined, path: string): s
 	base.hash = "";
 	if (!base.pathname.endsWith("/")) base.pathname += "/";
 	return new URL(path.replace(/^\//, ""), base).toString();
+}
+
+function operatorCookiePath(publicBaseUrl?: string): string {
+	if (!publicBaseUrl) return "/operator";
+	const base = new URL(publicBaseUrl);
+	if (!base.pathname.endsWith("/")) base.pathname += "/";
+	return new URL("operator", base).pathname;
 }
 
 function renderLogin(publicBaseUrl?: string): string {
