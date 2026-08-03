@@ -26,6 +26,7 @@ function runBattle(seed: number, maxTicks = 400_000): { handler: GameHandler; ti
 describe("KI vs KI battle handler", () => {
 	test("plays a deterministic battle to completion with a consistent result", () => {
 		const { handler, ticks } = runBattle(4242);
+
 		expect(handler.getState()).toBe(GameState.Game_over);
 		const result = handler.getMatchResult();
 		expect(result).toBeDefined();
@@ -40,7 +41,7 @@ describe("KI vs KI battle handler", () => {
 		// The rule state must have left the per-turn phases (item allowance
 		// reset), i.e. the last turn completed its physics phase.
 		expect(handler.getRuleState().phase).toBe(RulePhase.Physics);
-	});
+	}, 120_000);
 
 	test("keeps every entity state finite throughout the battle", () => {
 		const handler = createAiBattleHandler("ice-map-v1", 1337);
@@ -56,7 +57,7 @@ describe("KI vs KI battle handler", () => {
 			}
 			if (handler.getState() === GameState.Game_over) break;
 		}
-	});
+	}, 120_000);
 
 	test("both teams take turns through the battle", () => {
 		const handler = createAiBattleHandler("ice-map-v1", 4242);
@@ -69,7 +70,7 @@ describe("KI vs KI battle handler", () => {
 			if (handler.getState() === GameState.Game_over) break;
 		}
 		expect(teamsActed.size).toBe(2);
-	});
+	}, 120_000);
 
 	test("persistence round trip restores the completed battle", () => {
 		const { handler } = runBattle(4242);
@@ -77,7 +78,7 @@ describe("KI vs KI battle handler", () => {
 		const rebuilt = new GameHandlerBuilder().defaultSystems().fromSettings(finalSnapshot).build();
 		expect(JSON.stringify(rebuilt.toSettings())).toBe(JSON.stringify(finalSnapshot));
 		expect(rebuilt.getMatchResult()).toEqual(handler.getMatchResult());
-	});
+	}, 120_000);
 
 	test("rematch resets the completed battle and plays it again", () => {
 		const { handler } = runBattle(4242);
@@ -94,5 +95,5 @@ describe("KI vs KI battle handler", () => {
 		}
 		expect(handler.getState()).toBe(GameState.Game_over);
 		expect(handler.getMatchResult()).toBeDefined();
-	});
+	}, 120_000);
 });

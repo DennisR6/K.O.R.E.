@@ -2255,7 +2255,7 @@ map release
   * **Target Files:** `src/ai/AiBattleSystem.ts`, `src/menu/Menu.ts`,
     `src/scenes/LocalMatchSceneRouter.ts`, `src/ai/aiEmitter.ts`
   * **Test File:** `tests/ai_battle_menu.test.ts`,
-    `tests/ai_battle_match.test.ts`,
+    `tests/ai_battle_match.test.ts`, `tests/ai_battle_maps.test.ts`,
     `tests/browser/browser_ai_battle.e2e.test.ts`
   * **Allowed Context:** AI drivers, menu pages, local match scene wiring,
     browser E2E harness
@@ -2265,6 +2265,11 @@ map release
     * The main menu offers a "KI vs KI" action (world rect
       `(270..530, 176..234)`); the existing Play Online, Play Local Game, and
       Choose Map rectangles stay reachable at their documented coordinates.
+    * The "KI vs KI" action opens the Choose Map page in battle mode, and the
+      selected map starts the battle; the page filters to `battleAvailable`
+      catalog maps (battles must terminate on the stock hard AI), while the
+      human local path keeps every `browserAvailable` map. A pending
+      local/battle intent is discarded when the map page is left via Back.
     * The battle reuses the validated canonical settings, the winning
       evaluator, and the local `GameEmitter` turn flow; both teams are driven
       through the shared `AiTurnEmitter` input boundary with bounded hard-AI
@@ -2276,12 +2281,17 @@ map release
     * A battle plays to a consistent terminal result (winner or draw),
       survives persistence round trips, and rematches to a playable turn
       zero.
+    * Every `battleAvailable` catalog map terminates an autonomous battle
+      with a finite result (`tests/ai_battle_maps.test.ts`); maps whose
+      geometry blocks every AI kill route (e.g. symmetric-duel) keep
+      `battleAvailable: false` and stay hidden from the battle selection.
     * The browser bundle must not pull server-only modules: the AI path uses
       the pure `src/input/validate.ts` boundary, not the `gameRegistry`
       re-export.
-    * A real browser run proves the full flow: menu click, battle start with
-      the `AiBattleSystem` installed behind the result overlay, and at least
-      one completed turn without input.
+    * A real browser run proves the full flow: menu click, map selection,
+      battle start with the `AiBattleSystem` installed behind the result
+      overlay, the selected map ID on the debug surface, and at least one
+      completed turn without input.
 
 * [x] **Task [19.2]: Seed-Varied Battles And Seed-Sensitive Hard AI**
 

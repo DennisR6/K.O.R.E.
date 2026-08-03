@@ -41,9 +41,11 @@ describe("browser KI vs KI battle", () => {
 			expect(menuHandler).toBe("MainMenu");
 			expect(await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id ?? null)).toBeNull();
 
-			// Landing page -> main menu -> "KI vs KI" at world (270..530, 176..234).
+			// Landing page -> main menu -> "KI vs KI" at world (270..530, 176..234)
+			// opens the Choose Map page; the first row (Ice Map) starts the battle.
 			await clickWorld(page, 400, 100);
 			await clickWorld(page, 400, 205);
+			await clickWorld(page, 400, 100);
 
 			// The battle handler boots the canonical arena.
 			await waitFor(
@@ -52,6 +54,8 @@ describe("browser KI vs KI battle", () => {
 				100,
 				"KI vs KI battle start",
 			);
+			// The selected map is the one that was picked on the map page.
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
 			const matchInfo = await page.evaluate(() => {
 				const handler = (window as any).game.handler;
 				const overlay = handler?.getMouseHandler?.();
@@ -65,7 +69,7 @@ describe("browser KI vs KI battle", () => {
 			// wrapped gameplay input is the passive AI driver (no human input).
 			expect(matchInfo.mouseHandler).toBe("MatchResultOverlay");
 			expect(matchInfo.gameplayInput).toBe("AiBattleSystem");
-			expect(matchInfo.entities).toBe(2);
+			expect(matchInfo.entities).toBe(12);
 
 			// The battle plays without any pointer input: wait until at least
 			// one full turn completed (turn counter advanced past zero).

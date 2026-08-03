@@ -4,14 +4,20 @@ import { WinningSystem } from "../systems/WinningSystem.js";
 import { createDefaultGameSettings, validateGameSettings, type GameSettings } from "./settings.js";
 import { SHAPE } from "../physics/physics.js";
 import { FitWorldCamera } from "../ui/FitWorldCamera.js";
-import { powerDashItem } from "../item/officialItems.js";
+import {
+	powerDashItem,
+	vodkaZeroItem
+
+} from "../item/officialItems.js";
+
+
 
 /** The supported two-human local reference match for the playable vertical slice. */
 export const CANONICAL_PLAYABLE_MATCH = {
 	id: "local-ice-duel-v1",
 	mapId: "ice-map-v1",
 	teamCount: 2,
-	figuresPerTeam: 1,
+	figuresPerTeam: 6,
 	humanTeams: [0, 1],
 	camera: { mode: "fit-world", worldSize: { x: 800, y: 450 } },
 	items: "enabled",
@@ -20,13 +26,14 @@ export const CANONICAL_PLAYABLE_MATCH = {
 
 /** Returns a detached, validated and deterministic reference-match snapshot. */
 export function createCanonicalPlayableMatchSettings(): GameSettings {
-	const settings = createDefaultGameSettings(2, 1);
+	const settings = createDefaultGameSettings(2, 6);
 	settings.id = "00000000-0000-4000-8000-000000000014";
 	settings.myTeam = [0, 1];
 	settings.allTeams = ["Local team 0", "Local team 1"];
-	settings.players[0]!.id = "00000000-0000-4000-8000-000000000140";
-	settings.players[1]!.id = "00000000-0000-4000-8000-000000000141";
-	settings.items = [powerDashItem];
+	settings.players.forEach((player, index) => {
+		player.id = `00000000-0000-4000-8000-00000000014${index.toString(16)}`;
+	});
+	settings.items = [powerDashItem, vodkaZeroItem];
 	settings.mapBoundarys = settings.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
 	settings.mapBoundarys.unshift({ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
 	settings.gameMode = {

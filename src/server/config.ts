@@ -7,7 +7,7 @@
  * the `/config` JSON endpoint so the menu's "Play Online" action can join a
  * match without hardcoding a client-side server URL.
  */
-export const DEFAULT_KORE_BASE_URL = "https://lupricht.net/kore";
+export const DEFAULT_KORE_BASE_URL = "https://lupricht.net/kore/";
 
 export interface ServerConfig {
 	baseUrl: string;

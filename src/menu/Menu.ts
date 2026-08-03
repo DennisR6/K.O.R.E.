@@ -30,18 +30,44 @@ export class MainMenu implements IMenu {
 		new LandingPage((page: Pages) => this.activePage = page),
 		new MainMenuPage((page: Pages) => this.activePage = page),
 	]
+	/** Which mode consumes the next map selection on the Choose Map page. */
+	private pendingMapAction: "local" | "battle" | null = null
+	private readonly mapPage: MapSelectionPage
 	constructor(
 		onPlayLocal?: () => void,
 		onSelectMap?: (mapId: string) => void,
 		private readonly getStartError?: () => string | undefined,
 		onPlayOnline?: () => void,
-		onPlayAiBattle?: () => void,
+		onPlayAiBattle?: (mapId: string) => void,
 	) {
+		this.mapPage = new MapSelectionPage(
+			(page: Pages) => {
+				// Leaving the map page without picking a map discards the
+				// pending local/battle intent.
+				if (page === Pages.MainMenu) this.pendingMapAction = null
+				this.activePage = page
+			},
+			(mapId: string) => {
+				const action = this.pendingMapAction
+				this.pendingMapAction = null
+				if (action === "battle") {
+					onPlayAiBattle?.(mapId)
+					return
+				}
+				onSelectMap?.(mapId)
+			},
+		)
 		this.pages = [
 			new LandingPage((page: Pages) => this.activePage = page),
-			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.activePage = Pages.ChooseMap, onPlayOnline, onPlayAiBattle),
-			new MapSelectionPage((page: Pages) => this.activePage = page, onSelectMap ?? (() => { })),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.openMapSelection("local"), onPlayOnline, () => this.openMapSelection("battle")),
+			this.mapPage,
 		]
+	}
+	/** Opens the map selection page for a pending local match or KI battle. */
+	private openMapSelection(action: "local" | "battle"): void {
+		this.mapPage.setSelectionMode(action)
+		this.pendingMapAction = action
+		this.activePage = Pages.ChooseMap
 	}
 	private activePage: number = 0;
 	tick(deltatime: number, globalfriction: number): void { this.pages[this.activePage].tick(deltatime, globalfriction) }
@@ -170,10 +196,19 @@ export class MainMenuPage implements IMenuPage {
 export class MapSelectionPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
 	private cb: (page: Pages) => void
-	private readonly maps: readonly MapCatalogEntry[]
+	private mode: "local" | "battle" = "local"
+	private readonly allMaps: readonly MapCatalogEntry[]
 	constructor(pageSwitcher: (page: Pages) => void, private readonly onSelectMap: (mapId: string) => void) {
 		this.cb = pageSwitcher
-		this.maps = MAP_CATALOG.filter(entry => entry.browserAvailable)
+		this.allMaps = MAP_CATALOG.filter(entry => entry.browserAvailable)
+	}
+	/**
+	 * Restricts the shown rows to maps whose autonomous KI battle terminates
+	 * (`battleAvailable`); local matches keep the full browser-visible list.
+	 */
+	setSelectionMode(mode: "local" | "battle"): void { this.mode = mode }
+	private get maps(): readonly MapCatalogEntry[] {
+		return this.mode === "battle" ? this.allMaps.filter(entry => entry.battleAvailable) : this.allMaps
 	}
 	private rowRect(index: number) { return { x: 150, y: 80 + index * 50, w: 500, h: 40 } }
 	private backRect() { return { x: 150, y: 80 + this.maps.length * 50 + 8, w: 120, h: 34 } }

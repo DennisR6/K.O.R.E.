@@ -35,7 +35,7 @@ export class LocalMatchSceneRouter {
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
 	) {
 		this.handler = new GameHandler();
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, () => this.startAiBattle());
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId));
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
 	}
@@ -118,7 +118,7 @@ export class LocalMatchSceneRouter {
 	}
 
 	private createMenuHandler(): GameHandler {
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, () => this.startAiBattle());
+		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId));
 		const handler = new GameHandler();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);

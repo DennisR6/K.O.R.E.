@@ -2,7 +2,7 @@ import type { TurnPacket } from "../engine/types.js";
 import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
-import { createPlayerSettings } from "../entity/types.js";
+import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -185,6 +185,28 @@ function isArenaGeometry(value: unknown): value is MapBoundarySettings {
 	return value.type === SHAPE.LINE && typeof value.x2 === "number" && typeof value.y2 === "number" && Number.isFinite(value.x2) && Number.isFinite(value.y2)
 }
 
+/** Arranges a full six-figure team as a centered 2x3 formation; smaller teams use the compact grid. */
+function arrangeTeamStartGrid(players: PlayerSettings[], region: MapSpawnRegion): void {
+	if (players.length === 6) {
+		const size = players[0]!.size * 2;
+		const cellSize = Math.min(region.w / 2, region.h / 3);
+		if (!(cellSize > size)) throw new Error("Map spawn region is too small for the 2x3 team formation");
+		const offsetX = (region.w - cellSize * 2) / 2;
+		// Top-aligned like arrangeInGrid: several map documents define regions
+		// that extend past the world height, so vertical centering would push
+		// the last row outside containment.
+		const offsetY = 0;
+		players.forEach((player, index) => {
+			const col = index % 2;
+			const row = Math.floor(index / 2);
+			player.position.x = region.x + offsetX + col * cellSize + size / 2;
+			player.position.y = region.y + offsetY + row * cellSize + size / 2;
+		});
+		return;
+	}
+	arrangeInGrid(players, region);
+}
+
 /** Converts validated map geometry and supported collision hazards into playable game settings. */
 export function loadMapDocument(map: MapDocument, template: GameSettings): GameSettings {
 	validateMapDocument(map)
@@ -200,7 +222,7 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 	for (const [team, teamPlayers] of playersByTeam) {
 		const region = map.spawnRegions.find(spawn => spawn.team === team)
 		if (!region) throw new Error(`Map has no spawn region for team ${team}`)
-		arrangeInGrid(teamPlayers, region)
+		arrangeTeamStartGrid(teamPlayers, region)
 	}
 	return {
 		...template,

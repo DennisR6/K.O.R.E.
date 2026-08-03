@@ -15,7 +15,7 @@ test("a real ice-map shot resolves to a deterministic final snapshot", () => {
 		dead: finalActor.isDead,
 	}).toEqual({
 		durationFrames: 72,
-		position: { x: 169.77203949870284, y: 132 },
+		position: { x: 169.77203949870284, y: 162 },
 		velocity: { x: 0, y: 0 },
 		dead: false,
 	})

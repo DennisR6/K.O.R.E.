@@ -237,10 +237,13 @@ After every change, check whether this guide still reflects the implementation a
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - `src/menu/Menu.ts`: landing and menu pages; the main menu offers a
-  "KI vs KI" battle action (world rect `(270..530, 176..234)`), a "Play
+  "KI vs KI" battle action (world rect `(270..530, 176..234)`) that opens the
+  Choose Map page and starts the battle on the selected map, a "Play
   Online" action (joins a match on the server advertised by `/config`), a
   "Play Local Game" button, and a "Choose Map" page listing every
-  `browserAvailable` catalog map (`MapSelectionPage`).
+  `browserAvailable` catalog map (`MapSelectionPage`). The map page filters
+  to `battleAvailable` maps while a battle is pending, so a selected battle
+  map always terminates.
 - `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.

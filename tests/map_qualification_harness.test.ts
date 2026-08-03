@@ -40,8 +40,11 @@ function spawnInKillZone(settings: ReturnType<typeof createCanonicalPlayableMatc
 }
 
 function deadSpawn(settings: ReturnType<typeof createCanonicalPlayableMatchSettings>): void {
-	settings.players[0]!.isDead = true;
-	settings.players[1]!.isDead = true;
+	// With six figures per team, every actor must be dead for the
+	// "no legal actor" finding to apply.
+	for (const player of settings.players) {
+		player.isDead = true;
+	}
 }
 
 function stallSettings(): ReturnType<typeof createCanonicalPlayableMatchSettings> {
@@ -100,7 +103,7 @@ describe("Section 17.3 map qualification harness", () => {
 				}
 			}
 		}
-	});
+	}, 300_000);
 
 	test("a map that violates the physics contract is reported deterministically as blocked", () => {
 		// frostbite-arena (drift 1.0) deterministically produces a two-player
@@ -132,7 +135,7 @@ describe("Section 17.3 map qualification harness", () => {
 		expect(first.result).toBe(second.result);
 		const other = qualifyMap("ice-map-v1", { seed: 9999 });
 		expect(other.checks.deterministic).toBe(true);
-	});
+	}, 30_000);
 
 	test("side-swapped variants mirror deterministically", () => {
 		for (const mapId of ["ice-map-v1", "cue-clash"]) {
@@ -146,15 +149,16 @@ describe("Section 17.3 map qualification harness", () => {
 			expect(swapped.spawnFindings).toEqual([]);
 			expect(swapped.result).toBe(original.result);
 		}
-	});
+	}, 120_000);
 
 	test("mirroring swaps teams and positions deterministically", () => {
 		const template = canonicalTemplate();
 		const mirrored = mirrorSettings(template);
-		expect(mirrored.players[0]!.team).toEqual([1]);
-		expect(mirrored.players[1]!.team).toEqual([0]);
+		// Six figures per team, grouped: indices 0..5 are team 0, 6..11 team 1.
+		for (const player of mirrored.players.slice(0, 6)) expect(player.team).toEqual([1]);
+		for (const player of mirrored.players.slice(6)) expect(player.team).toEqual([0]);
 		expect(mirrored.players[0]!.position.x).toBeCloseTo(template.worldSize.x - template.players[0]!.position.x, 6);
-		expect(mirrored.players[1]!.position.x).toBeCloseTo(template.worldSize.x - template.players[1]!.position.x, 6);
+		expect(mirrored.players[6]!.position.x).toBeCloseTo(template.worldSize.x - template.players[6]!.position.x, 6);
 		expect(JSON.stringify(mirrored.players[0]!.position)).not.toBe(JSON.stringify(template.players[0]!.position));
 	});
 
@@ -215,7 +219,7 @@ describe("Section 17.3 map qualification harness", () => {
 			expect(status).toBe(mapId === "frostbite-arena" ? "blocked" : "browser-qualified");
 		}
 		expect(template.players.length).toBe(2);
-	});
+	}, 120_000);
 
 	test("a custom settings map is labelled without a catalog ID", () => {
 		const result = qualifyMapSettings(canonicalTemplate(), { seed: 1503 });

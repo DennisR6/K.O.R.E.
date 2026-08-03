@@ -32,7 +32,9 @@ const MAP_ID = "symmetric-duel";
 const PLAYER_RADIUS = 12;
 
 function build(): ReturnType<typeof createCanonicalPlayableMatchSettings> {
-	return buildMapSettings(MAP_ID, createCanonicalPlayableMatchSettings());
+	const template = createCanonicalPlayableMatchSettings();
+	template.players = [template.players[0]!, template.players[6]!];
+	return buildMapSettings(MAP_ID, template);
 }
 
 function quiet<T>(callback: () => T): T {

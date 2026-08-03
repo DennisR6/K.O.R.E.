@@ -5,7 +5,7 @@ import { readServerConfig, serveConfig } from "./src/server/config.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
-// KORE_BASE_URL (default https://lupricht.net/kore) is the public base URL the
+// KORE_BASE_URL (default https://lupricht.net/kore/) is the public base URL the
 // browser menu uses to join online matches; it is published via `/config`.
 const serverConfig = readServerConfig(process.env);
 const database = new GameDatabase(process.env.GAME_DB_PATH ?? "./data/kore.db");

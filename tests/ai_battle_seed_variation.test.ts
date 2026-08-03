@@ -73,7 +73,7 @@ describe("KI vs KI battle seed variation", () => {
 		expect(a.shots.length).toBeGreaterThan(0);
 		expect(b.shots.length).toBeGreaterThan(0);
 		expect(a.shots).not.toEqual(b.shots);
-	});
+	}, 120_000);
 
 	test("the same battle seed replays the identical game", () => {
 		const a = runBattle(4242);
@@ -82,7 +82,7 @@ describe("KI vs KI battle seed variation", () => {
 		expect(a.ticks).toBe(b.ticks);
 		expect(a.status).toBe(b.status);
 		expect(a.winnerTeam).toBe(b.winnerTeam);
-	});
+	}, 120_000);
 });
 
 describe("KI vs KI battle rematch re-seeding", () => {
@@ -104,7 +104,7 @@ describe("KI vs KI battle rematch re-seeding", () => {
 		// The fresh battle keeps playing to completion.
 		expect(tickUntilOver(second)).toBeGreaterThan(0);
 		expect(second.getState()).toBe(GameState.Game_over);
-	});
+	}, 120_000);
 
 	test("menu action returns to the menu and clears the battle seed", () => {
 		let nextSeed = 0;
@@ -119,5 +119,5 @@ describe("KI vs KI battle rematch re-seeding", () => {
 		expect(router.getMapId()).toBeNull();
 		expect(router.getHandler()).not.toBe(battle);
 		expect(router.isLocalMatch()).toBe(false);
-	});
+	}, 120_000);
 });

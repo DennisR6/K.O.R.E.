@@ -225,8 +225,8 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 				};
 			});
 			expect(matchInfo.settingsMode).toBe("local-ice-duel-v1");
-			// Two figures (one per team) exist in the authoritative handler.
-			expect(matchInfo.entities).toBe(2);
+			// Twelve figures (six per team) exist in the authoritative handler.
+			expect(matchInfo.entities).toBe(12);
 
 			assertCleanConsole(capture);
 		} finally {

@@ -48,14 +48,14 @@ describe("Section 16.3 local turn through browser input", () => {
 			await clickWorld(page, 400, 325); // "Play Local Game"
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 
-			// The canonical match starts in the item phase with two live figures.
+			// The canonical match starts in the item phase with twelve live figures.
 			const initial = await readMatchState(page);
 			expect(initial.state).toBe("GameState.Your_turn");
 			expect(initial.phase).toBe("item");
 			expect(initial.turnNumber).toBe(0);
 			expect(initial.activeTeam).toBe(0);
-			expect(initial.entities).toHaveLength(2);
-			expect(initial.entities.filter(entity => !entity.dead)).toHaveLength(2);
+			expect(initial.entities).toHaveLength(12);
+			expect(initial.entities.filter(entity => !entity.dead)).toHaveLength(12);
 			expect(finiteEntities(initial)).toBe(true);
 
 			// Skip the item phase through the visible browser panel.

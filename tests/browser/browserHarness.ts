@@ -29,7 +29,13 @@ export class BrowserHarnessError extends Error {
 /** Default isolated test port; overridable so parallel workers cannot collide. */
 const BASE_TEST_PORT = Number(process.env.E2E_TEST_PORT ?? 4187);
 
-let nextPort = BASE_TEST_PORT;
+/**
+ * Per-worker deterministic port sequence. The PID offset keeps parallel
+ * workers (`bun test --parallel`, one Bun process per test file) on disjoint
+ * port ranges, while the in-worker counter stays deterministic.
+ */
+const WORKER_PORT_OFFSET = (process.pid % 256) * 64;
+let nextPort = BASE_TEST_PORT + WORKER_PORT_OFFSET;
 
 /** Returns the next deterministic isolated test port for this worker. */
 export function nextTestPort(): number {
