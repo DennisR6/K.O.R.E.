@@ -288,6 +288,9 @@ After every change, check whether this guide still reflects the implementation a
 	UUID-keyed declarative map revisions with canonical content hashes and
 	draft/approved/retired lifecycle state; map documents are always structurally
 	validated and never updated in place.
+- `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
+  `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
+  retired revisions for new matches while preserving them in storage.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
   input checks, simulation commits, rule progression, lifecycle-gated paused/
   completed actions, persistence, metric aggregation, and lazy SQLite

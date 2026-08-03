@@ -2745,10 +2745,14 @@ invent a zero for data the current server cannot establish.
     canonical document data, supports draft approval and retirement without
     content mutation, and returns defensive document copies.
 
-* [ ] Add a `MapRepository` that loads only approved IDs for new matchmaking,
+* [x] Add a `MapRepository` that loads only approved IDs for new matchmaking,
   validates schema/fields/numbers/geometry/spawns/hazards/team layouts/hash,
   and converts through `validateMapDocument()` then `loadMapDocument()`.
   Commit: `feat: load approved database maps`
+
+  * **Done:** The server-only repository selects only approved immutable
+    documents and converts defensive copies through the canonical map loader;
+    draft and retired IDs remain unreadable to new matchmaking.
 
 * [ ] Make authoritative matchmaking expand a requested map ID server-side into
   `GameSettings` and a `GameHandler`/ECS runtime. Clients may request an ID but
