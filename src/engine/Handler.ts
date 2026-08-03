@@ -763,7 +763,8 @@ export class GameHandlerBuilder {
 			const systemOrder = snapshot.systemOrder as string[]
 			const byId = new Map(systemSettings.map(system => [system.systemId, system]))
 			const restored = new Map<string, ISerializableSystem>()
-			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "ui.direction-arrow")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
+			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "ui.direction-arrow" && id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
+			if (byId.has("core.simulator")) restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator")!, restored))
 			if (byId.has("ui.direction-arrow")) restored.set("ui.direction-arrow", createSystemFromSettings(byId.get("ui.direction-arrow")!, restored))
 			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined

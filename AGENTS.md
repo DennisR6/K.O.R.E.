@@ -497,6 +497,9 @@ remain unsupported.
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.
+It also carries sorted, versioned stable system settings plus explicit tick order;
+the allowlisted system factory rejects unknown, duplicate, malformed, executable,
+or unsupported-version system data during restoration.
 `GameModeSettings` can carry an `ItemEconomySettings` contract for fixed
 per-team loadouts, declared map pickups, and deterministic seeded draw pools;
 the selected optional mode is preserved in engine snapshots.

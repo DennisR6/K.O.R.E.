@@ -2584,7 +2584,13 @@ invent a zero for data the current server cannot establish.
       clipboard permission, invalid token, and verifies that viewer controls
       cannot send `SHOOT`, `USE_ITEM`, `REMATCH`, pause, or report packets.
 
-  * [v] **Task [20.6.0]: Serialize Every Registered System With A Stable Identity**
+  * [x] **Task [20.6.0]: Serialize Every Registered System With A Stable Identity**
+    * **Done:** Engine snapshots now carry stable-ID system settings and their
+      explicit tick order. The allowlisted factory rejects malformed, duplicate,
+      executable, unsupported-version, and unknown system settings; handler
+      restoration rebuilds core and deterministic browser adapters without
+      retaining live emitter/canvas references. Focused round-trip coverage
+      proves JSON-identical restored snapshots and mid-playback continuation.
     * **Goal:** Before continuing replay sharing, make systems reconstructible
       from snapshot data just like players: every system installed on a handler
       has a stable unique ID and a versioned settings object, and

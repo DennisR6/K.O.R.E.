@@ -3,7 +3,7 @@ import { GameState } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase } from "../rules/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { TurnSystem } from "./TurnSystem.js";
 
 /**
@@ -26,11 +26,13 @@ import { TurnSystem } from "./TurnSystem.js";
  * Es fungiert als Zustandsautomat (State Machine), der nach jedem 
  * abgeschlossenen Zug zwischen dem eigenen und dem gegnerischen Zug wechselt.
  */
-export class RoundPlayerSystem implements ISystem {
+export class RoundPlayerSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.round-player";
 	teams: UUID[]
 	private rules = new RuleInterpreter(currentTurnMode)
 	/** Interner Flag, um den aktuellen Besitzer des Zuges zu tracken. */
 	constructor(teams: UUID[]) { this.teams = teams }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { teams: [...this.teams] } }; }
 	/**
 	 * Prüft den Spielzustand und wechselt die Runde, sobald die Action vorbei ist.
 	 */

@@ -1,5 +1,5 @@
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { IGameContext, ISimulator } from "./types.js";
+import type { IGameContext, ISerializableSystem, ISimulator, SystemSettings } from "./types.js";
 import type { PhysicsSystem } from "./PhysicsSystem.js";
 import { GameState } from "../engine/types.js";
 
@@ -10,10 +10,12 @@ import { GameState } from "../engine/types.js";
  * durchzurechnen ("Vorspulen"), damit das Ergebnis feststeht, bevor 
  * die Animation (Playback) beginnt.
  */
-export class Simulator implements ISimulator {
+export class Simulator implements ISimulator, ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.simulator";
 	private physics: PhysicsSystem
 
 	constructor(physics: PhysicsSystem) { this.physics = physics }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 
 	/**
 	 * Prüft, ob die Welt "eingeschlafen" ist.

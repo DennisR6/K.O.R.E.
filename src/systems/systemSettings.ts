@@ -2,9 +2,13 @@ import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { BoundarySystem } from "./BoundarySystem.js";
 import { DirectionArrow } from "./DirectionArrow.js";
 import { EmitterSystem } from "./Emitter.js";
+import { EffectSystem } from "./EffectSystem.js";
 import { GameStateManager } from "./GameStateManager.js";
+import { MatchStateIndicator } from "./MatchStateIndicator.js";
 import { PlaybackSystem } from "./PlayBackSystem.js";
 import { PhysicsSystem } from "./PhysicsSystem.js";
+import { RoundPlayerSystem } from "./RoundSystem.js";
+import { Simulator } from "./Simulator.js";
 import { WinningSystem } from "./WinningSystem.js";
 import { UiSystem } from "./UiSystem.js";
 import type { ISerializableSystem, SystemSettings } from "./types.js";
@@ -61,6 +65,23 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 			return system
 		}
 		case "core.emitter": if (Object.keys(state).length) throw new Error("Malformed emitter settings"); return new EmitterSystem()
+		case "core.effects": if (typeof state.newRound !== "boolean") throw new Error("Malformed effects settings"); return new EffectSystem(state.newRound)
+		case "core.round-player": {
+			if (!Array.isArray(state.teams) || !state.teams.every(team => typeof team === "string")) throw new Error("Malformed round settings")
+			return new RoundPlayerSystem(state.teams as never[])
+		}
+		case "core.simulator": {
+			if (Object.keys(state).length) throw new Error("Malformed simulator settings")
+			const physics = restored.get("core.physics")
+			if (!(physics instanceof PhysicsSystem)) throw new Error("Simulator requires serialized physics")
+			return new Simulator(physics)
+		}
+		case "ui.match-state-indicator": {
+			if (typeof state.rulePhase !== "string" || !(state.selectedItemId === null || typeof state.selectedItemId === "string")) throw new Error("Malformed match indicator settings")
+			const system = new MatchStateIndicator()
+			Object.assign(system as object, { rulePhase: state.rulePhase, selectedItemId: state.selectedItemId })
+			return system
+		}
 		case "ui.direction-arrow": {
 			if (Object.keys(state).length) throw new Error("Malformed direction arrow settings")
 			const input = restored.get("ui.pointer-input")
