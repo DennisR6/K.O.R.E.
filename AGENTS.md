@@ -275,6 +275,9 @@ After every change, check whether this guide still reflects the implementation a
   `KORE_BASE_URL` (default `https://lupricht.net/kore`), derives the matching
   WebSocket URL, and serves the `/config` JSON contract used by the browser
   "Play Online" action.
+- `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
+  aggregate lifecycle metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
+  disables the routes, and no player, snapshot, or game-ID data is exposed.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
   `EngineSettings` snapshots, maintains player-to-game membership rows, and

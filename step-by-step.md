@@ -2381,7 +2381,17 @@ invent a zero for data the current server cannot establish.
       restart. State the consistency boundary for the live `now` value in the
       API response.
 
-* [ ] **Task [20.2]: Publish A Minimal Safe Server Dashboard**
+* [x] **Task [20.2]: Publish A Minimal Safe Server Dashboard**
+
+  * **Done:** `src/server/dashboard.ts` serves only exact authenticated
+    `/operator/dashboard` and `/operator/dashboard/metrics` routes. A
+    deployment-provided 32-byte `KORE_DASHBOARD_OPERATOR_SECRET` is required;
+    disabled, missing, and invalid credentials all return indistinguishable
+    no-store 404s. The version-one aggregate JSON and fixed server-rendered
+    HTML expose only all-time/now/paused/sleeping counts plus freshness, while
+    failures return a sanitized 503. Unit and production-server integration
+    coverage is in `tests/server_dashboard.test.ts` and
+    `tests/server_dashboard.integration.test.ts`.
 
   * **Goal:** Provide a small operator dashboard that shows the four
     authoritative match counts and enough freshness/status information to

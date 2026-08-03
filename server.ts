@@ -2,12 +2,15 @@ import { ServerRuntime, type ServerSocket } from "./src/server/runtime.ts";
 import { GameDatabase } from "./src/server/db.ts";
 import { GameRegistry } from "./src/server/gameRegistry.ts";
 import { readServerConfig, serveConfig } from "./src/server/config.ts";
+import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 // KORE_BASE_URL (default https://lupricht.net/kore/) is the public base URL the
 // browser menu uses to join online matches; it is published via `/config`.
 const serverConfig = readServerConfig(process.env);
+// Set KORE_DASHBOARD_OPERATOR_SECRET through the deployment secret store, not .env.
+const dashboardConfig = readDashboardConfig(process.env);
 const database = new GameDatabase(process.env.GAME_DB_PATH ?? "./data/kore.db");
 const runtime = new ServerRuntime(new GameRegistry(database));
 
@@ -18,6 +21,8 @@ Bun.serve<WebSocketData>({
 
 		const url = new URL(req.url);
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
+		const dashboard = serveDashboard(req, runtime.getRegistry(), dashboardConfig);
+		if (dashboard) return dashboard;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		// The offline shell lives in public/ but must register at root scope.
