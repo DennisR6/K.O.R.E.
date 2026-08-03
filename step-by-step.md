@@ -2458,7 +2458,7 @@ invent a zero for data the current server cannot establish.
     * Test slow config, delayed `INIT`, socket failure, retry, cancellation,
       and two-tab matchmaking through the production browser route.
 
-* [ ] **Task [20.4]: Add A Non-Binding Online Map Preference Screen**
+* [v] **Task [20.4]: Add A Non-Binding Online Map Preference Screen**
 
   * **Goal:** Let an online player choose a map as a matchmaking preference,
     not a final unilateral map decision. The UI must explicitly describe that

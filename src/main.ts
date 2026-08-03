@@ -23,6 +23,7 @@ const usersettings = {
 	mapbuilder: uri.searchParams.has("mapbuilder"),
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
 	replay: uri.searchParams.has("replay"),
+	mapPreference: uri.searchParams.get("map") ?? undefined,
 }
 
 const ui = new UiSystem()
@@ -79,7 +80,7 @@ function startNetworkGame(serverUrl: string) {
 	}
 	socket.addEventListener("open", () => {
 		loading.setMessage("Finding an opponent…")
-		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined }))
+		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference }))
 	})
 	socket.addEventListener("error", () => fail("Could not connect to the match server."))
 	socket.addEventListener("close", () => fail("The match connection closed before setup completed."))
@@ -109,6 +110,7 @@ function startNetworkGame(serverUrl: string) {
 		window.clearTimeout(timeout)
 		loading.dispose()
 		const init = message as NetworkInit
+		if (init.mapId) loading.setMessage(`Starting ${init.mapId}…`)
 		const settings = init.settings
 const ui = new UiSystem()
 if (usersettings.replay) {

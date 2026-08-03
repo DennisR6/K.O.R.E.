@@ -2,6 +2,7 @@ import { GameSettings, validateGameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
+import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import { NetworkMessageType, type NetworkError, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -13,7 +14,7 @@ export class ServerRuntime {
 	private sockets = new Map<string, ServerSocket>();
 	private userByConnection = new Map<string, string>();
 	private connectionByUser = new Map<string, string>();
-	private waitingUsers: string[] = [];
+	private waitingUsers: Array<{ userId: string; mapPreference?: string }> = [];
 
 	constructor(private readonly games = new GameRegistry()) { }
 
@@ -28,7 +29,7 @@ export class ServerRuntime {
 		this.userByConnection.delete(connectionId)
 		if (userId) {
 			if (this.connectionByUser.get(userId) === connectionId) this.connectionByUser.delete(userId)
-			this.waitingUsers = this.waitingUsers.filter(user => user !== userId)
+			this.waitingUsers = this.waitingUsers.filter(waiting => waiting.userId !== userId)
 			this.games.disconnectUser(userId)
 		}
 	}
@@ -39,7 +40,7 @@ export class ServerRuntime {
 
 		switch (message.type) {
 			case NetworkMessageType.LOGIN:
-				this.login(socket, message.userid)
+				this.login(socket, message.userid, message.mapPreference)
 				return
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
@@ -67,12 +68,14 @@ export class ServerRuntime {
 	public matchmakeOnce(): void {
 		this.games.evictInactive()
 		while (this.waitingUsers.length >= 2) {
-			const users = this.waitingUsers.splice(0, 2)
-			const record = this.games.create(GameSettings, users)
+			const waiting = this.waitingUsers.splice(0, 2)
+			const users = waiting.map(entry => entry.userId)
+			const mapId = chooseMap(waiting[0].mapPreference, waiting[1].mapPreference)
+			const record = this.games.create(buildMapSettings(mapId, GameSettings), users, mapId)
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
-				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState }))
+				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId }))
 			}
 		}
 	}
@@ -84,9 +87,9 @@ export class ServerRuntime {
 		if (!userId) return this.sendError(socket, "Login is required before creating a game")
 		try {
 			validateGameSettings(rawSettings)
-			if (!this.waitingUsers.includes(userId)) this.waitingUsers.push(userId)
+			if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId })
 			if (this.waitingUsers.length >= 2) {
-				const users = this.waitingUsers.splice(0, 2)
+				const users = this.waitingUsers.splice(0, 2).map(waiting => waiting.userId)
 				const record = this.games.create(rawSettings, users)
 				for (const user of users) {
 					this.games.connectUser(user)
@@ -117,7 +120,7 @@ export class ServerRuntime {
 		}
 	}
 
-	private login(socket: ServerSocket, requestedUserId: unknown): void {
+	private login(socket: ServerSocket, requestedUserId: unknown, mapPreference?: unknown): void {
 		const userId = typeof requestedUserId === "string" && requestedUserId.length > 0
 			? requestedUserId
 			: crypto.randomUUID()
@@ -132,7 +135,9 @@ export class ServerRuntime {
 			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState }))
 			return
 		}
-		if (!this.waitingUsers.includes(userId)) this.waitingUsers.push(userId)
+		const preference = validateMapPreference(mapPreference)
+		if (mapPreference !== undefined && !preference) return this.sendError(socket, "Invalid map preference")
+		if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId, mapPreference: preference })
 		socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
 	}
 
@@ -192,6 +197,16 @@ export class ServerRuntime {
 	private sendError(socket: ServerSocket, message: string): void {
 		socket.send(wrap<NetworkError>({ type: NetworkMessageType.ERROR, message }))
 	}
+}
+
+function validateMapPreference(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const entry = MAP_CATALOG.find(candidate => candidate.id === value);
+	return entry?.browserAvailable && isMapLoadable(value) ? value : undefined;
+}
+
+function chooseMap(first: string | undefined, second: string | undefined): string {
+	return first !== undefined && first === second ? first : "ice-map-v1";
 }
 
 function parseMessage(value: string): UnTypedNetworkMessage | undefined {

@@ -27,6 +27,7 @@ export type GameRecord = {
 	connectedUsers: Set<string>;
 	recorder: ReplayRecorder;
 	lifecycle: PersistedMatchLifecycle;
+	mapId: string;
 };
 
 export type SubmitTurnResult =
@@ -53,7 +54,7 @@ export class GameRegistry {
 		private readonly idleTimeoutMs: number = 60_000,
 	) { }
 
-	public create(settings: GameSettings, users: string[]): GameRecord {
+	public create(settings: GameSettings, users: string[], mapId: string = "ice-map-v1"): GameRecord {
 		if (users.length < 2) throw new Error("A game requires at least two users")
 		validateGameSettings(settings)
 		const id = crypto.randomUUID()
@@ -63,7 +64,7 @@ export class GameRegistry {
 			allTeams: [...users],
 			myTeam: [],
 		}
-		const record = this.createRecord(id, this.buildAuthoritativeHandler(gameSettings, users.length), users, 0, 0)
+		const record = this.createRecord(id, this.buildAuthoritativeHandler(gameSettings, users.length), users, 0, 0, undefined, undefined, undefined, undefined, mapId)
 		this.games.set(id, record)
 		this.persist(record)
 		return record
@@ -258,6 +259,7 @@ export class GameRegistry {
 		ruleState?: RuleState,
 		actions?: ReplayDocument["actions"],
 		lifecycle: PersistedMatchLifecycle = createLifecycle("resident", Date.now()),
+		mapId: string = "ice-map-v1",
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
@@ -276,6 +278,7 @@ export class GameRegistry {
 			connectedUsers: new Set(),
 			recorder,
 			lifecycle,
+			mapId,
 		}
 	}
 
