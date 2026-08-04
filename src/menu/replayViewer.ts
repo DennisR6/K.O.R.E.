@@ -13,9 +13,11 @@ export class ReplayViewer {
 			validateReplayDocument(rawReplay);
 			this.player = new ReplayPlayer(rawReplay as ReplayDocument);
 			this.player.advance();
+			console.log(`[replay] ReplayPlayer ready: actions=${this.player.getActionCount()} state=${this.player.getHandler().getState()}`);
 			return true;
 		} catch (error) {
 			this.errorState = error instanceof Error ? error.message : "Malformed or incompatible replay";
+			console.error(`[replay] replay document rejected: ${this.errorState}`, error);
 			this.player = undefined;
 			return false;
 		}

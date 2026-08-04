@@ -52,6 +52,10 @@ const builder = new GameHandlerBuilder()
 if (isUiDebugSandboxUrl(uri)) {
 	startUiDebugSandbox()
 } else if (usersettings.replayToken) {
+	// The read-only replay page has no server socket or in-game error channel;
+	// every step of the load sequence is logged so failures are visible in the
+	// browser console (`[replay]` prefix) instead of only in the status line.
+	console.log(`[replay] replay mode with token ${usersettings.replayToken}`)
 	handler = new GameHandler()
 	const viewer = startReplayViewer(usersettings.replayToken)
 	startGame(handler, () => handler, () => viewer.advance())
@@ -185,18 +189,28 @@ function startReplayViewer(initialToken: string): ReplayViewer {
 	const status = document.createElement("p"); status.setAttribute("role", "status");
 	const loadToken = async () => {
 		const token = input.value.trim();
-		if (!REPLAY_TOKEN.test(token)) { status.textContent = "Enter a valid replay share ID."; return; }
+		if (!REPLAY_TOKEN.test(token)) { status.textContent = "Enter a valid replay share ID."; console.error(`[replay] invalid replay share ID: ${JSON.stringify(token)}`); return; }
 		status.textContent = "Loading replay…";
+		const endpoint = buildReplayShareEndpoint(window.location.href, token);
+		console.log(`[replay] requesting replay from ${endpoint}`);
 		try {
-			const response = await fetch(buildReplayShareEndpoint(window.location.href, token), { cache: "no-store" });
-			if (!response.ok) throw new Error("Replay unavailable");
+			const response = await fetch(endpoint, { cache: "no-store" });
+			console.log(`[replay] ${endpoint} responded HTTP ${response.status}`);
+			if (!response.ok) throw new Error(`Replay unavailable (HTTP ${response.status})`);
 			const body = await response.json() as { replay?: unknown };
+			console.log(`[replay] response payload keys: ${Object.keys(body).join(", ") || "(empty)"}${body.replay === undefined ? " — replay field MISSING" : ""}`);
 			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? "Replay unavailable");
 			handler = viewer.getPlayer()!.getHandler();
-			status.textContent = viewer.getPlayer()!.getActionCount() > 0
+			const loadedPlayer = viewer.getPlayer()!;
+			const world = handler.getSettings()?.worldSize;
+			console.log(`[replay] loaded: state=${handler.getState()} entities=${handler.getEntityManager().getEntities().length} actions=${loadedPlayer.getActionCount()} world=${JSON.stringify(world)} rendererWorldWidth=${GameSettings.screenResolution.x}`);
+			status.textContent = loadedPlayer.getActionCount() > 0
 				? "Replay loaded. Playback is read-only."
 				: "Replay loaded. No actions have been recorded yet.";
-		} catch { status.textContent = "Replay unavailable. Check the share ID and try again."; }
+		} catch (error) {
+			console.error("[replay] replay load failed:", error);
+			status.textContent = "Replay unavailable. Check the share ID and try again.";
+		}
 	};
 	load.addEventListener("click", () => { void loadToken(); });
 	paste.addEventListener("click", async () => {
@@ -270,6 +284,18 @@ function showNetworkLoading(initialMessage: string) {
 	}
 }
 
+/** Throttled per-frame error surfacing for the read-only replay page. */
+const recentReplayFrameErrors = new Map<string, number>();
+function logReplayFrameError(error: unknown): void {
+	const message = error instanceof Error ? error.message : String(error);
+	const now = Date.now();
+	const last = recentReplayFrameErrors.get(message);
+	if (last !== undefined && now - last < 5_000) return;
+	recentReplayFrameErrors.set(message, now);
+	if (recentReplayFrameErrors.size > 100) recentReplayFrameErrors.clear();
+	console.error(`[replay] frame error: ${message}`, error);
+}
+
 function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h, afterTick?: () => void) {
 	const sketch = (p: p5Types) => {
 		let ctx: RenderContext;
@@ -292,13 +318,18 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 
 		p.draw = () => {
 			if (!ctx) return
-			const active = getActiveHandler()
-			active.tick()
-			afterTick?.()
-			flushBrowserAudio(active)
-			p.push()
-			active.drawWorld(ctx)
-			p.pop()
+			try {
+				const active = getActiveHandler()
+				active.tick()
+				afterTick?.()
+				flushBrowserAudio(active)
+				p.push()
+				active.drawWorld(ctx)
+				p.pop()
+			} catch (error) {
+				if (usersettings.replayToken) logReplayFrameError(error)
+				else throw error
+			}
 		};
 
 		window.addEventListener("mousemove", (e) => {
