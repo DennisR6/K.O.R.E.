@@ -100,7 +100,12 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
 	expect(completedHtml).toContain("View replay");
-	expect(completedHtml).toContain(`./${completed.id}/view`);
+	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}/view`);
+	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}`);
+	const mountedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!;
+	const mountedHtml = await mountedPage.text();
+	expect(mountedHtml).toContain(`href="https://operator.example/kore/operator/replays/${first.id}/view"`);
+	expect(mountedHtml).toContain(`href="https://operator.example/kore/operator/replays/${first.id}"`);
 	const download = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(download.status).toBe(200);
 	expect(download.headers.get("content-disposition")).toContain("attachment");
