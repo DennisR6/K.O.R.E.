@@ -225,9 +225,13 @@ After every change, check whether this guide still reflects the implementation a
 
 - `src/settings/settings.ts`: canonical `GameSettings`, friction presets,
   default teams/entities, active settings object, and grid arrangement.
-- `src/kore_sdk.ts`: single `kore` SDK export for typed, fluent construction
-  of validated engine-importable `GameSettings` JSON maps, serializable teams,
-  spawns, structures, world effects, and supported external/image backgrounds.
+- `src/engine/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
+  JSON-safe worlds/entities/structures/effects and deterministic framework
+  metadata selection. It must not import KORE/game domains or runtime adapters.
+- `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
+  validated engine-importable `GameSettings` JSON maps, serializable teams,
+  spawns, KORE effects/defaults, and KORE handler composition. Root
+  `src/kore_sdk.ts` is the supported deprecated compatibility re-export.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
