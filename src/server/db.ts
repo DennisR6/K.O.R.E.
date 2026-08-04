@@ -6,8 +6,8 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import type { EngineSettings } from "../engine/types.js";
 import { GameState } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
-import type { FrozenReplayDocument, ReplayAction } from "../replay/types.js";
-import { validateFrozenReplayDocument } from "../replay/types.js";
+import type { FrozenReplayDocument, ReplayAction, ReplayDocument } from "../replay/types.js";
+import { validateFrozenReplayDocument, validateReplayDocument } from "../replay/types.js";
 import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 
@@ -26,6 +26,8 @@ export type StoredGame = {
 };
 export type StoredReplayShare = { token: string; replay: FrozenReplayDocument; createdAt: number; revokedAt: number | null };
 export type PublicReplayShare = { token: string; replay: Omit<FrozenReplayDocument, "finalSettings">; createdAt: number };
+/** Authenticated-operator-only replay index; it deliberately has no player or snapshot fields. */
+export type OperatorReplaySummary = { gameId: string; status: AuthoritativeMatchStatus; updatedAt: number; actionCount: number };
 export type StoredMapStatus = "draft" | "approved" | "retired";
 export type StoredMap = { id: string; document: MapDocument; status: StoredMapStatus; contentHash: string; createdAt: number; approvedAt: number | null };
 
@@ -48,6 +50,7 @@ type StoredLifecycleRow = {
 
 type StoredUserRow = { user_id: string };
 type StoredMapRow = { id: string; document_json: string; status: StoredMapStatus; content_hash: string; created_at: number; approved_at: number | null };
+type OperatorReplayRow = { id: string; snapshot: Uint8Array; updated_at: number; status: AuthoritativeMatchStatus };
 
 /**
  * Durable game storage. Snapshots are gzip-compressed JSON so inactive matches
@@ -211,14 +214,33 @@ export class GameDatabase {
 		this.writeLifecycle(id, lifecycle);
 	}
 
-	public getMetricCounts(): { allTime: number; paused: number; sleeping: number } {
+	public getMetricCounts(): { allTime: number; playersAllTime: number; playersOnline: number; paused: number; sleeping: number } {
 		const allTime = this.db.query("SELECT count(*) AS count FROM games").get() as { count: number };
+		const playersAllTime = this.db.query("SELECT count(DISTINCT user_id) AS count FROM game_players").get() as { count: number };
+		const playersOnline = this.db.query("SELECT count(DISTINCT game_players.user_id) AS count FROM game_players JOIN game_lifecycle ON game_lifecycle.game_id = game_players.game_id WHERE game_lifecycle.status != 'sleeping'").get() as { count: number };
 		const statuses = this.db.query(`
 			SELECT status, count(*) AS count FROM game_lifecycle
 			WHERE status IN ('paused', 'sleeping') GROUP BY status
 		`).all() as Array<{ status: AuthoritativeMatchStatus; count: number }>;
 		const counts = new Map(statuses.map(row => [row.status, row.count]));
-		return { allTime: allTime.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
+		return { allTime: allTime.count, playersAllTime: playersAllTime.count, playersOnline: playersOnline.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
+	}
+
+	/** Lists every persisted action log for authenticated operator replay lookup. */
+	public listOperatorReplays(gameId?: string): OperatorReplaySummary[] {
+		const rows = (gameId === undefined
+			? this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id ORDER BY games.updated_at DESC, games.id ASC").all()
+			: this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id WHERE games.id = ?1 ORDER BY games.updated_at DESC, games.id ASC").all(gameId)) as OperatorReplayRow[];
+		return rows.map(row => ({ gameId: row.id, status: row.status, updatedAt: row.updated_at, actionCount: decompress(row.snapshot).actions.length }));
+	}
+
+	/** Returns the deterministic replay document for any persisted match. */
+	public getOperatorReplay(gameId: string): ReplayDocument | undefined {
+		const game = this.loadGame(gameId);
+		if (!game) return undefined;
+		const replay: ReplayDocument = { schemaVersion: 1, initialSettings: game.initialSettings ?? game.settings, seed: 12345, actions: game.actions ?? [] };
+		validateReplayDocument(replay);
+		return structuredClone(replay);
 	}
 
 	/** Durable map usage, sorted so equal counts have a stable dashboard order. */

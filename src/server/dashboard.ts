@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { GameDatabase } from "./db.js";
+import type { GameDatabase, OperatorReplaySummary } from "./db.js";
 import type { GameRegistry } from "./gameRegistry.js";
 import type { MatchMetrics } from "./types.js";
 
@@ -8,20 +8,22 @@ export const DASHBOARD_PATH = "/operator/dashboard";
 export const DASHBOARD_LOGIN_PATH = "/operator/login";
 export const DASHBOARD_LOGOUT_PATH = "/operator/logout";
 export const DASHBOARD_DATABASE_PATH = "/operator/db";
+export const DASHBOARD_REPLAYS_PATH = "/operator/replays";
 const DASHBOARD_COOKIE = "kore_operator_session";
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
-const FRESHNESS = "allTime, paused, and sleeping are durable SQLite lifecycle aggregates; now is scoped to this server process's resident registry cache.";
+const FRESHNESS = "allTime, playersAllTime, playersOnline, paused, and sleeping are durable SQLite aggregates; playersOnline includes every player whose game is not sleeping; now is scoped to this server process's resident registry cache.";
 
 export type DashboardConfig = { operatorSecret: string | undefined };
 
 export type DashboardMetricsResponse = {
 	schemaVersion: 1;
 	measuredAt: number;
-	counts: Pick<MatchMetrics, "allTime" | "now" | "paused" | "sleeping">;
+	counts: Pick<MatchMetrics, "allTime" | "playersAllTime" | "playersOnline" | "now" | "paused" | "sleeping">;
 	mapUsage: MatchMetrics["mapUsage"];
 	mostPlayedMap: MatchMetrics["mostPlayedMap"];
 	freshness: typeof FRESHNESS;
 };
+export type DashboardReplayIndexResponse = { schemaVersion: 1; replays: OperatorReplaySummary[]; filter: { gameId?: string } };
 
 /** Reads a deployment-only secret; unset or weak values deliberately disable routes. */
 export function readDashboardConfig(env: Record<string, string | undefined> = process.env): DashboardConfig {
@@ -30,7 +32,7 @@ export function readDashboardConfig(env: Record<string, string | undefined> = pr
 }
 
 export function isDashboardPath(pathname: string): boolean {
-	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH;
+	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH || pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`);
 }
 
 /**
@@ -40,13 +42,14 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot">, publicBaseUrl?: string): Promise<Response | undefined> {
-	const pathname = new URL(request.url).pathname;
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay">, publicBaseUrl?: string): Promise<Response | undefined> {
+	const url = new URL(request.url); const pathname = url.pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
 	if (!isAuthorized(request, config.operatorSecret)) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
+	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, database, pathname, url.searchParams.get("id"));
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	try {
 		const metrics = registry.getMetrics();
@@ -57,6 +60,25 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 		return new Response(renderDashboard(body), {
 			headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
 		});
+	} catch {
+		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
+	}
+}
+
+function operatorReplays(request: Request, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay"> | undefined, pathname: string, requestedGameId: string | null): Response {
+	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
+	if (!database) return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
+	try {
+		const suffix = pathname.slice(DASHBOARD_REPLAYS_PATH.length).replace(/^\//, "");
+		if (suffix) {
+			const replay = database.getOperatorReplay(decodeURIComponent(suffix));
+			if (!replay) return notFound();
+			return Response.json(replay, { headers: { "content-disposition": `attachment; filename="kore-replay-${safeFilename(suffix)}.json"`, "cache-control": "no-store" } });
+		}
+		const gameId = requestedGameId?.trim() || undefined;
+		const body: DashboardReplayIndexResponse = { schemaVersion: 1, replays: database.listOperatorReplays(gameId), filter: gameId ? { gameId } : {} };
+		if (wantsJson(request)) return Response.json(body, { headers: { "cache-control": "no-store" } });
+		return new Response(renderReplayDashboard(body), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
 	}
@@ -83,6 +105,8 @@ export function metricsResponse(metrics: MatchMetrics): DashboardMetricsResponse
 		measuredAt: metrics.measuredAt,
 		counts: {
 			allTime: metrics.allTime,
+			playersAllTime: metrics.playersAllTime,
+			playersOnline: metrics.playersOnline,
 			now: metrics.now,
 			paused: metrics.paused,
 			sleeping: metrics.sleeping,
@@ -164,8 +188,17 @@ function notFound(): Response {
 function renderDashboard(metrics: DashboardMetricsResponse): string {
 	const mostPlayed = metrics.mostPlayedMap ? `${metrics.mostPlayedMap.mapId} (${metrics.mostPlayedMap.games} games, ${metrics.mostPlayedMap.percentage}%)` : "No matches yet";
 	const rows = metrics.mapUsage.map(metric => `<tr><td>${metric.mapId}</td><td>${metric.games}</td><td>${metric.percentage}%</td></tr>`).join("") || "<tr><td colspan=\"3\">No matches yet</td></tr>";
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Most played map</dt><dd data-metric="mostPlayedMap">${mostPlayed}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><table><caption>Map usage</caption><thead><tr><th>Map</th><th>Games</th><th>Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><p><a href="replays">Replay archive</a></p><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>All-time players</dt><dd data-metric="playersAllTime">${metrics.counts.playersAllTime}</dd><dt>Players online</dt><dd data-metric="playersOnline">${metrics.counts.playersOnline}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Most played map</dt><dd data-metric="mostPlayedMap">${mostPlayed}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><table><caption>Map usage</caption><thead><tr><th>Map</th><th>Games</th><th>Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
 }
+
+function renderReplayDashboard(response: DashboardReplayIndexResponse): string {
+	const filter = response.filter.gameId ?? "";
+	const rows = response.replays.map(replay => `<tr><td>${escapeHtml(replay.gameId)}</td><td>${escapeHtml(replay.status)}</td><td>${replay.updatedAt}</td><td>${replay.actionCount}</td><td><a href="./${encodeURIComponent(replay.gameId)}">Download</a></td></tr>`).join("") || "<tr><td colspan=\"5\">No replay found</td></tr>";
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE replay archive</title></head><body><main><h1>KORE replay archive</h1><p><a href="../dashboard">Dashboard</a></p><form method="get"><label>Match ID <input name="id" value="${escapeHtml(filter)}" autocomplete="off"></label><button type="submit">Filter</button></form><table><caption>Persisted match replays</caption><thead><tr><th>Match ID</th><th>Status</th><th>Updated</th><th>Actions</th><th>Replay</th></tr></thead><tbody data-replays="index">${rows}</tbody></table></main></body></html>`;
+}
+
+function escapeHtml(value: string): string { return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
+function safeFilename(value: string): string { return value.replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "replay"; }
 
 export function dashboardUrl(publicBaseUrl: string | undefined, path: string): string {
 	if (!publicBaseUrl) return path;

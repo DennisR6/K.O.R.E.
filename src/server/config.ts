@@ -17,7 +17,7 @@ export interface ServerConfig {
 /** Resolves durable storage independently of the process working directory. */
 export function resolveGameDatabasePath(env: Record<string, string | undefined>, serverDirectory: string): string {
 	const configured = env.GAME_DB_PATH?.trim();
-	return configured && configured.length > 0 ? configured : join(serverDirectory, "data", "kore.db");
+	return configured && configured.length > 0 ? configured : `${serverDirectory.replace(/[\\/]$/, "")}/data/kore.db`;
 }
 
 /** Converts an http(s) base URL into the matching WebSocket URL. */
@@ -51,4 +51,3 @@ export function serveConfig(config: ServerConfig): Response {
 		{ headers: { "cache-control": "no-store" } },
 	);
 }
-import { join } from "node:path";

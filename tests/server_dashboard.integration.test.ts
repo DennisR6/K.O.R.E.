@@ -11,7 +11,7 @@ test.serial("production server exposes only authenticated aggregate dashboard ro
 		const metrics = await fetch(`${server.url}/operator/dashboard/metrics`, { headers: { authorization: `Bearer ${secret}` } });
 		expect(metrics.status).toBe(200);
 		expect(metrics.headers.get("cache-control")).toBe("no-store");
-		expect(await metrics.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
+		expect(await metrics.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
 		const page = await fetch(`${server.url}/operator/dashboard`, { headers: { authorization: `Bearer ${secret}` } });
 		expect(page.status).toBe(200);
 		expect(page.headers.get("cache-control")).toBe("no-store");
@@ -19,7 +19,11 @@ test.serial("production server exposes only authenticated aggregate dashboard ro
 		const jsonDashboard = await fetch(`${server.url}/operator/dashboard?format=json`, { headers: { authorization: `Bearer ${secret}` } });
 		expect(jsonDashboard.status).toBe(200);
 		expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
-		expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
+		expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
+		expect((await fetch(`${server.url}/operator/replays?format=json`)).status).toBe(404);
+		const replays = await fetch(`${server.url}/operator/replays?format=json`, { headers: { authorization: `Bearer ${secret}` } });
+		expect(replays.status).toBe(200);
+		expect(await replays.json()).toEqual({ schemaVersion: 1, replays: [], filter: {} });
 		const login = await fetch(`${server.url}/operator/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: secret }) });
 		expect(login.status).toBe(200);
 		const cookie = login.headers.get("set-cookie")!;

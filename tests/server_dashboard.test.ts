@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
-import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
+import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 
 const secret = "0123456789abcdef0123456789abcdef";
 const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
@@ -16,13 +16,15 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(response.headers.get("cache-control")).toBe("no-store");
 	expect(await response.json()).toMatchObject({
 		schemaVersion: 1,
-		counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 },
+		counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 },
 		freshness: metricsResponse(registry.getMetrics()).freshness,
 	});
 
 	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
 	expect(page).toContain('data-metric="allTime">0');
 	expect(page).toContain("All-time matches");
+	expect(page).toContain("All-time players");
+	expect(page).toContain("Players online");
 	expect(page).toContain("Matches now");
 	expect(page).toContain("Paused matches");
 	expect(page).toContain("Sleeping matches");
@@ -30,7 +32,7 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).not.toContain(users[0]);
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
-	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, now: 0, paused: 0, sleeping: 0 } });
+	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
 	database.close();
 });
 
@@ -40,14 +42,14 @@ test.serial("dashboard counts remain server-derived across lifecycle changes", a
 	const record = registry.create(createDefaultGameSettings(2, 1), users);
 	registry.setPaused(record.id, true, 10);
 	let response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, now: 0, paused: 1, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 } });
 	registry.setPaused(record.id, false, 11);
 	registry.evictInactive(Date.now() + 2);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ counts: { allTime: 1, now: 0, paused: 0, sleeping: 1 } });
+	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 0, sleeping: 1 } });
 	registry.connectUser(users[0]);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ counts: { allTime: 1, now: 1, paused: 0, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 1, paused: 0, sleeping: 0 } });
 	database.close();
 });
 
@@ -68,6 +70,30 @@ test.serial("dashboard exposes durable map counts, percentages, and the most pla
 	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
 	expect(page).toContain('data-metric="mostPlayedMap">cue-clash (2 games, 66.67%)');
 	expect(page).toContain('data-metric="mapUsage"');
+	database.close();
+});
+
+test.serial("authenticated dashboard lists every persisted replay and filters/downloads by match ID", async () => {
+	const database = new GameDatabase(":memory:");
+	const registry = new GameRegistry(database);
+	const first = registry.create(createDefaultGameSettings(2, 1), users, "cue-clash");
+	const second = registry.create(createDefaultGameSettings(2, 1), ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-844444444444"], "ice-map-v1");
+	const unauthorized = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`), registry, { operatorSecret: secret }, database))!;
+	expect(unauthorized.status).toBe(404);
+	const index = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(index.status).toBe(200);
+	const indexBody = await index.json() as { schemaVersion: number; filter: object; replays: Array<{ gameId: string; actionCount: number }> };
+	expect(indexBody.schemaVersion).toBe(1);
+	expect(indexBody.filter).toEqual({});
+	expect(indexBody.replays.map(replay => ({ gameId: replay.gameId, actionCount: replay.actionCount })).sort((left, right) => left.gameId.localeCompare(right.gameId))).toEqual([{ gameId: first.id, actionCount: 0 }, { gameId: second.id, actionCount: 0 }].sort((left, right) => left.gameId.localeCompare(right.gameId)));
+	const filtered = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json&id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(await filtered.json()).toMatchObject({ filter: { gameId: first.id }, replays: [{ gameId: first.id }] });
+	const page = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(await page.text()).toContain(`data-replays="index"`);
+	const download = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(download.status).toBe(200);
+	expect(download.headers.get("content-disposition")).toContain("attachment");
+	expect(await download.json()).toMatchObject({ schemaVersion: 1, actions: [] });
 	database.close();
 });
 

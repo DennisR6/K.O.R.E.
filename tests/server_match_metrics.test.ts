@@ -16,6 +16,8 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 	const registry = new GameRegistry(database, 1);
 	expect(registry.getMetrics(10)).toEqual({
 		allTime: 0,
+		playersAllTime: 0,
+		playersOnline: 0,
 		now: 0,
 		paused: 0,
 		sleeping: 0,
@@ -40,6 +42,8 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 
 	expect(registry.getMetrics(30)).toEqual({
 		allTime: 4,
+		playersAllTime: 8,
+		playersOnline: 6,
 		now: 1,
 		paused: 1,
 		sleeping: 1,
@@ -82,12 +86,12 @@ test.serial("lifecycle transitions are idempotent and paused games reject action
 	registry.disconnectUser(users[0]);
 	registry.disconnectUser(users[1]);
 	registry.evictInactive(100);
-	expect(registry.getMetrics(101)).toMatchObject({ allTime: 1, now: 0, paused: 1, sleeping: 0 });
+	expect(registry.getMetrics(101)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 });
 
 	const restored = registry.connectUser(users[0])!;
 	expect(restored.id).toBe(record.id);
-	expect(registry.getMetrics(102)).toMatchObject({ allTime: 1, now: 0, paused: 1, sleeping: 0 });
+	expect(registry.getMetrics(102)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 });
 	registry.setPaused(record.id, false, 103);
-	expect(registry.getMetrics(104)).toMatchObject({ allTime: 1, now: 1, paused: 0, sleeping: 0 });
+	expect(registry.getMetrics(104)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 1, paused: 0, sleeping: 0 });
 	database.close();
 });

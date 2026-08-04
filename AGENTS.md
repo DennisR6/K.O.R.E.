@@ -308,10 +308,13 @@ After every change, check whether this guide still reflects the implementation a
   WebSocket URL, and serves the `/config` JSON contract used by the browser
   "Play Online" action.
 - `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
-  aggregate lifecycle metrics plus durable map usage/count/percentage and
-  most-played-map metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
-  disables the routes, and the dashboard representations expose no player,
-  snapshot, or game-ID data.
+  aggregate lifecycle/player metrics plus durable map usage/count/percentage
+  and most-played-map metrics; an unset or short
+  `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
+  `/operator/replays` lists every persisted replay and filters by exact match
+  ID; `/operator/replays/<id>` downloads that deterministic replay document.
+  These operator-only replay routes may expose match IDs and settings, while
+  public replay-share routes remain separately redacted.
   `GET /operator/dashboard?format=json` returns the same complete aggregate
   dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
   metrics alias. `GET /operator/login` serves a minimal password form and
