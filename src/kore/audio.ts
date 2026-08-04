@@ -30,7 +30,9 @@ export const koreAudio = {
 	command: {
 		uiConfirm(sourceId: string, soundId: string = "kore.ui.confirm"): PlaySoundCommand { return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" }); },
 		shot(sourceId: string): PlaySoundCommand { return audio.command.play({ sourceId, soundId: "kore.game.shot", bus: "effects", priority: 20, dedupeKey: "shot" }); },
-		menuMusic(sourceId: string = "menu.music"): PlayMusicCommand { return audio.command.music({ sourceId, soundId: "kore.music.menu", bus: "music", priority: 10, replacementPolicy: "replace-lower-or-equal", fadeInMs: 250 }); },
+		// Menu creation is an application-mode handoff, so it deliberately claims
+		// the slot again when returning from a higher-priority match.
+		menuMusic(sourceId: string = "menu.music"): PlayMusicCommand { return audio.command.music({ sourceId, soundId: "kore.music.menu", bus: "music", priority: 10, replacementPolicy: "replace-current", fadeInMs: 250 }); },
 		matchMusic(sourceId: string = "match.music"): PlayMusicCommand { return audio.command.music({ sourceId, soundId: "kore.music.match", bus: "music", priority: 20, replacementPolicy: "replace-lower-or-equal", fadeInMs: 500 }); },
 	},
 } as const;

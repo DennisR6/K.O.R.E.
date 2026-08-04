@@ -15,7 +15,8 @@ import { GameplayFeedback } from "../ui/GameplayFeedback.js";
 import { ItemPhaseControls } from "../ui/ItemPhaseControls.js";
 import { MatchResultOverlay, type MatchResultAction } from "../ui/MatchResultOverlay.js";
 import { buildMapSettings } from "../content/mapCatalog.js";
-import type { AudioCommand, ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { koreAudio } from "../kore/audio.js";
 
 export type LocalHandlerFactory = (mapId: string) => GameHandler;
 
@@ -135,6 +136,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			return;
 		}
 		this.handler.dispose();
+		// The application mixer owns the global music slot. Explicitly release the
+		// local match source before the fresh menu requests lower-priority music.
+		this.pendingSoundCommands.push(audio.command.stopSource({ sourceId: "kore.game.local", fadeOutMs: 150 }));
+		this.pendingSoundCommands.push(koreAudio.command.menuMusic("kore.menu"));
 		this.overlay = undefined;
 		this.mapId = null;
 		this.aiBattle = false;
