@@ -28,7 +28,7 @@ export const koreAudio = {
 	sounds: { uiConfirm: "kore.ui.confirm", shot: "kore.game.shot" },
 	music: { menu: "kore.music.menu", match: "kore.music.match" },
 	command: {
-		uiConfirm(sourceId: string): PlaySoundCommand { return audio.command.play({ sourceId, soundId: "kore.ui.confirm", bus: "ui", priority: 30, dedupeKey: "confirm" }); },
+		uiConfirm(sourceId: string, soundId: string = "kore.ui.confirm"): PlaySoundCommand { return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" }); },
 		shot(sourceId: string): PlaySoundCommand { return audio.command.play({ sourceId, soundId: "kore.game.shot", bus: "effects", priority: 20, dedupeKey: "shot" }); },
 		menuMusic(sourceId: string = "menu.music"): PlayMusicCommand { return audio.command.music({ sourceId, soundId: "kore.music.menu", bus: "music", priority: 10, replacementPolicy: "replace-lower-or-equal", fadeInMs: 250 }); },
 		matchMusic(sourceId: string = "match.music"): PlayMusicCommand { return audio.command.music({ sourceId, soundId: "kore.music.match", bus: "music", priority: 20, replacementPolicy: "replace-lower-or-equal", fadeInMs: 500 }); },

@@ -106,6 +106,16 @@ export class UiRuntime {
 	public getFocusedElementId(): string | undefined { return this.getActiveElements().find(hasFocusable)?.id; }
 	public getHoveredElementId(): string | undefined { return this.hovered; }
 	public getPressedTargetId(): string | undefined { return this.pendingPress; }
+	/** Applies a validated semantic action during an explicit host-controlled tick. */
+	public dispatch(action: UiAction): void { validateAction(action, new Set(this.screens.keys())); this.applyAction(clone(action)); }
+	/** Changes a declared element's visibility without coupling hosts to runtime element classes. */
+	public setElementVisible(id: string, visible: boolean): boolean {
+		for (const screen of this.screens.values()) {
+			const element = screen.elements.find(candidate => candidate.id === id);
+			if (element) { element.visible = visible; return true; }
+		}
+		return false;
+	}
 	public drainCommands(): UiCommand[] { const commands = this.emitted.map(clone); this.emitted = []; return commands; }
 	public explain(): string { return `UI '${this.settings.id}' uses ${this.systems.map(system => system.id).join(", ")} with explicit tick() and draw().`; }
 
