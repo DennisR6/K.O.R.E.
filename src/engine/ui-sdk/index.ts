@@ -76,6 +76,7 @@ export class UiRuntime {
 	private activeScreen: string;
 	private history: string[];
 	private pendingPress: string | undefined;
+	private pendingKeyboard: UiKeyboardState | undefined;
 	private pendingActions: UiAction[] = [];
 	private emitted: UiCommand[] = [];
 
@@ -128,10 +129,14 @@ export class UiRuntime {
 		for (const element of this.getActiveElements()) if (hasFocusable(element)) element.focused = element.id === this.pendingPress;
 	}
 	public keyboard(input: UiKeyboardState | undefined): void {
+		this.pendingKeyboard = input;
+	}
+	public textInput(): void {
 		const focused = this.getActiveElements().find(hasTextInput);
-		if (!focused) return;
-		if (input?.textInput) focused.insertText(input.textInput);
-		if (input?.pressedKeys?.includes("Backspace")) focused.deleteBackward();
+		if (!focused) { this.pendingKeyboard = undefined; return; }
+		if (this.pendingKeyboard?.textInput) focused.insertText(this.pendingKeyboard.textInput);
+		if (this.pendingKeyboard?.pressedKeys?.includes("Backspace")) focused.deleteBackward();
+		this.pendingKeyboard = undefined;
 	}
 	public press(): void {
 		if (!this.pendingPress) return;
@@ -185,7 +190,7 @@ const UI_SYSTEMS: Record<string, UiSystem> = {
 	"ui.input.pointer": { id: "ui.input.pointer", tick: (runtime, input) => runtime.pointer(input.pointer) },
 	"ui.focus": { id: "ui.focus", tick: runtime => runtime.focus() },
 	"ui.input.keyboard": { id: "ui.input.keyboard", tick: (runtime, input) => runtime.keyboard(input.keyboard) },
-	"ui.text-input": { id: "ui.text-input" },
+	"ui.text-input": { id: "ui.text-input", tick: runtime => runtime.textInput() },
 	"ui.button": { id: "ui.button", tick: runtime => runtime.press() },
 	"ui.navigation": { id: "ui.navigation", tick: runtime => runtime.navigate() },
 	"ui.render": { id: "ui.render", draw: (runtime, renderer) => runtime.render(renderer) },
