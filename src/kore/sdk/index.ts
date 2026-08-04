@@ -12,6 +12,7 @@ import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics
 import { DOCUMENT_SCHEMA_VERSION, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
+import { koreAudio } from "../audio.js";
 
 type SerializableEffect = { toSettings(): EffectSettings };
 type EffectInput = SerializableEffect | EffectSettings | FullEffectSettings;
@@ -299,6 +300,8 @@ export const kore = {
 	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return new GameHandlerBuilder().defaultSystems().fromSettings(settings).build(); },
 	/** Returns KORE's default deterministic runtime system profile as serializable framework metadata. */
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
+	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
+	audio: koreAudio,
 	/** Runtime effect constructors; pass their results into `addWorldEffects` or structure effect arrays. */
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
