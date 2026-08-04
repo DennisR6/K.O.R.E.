@@ -273,7 +273,8 @@ After every change, check whether this guide still reflects the implementation a
   SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.
   `hudCommands.ts` owns the enum-backed KORE HUD command vocabulary and
   `hudVocabulary.ts` owns its enum-backed identifiers/styles/labels;
-  `gameHudProjection.ts` owns the detached gameplay projection. Generic UI
+  `gameHudProjection.ts` owns the detached gameplay projection, including
+  active-player dots and pull-arrow world geometry. Generic UI
   settings still serialize ordinary strings, but KORE must author and parse its
   vocabulary exclusively through these enums. The local pause command freezes
   transient handler ticks; online skip/pause controls are hidden because the

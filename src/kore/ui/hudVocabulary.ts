@@ -54,6 +54,8 @@ export enum KoreHudColor {
 	Pause = "#475569",
 	DefaultButton = "#334155",
 	Text = "white",
+	TeamOne = "#38bdf8",
+	TeamTwo = "#fb7185",
 }
 
 export enum KoreHudText {

@@ -45,7 +45,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.runtime.setElementVisible(KoreHudElement.Paused, this.paused && this.capabilities.canPause); this.runtime.setElementVisible(KoreHudElement.Resume, this.paused && this.capabilities.canPause); this.runtime.setElementVisible(KoreHudElement.Pause, !this.paused && !resultVisible && this.capabilities.canPause);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }
-	public draw(renderer: RenderContext): void { this.runtime.draw(new KoreHudRenderer(renderer)); }
+	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
 	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; this.gameplayInput?.updateMouse(x, y); }
 	public handleMousePressed(): void {
 		this.runtime.tick({ pointer: { ...this.mouse, pressed: true, justPressed: true } }); const hit = this.runtime.getPressedTargetId(); this.route(this.runtime.drainCommands());
@@ -70,6 +70,22 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	private dispatch(command: KoreHudCommandMessage): void { if (this.port.handle(command) !== false) this.confirm(); }
 	private confirm(): void { this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId)); }
 	private setText(id: KoreHudElement | string, text: string): void { this.runtime.dispatch({ type: "setText", target: id, text }); }
+	/** Renders only immutable projection geometry; gameplay input and state stay outside the surface. */
+	private drawWorldGuidance(renderer: RenderContext): void {
+		const projection = this.projection;
+		if (!projection || projection.match.result) return;
+		const color = projection.turn.activeTeam === 0 ? KoreHudColor.TeamOne : KoreHudColor.TeamTwo;
+		renderer.push(); renderer.setFillColor(color);
+		for (const marker of projection.guidance.activeMarkers) renderer.drawCircle(marker.x, marker.y - marker.radius - 8, 4);
+		const preview = projection.guidance.aimPreview;
+		if (preview) {
+			renderer.setStrokeColor(color); renderer.setStroke(2);
+			renderer.line(preview.from.x, preview.from.y, preview.to.x, preview.to.y);
+			renderer.line(preview.to.x, preview.to.y, preview.left.x, preview.left.y);
+			renderer.line(preview.to.x, preview.to.y, preview.right.x, preview.right.y);
+		}
+		renderer.pop();
+	}
 }
 
 class KoreHudRenderer implements UiRenderer {

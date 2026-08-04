@@ -77,7 +77,7 @@ match music through the existing scene audio policy.
 | Turn/status/aim feedback | Projection labels | migrated |
 | Item panel and skip hitboxes | SDK item buttons/skip command | migrated |
 | Result overlay/rematch/menu | SDK modal result controls | migrated |
-| Direction/status duplicate layers | HUD projection; world renderer no longer draws status/result | migrated (numeric aim/power replaces the drawn arrow) |
+| Direction/status duplicate layers | HUD projection draws active-player dots and pull-arrow geometry; world renderer no longer draws status/result | migrated |
 | World drag aiming | `UiSystem` delegated input | intentionally retained as world input |
 | Local pause | HUD command freezes transient local handler ticks | migrated |
 | DOM network pause/share/report controls | Browser host; unavailable HUD controls are hidden | intentionally browser-hosted |

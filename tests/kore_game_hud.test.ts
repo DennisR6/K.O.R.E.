@@ -6,7 +6,7 @@ import { KoreHudElement, KoreHudId } from "../src/kore/ui/hudVocabulary.ts";
 import { GameState } from "../src/engine/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 
-const projection = (overrides: object = {}) => ({ revision: 1, turn: { number: 0, activeTeam: 0, phase: RulePhase.Item, engineState: GameState.Your_turn, selectedActorId: "actor", aimAngle: 30, power: 4 }, inventory: [{ itemId: "freeze-shot", remainingUses: 1, enabled: true }], match: { inputLocked: false, waiting: false, paused: false }, ...overrides });
+const projection = (overrides: object = {}) => ({ revision: 1, turn: { number: 0, activeTeam: 0, phase: RulePhase.Item, engineState: GameState.Your_turn, selectedActorId: "actor", aimAngle: 30, power: 4 }, inventory: [{ itemId: "freeze-shot", remainingUses: 1, enabled: true }], match: { inputLocked: false, waiting: false, paused: false }, guidance: { activeMarkers: [] }, ...overrides });
 
 test("KORE HUD composition builds JSON-safe enum-backed canonical settings", () => {
 	const composition = createGameHudComposition(); const settings = composition.build();
@@ -50,4 +50,13 @@ test("host capabilities hide unavailable network controls and suppress unconfirm
 	hud.updateMouse(530, 85); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "freeze-shot", target: { type: "self" } } }]);
 	expect(hud.drainSoundCommands()).toEqual([]);
+});
+
+test("HUD renders projected active-player dots and three-line pull-arrow preview", () => {
+	const circles: Array<[number, number, number]> = []; const lines: Array<[number, number, number, number]> = [];
+	const hud = createKoreGameHudSurface({ handle() {} });
+	hud.applyProjection(projection({ guidance: { activeMarkers: [{ x: 100, y: 100, radius: 20 }], aimPreview: { from: { x: 100, y: 100 }, to: { x: 60, y: 100 }, left: { x: 68, y: 108 }, right: { x: 68, y: 92 } } } }));
+	hud.draw({ push() {}, pop() {}, setFillColor() {}, setStrokeColor() {}, setStroke() {}, drawCircle(x, y, radius) { circles.push([x, y, radius]); }, line(x, y, x1, y1) { lines.push([x, y, x1, y1]); }, drawRect() {}, drawText() {} } as any);
+	expect(circles).toEqual([[100, 72, 4]]);
+	expect(lines).toEqual([[100, 100, 60, 100], [60, 100, 68, 108], [60, 100, 68, 92]]);
 });
