@@ -313,8 +313,10 @@ After every change, check whether this guide still reflects the implementation a
   `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
   `/operator/replays` lists every persisted replay and filters by exact match
   ID; `/operator/replays/<id>` downloads that deterministic replay document.
-  These operator-only replay routes may expose match IDs and settings, while
-  public replay-share routes remain separately redacted.
+  Every completed match automatically receives an unbroadcast replay token; the
+  archive exposes a `View replay` link only to authenticated operators. These
+  operator-only replay routes may expose match IDs and settings, while public
+  replay-share routes remain separately redacted.
   `GET /operator/dashboard?format=json` returns the same complete aggregate
   dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
   metrics alias. `GET /operator/login` serves a minimal password form and

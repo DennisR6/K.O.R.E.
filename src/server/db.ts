@@ -27,7 +27,7 @@ export type StoredGame = {
 export type StoredReplayShare = { token: string; replay: FrozenReplayDocument; createdAt: number; revokedAt: number | null };
 export type PublicReplayShare = { token: string; replay: Omit<FrozenReplayDocument, "finalSettings">; createdAt: number };
 /** Authenticated-operator-only replay index; it deliberately has no player or snapshot fields. */
-export type OperatorReplaySummary = { gameId: string; status: AuthoritativeMatchStatus; updatedAt: number; actionCount: number };
+export type OperatorReplaySummary = { gameId: string; status: AuthoritativeMatchStatus; updatedAt: number; actionCount: number; replayToken?: string };
 export type StoredMapStatus = "draft" | "approved" | "retired";
 export type StoredMap = { id: string; document: MapDocument; status: StoredMapStatus; contentHash: string; createdAt: number; approvedAt: number | null };
 
@@ -50,7 +50,7 @@ type StoredLifecycleRow = {
 
 type StoredUserRow = { user_id: string };
 type StoredMapRow = { id: string; document_json: string; status: StoredMapStatus; content_hash: string; created_at: number; approved_at: number | null };
-type OperatorReplayRow = { id: string; snapshot: Uint8Array; updated_at: number; status: AuthoritativeMatchStatus };
+type OperatorReplayRow = { id: string; snapshot: Uint8Array; updated_at: number; status: AuthoritativeMatchStatus; token: string | null };
 
 /**
  * Durable game storage. Snapshots are gzip-compressed JSON so inactive matches
@@ -229,9 +229,9 @@ export class GameDatabase {
 	/** Lists every persisted action log for authenticated operator replay lookup. */
 	public listOperatorReplays(gameId?: string): OperatorReplaySummary[] {
 		const rows = (gameId === undefined
-			? this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id ORDER BY games.updated_at DESC, games.id ASC").all()
-			: this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id WHERE games.id = ?1 ORDER BY games.updated_at DESC, games.id ASC").all(gameId)) as OperatorReplayRow[];
-		return rows.map(row => ({ gameId: row.id, status: row.status, updatedAt: row.updated_at, actionCount: decompress(row.snapshot).actions.length }));
+			? this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status, replay_shares.token FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id LEFT JOIN replay_shares ON replay_shares.game_id = games.id AND replay_shares.revoked_at IS NULL ORDER BY games.updated_at DESC, games.id ASC").all()
+			: this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status, replay_shares.token FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id LEFT JOIN replay_shares ON replay_shares.game_id = games.id AND replay_shares.revoked_at IS NULL WHERE games.id = ?1 ORDER BY games.updated_at DESC, games.id ASC").all(gameId)) as OperatorReplayRow[];
+		return rows.map(row => ({ gameId: row.id, status: row.status, updatedAt: row.updated_at, actionCount: decompress(row.snapshot).actions.length, ...(row.token ? { replayToken: row.token } : {}) }));
 	}
 
 	/** Returns the deterministic replay document for any persisted match. */

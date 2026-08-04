@@ -59,11 +59,11 @@ Result visibility is projection-driven. Rematch and menu actions are semantic
 HUD commands routed by `LocalMatchSceneRouter`; returning to menu releases
 match music through the existing scene audio policy.
 
-In online results, `Replay` asks the authoritative server for the frozen public
-token and navigates the requesting player to its read-only viewer. `Share`
-displays the same token URL for copying. Replay-share creation is idempotent per
-completed match and the server broadcasts its token to both participants, so
-either player can export it.
+Every completed online match stores an unbroadcast frozen replay token. `Replay`
+asks the authoritative server for that token and navigates the requesting player
+to its read-only viewer. `Share` displays the same token URL for copying.
+Participant requests are idempotent and broadcast the token only to both match
+participants, so automatic storage does not publish it globally.
 
 ## Extending
 

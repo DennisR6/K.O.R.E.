@@ -41,3 +41,19 @@ test("either completed-match participant exports the same replay token and both 
 	expect(second.last(NetworkMessageType.REPLAY_SHARE_CREATED)?.token).toBe(firstToken);
 	database.close();
 });
+
+test("completion automatically stores a private replay token before any player shares it", () => {
+	const settings = createDefaultGameSettings(2, 1);
+	settings.players.find(player => player.team.includes(1))!.isDead = true;
+	const database = new GameDatabase(":memory:");
+	const registry = new GameRegistry(database);
+	const record = registry.create(settings, [FIRST_USER, SECOND_USER]);
+	const actorId = record.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!.getId();
+	expect(registry.submitTurn(FIRST_USER, { actorId, angle: 0, power: 1 }).ok).toBe(true);
+	const summary = database.listOperatorReplays(record.id)[0]!;
+	expect(summary.replayToken).toMatch(/^[a-f0-9]{32}$/);
+	expect(database.getPublicReplayShare(summary.replayToken!)).toBeDefined();
+	const exported = registry.createReplayShare(FIRST_USER);
+	expect(exported).toEqual({ ok: true, token: summary.replayToken });
+	database.close();
+});
