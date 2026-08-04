@@ -31,9 +31,11 @@ Generic UI actions remain string-based at the canonical boundary. KORE
 production authoring uses `KoreHudCommand` enum values from
 `src/kore/ui/hudCommands.ts`; serialized settings contain their stable strings.
 `KoreHudCommandPayloads`, `KoreHudCommandMessage`, and
-`parseKoreHudCommand()` provide typed payloads and runtime narrowing. The HUD
-uses exhaustive command routing; unknown/malformed commands are rejected and
-never reach gameplay.
+`parseKoreHudCommand()` provide typed payloads and runtime narrowing.
+`hudVocabulary.ts` owns the remaining enum-backed KORE HUD IDs, screen, styles,
+labels, and closed item slots. The HUD uses exhaustive command routing;
+unknown/malformed commands are rejected and never reach gameplay. Generic UI
+continues to use serialized strings and is unchanged.
 
 Current command domains are item use/skip, pause/resume, rematch, replay,
 share, and return-to-menu. Item actions propose a self target; `ItemPhaseUI`
@@ -49,14 +51,19 @@ The existing `SoundSystem` → `ApplicationAudioMixer` → `BrowserAudioOutput`
 path remains the only browser-audio route. Gameplay shot/music cues remain in
 the gameplay emitter. Local HUD pause is host-local and freezes
 `GameHandler.tick()` without changing any serializable authoritative state;
-resume releases that transient lock. Network pause operations remain the
-browser/server-host mutual-pause functionality, so the network HUD hides its
-pause/resume controls. The network HUD also hides item skip until an
-authoritative skip-phase protocol exists.
+resume releases that transient lock. The production network match mounts no
+HTML pause/report/leave controls, and its HUD hides pause/resume and item skip
+until authoritative protocol support exists.
 
 Result visibility is projection-driven. Rematch and menu actions are semantic
 HUD commands routed by `LocalMatchSceneRouter`; returning to menu releases
 match music through the existing scene audio policy.
+
+Every completed online match stores an unbroadcast frozen replay token. `Replay`
+asks the authoritative server for that token and navigates the requesting player
+to its read-only viewer. `Share` displays the same token URL for copying.
+Participant requests are idempotent and broadcast the token only to both match
+participants, so automatic storage does not publish it globally.
 
 ## Extending
 
@@ -75,7 +82,7 @@ match music through the existing scene audio policy.
 | Turn/status/aim feedback | Projection labels | migrated |
 | Item panel and skip hitboxes | SDK item buttons/skip command | migrated |
 | Result overlay/rematch/menu | SDK modal result controls | migrated |
-| Direction/status duplicate layers | HUD projection; world renderer no longer draws status/result | migrated (numeric aim/power replaces the drawn arrow) |
+| Direction/status duplicate layers | HUD projection draws active-player dots and pull-arrow geometry; world renderer no longer draws status/result | migrated |
 | World drag aiming | `UiSystem` delegated input | intentionally retained as world input |
 | Local pause | HUD command freezes transient local handler ticks | migrated |
-| DOM network pause/share/report controls | Browser host; unavailable HUD controls are hidden | intentionally browser-hosted |
+| Persistent DOM network pause/report/leave controls | Removed; unavailable HUD controls are hidden | migrated |

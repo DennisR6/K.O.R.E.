@@ -264,17 +264,22 @@ After every change, check whether this guide still reflects the implementation a
    game while remaining reproducible from its seed.
 - `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
   Its `.build()` result contains every production menu screen, element, action,
-  UI framework, and persistent menu-audio intent. `KoreMainMenuSurface.ts`
-  reconstructs that result as the KORE renderer/input/audio adapter; do not add
-  parallel pages, manual hitboxes, or browser resources to the composition.
+  UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
+  enum-backed KORE identifiers, commands, routes, styles, and parser;
+  `KoreMainMenuSurface.ts` reconstructs that result as the KORE renderer/input/
+  audio adapter. Do not add parallel pages, manual hitboxes, or browser
+  resources to the composition.
 - `src/kore/ui/gameHud.ts` and `KoreGameHudSurface.ts`: authoritative
   SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.
   `hudCommands.ts` owns the enum-backed KORE HUD command vocabulary and
-  `gameHudProjection.ts` owns the detached gameplay projection; generic UI
-  settings still serialize ordinary strings. The local pause command freezes
+  `hudVocabulary.ts` owns its enum-backed identifiers/styles/labels;
+  `gameHudProjection.ts` owns the detached gameplay projection, including
+  active-player dots and pull-arrow world geometry. Generic UI
+  settings still serialize ordinary strings, but KORE must author and parse its
+  vocabulary exclusively through these enums. The local pause command freezes
   transient handler ticks; online skip/pause controls are hidden because the
-  server protocol has no skip action and retains its separate mutual-pause DOM
-  host. Do not add manual HUD hitboxes or direct `AudioManager` calls to
+  server protocol has no skip action or production pause surface. Do not add
+  manual HUD hitboxes or direct `AudioManager` calls to
   gameplay scenes.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
@@ -303,10 +308,17 @@ After every change, check whether this guide still reflects the implementation a
   WebSocket URL, and serves the `/config` JSON contract used by the browser
   "Play Online" action.
 - `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
-  aggregate lifecycle metrics plus durable map usage/count/percentage and
-  most-played-map metrics; an unset or short `KORE_DASHBOARD_OPERATOR_SECRET`
-  disables the routes, and the dashboard representations expose no player,
-  snapshot, or game-ID data.
+  aggregate lifecycle/player metrics plus durable map usage/count/percentage
+  and most-played-map metrics; an unset or short
+  `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
+  `/operator/replays` lists every persisted replay and filters by exact match
+  ID; `/operator/replays/<id>` downloads that deterministic replay document.
+  Every completed match automatically receives an unbroadcast replay token; the
+  archive exposes a `View replay` link only to authenticated operators. These
+  operator-only replay routes may expose match IDs and settings, while public
+  replay-share routes remain separately redacted. An operator view of an active
+  match creates an unbroadcast opaque token containing only its current replay
+  document, so unfinished matches can be replayed without public listing.
   `GET /operator/dashboard?format=json` returns the same complete aggregate
   dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
   metrics alias. `GET /operator/login` serves a minimal password form and
@@ -317,7 +329,8 @@ After every change, check whether this guide still reflects the implementation a
   static-file routing.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
-	`EngineSettings` snapshots, maintains player-to-game membership rows, and
+	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
+	maintains player-to-game membership rows, and
 	migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
 	`completed`) for durable aggregate match metrics. It also stores immutable
 	UUID-keyed declarative map revisions with canonical content hashes and
@@ -743,7 +756,12 @@ authoritative `REMATCH` resets the handler and broadcasts fresh per-player
 `INIT` settings. `GameHandler` objects
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
-from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
+from SQLite. The database path is explicit `GAME_DB_PATH` or a default anchored
+to `<server-root>/data/kore.db`, never the process working directory.
+Completed-match replay shares are idempotent per game: either participant may
+request the same public token and the runtime broadcasts it to both connected
+participants. The requesting online HUD `Replay` action opens the read-only
+viewer; `Share` exposes the same URL for copying.
 The server advertises its public base URL through `/config`: `KORE_BASE_URL`
 (default `https://lupricht.net/kore`) is read at startup, the matching WebSocket
 URL is derived, and both are served as a never-cached JSON contract. The
@@ -763,8 +781,9 @@ Be careful when running `bun run start`:
   root-scope offline shell), `public/`, `dist/`, and the `/config` JSON contract;
   continue to keep secrets out of this repository and do not broaden that
   allowlist casually.
-- The production server writes `./data/kore.db` by default. `*.db` is ignored;
-  do not commit database files. Set `GAME_DB_PATH` for another durable path.
+- The production server writes `<server-root>/data/kore.db` by default. `*.db`
+  is ignored; do not commit database files. Set `GAME_DB_PATH` for another
+  durable path.
 
 `window.game.handler` is a getter over the active scene handler (menu -> match
 -> rematch -> menu), so the debug surface always reflects the authoritative

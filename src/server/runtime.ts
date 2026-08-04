@@ -102,7 +102,10 @@ export class ServerRuntime {
 		if (!userId) return this.sendError(socket, "Login is required before sharing a replay");
 		const result = this.games.createReplayShare(userId);
 		if (!result.ok) return this.sendError(socket, result.error);
-		socket.send(wrap<NetworkReplayShareCreated>({ type: NetworkMessageType.REPLAY_SHARE_CREATED, token: result.token }));
+		const record = this.games.getForUser(userId);
+		if (!record) return this.sendError(socket, "No active game for this user");
+		const message = wrap<NetworkReplayShareCreated>({ type: NetworkMessageType.REPLAY_SHARE_CREATED, token: result.token });
+		for (const user of record.users) this.socketForUser(user)?.send(message);
 	}
 
 	private leaveGame(socket: ServerSocket): void {

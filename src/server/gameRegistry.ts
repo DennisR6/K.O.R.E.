@@ -197,10 +197,12 @@ export class GameRegistry {
 
 		record.resolving = true
 		try {
+			let completed = false
 			record.recorder.recordShoot(input.actorId, input.angle, input.power)
 			const packet = record.handler.resolveTurn(input)
 			if (record.handler.getState() === GameState.Game_over) {
 				this.transition(record, "completed")
+				completed = true
 			} else {
 				const completedState = record.rules.advancePhase(record.ruleState)
 				record.ruleState = record.rules.startNextTurn(completedState, record.users.length)
@@ -209,6 +211,9 @@ export class GameRegistry {
 				record.turnNumber = record.ruleState.turnNumber
 			}
 			this.persist(record)
+			// Every completed match receives a secret replay token immediately.
+			// It stays private until an explicit player share or operator lookup.
+			if (completed) this.storeCompletedReplay(record)
 			return { ok: true, record, packet }
 		} finally {
 			record.resolving = false
@@ -263,16 +268,8 @@ export class GameRegistry {
 		const record = this.getForUser(userId);
 		if (!record) return { ok: false, error: "No active game for this user" };
 		if (record.lifecycle.status !== "completed" || record.handler.getState() !== GameState.Game_over) return { ok: false, error: "Replay shares require a completed match" };
-		const result = record.handler.getMatchResult();
-		if (!result) return { ok: false, error: "Completed match has no result" };
-		const replay: FrozenReplayDocument = {
-			...record.recorder.getReplay(),
-			finalSettings: record.handler.toSettings(),
-			result,
-			completedAt: record.lifecycle.completedAt ?? Date.now(),
-		};
-		try { return { ok: true, token: this.database.createReplayShare(record.id, replay).token }; }
-		catch { return { ok: false, error: "Replay share already exists" }; }
+		try { return { ok: true, token: this.storeCompletedReplay(record) }; }
+		catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Replay share unavailable" }; }
 	}
 
 	public requestPause(userId: string, action: unknown): PauseRequestResult {
@@ -310,7 +307,7 @@ export class GameRegistry {
 		const handler = this.buildAuthoritativeHandler(stored.settings, stored.users.length)
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId, stored.initialSettings)
 		this.games.set(id, record)
 		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
@@ -327,10 +324,11 @@ export class GameRegistry {
 		actions?: ReplayDocument["actions"],
 		lifecycle: PersistedMatchLifecycle = createLifecycle("resident", Date.now()),
 		mapId: string = "ice-map-v1",
+		initialSettings?: GameSettings,
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
-		const recorder = new ReplayRecorder(handler.toSettings(), 12345, actions ?? [])
+		const recorder = new ReplayRecorder(initialSettings ?? handler.toSettings(), 12345, actions ?? [])
 		return {
 			id,
 			handler,
@@ -355,6 +353,7 @@ export class GameRegistry {
 		const game: StoredGame = {
 			id: record.id,
 			settings: record.handler.toSettings(),
+			initialSettings: record.recorder.getReplay().initialSettings,
 			users: record.users,
 			currentTeam: record.currentTeam,
 			turnNumber: record.turnNumber,
@@ -366,6 +365,18 @@ export class GameRegistry {
 		if (this.database.hasGame(record.id)) this.database.saveGame(game)
 		else this.database.createGame(game)
 		record.lastAccess = game.updatedAt
+	}
+	/** Idempotently stores the frozen replay token without publishing it to clients. */
+	private storeCompletedReplay(record: GameRecord): string {
+		const result = record.handler.getMatchResult();
+		if (!result) throw new Error("Completed match has no result");
+		const replay: FrozenReplayDocument = {
+			...record.recorder.getReplay(),
+			finalSettings: record.handler.toSettings(),
+			result,
+			completedAt: record.lifecycle.completedAt ?? Date.now(),
+		};
+		return this.database.createReplayShare(record.id, replay).token;
 	}
 
 	private touch(record: GameRecord): GameRecord {

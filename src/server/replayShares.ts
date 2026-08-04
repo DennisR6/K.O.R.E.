@@ -11,6 +11,8 @@ export function servePublicReplayShare(request: Request, registry: GameRegistry)
 	const token = match?.[1];
 	if (!token || !TOKEN.test(token)) return new Response("Replay unavailable", { status: 404 });
 	const share = registry.getDatabase().getPublicReplayShare(token);
-	if (!share) return new Response("Replay unavailable", { status: 404 });
-	return Response.json({ version: 1, token: share.token, createdAt: share.createdAt, replay: share.replay }, { headers: { "cache-control": "no-store" } });
+	if (share) return Response.json({ version: 1, token: share.token, createdAt: share.createdAt, replay: share.replay }, { headers: { "cache-control": "no-store" } });
+	const operatorView = registry.getDatabase().getPublicOperatorReplayView(token);
+	if (!operatorView) return new Response("Replay unavailable", { status: 404 });
+	return Response.json({ version: 1, token: operatorView.token, updatedAt: operatorView.updatedAt, replay: operatorView.replay }, { headers: { "cache-control": "no-store" } });
 }

@@ -5,7 +5,7 @@ import { createPlayerSettings } from "../src/entity/types.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
 import { createKoreHudProjection } from "../src/kore/ui/gameHudProjection.ts";
 
-test("HUD projection identifies the active team and exposes the opposite drag direction", () => {
+test("HUD projection restores active-player markers and the opposite pull-arrow geometry", () => {
 	const ui = new UiSystem()
 	const player = new Player(createPlayerSettings({ position: { x: 100, y: 100 }, team: [0] }))
 	const handler = new GameHandlerBuilder().defaultSystems().setPlayerTeam([0]).addPlayer(player).build()
@@ -17,4 +17,6 @@ test("HUD projection identifies the active team and exposes the opposite drag di
 	expect(projection.turn.selectedActorId).toBe(player.getId())
 	expect(projection.turn.aimAngle).toBe(180)
 	expect(projection.turn.power).toBe(4)
+	expect(projection.guidance.activeMarkers).toEqual([{ x: 100, y: 100, radius: player.getBounds().x }])
+	expect(projection.guidance.aimPreview).toMatchObject({ from: { x: 100, y: 100 }, to: { x: 60, y: 100 } })
 })

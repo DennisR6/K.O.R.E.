@@ -14,6 +14,12 @@ export interface ServerConfig {
 	wsUrl: string;
 }
 
+/** Resolves durable storage independently of the process working directory. */
+export function resolveGameDatabasePath(env: Record<string, string | undefined>, serverDirectory: string): string {
+	const configured = env.GAME_DB_PATH?.trim();
+	return configured && configured.length > 0 ? configured : `${serverDirectory.replace(/[\\/]$/, "")}/data/kore.db`;
+}
+
 /** Converts an http(s) base URL into the matching WebSocket URL. */
 export function wsUrlForBaseUrl(baseUrl: string): string {
 	const url = new URL(baseUrl);

@@ -1,7 +1,7 @@
 import { ServerRuntime, type ServerSocket } from "./src/server/runtime.ts";
 import { GameDatabase } from "./src/server/db.ts";
 import { GameRegistry } from "./src/server/gameRegistry.ts";
-import { readServerConfig, serveConfig } from "./src/server/config.ts";
+import { readServerConfig, resolveGameDatabasePath, serveConfig } from "./src/server/config.ts";
 import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
 import { servePublicReplayShare } from "./src/server/replayShares.ts";
 import type { WebSocketData } from "./src/server/types.ts";
@@ -12,7 +12,8 @@ const PORT = Number(process.env.PORT ?? 3000);
 const serverConfig = readServerConfig(process.env);
 // Set KORE_DASHBOARD_OPERATOR_SECRET through the deployment secret store, not .env.
 const dashboardConfig = readDashboardConfig(process.env);
-const database = new GameDatabase(process.env.GAME_DB_PATH ?? "./data/kore.db");
+const databasePath = resolveGameDatabasePath(process.env, import.meta.dir);
+const database = new GameDatabase(databasePath);
 const runtime = new ServerRuntime(new GameRegistry(database));
 
 Bun.serve<WebSocketData>({
@@ -43,4 +44,4 @@ Bun.serve<WebSocketData>({
 });
 
 setInterval(() => runtime.matchmakeOnce(), 250);
-console.log(`Server running on http://localhost:${PORT} (KORE_BASE_URL=${serverConfig.baseUrl})`);
+console.log(`Server running on http://localhost:${PORT} (KORE_BASE_URL=${serverConfig.baseUrl}, GAME_DB_PATH=${databasePath})`);

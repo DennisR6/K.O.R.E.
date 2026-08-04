@@ -24,6 +24,10 @@ export type MapUsageMetric = { mapId: string; games: number; percentage: number 
 /** Aggregate dashboard facts. `now` is a point-in-time registry-cache count. */
 export type MatchMetrics = {
 	allTime: number;
+	/** Distinct durable player identities across every stored match. */
+	playersAllTime: number;
+	/** Distinct players whose match lifecycle is anything except sleeping. */
+	playersOnline: number;
 	now: number;
 	paused: number;
 	sleeping: number;

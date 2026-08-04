@@ -137,6 +137,7 @@ function startNetworkGame(serverUrl: string) {
 		const ui = new UiSystem()
 
 		const emitter = new NetworkEmitter(socket)
+		let replayShareAction: "view" | "share" | undefined
 		handler = new GameHandlerBuilder()
 			.defaultSystems()
 			.fromSettings(settings)
@@ -149,7 +150,8 @@ function startNetworkGame(serverUrl: string) {
 			switch (command.type) {
 				case KoreHudCommand.UseItem: { const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam())); if (!actor) throw new Error("No active item actor"); emitter.sendItemUse(actor.getId(), command.payload.itemId, command.payload.target); return false; }
 				case KoreHudCommand.Rematch: socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false;
-				case KoreHudCommand.Replay: case KoreHudCommand.Share: emitter.requestReplayShare(); return false;
+				case KoreHudCommand.Replay: replayShareAction = "view"; emitter.requestReplayShare(); return false;
+				case KoreHudCommand.Share: replayShareAction = "share"; emitter.requestReplayShare(); return false;
 				case KoreHudCommand.ReturnToMenu: window.location.assign(window.location.pathname); return false;
 				case KoreHudCommand.SkipItemPhase: throw new Error("Network item skipping is unavailable");
 				case KoreHudCommand.Pause: case KoreHudCommand.Resume: return false;
@@ -160,8 +162,12 @@ function startNetworkGame(serverUrl: string) {
 		handler.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(syncHud()); hud.tick(dt); } });
 		handler.addPostDrawer({ draw: renderer => { hud.applyProjection(syncHud()); hud.draw(renderer); } });
 		installTurnReceiver(socket, handler)
-		installPauseMenu(socket)
-		installReplayShareControls(socket)
+		installReplayShareControls(socket, url => {
+			if (replayShareAction !== "view") return false
+			replayShareAction = undefined
+			window.location.assign(url)
+			return true
+		})
 		startGame(handler)
 	})
 }
@@ -202,7 +208,7 @@ function startReplayViewer(initialToken: string): ReplayViewer {
 }
 
 /** Share URLs are displayed first; clipboard access is an explicit second click. */
-function installReplayShareControls(socket: WebSocket): void {
+function installReplayShareControls(socket: WebSocket, onReplayLink?: (url: string) => boolean): void {
 	const panel = document.createElement("aside")
 	panel.id = "replay-share-controls"
 	panel.hidden = true
@@ -225,67 +231,11 @@ function installReplayShareControls(socket: WebSocket): void {
 			if (message.type !== NetworkMessageType.REPLAY_SHARE_CREATED) return
 			const token = (message as { token: string }).token
 			url.value = buildReplayViewerUrl(window.location.href, token)
+			if (onReplayLink?.(url.value)) return
 			status.textContent = "Replay link ready. Copy it or select it manually."
 			panel.hidden = false
 		} catch { /* ignore malformed protocol input */ }
 	})
-}
-
-function installPauseMenu(socket: WebSocket): void {
-	const menu = document.createElement("aside")
-	menu.id = "network-pause-menu"
-	const pause = document.createElement("button")
-	pause.type = "button"
-	pause.textContent = "Request pause"
-	const report = document.createElement("button")
-	report.type = "button"
-	report.textContent = "Report match"
-	const leave = document.createElement("button")
-	leave.type = "button"
-	leave.textContent = "Leave game"
-	const status = document.createElement("p")
-	status.textContent = ""
-	let leaving = false
-	const returnToMenu = () => {
-		socket.close()
-		const url = new URL(window.location.href)
-		url.searchParams.delete("skipmenu")
-		url.searchParams.delete("url")
-		url.searchParams.delete("map")
-		window.location.assign(url.toString())
-	}
-	pause.addEventListener("click", () => socket.send(wrap({ type: NetworkMessageType.PAUSE_REQUEST, action: pause.dataset.paused === "true" ? "resume" : "pause" })))
-	report.addEventListener("click", () => {
-		const text = window.prompt("Describe the issue (max 500 characters)")
-		if (!text) return
-		socket.send(wrap({ type: NetworkMessageType.REPORT_MATCH, category: "other", text }))
-	})
-	leave.addEventListener("click", () => {
-		if (leaving) return
-		if (socket.readyState !== WebSocket.OPEN) returnToMenu()
-		else {
-			leaving = true
-			leave.disabled = true
-			status.textContent = "Leaving game…"
-			socket.send(wrap({ type: NetworkMessageType.LEAVE_GAME }))
-		}
-	})
-	socket.addEventListener("message", event => {
-		try {
-			const message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
-			if (message.type === NetworkMessageType.PAUSE_STATE) {
-				const state = message as any
-				pause.dataset.paused = String(state.paused)
-				pause.textContent = state.paused ? "Request resume" : "Request pause"
-				status.textContent = state.waitingForOtherPlayer ? "Waiting for the other player…" : state.paused ? "Match paused" : "Match resumed"
-			}
-			if (message.type === NetworkMessageType.REPORT_SUBMITTED) status.textContent = "Report submitted"
-			if (message.type === NetworkMessageType.GAME_ENDED) returnToMenu()
-		} catch { /* protocol receiver handles malformed packets separately */ }
-	})
-	socket.addEventListener("close", () => { if (leaving) returnToMenu() })
-	menu.append(pause, report, leave, status)
-	document.body.append(menu)
 }
 
 function showNetworkLoading(initialMessage: string) {

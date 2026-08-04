@@ -115,7 +115,7 @@ Use `{ type: "url", url: "https://…" }` for an HTTP(S) background image or
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `3000` (root `.env` sets `4001`) | HTTP/WebSocket server port |
-| `GAME_DB_PATH` | `./data/kore.db` | SQLite match database path |
+| `GAME_DB_PATH` | `<server-root>/data/kore.db` | SQLite match database path |
 | `KORE_BASE_URL` | `https://lupricht.net/kore` | Public base URL advertised via `/config` and used by the menu's "Play Online" join action (http(s); the WebSocket URL is derived) |
 
 ---

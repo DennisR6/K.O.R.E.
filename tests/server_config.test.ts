@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_KORE_BASE_URL,
 	readServerConfig,
+	resolveGameDatabasePath,
 	serveConfig,
 	wsUrlForBaseUrl,
 } from "../src/server/config.js";
@@ -24,6 +25,12 @@ describe("server online-play config", () => {
 		const config = readServerConfig({ KORE_BASE_URL: "" });
 		expect(config.baseUrl).toBe(DEFAULT_KORE_BASE_URL);
 		expect(config.wsUrl).toBe("wss://lupricht.net/kore/");
+	});
+
+	test("anchors the default durable database path to the server directory", () => {
+		expect(resolveGameDatabasePath({}, "/srv/kore")).toBe("/srv/kore/data/kore.db");
+		expect(resolveGameDatabasePath({ GAME_DB_PATH: "/var/lib/kore/matches.db" }, "/srv/kore")).toBe("/var/lib/kore/matches.db");
+		expect(resolveGameDatabasePath({ GAME_DB_PATH: "  " }, "/srv/kore")).toBe("/srv/kore/data/kore.db");
 	});
 
 	test("normalizes trailing slashes and derives the WebSocket URL", () => {
