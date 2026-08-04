@@ -1,26 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { MainMenu } from "../src/menu/Menu.js";
+import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 
-function pressAt(menu: MainMenu, x: number, y: number): void {
+function pressAt(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);
 	menu.handleMousePressed();
 }
 
 describe("main menu online join", () => {
-	test("routes the Play Online button to the configured callback", () => {
+	test("routes Play Online through the configured map selection callback", () => {
 		let online = 0;
 		let local = 0;
 		let map = 0;
-		const menu = new MainMenu(
-			() => { local++; },
-			() => { map++; },
-			undefined,
-			() => { online++; },
-		);
+		const menu = createKoreMainMenuSurface({ onPlayLocal: () => { local++; }, onSelectMap: () => { map++; }, onPlayOnline: () => { online++; } });
 		// Landing page: any press advances to the main menu page.
 		pressAt(menu, 400, 100);
-		// Play Online at world (270..530, 240..298).
+		// Play Online opens the online map-preference screen.
 		pressAt(menu, 400, 250);
+		pressAt(menu, 400, 100);
 		expect(online).toBe(1);
 		expect(local).toBe(0);
 		expect(map).toBe(0);
@@ -30,12 +26,7 @@ describe("main menu online join", () => {
 		let online = 0;
 		let local = 0;
 		let map = 0;
-		const menu = new MainMenu(
-			() => { local++; },
-			(_mapId: string) => { map++; },
-			undefined,
-			() => { online++; },
-		);
+		const menu = createKoreMainMenuSurface({ onPlayLocal: () => { local++; }, onSelectMap: (_mapId: string) => { map++; }, onPlayOnline: () => { online++; } });
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		// Play Local Game at world (270..530, 304..362).
 		pressAt(menu, 400, 325);
@@ -50,7 +41,7 @@ describe("main menu online join", () => {
 
 	test("does not fire the online action for presses outside the button", () => {
 		let online = 0;
-		const menu = new MainMenu(undefined, undefined, undefined, () => { online++; });
+		const menu = createKoreMainMenuSurface({ onPlayOnline: () => { online++; } });
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		pressAt(menu, 100, 250); // left of the button column
 		pressAt(menu, 400, 300); // gap between the online and play buttons

@@ -205,9 +205,9 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			const capture = captureConsole(page);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 
-			// The menu is active: mouse handler is the MainMenu, no match yet.
+			// The SDK-composed KORE menu surface is active; no match exists yet.
 			const menuHandler = await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.constructor?.name ?? null);
-			expect(menuHandler).toBe("MainMenu");
+			expect(menuHandler).toBe("KoreMainMenuSurface");
 			expect(await activeGameModeId(page)).toBeNull();
 
 			// Landing page: any press advances to the main menu page.

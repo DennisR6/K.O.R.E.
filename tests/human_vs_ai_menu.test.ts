@@ -1,20 +1,20 @@
 import { expect, test } from "bun:test";
 import { GameState } from "../src/engine/types.ts";
-import { MainMenu } from "../src/menu/Menu.ts";
+import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createHumanVsAiHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
 import { MAP_CATALOG } from "../src/content/mapCatalog.ts";
 
 const firstMapId = MAP_CATALOG.find(entry => entry.browserAvailable)!.id;
 
-function press(menu: MainMenu, x: number, y: number): void {
+function press(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);
 	menu.handleMousePressed();
 }
 
 test("1 vs KI menu selects difficulty before starting the selected map", () => {
 	const starts: Array<{ difficulty: string; mapId: string }> = [];
-	const menu = new MainMenu(undefined, undefined, undefined, undefined, undefined, (difficulty, mapId) => starts.push({ difficulty, mapId }));
+	const menu = createKoreMainMenuSurface({ onPlayAiOpponent: (difficulty, mapId) => starts.push({ difficulty, mapId }) });
 	press(menu, 400, 100); // landing -> main menu
 	press(menu, 400, 141); // 1 vs KI
 	press(menu, 400, 214); // medium KI

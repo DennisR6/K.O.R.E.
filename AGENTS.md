@@ -271,18 +271,19 @@ After every change, check whether this guide still reflects the implementation a
   autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
   Every battle start and battle rematch draws a fresh battle seed (injectable
   `battleSeedSource`, exposed as `getBattleSeed()`), so each battle is a new
-  game while remaining reproducible from its seed.
+   game while remaining reproducible from its seed.
+- `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
+  Its `.build()` result contains every production menu screen, element, action,
+  UI framework, and persistent menu-audio intent. `KoreMainMenuSurface.ts`
+  reconstructs that result as the KORE renderer/input/audio adapter; do not add
+  parallel pages, manual hitboxes, or browser resources to the composition.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- `src/menu/Menu.ts`: landing and menu pages; the main menu offers a
-  "1 vs KI" action (world rect `(270..530, 112..170)`) that selects Easy,
-  Medium, or Hard KI then a browser-available map, a "KI vs KI" battle action
-  (world rect `(270..530, 176..234)`) that opens the Choose Map page and starts
-  the battle on the selected map, a "Play Online" action (joins a match on the
-  server advertised by `/config`), a "Play Local Game" button, and a "Choose
-  Map" page listing every `browserAvailable` catalog map (`MapSelectionPage`).
-  The map page filters to `battleAvailable` maps while a battle is pending, so
-  a selected battle map always terminates.
+- The SDK main menu offers "1 vs KI" (world rect `(270..530, 112..170)`),
+  "KI vs KI" `(270..530, 176..234)`, "Play Online" `(270..530, 240..298)`,
+  "Play Local Game" `(270..530, 304..362)`, and "Choose Map"
+  `(270..530, 368..426)`. Its KORE composition generates browser-available
+  catalog-map screens and filters battle screens to `battleAvailable` maps.
 - `src/menu/AudioManager.ts`: single browser media owner. It resolves KORE
   sound IDs, manages media elements/volume/unlock/disposal, buffers persistent
   intent while locked, and retains playlist keyboard compatibility.
@@ -381,6 +382,7 @@ bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
 bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
 bun run test:browser:audio # Generic audio aggregation browser E2E
+bun run test:browser:menu-sdk # SDK-authored production main-menu browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run

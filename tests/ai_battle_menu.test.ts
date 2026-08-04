@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MainMenu } from "../src/menu/Menu.js";
+import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { MAP_CATALOG } from "../src/content/mapCatalog.js";
 
 const firstMapId = MAP_CATALOG.find(entry => entry.browserAvailable)!.id;
@@ -10,19 +10,13 @@ const MAP_ROW = { x: 400, y: 100 };
 const LOCAL_BACK = { x: 210, y: 405 };
 const BATTLE_BACK = { x: 210, y: 355 };
 
-function pressAt(menu: MainMenu, x: number, y: number): void {
+function pressAt(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);
 	menu.handleMousePressed();
 }
 
 function menuWithCallbacks(recorder: { local: string[]; battle: string[]; online: number }) {
-	return new MainMenu(
-		() => { recorder.local.push("immediate"); },
-		(mapId: string) => { recorder.local.push(mapId); },
-		undefined,
-		() => { recorder.online++; },
-		(mapId: string) => { recorder.battle.push(mapId); },
-	);
+	return createKoreMainMenuSurface({ onPlayLocal: () => { recorder.local.push("immediate"); }, onSelectMap: (mapId: string) => { recorder.local.push(mapId); }, onPlayOnline: () => { recorder.online++; }, onPlayAiBattle: (mapId: string) => { recorder.battle.push(mapId); } });
 }
 
 describe("main menu KI vs KI battle map selection", () => {
@@ -100,7 +94,7 @@ describe("main menu KI vs KI battle map selection", () => {
 	});
 
 	test("is a no-op when no callbacks are configured", () => {
-		const menu = new MainMenu();
+		const menu = createKoreMainMenuSurface();
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		pressAt(menu, 400, 205); // KI vs KI opens the map page
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y); // no battle callback

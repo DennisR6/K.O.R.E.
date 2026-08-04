@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { MainMenu } from "../src/menu/Menu.ts";
+import { createKoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { GameSettings } from "../src/settings/settings.ts";
 
 test("KORE menu pilot emits semantic menu music and a UI confirmation without browser media access", () => {
 	let started = 0;
-	const menu = new MainMenu(() => { started++; });
+	const menu = createKoreMainMenuSurface({ onPlayLocal: () => { started++; } });
 	expect(menu.drainSoundCommands()).toMatchObject([{ type: "playMusic", soundId: "kore.music.menu", bus: "music" }]);
 	menu.updateMouse(400, 100); menu.handleMousePressed(); // landing -> main menu
 	menu.updateMouse(400, 325); menu.handleMousePressed(); // local-play button

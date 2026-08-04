@@ -4,7 +4,7 @@ import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
-import { MainMenu } from "../menu/Menu.js";
+import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
 import { validateGameSettings } from "../settings/settings.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
@@ -37,9 +37,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public constructor(
 		private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler,
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
+		private readonly onPlayOnline?: (mapId?: string) => void,
 	) {
 		this.handler = new GameHandler();
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId), (difficulty, mapId) => this.startAiOpponent(difficulty, mapId));
+		const menu = createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
 	}
@@ -142,7 +143,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuHandler(): GameHandler {
-		const menu = new MainMenu(() => this.startLocalMatch(), (mapId: string) => this.startLocalMatch(mapId), () => this.error, undefined, (mapId: string) => this.startAiBattle(mapId), (difficulty, mapId) => this.startAiOpponent(difficulty, mapId));
+		const menu = createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
 		const handler = new GameHandler();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);

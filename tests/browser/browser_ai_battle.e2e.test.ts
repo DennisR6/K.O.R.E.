@@ -38,7 +38,7 @@ describe("browser KI vs KI battle", () => {
 
 			// Menu is active before the battle starts.
 			const menuHandler = await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.constructor?.name ?? null);
-			expect(menuHandler).toBe("MainMenu");
+			expect(menuHandler).toBe("KoreMainMenuSurface");
 			expect(await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id ?? null)).toBeNull();
 
 			// Landing page -> main menu -> "KI vs KI" at world (270..530, 176..234)

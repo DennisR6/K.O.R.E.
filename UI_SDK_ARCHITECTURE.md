@@ -24,9 +24,9 @@ The Engine SDK does not import the UI SDK.
 | Generic UI contracts/runtime/systems | absent | UI SDK | New explicit runtime. |
 | System metadata and ordering | `src/engine/sdk/systemRegistry.ts` | Engine SDK | Reused directly. |
 | Browser/p5 event collection | `src/main.ts` | Host runtime | Unchanged. |
-| KORE visual rendering/assets/callback routes | `src/menu/Menu.ts` | KORE UI | Retained. |
+| KORE visual rendering/assets/callback routes | `src/kore/ui/KoreMainMenuSurface.ts` | KORE UI adapter | Reconstructs the SDK-authored production menu and retains KORE rendering/callback dispatch. |
 | Gameplay drag-to-shot and overlays | `src/systems/UiSystem.ts`, `src/ui/*` | KORE gameplay UI | Not migrated. |
-| AI difficulty interaction | `AiDifficultyPage` | KORE UI pilot | Uses generic UI runtime for pointer/action handling. |
+| Main-menu interaction | `src/kore/ui/mainMenu.ts` + `KoreMainMenuSurface.ts` | KORE UI production composition | Every production menu screen uses generic UI settings/runtime interaction. |
 
 ## 4. Passive engine lifecycle
 
@@ -119,8 +119,9 @@ select optional systems or declared replacements through the same registry.
 
 The UI SDK has no KORE labels, colors, routes, maps, teams, or game modes.
 KORE pages retain their renderer/theme and translate generic `emit` commands.
-The current pilot is `AiDifficultyPage`: its pointer/button behavior is a
-generic UI menu, while its KORE text, colors, and callbacks remain local.
+The production KORE main menu is the current full composition: its screens,
+buttons, navigation, and semantic commands are generic UI settings, while the
+KORE surface retains visual projection and application callback dispatch.
 
 ## 15. Extension and generation model
 

@@ -18,6 +18,7 @@ import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
 import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
+import { buildOnlineJoinUrl } from "./utils/onlineConfig.js";
 import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
 import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
@@ -53,7 +54,9 @@ if (isUiDebugSandboxUrl(uri)) {
 	const viewer = startReplayViewer(usersettings.replayToken)
 	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
-	router = new LocalMatchSceneRouter()
+	router = new LocalMatchSceneRouter(undefined, undefined, mapId => {
+		void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
+	})
 	handler = router.getHandler()
 	startGame(handler, () => router?.getHandler() ?? handler)
 	} else if (usersettings.url && usersettings.url !== "local") {
@@ -354,14 +357,18 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			if (!canvasEl) return
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
-			getActiveHandler().handleMousePressed()
+			const active = getActiveHandler()
+			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
+			active.handleMousePressed()
 		})
 		window.addEventListener("mouseup", (e) => {
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (!canvasEl) return
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
-			getActiveHandler().handleMouseReleased()
+			const active = getActiveHandler()
+			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
+			active.handleMouseReleased()
 		})
 
 		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
