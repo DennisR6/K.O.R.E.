@@ -17,6 +17,7 @@ export interface RenderContext {
 	setNoFill(): void;
 	setStrokeColor(color: string): void;
 	setStroke(weight: number): void;
+	noStroke(): void;
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
@@ -39,6 +40,7 @@ export interface RenderContext {
 	beginClip(): void;
 	endClip(): void;
 	mouseWheel(func: (e: WheelEvent) => void): void;
+	getTextWidth(text: string, size: number): number;
 }
 
 /** 
