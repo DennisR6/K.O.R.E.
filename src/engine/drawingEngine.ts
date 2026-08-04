@@ -93,7 +93,7 @@ export class P5Renderer implements RenderContext {
 			this.p5ctx.pop();
 		}
 	}
-	drawImage(key: AssetKey, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
+	drawImage(key: AssetKey | string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
 		const img = assetManager.get(key);
 		if (!img) return;
 

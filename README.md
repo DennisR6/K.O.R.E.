@@ -86,6 +86,30 @@ bun run docs
 4. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
 5. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
 
+## Map SDK
+
+`src/kore_sdk.ts` exports one `kore` entry point for authoring validated,
+engine-importable JSON settings. `bun run build` emits `dist/kore_sdk.js`
+alongside the browser bundle.
+
+```ts
+import { kore } from "./src/kore_sdk.ts";
+
+const penguins = kore.createTeam({ teamNr: 0, name: "Penguins", playerCount: 2 });
+const map = kore.createDefaultMap({ name: "Training Arena" })
+  .addBackground({ type: "color", color: "#dff6ff" })
+  .addTeam(penguins)
+  .addPlayerSpawn({ x: 40, y: 130, w: 180, h: 180, team: penguins })
+  .addPlayerSpawn({ x: 580, y: 130, w: 180, h: 180, teamNr: 1, playerCount: 2 })
+  .addWorldEffects({ effects: [kore.effects.move({ deltaTime: 0, x: 0, y: 0 })] })
+  .build();
+
+const handler = kore.createHandler(map);
+```
+
+Use `{ type: "url", url: "https://…" }` for an HTTP(S) background image or
+`{ type: "asset", asset: /* AssetList numeric key */ }` for a generated asset.
+
 ## Environment Variables
 
 | Variable | Default | Description |

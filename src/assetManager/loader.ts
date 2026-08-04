@@ -1,14 +1,16 @@
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
-class EngineAssetManager {
-	private cache: Map<AssetKey, HTMLImageElement> = new Map();
-	private errorCount: Map<AssetKey, number> = new Map();
-	private MAX_RETRIES = 2;
-	private isLoading: Set<AssetKey> = new Set();
+type ImageKey = AssetKey | string;
 
-	get(key: AssetList): HTMLImageElement | null {
+class EngineAssetManager {
+	private cache: Map<ImageKey, HTMLImageElement> = new Map();
+	private errorCount: Map<ImageKey, number> = new Map();
+	private MAX_RETRIES = 2;
+	private isLoading: Set<ImageKey> = new Set();
+
+	get(key: ImageKey): HTMLImageElement | null {
 		if (key === undefined) {
-			console.log(`${key}:${AssetPaths[key]} is undefined`, key)
+			console.log(`${key}:${typeof key === "number" ? AssetPaths[key] : key} is undefined`, key)
 			return null
 		}
 		if (this.cache.has(key)) return this.cache.get(key)!;
@@ -21,7 +23,7 @@ class EngineAssetManager {
 		return null;
 	}
 
-	private async startAsyncLoad(key: AssetKey) {
+	private async startAsyncLoad(key: ImageKey) {
 		if (this.isLoading.has(key)) return
 		this.isLoading.add(key)
 
@@ -29,14 +31,14 @@ class EngineAssetManager {
 		this.errorCount.set(key, currentRetries + 1);
 
 		try {
-			const path = AssetPaths[key];
-			const response = await fetch(`./public/${path}?t=${Date.now()}`);
+			const fetchUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
+			const response = await fetch(fetchUrl);
 			if (!response.ok) throw new Error("Netzwerkfehler");
 
 			const blob = await response.blob();
-			const url = URL.createObjectURL(blob);
+			const objectUrl = URL.createObjectURL(blob);
 			const img = new Image();
-			img.src = url;
+			img.src = objectUrl;
 			await img.decode();
 
 			this.cache.set(key, img);
@@ -54,7 +56,8 @@ class EngineAssetManager {
 		}
 	}
 
-	private async loadJsonFallback(key: AssetKey) {
+	private async loadJsonFallback(key: ImageKey) {
+		if (typeof key === "string") return;
 		try {
 			const response = await fetch(`./src/assetManager/assets/json/${AssetList[key]}.json`);
 			if (!response.ok) throw new Error("JSON Fallback fehlgeschlagen");

@@ -225,6 +225,9 @@ After every change, check whether this guide still reflects the implementation a
 
 - `src/settings/settings.ts`: canonical `GameSettings`, friction presets,
   default teams/entities, active settings object, and grid arrangement.
+- `src/kore_sdk.ts`: single `kore` SDK export for typed, fluent construction
+  of validated engine-importable `GameSettings` JSON maps, serializable teams,
+  spawns, structures, world effects, and supported external/image backgrounds.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
@@ -493,7 +496,7 @@ The canonical engine map/game model is `GameSettings` in
 - `screenResolution: { x, y }`
 - `players: PlayerSettings[]`
 - `mapBoundarys`: numeric circle/line/rectangle shape settings
-- `background`: color or numeric `AssetList` image
+- `background`: color, numeric `AssetList` image, or HTTP(S)/same-origin image URL
 - `friction: { friction, linearDrag, stopThreshold }`
 - `drift`: finite `[0, 1]` per-tick, speed-preserving steering blend toward each
   player's rotation; it does not apply at or below the physics stop threshold
