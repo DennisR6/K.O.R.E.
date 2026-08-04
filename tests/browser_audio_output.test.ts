@@ -41,3 +41,17 @@ test("browser audio adapter translates bus and source controls into managed medi
 	manager.applyAudioBatch(batch([command({ type: "stopSource", sourceId: "wind" })]));
 	expect(created[0]!.pauses).toBe(1);
 });
+
+test("music replacement stops the previous managed source before starting the new track", async () => {
+	const created: FakeAudio[] = [];
+	const manager = new AudioManager(0, url => { const element = new FakeAudio(url); created.push(element); return element; }, id => `/${id}.mp3`);
+	await manager.unlock();
+	manager.applyAudioBatch(batch([command({ type: "playMusic", sourceId: "menu", soundId: "menu", bus: "music", replacementPolicy: "replace-current" })]));
+	manager.applyAudioBatch(batch([
+		command({ type: "stopSource", sourceId: "menu" }),
+		command({ type: "playMusic", sourceId: "game", soundId: "match", bus: "music", replacementPolicy: "replace-current" }),
+	]));
+	expect(created).toHaveLength(2);
+	expect(created[0]!.pauses).toBe(1);
+	expect(created[1]!.plays).toBe(1);
+});

@@ -173,8 +173,12 @@ export class ApplicationAudioMixer {
 		const voices = incoming.filter(isVoiceCommand);
 		const music = voices.filter((command): command is ResolvedAudioCommand & PlayMusicCommand => command.type === "playMusic");
 		const nonMusic = this.limitVoices(voices.filter(command => command.type !== "playMusic"));
+		const previousMusic = this.activeMusic;
 		const selectedMusic = this.selectMusic(music);
-		const commands = [...controls, ...nonMusic, ...(selectedMusic ? [selectedMusic] : [])].sort((a, b) => compareResolved(a, b, this.buses));
+		const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId
+			? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 } as ResolvedAudioCommand]
+			: [];
+		const commands = [...controls, ...replacedMusic, ...nonMusic, ...(selectedMusic ? [selectedMusic] : [])].sort((a, b) => compareResolved(a, b, this.buses));
 		const diagnostics: AudioDiagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter(command => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
 		return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map(command => ({ ...command, sequence: this.sequence })), diagnostics };
 	}

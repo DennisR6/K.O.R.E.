@@ -57,6 +57,14 @@ test("application mixer namespaces runtimes and deterministically owns one music
 	expect(mixer.toSettings().activeMusic?.soundId).toBe("match-track");
 });
 
+test("a higher-priority music replacement emits an ordered stop for the old global source", () => {
+	const menu = new AudioEmitter("menu"); const game = new AudioEmitter("game");
+	const menuRuntime = new AudioRuntime(createAudioSettings({ runtimeId: "menu-runtime" })); const gameRuntime = new AudioRuntime(createAudioSettings({ runtimeId: "game-runtime" })); const mixer = new ApplicationAudioMixer("browser");
+	menu.emit(audio.command.music({ sourceId: "menu", soundId: "menu-track", bus: "music", priority: 10 })); menuRuntime.tick([menu]); mixer.submit(menuRuntime.drainOutput()); mixer.flush();
+	game.emit(audio.command.music({ sourceId: "game", soundId: "match-track", bus: "music", priority: 20 })); gameRuntime.tick([game]); mixer.submit(gameRuntime.drainOutput());
+	expect(mixer.flush().commands.map(command => `${command.type}:${command.globalSourceId}`)).toEqual(["stopSource:menu-runtime:menu", "playMusic:game-runtime:game"]);
+});
+
 test("validation rejects malformed settings and generic layers remain browser and KORE independent", () => {
 	const malformed = createAudioSettings({ runtimeId: "x" }) as any; malformed.buses[0].volume = 2;
 	expect(() => validateAudioSettings(malformed)).toThrow("Invalid audio bus");
