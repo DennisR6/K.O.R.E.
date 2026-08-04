@@ -268,8 +268,11 @@ export class GameRegistry {
 		const record = this.getForUser(userId);
 		if (!record) return { ok: false, error: "No active game for this user" };
 		if (record.lifecycle.status !== "completed" || record.handler.getState() !== GameState.Game_over) return { ok: false, error: "Replay shares require a completed match" };
-		try { return { ok: true, token: this.storeCompletedReplay(record) }; }
-		catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Replay share unavailable" }; }
+		try {
+			const token = this.storeCompletedReplay(record);
+			if (!token) return { ok: false, error: "Replay share unavailable" };
+			return { ok: true, token };
+		} catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Replay share unavailable" }; }
 	}
 
 	public requestPause(userId: string, action: unknown): PauseRequestResult {
@@ -307,7 +310,11 @@ export class GameRegistry {
 		const handler = this.buildAuthoritativeHandler(stored.settings, stored.users.length)
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId, stored.initialSettings)
+		// Only a stored immutable origin makes the recorded actions playable.
+		// Legacy rows without one get a fresh recorder so a broken origin is
+		// never persisted or served; their past actions stay unplayable.
+		const origin = stored.initialSettings
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, origin ? stored.actions ?? [] : [], stored.lifecycle, stored.mapId, origin)
 		this.games.set(id, record)
 		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
@@ -367,7 +374,7 @@ export class GameRegistry {
 		record.lastAccess = game.updatedAt
 	}
 	/** Idempotently stores the frozen replay token without publishing it to clients. */
-	private storeCompletedReplay(record: GameRecord): string {
+	private storeCompletedReplay(record: GameRecord): string | undefined {
 		const result = record.handler.getMatchResult();
 		if (!result) throw new Error("Completed match has no result");
 		const replay: FrozenReplayDocument = {
@@ -376,7 +383,13 @@ export class GameRegistry {
 			result,
 			completedAt: record.lifecycle.completedAt ?? Date.now(),
 		};
-		return this.database.createReplayShare(record.id, replay).token;
+		try {
+			return this.database.createReplayShare(record.id, replay).token;
+		} catch {
+			// An unreproducible origin produces no share token; the completed
+			// match still persists and its turn submission stays successful.
+			return undefined;
+		}
 	}
 
 	private touch(record: GameRecord): GameRecord {

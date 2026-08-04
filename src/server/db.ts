@@ -7,7 +7,7 @@ import type { EngineSettings } from "../engine/types.js";
 import { GameState } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import type { FrozenReplayDocument, ReplayAction, ReplayDocument } from "../replay/types.js";
-import { validateFrozenReplayDocument, validateReplayDocument } from "../replay/types.js";
+import { validateFrozenReplayDocument, validateReplayDocument, validateReplayOrigin } from "../replay/types.js";
 import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 
@@ -150,7 +150,10 @@ export class GameDatabase {
 	}
 
 	public createGame(game: StoredGame): void {
-		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings ?? game.settings, actions: game.actions ?? [] });
+		// The immutable origin is stored independently from the mutable live
+		// snapshot. Never fabricate it from `settings`: a live snapshot from a
+		// later turn is not a reproducible replay origin.
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [] });
 		const lifecycle = game.lifecycle ?? createLifecycle("resident", game.updatedAt, game.updatedAt);
 		this.db.transaction(() => {
 			this.db.query(`
@@ -164,7 +167,7 @@ export class GameDatabase {
 	}
 
 	public saveGame(game: StoredGame): void {
-		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings ?? game.settings, actions: game.actions ?? [] });
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [] });
 		this.db.transaction(() => {
 			this.db.query(`
 			UPDATE games
@@ -187,7 +190,9 @@ export class GameDatabase {
 		return {
 			id: row.id,
 			settings: decompressed.settings,
-			initialSettings: decompressed.initialSettings ?? decompressed.settings,
+			// Missing origins stay missing: legacy rows without a stored
+			// initialSettings cannot fabricate one from the live snapshot.
+			initialSettings: decompressed.initialSettings,
 			actions: decompressed.actions,
 			users: users.map(user => user.user_id),
 			currentTeam: row.current_team,
@@ -248,9 +253,16 @@ export class GameDatabase {
 	/** Returns the deterministic replay document for any persisted match. */
 	public getOperatorReplay(gameId: string): ReplayDocument | undefined {
 		const game = this.loadGame(gameId);
-		if (!game) return undefined;
-		const replay: ReplayDocument = { schemaVersion: 1, initialSettings: game.initialSettings ?? game.settings, seed: 12345, actions: game.actions ?? [] };
+		if (!game?.initialSettings) return undefined;
+		const replay: ReplayDocument = { schemaVersion: 1, initialSettings: game.initialSettings, seed: 12345, actions: game.actions ?? [] };
 		validateReplayDocument(replay);
+		try {
+			validateReplayOrigin(replay);
+		} catch {
+			// A legacy row whose origin is unknown cannot be replayed; an
+			// unplayable document must never be offered to the operator.
+			return undefined;
+		}
 		return structuredClone(replay);
 	}
 
@@ -319,6 +331,7 @@ export class GameDatabase {
 
 	public createReplayShare(gameId: string, replay: FrozenReplayDocument, now: number = Date.now()): StoredReplayShare {
 		validateFrozenReplayDocument(replay);
+		validateReplayOrigin(replay);
 		const lifecycle = this.getLifecycle(gameId);
 		if (lifecycle?.status !== "completed") throw new Error("Replay shares require a completed match");
 		const existing = this.db.query("SELECT token, replay_json, created_at, revoked_at FROM replay_shares WHERE game_id = ?1").get(gameId) as { token: string; replay_json: string; created_at: number; revoked_at: number | null } | null;
@@ -346,6 +359,9 @@ export class GameDatabase {
 		try {
 			const replay = JSON.parse(row.replay_json) as FrozenReplayDocument;
 			validateFrozenReplayDocument(replay);
+			// Shares persisted before origin validation may still carry an
+			// unplayable live fallback; those are treated as revoked.
+			validateReplayOrigin(replay);
 			const { finalSettings: _privateFinalSnapshot, ...publicReplay } = replay;
 			return { token, replay: publicReplay, createdAt: row.created_at };
 		} catch { return undefined; }
@@ -355,6 +371,7 @@ export class GameDatabase {
 	public createOperatorReplayView(gameId: string, replay: ReplayDocument, now: number = Date.now()): PublicOperatorReplayView {
 		if (!this.hasGame(gameId)) throw new Error("Unknown game");
 		validateReplayDocument(replay);
+		validateReplayOrigin(replay);
 		const existing = this.db.query("SELECT token FROM operator_replay_views WHERE game_id = ?1").get(gameId) as { token: string } | null;
 		if (existing) {
 			this.db.query("UPDATE operator_replay_views SET replay_json = ?2, updated_at = ?3 WHERE game_id = ?1").run(gameId, JSON.stringify(replay), now);
@@ -373,6 +390,10 @@ export class GameDatabase {
 		try {
 			const replay = JSON.parse(row.replay_json) as ReplayDocument;
 			validateReplayDocument(replay);
+			// The operator may have snapshotted a legacy live fallback before
+			// origin validation existed; such views are unplayable and are no
+			// longer served instead of failing inside the viewer.
+			validateReplayOrigin(replay);
 			return { token, replay: structuredClone(replay), updatedAt: row.updated_at };
 		} catch { return undefined; }
 	}
@@ -462,7 +483,7 @@ function lifecycleFromRow(row: StoredLifecycleRow): PersistedMatchLifecycle {
 	};
 }
 
-function compress(data: { settings: EngineSettings; initialSettings: GameSettings | EngineSettings; actions: ReplayAction[] }): Uint8Array {
+function compress(data: { settings: EngineSettings; initialSettings?: GameSettings; actions: ReplayAction[] }): Uint8Array {
 	return gzipSync(JSON.stringify(data));
 }
 
