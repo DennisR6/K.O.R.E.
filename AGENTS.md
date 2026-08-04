@@ -749,7 +749,8 @@ authoritative `REMATCH` resets the handler and broadcasts fresh per-player
 `INIT` settings. `GameHandler` objects
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
-from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
+from SQLite. The database path is explicit `GAME_DB_PATH` or a default anchored
+to `<server-root>/data/kore.db`, never the process working directory.
 Completed-match replay shares are idempotent per game: either participant may
 request the same public token and the runtime broadcasts it to both connected
 participants. The requesting online HUD `Replay` action opens the read-only
@@ -773,8 +774,9 @@ Be careful when running `bun run start`:
   root-scope offline shell), `public/`, `dist/`, and the `/config` JSON contract;
   continue to keep secrets out of this repository and do not broaden that
   allowlist casually.
-- The production server writes `./data/kore.db` by default. `*.db` is ignored;
-  do not commit database files. Set `GAME_DB_PATH` for another durable path.
+- The production server writes `<server-root>/data/kore.db` by default. `*.db`
+  is ignored; do not commit database files. Set `GAME_DB_PATH` for another
+  durable path.
 
 `window.game.handler` is a getter over the active scene handler (menu -> match
 -> rematch -> menu), so the debug surface always reflects the authoritative
