@@ -228,6 +228,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/engine/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
   JSON-safe worlds/entities/structures/effects and deterministic framework
   metadata selection. It must not import KORE/game domains or runtime adapters.
+- `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
+  menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
+  no browser loop/listeners, and must not import KORE/game or browser domains.
 - `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
   validated engine-importable `GameSettings` JSON maps, serializable teams,
   spawns, KORE effects/defaults, and KORE handler composition. Root

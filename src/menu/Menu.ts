@@ -4,6 +4,7 @@ import type { IMenu, IMenuPage } from "./MenuTypes.js";
 import { MAP_CATALOG, type MapCatalogEntry } from "../content/mapCatalog.js";
 import { buildOnlineJoinUrl } from "../utils/onlineConfig.js";
 import type { AiDifficulty } from "../ai/types.js";
+import { ui, type UiRuntime } from "../engine/ui-sdk/index.js";
 
 
 const TimeFactorInSeconds = 60
@@ -301,6 +302,7 @@ export class MapSelectionPage implements IMenuPage {
 /** Selects the sole computer opponent's deterministic difficulty before map selection. */
 export class AiDifficultyPage implements IMenuPage {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
+	private readonly pilot: UiRuntime
 	private readonly choices: Array<{ difficulty: AiDifficulty; label: string; rect: { x: number; y: number; w: number; h: number } }> = [
 		{ difficulty: "easy", label: "Easy KI", rect: { x: 270, y: 130, w: 260, h: 48 } },
 		{ difficulty: "medium", label: "Medium KI", rect: { x: 270, y: 190, w: 260, h: 48 } },
@@ -308,7 +310,18 @@ export class AiDifficultyPage implements IMenuPage {
 	]
 	private readonly back = { x: 270, y: 320, w: 260, h: 42 }
 
-	public constructor(private readonly onSelect: (difficulty: AiDifficulty) => void, private readonly onBack: () => void) { }
+	public constructor(private readonly onSelect: (difficulty: AiDifficulty) => void, private readonly onBack: () => void) {
+		// KORE UI pilot: interaction is delegated to the generic explicit-tick UI
+		// runtime while this page retains its existing KORE renderer/theme.
+		this.pilot = ui.fromSettings(ui.createMenu({ id: "kore-ai-difficulty", size: { width: 800, height: 450 } })
+			.addScreen(ui.screen({ id: "difficulty", layout: ui.layout.absolute(), elements: [
+				ui.button({ id: "easy", text: "Easy KI", rect: toUiRect(this.choices[0]!.rect), action: ui.action.emit("difficulty:easy") }),
+				ui.button({ id: "medium", text: "Medium KI", rect: toUiRect(this.choices[1]!.rect), action: ui.action.emit("difficulty:medium") }),
+				ui.button({ id: "hard", text: "Hard KI", rect: toUiRect(this.choices[2]!.rect), action: ui.action.emit("difficulty:hard") }),
+				ui.button({ id: "back", text: "Back", rect: toUiRect(this.back), action: ui.action.emit("difficulty:back") }),
+			] }))
+			.build());
+	}
 	public draw(ctx: RenderContext): void {
 		ctx.push()
 		ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG)
@@ -327,15 +340,11 @@ export class AiDifficultyPage implements IMenuPage {
 		ctx.pop()
 	}
 	public handleMousePressed(): void {
-		const { x, y } = this.mouse
-		for (const choice of this.choices) {
-			const { rect } = choice
-			if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
-				this.onSelect(choice.difficulty)
-				return
-			}
+		this.pilot.tick({ pointer: { x: this.mouse.x, y: this.mouse.y, justPressed: true } });
+		for (const command of this.pilot.drainCommands()) {
+			if (command.command === "difficulty:back") this.onBack();
+			else if (command.command.startsWith("difficulty:")) this.onSelect(command.command.slice("difficulty:".length) as AiDifficulty);
 		}
-		if (x >= this.back.x && x <= this.back.x + this.back.w && y >= this.back.y && y <= this.back.y + this.back.h) this.onBack()
 	}
 	public handleMouseReleased(): void { }
 	public handleMouseWheel(_event: WheelEvent): void { }
@@ -343,3 +352,5 @@ export class AiDifficultyPage implements IMenuPage {
 	public updateMouse(x: number, y: number): void { this.mouse = { ...this.mouse, x, y } }
 	public switchSite(_page: Pages): void { this.onBack() }
 }
+
+function toUiRect(rect: { x: number; y: number; w: number; h: number }) { return { x: rect.x, y: rect.y, width: rect.w, height: rect.h }; }
