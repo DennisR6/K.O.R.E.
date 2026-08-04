@@ -5,6 +5,8 @@ import { MAP_CATALOG, type MapCatalogEntry } from "../content/mapCatalog.js";
 import { buildOnlineJoinUrl } from "../utils/onlineConfig.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { ui, type UiRuntime } from "../engine/ui-sdk/index.js";
+import { AudioEmitter, type ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { koreAudio } from "../kore/audio.js";
 
 
 const TimeFactorInSeconds = 60
@@ -28,8 +30,10 @@ export const enum Pages {
 	Choose_AiDifficulty,
 }
 type MiniMouseImplementation = { pressed: boolean, x: number, y: number, released: boolean }
-export class MainMenu implements IMenu {
+export class MainMenu implements IMenu, ISoundEmitter {
 	private mouse: MiniMouseImplementation = { released: false, pressed: false, x: 0, y: 0 }
+	private readonly sounds = new AudioEmitter("kore.menu");
+	public readonly soundSourceId = this.sounds.soundSourceId;
 	private pages: IMenu[] = [
 		new LandingPage((page: Pages) => this.activePage = page),
 		new MainMenuPage((page: Pages) => this.activePage = page),
@@ -46,6 +50,7 @@ export class MainMenu implements IMenu {
 		onPlayAiBattle?: (mapId: string) => void,
 		private readonly onPlayAiOpponent?: (difficulty: AiDifficulty, mapId: string) => void,
 	) {
+		this.sounds.emit(koreAudio.command.menuMusic(this.soundSourceId));
 		this.mapPage = new MapSelectionPage(
 			(page: Pages) => {
 				// Leaving the map page without picking a map discards the
@@ -83,7 +88,7 @@ export class MainMenu implements IMenu {
 		)
 		this.pages = [
 			new LandingPage((page: Pages) => this.activePage = page),
-			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.openMapSelection("local"), onPlayOnline ? () => onPlayOnline() : () => this.openMapSelection("online"), () => this.openMapSelection("battle"), () => this.openAiDifficulty()),
+			new MainMenuPage((page: Pages) => this.activePage = page, onPlayLocal, () => this.openMapSelection("local"), onPlayOnline ? () => onPlayOnline() : () => this.openMapSelection("online"), () => this.openMapSelection("battle"), () => this.openAiDifficulty(), () => this.emitUiConfirm()),
 			this.mapPage,
 			undefined!,
 			undefined!,
@@ -105,6 +110,8 @@ export class MainMenu implements IMenu {
 		this.activePage = Pages.ChooseMap
 	}
 	private openAiDifficulty(): void { this.activePage = Pages.Choose_AiDifficulty }
+	private emitUiConfirm(): void { this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId)); }
+	public drainSoundCommands() { return this.sounds.drainSoundCommands(); }
 	private activePage: number = 0;
 	tick(deltatime: number, globalfriction: number): void { this.pages[this.activePage].tick(deltatime, globalfriction) }
 	handleMousePressed(): void {
@@ -169,6 +176,7 @@ export class MainMenuPage implements IMenuPage {
 		private readonly onPlayOnline?: () => void,
 		private readonly onPlayAiBattle?: () => void,
 		private readonly onPlayAiOpponent?: () => void,
+		private readonly onConfirm?: () => void,
 	) { this.cb = pageSwitcher }
 	draw(ctx: RenderContext): void {
 		ctx.push()
@@ -191,14 +199,17 @@ export class MainMenuPage implements IMenuPage {
 	handleMousePressed(): void {
 		const { x, y } = this.mouse
 		if (x >= versusAiButton.x && x <= versusAiButton.x + versusAiButton.w && y >= versusAiButton.y && y <= versusAiButton.y + versusAiButton.h) {
+			this.onConfirm?.()
 			this.onPlayAiOpponent?.()
 			return
 		}
 		if (x >= kiButton.x && x <= kiButton.x + kiButton.w && y >= kiButton.y && y <= kiButton.y + kiButton.h) {
+			this.onConfirm?.()
 			this.onPlayAiBattle?.()
 			return
 		}
 		if (x >= onlineButton.x && x <= onlineButton.x + onlineButton.w && y >= onlineButton.y && y <= onlineButton.y + onlineButton.h) {
+			this.onConfirm?.()
 			if (this.onPlayOnline) {
 				this.onPlayOnline()
 				return
@@ -209,6 +220,7 @@ export class MainMenuPage implements IMenuPage {
 			return
 		}
 		if (x >= playButton.x && x <= playButton.x + playButton.w && y >= playButton.y && y <= playButton.y + playButton.h) {
+			this.onConfirm?.()
 			if (this.onPlayLocal) {
 				this.onPlayLocal()
 				return
@@ -220,6 +232,7 @@ export class MainMenuPage implements IMenuPage {
 			return
 		}
 		if (x >= chooseMapButton.x && x <= chooseMapButton.x + chooseMapButton.w && y >= chooseMapButton.y && y <= chooseMapButton.y + chooseMapButton.h) {
+			this.onConfirm?.()
 			this.onChooseMap?.()
 			return
 		}

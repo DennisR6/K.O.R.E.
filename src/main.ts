@@ -19,6 +19,9 @@ import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
 import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
 import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
+import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
+import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
+import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -31,6 +34,12 @@ const usersettings = {
 }
 
 const ui = new UiSystem()
+// One browser media owner receives batches from any active game/menu runtime.
+// The runtime and mixer are explicit host lifecycle objects, never engine loops.
+const browserAudioManager = new AudioManager()
+const browserAudioOutput = new BrowserAudioOutput(browserAudioManager)
+const browserAudioRuntime = new AudioRuntime(createKoreAudioSettings("kore.browser"))
+const browserAudioMixer = new ApplicationAudioMixer("kore.browser.output", { buses: KORE_AUDIO_BUSES })
 // setUserUUUID(undefined)
 // let userid = getUserUUUID()!
 let handler: GameHandler
@@ -327,6 +336,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			const active = getActiveHandler()
 			active.tick()
 			afterTick?.()
+			flushBrowserAudio(active)
 			p.push()
 			active.drawWorld(ctx)
 			p.pop()
@@ -366,8 +376,16 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		// The catalog map ID of the active local match, or null in the menu.
 		get mapId() { return router?.getMapId() ?? null; },
 		logs: [],
-		audio: new AudioManager()
+		audio: browserAudioManager
 	};
+}
+
+/** Collects semantic cues structurally; unsupported systems/handlers are ignored. */
+function flushBrowserAudio(active: GameHandler): void {
+	const systemEmitters = active.getSystems().map(system => (system as { emitter?: unknown }).emitter)
+	browserAudioRuntime.tick([active.getMouseHandler(), router, ...systemEmitters])
+	browserAudioMixer.submit(browserAudioRuntime.drainOutput())
+	browserAudioOutput.apply(browserAudioMixer.flush())
 }
 
 const customCursor = document.getElementById('my-cursor')!;
@@ -387,7 +405,7 @@ document.addEventListener('keydown', (e) => {
 	}
 });
 
-document.addEventListener('click', () => { (window as unknown as { game?: { audio?: AudioManager } }).game?.audio?.start() }, { once: true });
+document.addEventListener('click', () => { void browserAudioManager.unlock() }, { once: true });
 
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
 	window.addEventListener("load", () => {

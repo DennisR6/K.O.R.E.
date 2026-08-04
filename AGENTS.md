@@ -234,10 +234,18 @@ After every change, check whether this guide still reflects the implementation a
 - `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
   menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
   no browser loop/listeners, and must not import KORE/game or browser domains.
+- `src/engine/audio-sdk/index.ts`: generic `audio` SDK built on the Engine SDK.
+  It owns JSON-safe semantic commands, narrow emitter capabilities,
+  deterministic aggregation, persistent intent, framework metadata, and an
+  output port; it must not import KORE, UI, browser, or audio-device APIs.
 - `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
   validated engine-importable `GameSettings` JSON maps, serializable teams,
   spawns, KORE effects/defaults, and KORE handler composition. Root
   `src/kore_sdk.ts` is the supported deprecated compatibility re-export.
+- `src/kore/audio.ts`: KORE semantic sound IDs, bus presets, and the optional
+  browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
+  output-port adapter; `src/menu/AudioManager.ts` owns media resources and
+  autoplay unlocking, never game entities.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
@@ -275,7 +283,9 @@ After every change, check whether this guide still reflects the implementation a
   Map" page listing every `browserAvailable` catalog map (`MapSelectionPage`).
   The map page filters to `battleAvailable` maps while a battle is pending, so
   a selected battle map always terminates.
-- `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
+- `src/menu/AudioManager.ts`: single browser media owner. It resolves KORE
+  sound IDs, manages media elements/volume/unlock/disposal, buffers persistent
+  intent while locked, and retains playlist keyboard compatibility.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.
 - `src/assetManager/loader.ts`: lazy browser image fetch/cache with a currently
@@ -370,6 +380,7 @@ bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
 bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
+bun run test:browser:audio # Generic audio aggregation browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run

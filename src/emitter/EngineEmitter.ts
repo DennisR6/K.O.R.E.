@@ -7,6 +7,8 @@ import { TurnSystem } from "../systems/TurnSystem.js";
 import type { ItemTarget } from "../item/target.js";
 import { ReplayRecorder } from "../replay/recorder.js";
 import { isValidInput } from "../input/validate.js";
+import { AudioEmitter, type ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { koreAudio } from "../kore/audio.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -15,8 +17,10 @@ import { isValidInput } from "../input/validate.js";
  * Ideal für den Singleplayer-Modus oder lokale Tests, da kein Server
  * benötigt wird, um den Spielzug zu verarbeiten.
  */
-export class GameEmitter implements IInputEmitter {
+export class GameEmitter implements IInputEmitter, ISoundEmitter {
 	handler: GameHandler
+	private readonly sounds = new AudioEmitter("kore.game.local");
+	public readonly soundSourceId = this.sounds.soundSourceId;
 	private rules: RuleInterpreter
 	private ruleState: RuleState
 	private teamCount: number
@@ -29,7 +33,9 @@ export class GameEmitter implements IInputEmitter {
 		this.teamCount = teamCount
 		const settings = typeof (handler as any).toSettings === "function" ? (handler as any).toSettings() : ((handler as any).settings ?? { schemaVersion: 1, id: crypto.randomUUID(), screenResolution: { x: 16, y: 9 }, worldSize: { x: 16, y: 9 }, players: [], mapBoundarys: [], background: { type: "color", color: "#000" }, friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }, drift: 0, effects: [], items: [], myTeam: [], allTeamSize: 2, playerCount: 2, figuresPerPlayer: 6, minPlayers: 2, maxPlayers: 2 });
 		this.recorder = new ReplayRecorder(settings, seed)
+		this.sounds.emit(koreAudio.command.matchMusic(this.soundSourceId))
 	}
+	public drainSoundCommands() { return this.sounds.drainSoundCommands(); }
 
 	sendShot(actorId: string, angle: number, power: number): void {
 		this.ruleState = this.handler.getRuleState()
@@ -57,6 +63,9 @@ export class GameEmitter implements IInputEmitter {
 			}
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
 		})
+		// This is emitted only after the validated local turn was accepted and
+		// playback began; simulations and browser resources remain separate.
+		this.sounds.emit(koreAudio.command.shot(this.soundSourceId))
 	}
 
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {

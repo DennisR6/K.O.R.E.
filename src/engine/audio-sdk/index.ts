@@ -110,19 +110,19 @@ export class SoundSystem {
 			const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
 			if (!key) { retained.push(entry); continue; }
 			const prior = dedupe.get(key);
-			if (!prior || compareCommand(entry.command, prior.command, entry.ordinal, prior.ordinal) < 0) { if (prior) deduplicated++; dedupe.set(key, entry); }
+			if (!prior || compareCommand(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) { if (prior) deduplicated++; dedupe.set(key, entry); }
 			else deduplicated++;
 		}
 		retained.push(...dedupe.values());
 		const admitted: Array<{ command: AudioCommand; ordinal: number }> = [];
 		for (const [busId, entries] of groupBy(retained.filter(entry => isVoiceCommand(entry.command)), entry => commandBus(entry.command)).entries()) {
 			const bus = this.buses.get(busId)!;
-			const ordered = entries.sort((a, b) => compareCommand(a.command, b.command, a.ordinal, b.ordinal));
+			const ordered = entries.sort((a, b) => compareCommand(a.command, b.command, a.ordinal, b.ordinal, this.buses));
 			admitted.push(...ordered.slice(0, bus.maxVoices)); droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
 		}
 		admitted.push(...retained.filter(entry => !isVoiceCommand(entry.command)));
 		for (const entry of admitted) this.applyPersistent(entry.command);
-		const commands = admitted.sort((a, b) => comparePipeline(a.command, b.command, a.ordinal, b.ordinal)).map(entry => this.resolve(entry.command));
+		const commands = admitted.sort((a, b) => comparePipeline(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map(entry => this.resolve(entry.command));
 		return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
 	}
 	private resolve(command: AudioCommand): ResolvedAudioCommand { return { ...clone(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 }; }
@@ -165,21 +165,23 @@ export class ApplicationAudioMixer {
 	}
 	public submit(batch: AudioCommandBatch): void { validateAudioBatch(batch); this.pending.push(clone(batch)); }
 	public flush(): AudioCommandBatch {
-		const incoming = this.pending.splice(0).flatMap(batch => batch.commands).sort(compareResolved);
+		const submitted = this.pending.splice(0).flatMap(batch => batch.commands);
+		const rejected = submitted.filter(command => "bus" in command && command.bus !== undefined && !this.buses.has(command.bus)).length;
+		const incoming = submitted.filter(command => !("bus" in command && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved(a, b, this.buses));
 		const controls = incoming.filter(command => !isVoiceCommand(command));
 		for (const command of controls) this.applyControl(command);
 		const voices = incoming.filter(isVoiceCommand);
 		const music = voices.filter((command): command is ResolvedAudioCommand & PlayMusicCommand => command.type === "playMusic");
 		const nonMusic = this.limitVoices(voices.filter(command => command.type !== "playMusic"));
 		const selectedMusic = this.selectMusic(music);
-		const commands = [...controls, ...nonMusic, ...(selectedMusic ? [selectedMusic] : [])].sort(compareResolved);
-		const diagnostics: AudioDiagnostics = { collected: incoming.length, rejected: 0, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter(command => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
+		const commands = [...controls, ...nonMusic, ...(selectedMusic ? [selectedMusic] : [])].sort((a, b) => compareResolved(a, b, this.buses));
+		const diagnostics: AudioDiagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter(command => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
 		return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map(command => ({ ...command, sequence: this.sequence })), diagnostics };
 	}
 	public toSettings(): AudioApplicationSettings { const settings: AudioApplicationSettings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus).map(clone), ...(this.activeMusic ? { activeMusic: clone(this.activeMusic) } : {}), sequence: this.sequence }; validateApplicationAudioSettings(settings); return settings; }
-	private limitVoices(commands: ResolvedAudioCommand[]): ResolvedAudioCommand[] { const result: ResolvedAudioCommand[] = []; for (const [busId, entries] of groupBy(commands, command => commandBus(command)).entries()) result.push(...entries.sort(compareResolved).slice(0, this.buses.get(busId)!.maxVoices)); return result; }
+	private limitVoices(commands: ResolvedAudioCommand[]): ResolvedAudioCommand[] { const result: ResolvedAudioCommand[] = []; for (const [busId, entries] of groupBy(commands, command => commandBus(command)).entries()) result.push(...entries.sort((a, b) => compareResolved(a, b, this.buses)).slice(0, this.buses.get(busId)!.maxVoices)); return result; }
 	private selectMusic(candidates: Array<ResolvedAudioCommand & PlayMusicCommand>): ResolvedAudioCommand | undefined {
-		const ordered = candidates.sort(compareResolved);
+		const ordered = candidates.sort((a, b) => compareResolved(a, b, this.buses));
 		for (const candidate of ordered) {
 			const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
 			const currentPriority = this.activeMusic ? resolvedPriority(this.activeMusic, this.buses) : -Infinity;
@@ -190,6 +192,7 @@ export class ApplicationAudioMixer {
 	}
 	private applyControl(command: ResolvedAudioCommand): void {
 		if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)) this.activeMusic = undefined;
+		if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`) this.activeMusic = undefined;
 		if (command.type === "stopAll") this.activeMusic = undefined;
 		if (command.type === "setBusVolume") { const bus = this.buses.get(command.bus); if (bus) { bus.volume = command.volume; if (command.muted !== undefined) bus.muted = command.muted; } }
 		if (command.type === "pauseBus" || command.type === "resumeBus") { const bus = this.buses.get(command.bus); if (bus) bus.paused = command.type === "pauseBus"; }
@@ -235,7 +238,7 @@ export const audio = {
 	emitter(sourceId: string): AudioEmitter { return new AudioEmitter(sourceId); },
 	bus(settings: AudioBusSettings): AudioBusSettings { validateBus(settings); return clone(settings); },
 	command: {
-		play(settings: Omit<PlaySoundCommand, "type">): PlaySoundCommand { return { type: "playSound", ...clone(settings) }; }, loop(settings: Omit<StartLoopCommand, "type">): StartLoopCommand { return { type: "startLoop", ...clone(settings) }; }, music(settings: Omit<PlayMusicCommand, "type">): PlayMusicCommand { return { type: "playMusic", ...clone(settings) }; }, stopSource(settings: Omit<StopSourceCommand, "type">): StopSourceCommand { return { type: "stopSource", ...clone(settings) }; }, stopMusic(settings: Omit<StopMusicCommand, "type"> = {}): StopMusicCommand { return { type: "stopMusic", ...clone(settings) }; }, setBusVolume(settings: Omit<SetBusVolumeCommand, "type">): SetBusVolumeCommand { return { type: "setBusVolume", ...clone(settings) }; }, pauseBus(settings: Omit<PauseBusCommand, "type">): PauseBusCommand { return { type: "pauseBus", ...clone(settings) }; }, resumeBus(settings: Omit<ResumeBusCommand, "type">): ResumeBusCommand { return { type: "resumeBus", ...clone(settings) }; }, stopAll(settings: Omit<StopAllCommand, "type">): StopAllCommand { return { type: "stopAll", ...clone(settings) }; },
+		play(settings: Omit<PlaySoundCommand, "type">): PlaySoundCommand { return { type: "playSound", ...clone(settings) }; }, loop(settings: Omit<StartLoopCommand, "type">): StartLoopCommand { return { type: "startLoop", ...clone(settings) }; }, music(settings: Omit<PlayMusicCommand, "type">): PlayMusicCommand { return { type: "playMusic", ...clone(settings) }; }, stopSource(settings: Omit<StopSourceCommand, "type">): StopSourceCommand { return { type: "stopSource", ...clone(settings) }; }, stopInstance(settings: Omit<StopInstanceCommand, "type">): StopInstanceCommand { return { type: "stopInstance", ...clone(settings) }; }, stopMusic(settings: Omit<StopMusicCommand, "type"> = {}): StopMusicCommand { return { type: "stopMusic", ...clone(settings) }; }, setBusVolume(settings: Omit<SetBusVolumeCommand, "type">): SetBusVolumeCommand { return { type: "setBusVolume", ...clone(settings) }; }, pauseBus(settings: Omit<PauseBusCommand, "type">): PauseBusCommand { return { type: "pauseBus", ...clone(settings) }; }, resumeBus(settings: Omit<ResumeBusCommand, "type">): ResumeBusCommand { return { type: "resumeBus", ...clone(settings) }; }, stopAll(settings: Omit<StopAllCommand, "type">): StopAllCommand { return { type: "stopAll", ...clone(settings) }; },
 	},
 	validate: validateAudioSettings, validateCommand: validateAudioCommand, validateBatch: validateAudioBatch,
 } as const;
@@ -250,10 +253,10 @@ function validateResolvedCommand(value: unknown): asserts value is ResolvedAudio
 function commandBus(command: AudioCommand): string { return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects"; }
 function isVoiceCommand(command: AudioCommand): command is PlaySoundCommand | StartLoopCommand | PlayMusicCommand { return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic"; }
 function resolvedPriority(command: AudioCommand | ResolvedAudioCommand, buses: ReadonlyMap<string, AudioBusSettings>): number { return (command as { priority?: number }).priority ?? buses.get(commandBus(command))?.defaultPriority ?? 0; }
-function compareCommand(a: AudioCommand, b: AudioCommand, aOrdinal: number, bOrdinal: number): number { return (resolvedPriority(b, new Map()) - resolvedPriority(a, new Map())) || commandBus(a).localeCompare(commandBus(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal; }
+function compareCommand(a: AudioCommand, b: AudioCommand, aOrdinal: number, bOrdinal: number, buses: ReadonlyMap<string, AudioBusSettings>): number { return (resolvedPriority(b, buses) - resolvedPriority(a, buses)) || commandBus(a).localeCompare(commandBus(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal; }
 function pipelineOrder(command: AudioCommand): number { if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume") return 0; if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic") return 1; if (command.type === "playMusic") return 2; if (command.type === "startLoop") return 3; return 4; }
-function comparePipeline(a: AudioCommand, b: AudioCommand, aOrdinal: number, bOrdinal: number): number { return pipelineOrder(a) - pipelineOrder(b) || compareCommand(a, b, aOrdinal, bOrdinal); }
-function compareResolved(a: ResolvedAudioCommand, b: ResolvedAudioCommand): number { return pipelineOrder(a) - pipelineOrder(b) || (resolvedPriority(b, new Map()) - resolvedPriority(a, new Map())) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence; }
+function comparePipeline(a: AudioCommand, b: AudioCommand, aOrdinal: number, bOrdinal: number, buses: ReadonlyMap<string, AudioBusSettings>): number { return pipelineOrder(a) - pipelineOrder(b) || compareCommand(a, b, aOrdinal, bOrdinal, buses); }
+function compareResolved(a: ResolvedAudioCommand, b: ResolvedAudioCommand, buses: ReadonlyMap<string, AudioBusSettings>): number { return pipelineOrder(a) - pipelineOrder(b) || (resolvedPriority(b, buses) - resolvedPriority(a, buses)) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence; }
 function byBus(a: AudioBusSettings, b: AudioBusSettings): number { return a.id.localeCompare(b.id); }
 function emptyBatch(runtimeId: string, sequence: number, diagnostics: AudioDiagnostics): AudioCommandBatch { return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } }; }
 function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> { const grouped = new Map<string, T[]>(); for (const item of items) { const id = key(item); const values = grouped.get(id) ?? []; values.push(item); grouped.set(id, values); } return grouped; }

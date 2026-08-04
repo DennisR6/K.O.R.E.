@@ -15,6 +15,7 @@ import { GameplayFeedback } from "../ui/GameplayFeedback.js";
 import { ItemPhaseControls } from "../ui/ItemPhaseControls.js";
 import { MatchResultOverlay, type MatchResultAction } from "../ui/MatchResultOverlay.js";
 import { buildMapSettings } from "../content/mapCatalog.js";
+import type { AudioCommand, ISoundEmitter } from "../engine/audio-sdk/index.js";
 
 export type LocalHandlerFactory = (mapId: string) => GameHandler;
 
@@ -22,7 +23,7 @@ export type LocalHandlerFactory = (mapId: string) => GameHandler;
 const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
-export class LocalMatchSceneRouter {
+export class LocalMatchSceneRouter implements ISoundEmitter {
 	private handler: GameHandler;
 	private overlay: MatchResultOverlay | undefined;
 	private starting = false;
@@ -30,6 +31,8 @@ export class LocalMatchSceneRouter {
 	private mapId: string | null = null;
 	private aiBattle = false;
 	private battleSeed: number | undefined;
+	private pendingSoundCommands: AudioCommand[] = [];
+	public readonly soundSourceId = "kore.scene-router";
 
 	public constructor(
 		private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler,
@@ -48,6 +51,8 @@ export class LocalMatchSceneRouter {
 	public isResultVisible(): boolean { return this.overlay?.isVisible() ?? false; }
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
+	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
+	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
 	/** Starts exactly one canonical match on the given map; failures leave the menu handler usable. */
 	public startLocalMatch(mapId: string = "ice-map-v1"): boolean {
@@ -86,6 +91,7 @@ export class LocalMatchSceneRouter {
 		this.starting = true;
 		try {
 			const next = factory();
+			this.captureSoundCommands(this.handler.getMouseHandler());
 			this.handler.dispose();
 			this.handler = next;
 			this.mapId = mapId;
@@ -98,6 +104,10 @@ export class LocalMatchSceneRouter {
 		} finally {
 			this.starting = false;
 		}
+	}
+	private captureSoundCommands(value: unknown): void {
+		if (!value || typeof value !== "object" || typeof (value as Partial<ISoundEmitter>).drainSoundCommands !== "function") return;
+		this.pendingSoundCommands.push(...(value as ISoundEmitter).drainSoundCommands());
 	}
 
 	private installResultOverlay(handler: GameHandler): void {
