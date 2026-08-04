@@ -4,9 +4,11 @@ import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { MatchResult } from "../rules/types.js";
 import type { IStructure } from "../structures/types.js";
 import type { ISettingsSerialize } from "../engine/types.js";
+import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
+export type { SystemSettings } from "../engine/contracts/systemSettings.js";
 
 /** Versioned, data-only identity of a registered engine system. */
-export type SystemSettings = { systemId: string; schemaVersion: 1; state: Record<string, unknown> };
+type SystemSettings = CanonicalSystemSettings;
 
 /**
  * Serializable system contract. IDs are explicit protocol constants; runtime
