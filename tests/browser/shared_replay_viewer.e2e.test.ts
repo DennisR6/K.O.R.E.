@@ -37,13 +37,13 @@ test.serial("shared replay viewer loads by URL and manual token without opening 
 			if (text?.includes("unavailable")) throw new Error(`direct replay load failed: ${text}`);
 			const error = await page.evaluate(() => (window as any).replayViewer?.getErrorState?.());
 			if (error) throw new Error(`direct replay decode failed: ${error}`);
-			return text === "Replay loaded. Playback is read-only.";
+			return text === "Replay loaded. No actions have been recorded yet.";
 		}, 10_000, 50, "direct replay load");
 		expect(sockets).toEqual([]);
 		const input = page.locator("#replay-viewer-controls input");
 		await input.fill(token);
 		await page.getByRole("button", { name: "Load replay" }).evaluate((button: HTMLButtonElement) => button.click());
-		await waitFor(async () => await page.locator("#replay-viewer-controls [role=status]").textContent() === "Replay loaded. Playback is read-only.", 10_000, 50, "manual replay load");
+		await waitFor(async () => await page.locator("#replay-viewer-controls [role=status]").textContent() === "Replay loaded. No actions have been recorded yet.", 10_000, 50, "manual replay load");
 		await page.getByRole("button", { name: "Paste from clipboard" }).evaluate((button: HTMLButtonElement) => button.click());
 		await waitFor(async () => (await page.locator("#replay-viewer-controls [role=status]").textContent())?.includes("Clipboard access was denied") ?? false, 10_000, 50, "clipboard denial recovery");
 		await input.fill("bad");

@@ -193,7 +193,9 @@ function startReplayViewer(initialToken: string): ReplayViewer {
 			const body = await response.json() as { replay?: unknown };
 			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? "Replay unavailable");
 			handler = viewer.getPlayer()!.getHandler();
-			status.textContent = "Replay loaded. Playback is read-only.";
+			status.textContent = viewer.getPlayer()!.getActionCount() > 0
+				? "Replay loaded. Playback is read-only."
+				: "Replay loaded. No actions have been recorded yet.";
 		} catch { status.textContent = "Replay unavailable. Check the share ID and try again."; }
 	};
 	load.addEventListener("click", () => { void loadToken(); });

@@ -85,4 +85,6 @@ export class ReplayPlayer {
 	public getTickCount(): number {
 		return this.tickCount;
 	}
+	/** Number of recorded actions available for visible playback. */
+	public getActionCount(): number { return this.replay.actions.length; }
 }
