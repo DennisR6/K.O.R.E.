@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { ensureBrowserBuild, launchBrowser, nextTestPort, startTestServer, waitFor } from "./browserHarness.ts";
 
-test.serial("online operations join honors map preference and pauses only after both players agree", async () => {
+test.serial("online match join honors map preference without mounting legacy HTML match controls", async () => {
 	await ensureBrowserBuild();
 	const port = nextTestPort();
 	const secret = "section-20-dashboard-secret-with-at-least-32-bytes";
@@ -23,19 +23,8 @@ test.serial("online operations join honors map preference and pauses only after 
 		await pageB.goto(join);
 		const mode = (page: typeof pageA) => page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id ?? null);
 		await waitFor(async () => (await mode(pageA)) !== null && (await mode(pageB)) !== null, 20_000, 100, "matched online game");
-		expect(await pageA.locator("#network-pause-menu").count()).toBe(1);
-		expect(await pageB.locator("#network-pause-menu").count()).toBe(1);
-
-		const pauseA = pageA.locator("#network-pause-menu button").first();
-		const pauseB = pageB.locator("#network-pause-menu button").first();
-		await pauseA.evaluate((button: HTMLButtonElement) => button.click());
-		await waitFor(async () => (await pageA.locator("#network-pause-menu p").textContent())?.includes("Waiting") ?? false, 10_000, 50, "first pause request");
-		await pauseB.evaluate((button: HTMLButtonElement) => button.click());
-		await waitFor(async () => (await pageA.locator("#network-pause-menu p").textContent()) === "Match paused", 10_000, 50, "authoritative pause");
-		await waitFor(async () => (await pageB.locator("#network-pause-menu p").textContent()) === "Match paused", 10_000, 50, "authoritative pause broadcast");
-		await pageA.getByRole("button", { name: "Leave game" }).click();
-		await pageA.waitForURL(`${server.url}/`);
 		expect(await pageA.locator("#network-pause-menu").count()).toBe(0);
+		expect(await pageB.locator("#network-pause-menu").count()).toBe(0);
 		await contextA.close();
 		await contextB.close();
 	} finally {

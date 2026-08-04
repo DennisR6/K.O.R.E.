@@ -51,14 +51,19 @@ The existing `SoundSystem` → `ApplicationAudioMixer` → `BrowserAudioOutput`
 path remains the only browser-audio route. Gameplay shot/music cues remain in
 the gameplay emitter. Local HUD pause is host-local and freezes
 `GameHandler.tick()` without changing any serializable authoritative state;
-resume releases that transient lock. Network pause operations remain the
-browser/server-host mutual-pause functionality, so the network HUD hides its
-pause/resume controls. The network HUD also hides item skip until an
-authoritative skip-phase protocol exists.
+resume releases that transient lock. The production network match mounts no
+HTML pause/report/leave controls, and its HUD hides pause/resume and item skip
+until authoritative protocol support exists.
 
 Result visibility is projection-driven. Rematch and menu actions are semantic
 HUD commands routed by `LocalMatchSceneRouter`; returning to menu releases
 match music through the existing scene audio policy.
+
+In online results, `Replay` asks the authoritative server for the frozen public
+token and navigates the requesting player to its read-only viewer. `Share`
+displays the same token URL for copying. Replay-share creation is idempotent per
+completed match and the server broadcasts its token to both participants, so
+either player can export it.
 
 ## Extending
 
@@ -80,4 +85,4 @@ match music through the existing scene audio policy.
 | Direction/status duplicate layers | HUD projection draws active-player dots and pull-arrow geometry; world renderer no longer draws status/result | migrated |
 | World drag aiming | `UiSystem` delegated input | intentionally retained as world input |
 | Local pause | HUD command freezes transient local handler ticks | migrated |
-| DOM network pause/share/report controls | Browser host; unavailable HUD controls are hidden | intentionally browser-hosted |
+| Persistent DOM network pause/report/leave controls | Removed; unavailable HUD controls are hidden | migrated |

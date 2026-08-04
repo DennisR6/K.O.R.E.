@@ -5,6 +5,7 @@ import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { EngineSettings } from "../engine/types.js";
 import { GameState } from "../engine/types.js";
+import type { GameSettings } from "../settings/settings.js";
 import type { FrozenReplayDocument, ReplayAction } from "../replay/types.js";
 import { validateFrozenReplayDocument } from "../replay/types.js";
 import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
@@ -13,6 +14,8 @@ import { validateMapDocument, type MapDocument } from "../contracts/documents.js
 export type StoredGame = {
 	id: string;
 	settings: EngineSettings;
+	/** Immutable replay origin retained independently from the mutable live snapshot. */
+	initialSettings?: GameSettings;
 	users: string[];
 	currentTeam: number;
 	turnNumber: number;
@@ -133,7 +136,7 @@ export class GameDatabase {
 	}
 
 	public createGame(game: StoredGame): void {
-		const snapshot = compress({ settings: game.settings, actions: game.actions ?? [] });
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings ?? game.settings, actions: game.actions ?? [] });
 		const lifecycle = game.lifecycle ?? createLifecycle("resident", game.updatedAt, game.updatedAt);
 		this.db.transaction(() => {
 			this.db.query(`
@@ -147,7 +150,7 @@ export class GameDatabase {
 	}
 
 	public saveGame(game: StoredGame): void {
-		const snapshot = compress({ settings: game.settings, actions: game.actions ?? [] });
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings ?? game.settings, actions: game.actions ?? [] });
 		this.db.transaction(() => {
 			this.db.query(`
 			UPDATE games
@@ -170,6 +173,7 @@ export class GameDatabase {
 		return {
 			id: row.id,
 			settings: decompressed.settings,
+			initialSettings: decompressed.initialSettings ?? decompressed.settings,
 			actions: decompressed.actions,
 			users: users.map(user => user.user_id),
 			currentTeam: row.current_team,
@@ -284,6 +288,17 @@ export class GameDatabase {
 		validateFrozenReplayDocument(replay);
 		const lifecycle = this.getLifecycle(gameId);
 		if (lifecycle?.status !== "completed") throw new Error("Replay shares require a completed match");
+		const existing = this.db.query("SELECT token, replay_json, created_at, revoked_at FROM replay_shares WHERE game_id = ?1").get(gameId) as { token: string; replay_json: string; created_at: number; revoked_at: number | null } | null;
+		if (existing?.revoked_at === null) {
+			try {
+				const storedReplay = JSON.parse(existing.replay_json) as FrozenReplayDocument;
+				validateFrozenReplayDocument(storedReplay);
+				return { token: existing.token, replay: structuredClone(storedReplay), createdAt: existing.created_at, revokedAt: null };
+			} catch { throw new Error("Stored replay share is invalid"); }
+		}
+		// `game_id` is intentionally unique. A revoked share is replaced so either
+		// participant can publish a fresh token without reviving the old URL.
+		if (existing) this.db.query("DELETE FROM replay_shares WHERE game_id = ?1").run(gameId);
 		const token = crypto.randomUUID().replaceAll("-", "");
 		this.db.query("INSERT INTO replay_shares (token, game_id, replay_json, created_at) VALUES (?1, ?2, ?3, ?4)")
 			.run(token, gameId, JSON.stringify(replay), now);
@@ -388,14 +403,14 @@ function lifecycleFromRow(row: StoredLifecycleRow): PersistedMatchLifecycle {
 	};
 }
 
-function compress(data: { settings: EngineSettings; actions: ReplayAction[] }): Uint8Array {
+function compress(data: { settings: EngineSettings; initialSettings: GameSettings | EngineSettings; actions: ReplayAction[] }): Uint8Array {
 	return gzipSync(JSON.stringify(data));
 }
 
-function decompress(snapshot: Uint8Array): { settings: EngineSettings; actions: ReplayAction[] } {
+function decompress(snapshot: Uint8Array): { settings: EngineSettings; initialSettings?: GameSettings; actions: ReplayAction[] } {
 	const parsed = JSON.parse(gunzipSync(snapshot).toString());
 	if (parsed && typeof parsed === "object" && "settings" in parsed) {
-		return { settings: parsed.settings as EngineSettings, actions: (parsed.actions ?? []) as ReplayAction[] };
+		return { settings: parsed.settings as EngineSettings, initialSettings: parsed.initialSettings as GameSettings | undefined, actions: (parsed.actions ?? []) as ReplayAction[] };
 	}
 	return { settings: parsed as EngineSettings, actions: [] };
 }

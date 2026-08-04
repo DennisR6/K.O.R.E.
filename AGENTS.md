@@ -278,8 +278,8 @@ After every change, check whether this guide still reflects the implementation a
   settings still serialize ordinary strings, but KORE must author and parse its
   vocabulary exclusively through these enums. The local pause command freezes
   transient handler ticks; online skip/pause controls are hidden because the
-  server protocol has no skip action and retains its separate mutual-pause DOM
-  host. Do not add manual HUD hitboxes or direct `AudioManager` calls to
+  server protocol has no skip action or production pause surface. Do not add
+  manual HUD hitboxes or direct `AudioManager` calls to
   gameplay scenes.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
@@ -322,7 +322,8 @@ After every change, check whether this guide still reflects the implementation a
   static-file routing.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
-	`EngineSettings` snapshots, maintains player-to-game membership rows, and
+	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
+	maintains player-to-game membership rows, and
 	migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
 	`completed`) for durable aggregate match metrics. It also stores immutable
 	UUID-keyed declarative map revisions with canonical content hashes and
@@ -749,6 +750,10 @@ authoritative `REMATCH` resets the handler and broadcasts fresh per-player
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
 from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
+Completed-match replay shares are idempotent per game: either participant may
+request the same public token and the runtime broadcasts it to both connected
+participants. The requesting online HUD `Replay` action opens the read-only
+viewer; `Share` exposes the same URL for copying.
 The server advertises its public base URL through `/config`: `KORE_BASE_URL`
 (default `https://lupricht.net/kore`) is read at startup, the matching WebSocket
 URL is derived, and both are served as a never-cached JSON contract. The

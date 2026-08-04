@@ -36,6 +36,7 @@ describe("Persisted Match Continuation", () => {
 
 		// Snapshot everything the persisted game must reproduce.
 		const snapshotBeforeEviction = record.handler.toSettings();
+		const replayInitialSettings = record.recorder.getReplay().initialSettings;
 		const ruleStateBefore = { ...record.ruleState };
 		expect(ruleStateBefore).toEqual({ phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 });
 		const entityStateBefore = record.handler.getEntityManager().serialize();
@@ -63,6 +64,7 @@ describe("Persisted Match Continuation", () => {
 		expect(restored.teamByUser.get(userOne)).toBe(0);
 		expect(restored.teamByUser.get(userTwo)).toBe(1);
 		expect(restored.recorder.getReplay().actions).toHaveLength(1);
+		expect(restored.recorder.getReplay().initialSettings).toEqual(replayInitialSettings);
 		database.close();
 	});
 

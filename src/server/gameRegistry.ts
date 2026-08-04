@@ -310,7 +310,7 @@ export class GameRegistry {
 		const handler = this.buildAuthoritativeHandler(stored.settings, stored.users.length)
 		handler.setActiveTeam(stored.currentTeam)
 		handler.setTurnNumber(stored.turnNumber)
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, stored.actions, stored.lifecycle, stored.mapId, stored.initialSettings)
 		this.games.set(id, record)
 		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
@@ -327,10 +327,11 @@ export class GameRegistry {
 		actions?: ReplayDocument["actions"],
 		lifecycle: PersistedMatchLifecycle = createLifecycle("resident", Date.now()),
 		mapId: string = "ice-map-v1",
+		initialSettings?: GameSettings,
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
-		const recorder = new ReplayRecorder(handler.toSettings(), 12345, actions ?? [])
+		const recorder = new ReplayRecorder(initialSettings ?? handler.toSettings(), 12345, actions ?? [])
 		return {
 			id,
 			handler,
@@ -355,6 +356,7 @@ export class GameRegistry {
 		const game: StoredGame = {
 			id: record.id,
 			settings: record.handler.toSettings(),
+			initialSettings: record.recorder.getReplay().initialSettings,
 			users: record.users,
 			currentTeam: record.currentTeam,
 			turnNumber: record.turnNumber,
