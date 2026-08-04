@@ -120,6 +120,9 @@ not a game snapshot or SDK requirement.
 2. `GameEmitter` emits match music at live construction.
 3. `GameEmitter.sendShot()` emits a shot command only after a validated local
    turn has started visual playback.
+4. `KoreGameHudSurface` emits confirmation only after its semantic HUD action
+   reaches the KORE command port successfully. Async network ports return
+   `false`, so request submission does not play an acceptance cue.
 
 These are mappings to semantic cues, not direct `AudioManager` calls.
 

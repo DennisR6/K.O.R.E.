@@ -2,7 +2,6 @@ import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import { BoundarySystem } from "./BoundarySystem.js";
-import { DirectionArrow } from "./DirectionArrow.js";
 import { EmitterSystem } from "./Emitter.js";
 import { EffectSystem } from "./EffectSystem.js";
 import { GameStateManager } from "./GameStateManager.js";
@@ -86,12 +85,6 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 		}
 		case "ai.battle": return AiBattleSystem.fromSettings(state)
 		case "ai.opponent": return AiOpponentSystem.fromSettings(state)
-		case "ui.direction-arrow": {
-			if (Object.keys(state).length) throw new Error("Malformed direction arrow settings")
-			const input = restored.get("ui.pointer-input")
-			if (!(input instanceof UiSystem)) throw new Error("Direction arrow requires serialized UI input")
-			return new DirectionArrow(input)
-		}
 		default: throw new Error(`Unknown system ID '${settings.systemId}'`)
 	}
 }

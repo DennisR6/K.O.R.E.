@@ -26,8 +26,8 @@ import {
  * emitter, or gameplay method may be invoked from the test.
  */
 
-/** World-coordinate center of the ItemPhaseControls "Skip phase" button. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 151 };
+/** World-coordinate center of the SDK HUD "Skip phase" button. */
+const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 
 describe("Section 16.3 local turn through browser input", () => {
 	afterAll(() => {

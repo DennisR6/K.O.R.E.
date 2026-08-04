@@ -5,10 +5,12 @@ import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.
 export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 	public readonly systemId = "core.emitter";
 	emitter: IInputEmitter
-	constructor(em?: IInputEmitter, private readonly onError?: (error: unknown) => void) {
+	constructor(em?: IInputEmitter, private onError?: (error: unknown) => void) {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
+	/** Installs a host feedback hook without making the emitter itself a UI dependency. */
+	public setErrorHandler(onError: ((error: unknown) => void) | undefined): void { this.onError = onError }
 	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {

@@ -3,7 +3,6 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { validateSystemSettingsList } from "../src/systems/systemSettings.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
-import { DirectionArrow } from "../src/systems/DirectionArrow.ts";
 import { EmitterSystem } from "../src/systems/Emitter.ts";
 
 test("engine system snapshots round trip as JSON-identical data", () => {
@@ -33,7 +32,7 @@ test("mid-playback restored system graph reaches the uninterrupted snapshot", ()
 test("registered browser adapters export only deterministic JSON state", () => {
 	const ui = new UiSystem();
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings())
-		.addSystem(ui).addSystem(new DirectionArrow(ui)).addSystem(new EmitterSystem()).build();
+		.addSystem(ui).addSystem(new EmitterSystem()).build();
 	const snapshot = JSON.parse(JSON.stringify(handler.toSettings()));
 	expect(new GameHandlerBuilder().fromSettings(snapshot).build().toSettings()).toEqual(snapshot);
 });

@@ -1,7 +1,7 @@
 import type { RenderContext } from "../engine/RenderContext.js";
-import { GameState, getEngineStateName } from "../engine/types.js";
+import { GameState } from "../engine/types.js";
 import type { ItemPickup, ItemPickupState } from "../item/types.js";
-import { MatchStatus, type MatchResult, type RuleState } from "../rules/types.js";
+import { type MatchResult, type RuleState } from "../rules/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { SHAPE } from "../physics/physics.js";
 import type { PlayerSettings } from "../entity/types.js";
@@ -34,7 +34,6 @@ export class AuthoritativeGameplayRenderer {
 		for (const structure of snapshot.structures) this.drawStructure(renderer, structure);
 		this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState);
 		for (const player of snapshot.players) this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
-		this.drawStatus(renderer, snapshot.gameState, snapshot.ruleState, snapshot.matchResult);
 	}
 
 	private drawStructure(renderer: RenderContext, structure: MapBoundarySettings): void {
@@ -109,23 +108,6 @@ export class AuthoritativeGameplayRenderer {
 			renderer.setFillColor("#4c1d95");
 			renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
 		});
-		for (const item of player.inventory) {
-			renderer.setFillColor("#713f12");
-			renderer.drawText(`${item.itemId}: ${item.remainingUses}`, position.x - player.size, position.y + player.size + 12, 11);
-		}
-		renderer.pop();
-	}
-
-	private drawStatus(renderer: RenderContext, gameState: GameState, ruleState: RuleState, result: MatchResult | undefined): void {
-		renderer.push();
-		renderer.setFillColor("#0f172a");
-		renderer.drawText(`Team ${ruleState.activeTeam + 1} | ${ruleState.phase} | Turn ${ruleState.turnNumber + 1}`, 20, 28, 16);
-		renderer.drawText(getEngineStateName(gameState), 20, 48, 14);
-		if (gameState === GameState.Playing) renderer.drawText("Authoritative playback", 20, 68, 14);
-		if (result) {
-			const message = result.status === MatchStatus.Draw ? "Match draw" : `Team ${result.winnerTeam} wins`;
-			renderer.drawText(message, renderer.WORLD_SIZE_X / 2 - 80, renderer.WORLD_SIZE_Y / 2, 24);
-		}
 		renderer.pop();
 	}
 }

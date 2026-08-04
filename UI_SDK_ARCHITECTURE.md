@@ -123,6 +123,17 @@ The production KORE main menu is the current full composition: its screens,
 buttons, navigation, and semantic commands are generic UI settings, while the
 KORE surface retains visual projection and application callback dispatch.
 
+The production KORE gameplay HUD follows the same boundary through
+`src/kore/ui/gameHud.ts`: generic actions remain serialized strings, while the
+KORE layer narrows them to enum-backed typed HUD commands before routing them to
+gameplay authority.
+
+Hosts may project dynamic state without reaching into element implementations:
+`UiRuntime.dispatch()`, `setElementVisible()`, `setElementEnabled()`, and
+`setElementAction()` use the same validated generic action/settings contracts.
+The KORE HUD uses these capabilities to apply its immutable gameplay projection;
+they do not add KORE concepts to the generic SDK.
+
 ## 15. Extension and generation model
 
 The source of truth is `UiMenuSettings`, `UiElementSettings`, `UiAction`, and

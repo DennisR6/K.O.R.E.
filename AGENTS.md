@@ -219,7 +219,6 @@ After every change, check whether this guide still reflects the implementation a
   final position and velocity.
 - `src/systems/GameStateManager.ts`: incomplete state transitions.
 - `src/systems/TurnSystem.ts`: client turn-state mapping for controlled teams.
-- `src/systems/DirectionArrow.ts`: shot-direction overlay.
 - `src/systems/RoundSystem.ts`, `WinningSystem.ts`, `BoundarySystem.ts`,
   `EffectSystem.ts`, `Simulator.ts`, and related helpers: partial, placeholder,
   or archival implementations. Verify each before relying on it.
@@ -255,19 +254,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
-- `src/ui/GameplayFeedback.ts`: shared input-rejection feedback for local
-  gameplay.
-- `src/ui/ItemPhaseControls.ts`: browser-visible item-phase panel (draws the
-  phase state and skip/use buttons, routes use/skip through the validated
-  `ItemPhaseUI` -> emitter -> `RuleInterpreter` chain, delegates presses
-  outside the panel to the gameplay input).
-- `src/ui/MatchResultOverlay.ts`: completed-match result screen with rematch
-  and menu actions; it passes mouse events through to the gameplay input while
-  hidden and resets the wrapped input surface on rematch/dispose.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
   without retaining stale handlers; `createLocalGameplayHandler()` wires
-  `UiSystem`, `DirectionArrow`, `GameplayFeedback`, `ItemPhaseControls`, and
-  `EmitterSystem` around a canonical match; `createAiBattleHandler()` builds an
+  `UiSystem` and `EmitterSystem` around a canonical match, then installs the
+  SDK-authored `KoreGameHudSurface`; `createAiBattleHandler()` builds an
   autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
   Every battle start and battle rematch draws a fresh battle seed (injectable
   `battleSeedSource`, exposed as `getBattleSeed()`), so each battle is a new
@@ -277,6 +267,15 @@ After every change, check whether this guide still reflects the implementation a
   UI framework, and persistent menu-audio intent. `KoreMainMenuSurface.ts`
   reconstructs that result as the KORE renderer/input/audio adapter; do not add
   parallel pages, manual hitboxes, or browser resources to the composition.
+- `src/kore/ui/gameHud.ts` and `KoreGameHudSurface.ts`: authoritative
+  SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.
+  `hudCommands.ts` owns the enum-backed KORE HUD command vocabulary and
+  `gameHudProjection.ts` owns the detached gameplay projection; generic UI
+  settings still serialize ordinary strings. The local pause command freezes
+  transient handler ticks; online skip/pause controls are hidden because the
+  server protocol has no skip action and retains its separate mutual-pause DOM
+  host. Do not add manual HUD hitboxes or direct `AudioManager` calls to
+  gameplay scenes.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - The SDK main menu offers "1 vs KI" (world rect `(270..530, 112..170)`),
@@ -383,6 +382,7 @@ bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds
 bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
 bun run test:browser:audio # Generic audio aggregation browser E2E
 bun run test:browser:menu-sdk # SDK-authored production main-menu browser E2E
+bun run test:browser:hud # SDK-authored gameplay HUD browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run
@@ -465,10 +465,11 @@ Account for this mismatch when changing rendering APIs.
 2. `PhysicsSystem`
 3. `GameStateManager`
 
-The local gameplay branch in `src/main.ts` adds `UiSystem`, `DirectionArrow`,
-and `EmitterSystem`; `defaultSystems()` remains the sole registration point for
-physics and playback. The network branch waits for the server `INIT` settings,
-then installs the same UI systems with `NetworkEmitter`.
+The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`,
+then wraps input/drawing with `KoreGameHudSurface`; `defaultSystems()` remains
+the sole registration point for physics and playback. The network branch waits
+for the server `INIT` settings, then installs the same UI systems with
+`NetworkEmitter` and a capability-limited HUD surface.
 
 `GameHandlerBuilder.fromSettings()` installs the background, teams, players,
 wrapped map structures, handler effects, items, and map friction. It restores

@@ -4,21 +4,23 @@ import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
 import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
+import { GameState } from "../engine/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
 import { validateGameSettings } from "../settings/settings.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
-import { DirectionArrow } from "../systems/DirectionArrow.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
-import { GameplayFeedback } from "../ui/GameplayFeedback.js";
-import { ItemPhaseControls } from "../ui/ItemPhaseControls.js";
-import { MatchResultOverlay, type MatchResultAction } from "../ui/MatchResultOverlay.js";
+import { ItemPhaseUI } from "../ui/ItemPhaseUI.js";
 import { buildMapSettings } from "../content/mapCatalog.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
 import { koreAudio } from "../kore/audio.js";
+import { createKoreGameHudSurface } from "../kore/ui/KoreGameHudSurface.js";
+import { KoreHudCommand } from "../kore/ui/hudCommands.js";
+import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 
 export type LocalHandlerFactory = (mapId: string) => GameHandler;
+type MatchResultAction = "rematch" | "menu" | "replay" | "share";
 
 /** Bounded hard-AI search for browser-responsible KI-vs-KI decisions. */
 const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
@@ -26,12 +28,12 @@ const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamp
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
 export class LocalMatchSceneRouter implements ISoundEmitter {
 	private handler: GameHandler;
-	private overlay: MatchResultOverlay | undefined;
 	private starting = false;
 	private error: string | undefined;
 	private mapId: string | null = null;
 	private aiBattle = false;
 	private battleSeed: number | undefined;
+	private hud: ReturnType<typeof createKoreGameHudSurface> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
 	public readonly soundSourceId = "kore.scene-router";
 
@@ -50,7 +52,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public getError(): string | undefined { return this.error; }
 	public getMapId(): string | null { return this.mapId; }
 	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === "local-ice-duel-v1"; }
-	public isResultVisible(): boolean { return this.overlay?.isVisible() ?? false; }
+	public isResultVisible(): boolean {
+		if (this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined) this.hud?.applyProjection(createKoreHudProjection(this.handler, this.handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined));
+		return this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined;
+	}
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
 	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
@@ -114,14 +119,34 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 
 	private installResultOverlay(handler: GameHandler): void {
 		const gameplayInput = handler.getMouseHandler();
-		const overlay = new MatchResultOverlay(handler, action => this.handleResultAction(action), gameplayInput);
-		this.overlay = overlay;
-		handler.setMouseHandler(overlay);
-		handler.addPostDrawer(overlay);
+		const emitter = handler.getSystems().find(system => (system as { systemId?: string }).systemId === "core.emitter") as EmitterSystem | undefined;
+		const itemUi = emitter ? new ItemPhaseUI(handler, emitter.emitter) : undefined;
+		let rejection: string | undefined;
+		emitter?.setErrorHandler(error => { rejection = hudRejection(error); });
+		const hud = createKoreGameHudSurface({ handle: command => {
+			switch (command.type) {
+				case KoreHudCommand.UseItem: {
+					const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam()));
+					if (!actor || !itemUi) throw new Error("Items are unavailable"); itemUi.use(actor.getId(), command.payload.itemId, command.payload.target); return;
+				}
+				case KoreHudCommand.SkipItemPhase: if (!itemUi) throw new Error("Item phase is unavailable"); itemUi.skip(); return;
+				case KoreHudCommand.Rematch: this.handleResultAction("rematch"); return;
+				case KoreHudCommand.ReturnToMenu: this.handleResultAction("menu"); return;
+				case KoreHudCommand.Replay: this.handleResultAction("replay"); return;
+				case KoreHudCommand.Share: this.handleResultAction("share"); return;
+				case KoreHudCommand.Pause: handler.setPaused(true); return;
+				case KoreHudCommand.Resume: handler.setPaused(false); return;
+			}
+		} }, gameplayInput);
+		this.hud = hud;
+		handler.setMouseHandler(hud);
+		const sync = () => createKoreHudProjection(handler, handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined, rejection);
+		hud.applyProjection(sync());
+		handler.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(sync()); hud.tick(dt); } });
+		handler.addPostDrawer({ draw: renderer => { hud.applyProjection(sync()); hud.draw(renderer); } });
 	}
 
 	private handleResultAction(action: MatchResultAction): void {
-		if (!this.overlay?.isVisible()) return;
 		if (action === "replay" || action === "share") return;
 		if (action === "rematch") {
 			if (this.aiBattle) {
@@ -140,8 +165,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		// local match source before the fresh menu requests lower-priority music.
 		this.pendingSoundCommands.push(audio.command.stopSource({ sourceId: "kore.game.local", fadeOutMs: 150 }));
 		this.pendingSoundCommands.push(koreAudio.command.menuMusic("kore.menu"));
-		this.overlay = undefined;
 		this.mapId = null;
+		this.hud = undefined;
 		this.aiBattle = false;
 		this.battleSeed = undefined;
 		this.handler = this.createMenuHandler();
@@ -156,6 +181,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 }
 
+function hudRejection(error: unknown): string {
+	return (error instanceof Error ? error.message : "Action rejected").replace(/[\r\n]+/g, " ").replace(/^Error:\s*/, "").slice(0, 160);
+}
+
 /** Builds a local-match handler on any browser-available catalog map. */
 export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHandler {
 	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
@@ -166,20 +195,11 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHa
 		.fromSettings(settings)
 		.build();
 	const ui = new UiSystem();
-	const arrow = new DirectionArrow(ui);
 	const emitters = new CombiEmitter();
 	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2));
-	const feedback = new GameplayFeedback(handler, ui);
-	// Browser-visible item-phase panel; delegates to UiSystem outside the item
-	// phase and to shared validation inside it (ItemPhaseUI -> emitter -> rules).
-	const itemControls = new ItemPhaseControls(handler, emitters, ui);
 	handler.addSystem(ui);
-	handler.setMouseHandler(itemControls);
-	handler.addSystem(arrow);
-	handler.addSystem(new EmitterSystem(emitters, error => feedback.setRejection(error)));
-	handler.addPostDrawer(arrow);
-	handler.addPostDrawer(feedback);
-	handler.addPostDrawer(itemControls);
+	handler.setMouseHandler(ui);
+	handler.addSystem(new EmitterSystem(emitters));
 	return handler;
 }
 
@@ -227,18 +247,11 @@ export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty:
 		.fromSettings(settings)
 		.build();
 	const ui = new UiSystem();
-	const arrow = new DirectionArrow(ui);
 	const emitters = new CombiEmitter();
 	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2, seed));
-	const feedback = new GameplayFeedback(handler, ui);
-	const itemControls = new ItemPhaseControls(handler, emitters, ui);
 	handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings));
 	handler.addSystem(ui);
-	handler.setMouseHandler(itemControls);
-	handler.addSystem(arrow);
-	handler.addSystem(new EmitterSystem(emitters, error => feedback.setRejection(error)));
-	handler.addPostDrawer(arrow);
-	handler.addPostDrawer(feedback);
-	handler.addPostDrawer(itemControls);
+	handler.setMouseHandler(ui);
+	handler.addSystem(new EmitterSystem(emitters));
 	return handler;
 }

@@ -47,7 +47,7 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
  */
 
 /** World-coordinate centers of the visible browser controls. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 151 };
+const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 const LANDING_WORLD = { x: 400, y: 100 };
@@ -139,8 +139,7 @@ async function openMapSelection(page: import("playwright").Page): Promise<void> 
 
 /** Skips the item phase and plays a weak legal opening for the active team. */
 async function playWeakOpening(page: import("playwright").Page): Promise<{ movedBy: number; maxPlayback: number }> {
-	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
+	await skipItemPhase(page);
 	const shooter = (await readMatchState(page)).entities.find(entity => entity.team.includes(0))!;
 	const start = quantized(shooter);
 	await dragWorld(page, start, { x: start.x + WEAK_DRAG_DX, y: start.y });
@@ -165,8 +164,7 @@ async function playWeakOpening(page: import("playwright").Page): Promise<{ moved
  * next spawn figure instead of pushing one figure out of the arena.
  */
 async function playHazardWeak(page: import("playwright").Page): Promise<void> {
-	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
+	await skipItemPhase(page);
 	const shooter = (await readMatchState(page)).entities
 		.filter(entity => entity.team.includes(0) && !entity.dead)
 		.sort((a, b) => Math.hypot(a.x - 150, a.y - 225) - Math.hypot(b.x - 150, b.y - 225))[0];
@@ -202,12 +200,20 @@ async function waitForPlaybackOrResolution(page: import("playwright").Page, labe
  * shooter. After the last spawn the match ends (team 1 eliminated).
  */
 async function playSuicideTurn(page: import("playwright").Page, spawnIndex: number, expectEnd: boolean): Promise<void> {
-	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
+	await skipItemPhase(page);
 	const drag = SUICIDE_DRAGS[spawnIndex]!;
 	await dragWorld(page, drag.from, drag.to);
 	await waitForPlaybackOrResolution(page, "playback start");
 	await waitFor(async () => (await readMatchState(page)).state === (expectEnd ? "GameState.Game_over" : "GameState.Your_turn"), 90_000, 100, expectEnd ? "terminal result" : "suicide turn resolution");
+}
+
+async function skipItemPhase(page: import("playwright").Page): Promise<void> {
+	await waitFor(async () => await page.evaluate(() => {
+		const element = (window as any).game.handler.getMouseHandler()?.getRuntime?.().toSettings().screens[0].elements.find((candidate: any) => candidate.id === "hud-skip-item");
+		return element?.visible === true && element?.enabled === true;
+	}), 5_000, 50, "HUD skip control");
+	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
+	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
 }
 
 /** Plays one full Hazard Control terminal match (weak opening + 6 wall suicides). */

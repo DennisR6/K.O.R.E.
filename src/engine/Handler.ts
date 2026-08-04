@@ -114,6 +114,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	private disposed = false
+	/** Transient local host pause; it is intentionally not an authoritative snapshot field. */
+	private paused = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
 	/**
@@ -258,6 +260,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	public tick(dt: number = this.dt) {
 		if (this.disposed) return
+		if (this.paused) return
 		// Completed matches are frozen: the accepted final turn has been
 		// synchronized and its result stored. No later tick may mutate
 		// entities, effects, structures, systems, inventories, or outcome
@@ -497,6 +500,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.resetMapItemPickups()
 		const initialPhase = settings.gameMode?.phases?.[0] ?? RulePhase.Physics
 		this.startTurn({ phase: initialPhase, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		this.paused = false
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
 		this.mouseHandler?.reset?.()
@@ -516,6 +520,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.postDrawers = []
 	}
 	public isDisposed(): boolean { return this.disposed }
+	/** Freezes local host ticking without changing serializable authoritative match state. */
+	public setPaused(paused: boolean): void { this.paused = paused }
+	public isPaused(): boolean { return this.paused }
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
@@ -769,9 +776,8 @@ export class GameHandlerBuilder {
 			const systemOrder = snapshot.systemOrder as string[]
 			const byId = new Map(systemSettings.map(system => [system.systemId, system]))
 			const restored = new Map<string, ISerializableSystem>()
-			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "ui.direction-arrow" && id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
+			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
 			if (byId.has("core.simulator")) restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator")!, restored))
-			if (byId.has("ui.direction-arrow")) restored.set("ui.direction-arrow", createSystemFromSettings(byId.get("ui.direction-arrow")!, restored))
 			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
 			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")

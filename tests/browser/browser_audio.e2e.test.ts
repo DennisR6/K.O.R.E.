@@ -16,7 +16,7 @@ describe("browser audio aggregation pilots", () => {
 			expect(soundIds).toContain("kore.music.menu");
 			expect(soundIds).toContain("kore.ui.confirm");
 			expect(soundIds).toContain("kore.music.match");
-			await clickWorld(page, 660, 151); // item phase -> physics
+			await clickWorld(page, 660, 327); // item phase -> physics
 			await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 50, "physics phase");
 			const state = await readMatchState(page); const actor = state.entities.find((entity: any) => !entity.dead && entity.team.includes(state.activeTeam))!;
 			await dragWorld(page, { x: actor.x, y: actor.y }, { x: actor.x + 40, y: actor.y - 20 });

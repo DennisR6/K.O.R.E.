@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 import { GameState } from "../src/engine/types.ts";
 import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
-import { MatchResultOverlay } from "../src/ui/MatchResultOverlay.ts";
 import { LocalMatchSceneRouter } from "../src/scenes/LocalMatchSceneRouter.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
+import { createKoreGameHudSurface } from "../src/kore/ui/KoreGameHudSurface.ts";
+import { createKoreHudProjection } from "../src/kore/ui/gameHudProjection.ts";
+import { KoreHudCommand } from "../src/kore/ui/hudCommands.ts";
 
 function renderer(labels: string[]) {
 	return {
@@ -22,33 +24,39 @@ function completedHandler() {
 	return handler;
 }
 
-test("result overlay renders the authoritative winner or draw only after game over", () => {
+test("HUD result controls render the authoritative winner or draw and consume gameplay input", () => {
 	const handler = createCanonicalPlayableMatchHandler();
-	const actions: string[] = [];
-	const overlay = new MatchResultOverlay(handler, action => actions.push(action));
+	const actions: unknown[] = [];
+	let gameplayPresses = 0;
+	const overlay = createKoreGameHudSurface({ handle: action => actions.push(action) }, { updateMouse() {}, handleMousePressed() { gameplayPresses++; }, handleMouseReleased() {}, handleMouseWheel() {} });
 	const before: string[] = [];
+	overlay.applyProjection(createKoreHudProjection(handler));
 	overlay.draw(renderer(before));
-	expect(before).toEqual([]);
+	expect(before.some(text => text.includes("wins") || text === "Draw")).toBe(false);
 
 	handler.setMatchResult({ status: MatchStatus.Winner, winnerTeam: 1, reason: MatchEndReason.LastTeamStanding, turnNumber: 3 });
 	handler.setState(GameState.Game_over);
-	const winner: string[] = [];
-	overlay.draw(renderer(winner));
+	overlay.applyProjection(createKoreHudProjection(handler));
+	const winner: string[] = []; overlay.draw(renderer(winner));
 	expect(winner).toContain("Team 2 wins");
 
 	handler.setMatchResult({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 3 });
-	const draw: string[] = [];
-	overlay.draw(renderer(draw));
+	overlay.applyProjection(createKoreHudProjection(handler));
+	const draw: string[] = []; overlay.draw(renderer(draw));
 	expect(draw).toContain("Draw");
-	expect(draw.some(label => label.includes("Team"))).toBe(false);
 	overlay.updateMouse(250, 310);
 	overlay.handleMousePressed();
-	expect(actions).toEqual(["rematch"]);
+	expect(actions).toEqual([{ type: KoreHudCommand.Rematch, payload: undefined }]);
 	overlay.updateMouse(250, 365);
 	overlay.handleMousePressed();
 	overlay.updateMouse(420, 365);
 	overlay.handleMousePressed();
-	expect(actions).toEqual(["rematch", "replay", "share"]);
+	expect(actions).toEqual([
+		{ type: KoreHudCommand.Rematch, payload: undefined },
+		{ type: KoreHudCommand.Replay, payload: undefined },
+		{ type: KoreHudCommand.Share, payload: undefined },
+	]);
+	expect(gameplayPresses).toBe(0);
 });
 
 test("router rematch clears the result and menu action disposes the match handler", () => {
@@ -72,13 +80,4 @@ test("router rematch clears the result and menu action disposes the match handle
 	expect(router.getHandler()).not.toBe(handler);
 	expect(router.isLocalMatch()).toBe(false);
 	expect(created).toBe(1);
-});
-
-test("completed result overlay consumes gameplay input", () => {
-	const handler = completedHandler();
-	const overlay = new MatchResultOverlay(handler, () => { });
-	overlay.updateMouse(40, 40);
-	overlay.handleMousePressed();
-	overlay.handleMouseReleased();
-	expect(handler.getState()).toBe(GameState.Game_over);
 });

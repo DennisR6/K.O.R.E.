@@ -65,9 +65,8 @@ describe("browser KI vs KI battle", () => {
 					entities: handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
 				};
 			});
-			// The battle routes pointer events through the result overlay, whose
-			// wrapped gameplay input is the passive AI driver (no human input).
-			expect(matchInfo.mouseHandler).toBe("MatchResultOverlay");
+			// The SDK HUD wraps the passive AI driver; no human gameplay input is accepted.
+			expect(matchInfo.mouseHandler).toBe("KoreGameHudSurface");
 			expect(matchInfo.gameplayInput).toBe("AiBattleSystem");
 			expect(matchInfo.entities).toBe(12);
 

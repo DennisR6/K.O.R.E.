@@ -32,7 +32,7 @@ import {
 
 /** World-coordinate centers of the visible browser controls. */
 const ITEM_BUTTON_WORLD = { x: 645, y: 81 };
-const SKIP_BUTTON_WORLD = { x: 660, y: 151 };
+const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 
@@ -108,6 +108,10 @@ async function waitForPlaybackOrResolution(page: import("playwright").Page, labe
  * resolve (or for the match to end when `expectEnd` is set).
  */
 async function playTurn(page: import("playwright").Page, drag: Drag, expectEnd: boolean): Promise<void> {
+	await waitFor(async () => await page.evaluate(() => {
+		const element = (window as any).game.handler.getMouseHandler()?.getRuntime?.().toSettings().screens[0].elements.find((candidate: any) => candidate.id === "hud-skip-item");
+		return element?.visible === true && element?.enabled === true;
+	}), 5_000, 50, "HUD skip control");
 	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
 	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
 	await dragWorld(page, drag.from, drag.to);

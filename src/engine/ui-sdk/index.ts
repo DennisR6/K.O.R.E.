@@ -116,6 +116,23 @@ export class UiRuntime {
 		}
 		return false;
 	}
+	/** Rebinds a declared interactive element through the public generic action contract. */
+	public setElementAction(id: string, action: UiAction | undefined): boolean {
+		if (action) validateAction(action, new Set(this.screens.keys()));
+		for (const screen of this.screens.values()) {
+			const element = screen.elements.find(candidate => candidate.id === id);
+			if (element) { element.action = action ? clone(action) : undefined; return true; }
+		}
+		return false;
+	}
+	/** Updates enabled state through a reusable host-facing UI primitive. */
+	public setElementEnabled(id: string, enabled: boolean): boolean {
+		for (const screen of this.screens.values()) {
+			const element = screen.elements.find(candidate => candidate.id === id);
+			if (element) { element.enabled = enabled; return true; }
+		}
+		return false;
+	}
 	public drainCommands(): UiCommand[] { const commands = this.emitted.map(clone); this.emitted = []; return commands; }
 	public explain(): string { return `UI '${this.settings.id}' uses ${this.systems.map(system => system.id).join(", ")} with explicit tick() and draw().`; }
 
@@ -206,7 +223,7 @@ class UiElement implements UiRuntimeElement {
 	public get id(): string { return this.settings.id; } public get kind(): UiElementKind { return this.settings.kind; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get text(): string { return this.settings.text; } public set text(value: string) { this.settings.text = value; }
-	public get style(): string | undefined { return this.settings.style; } public get action(): UiAction | undefined { return this.settings.action; }
+	public get style(): string | undefined { return this.settings.style; } public get action(): UiAction | undefined { return this.settings.action; } public set action(value: UiAction | undefined) { this.settings.action = value; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public insertText(value: string): void { this.value += value; this.text = this.value; }
 	public deleteBackward(): void { this.value = this.value.slice(0, -1); this.text = this.value; }
