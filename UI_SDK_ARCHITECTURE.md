@@ -103,9 +103,10 @@ instances are independent; no global UI loop or singleton is required.
 
 ## 12. UI actions
 
-Actions are JSON-safe semantic commands: navigate, back, emit, set/select a
-value, or toggle visibility. Arbitrary callbacks are not serialized. Hosts drain
-emitted commands and translate them into application-specific behavior.
+Actions are JSON-safe semantic commands: navigate, back, emit (including values
+from named text inputs), set/select a value, set enabled/text state, or toggle
+visibility. Arbitrary callbacks are not serialized. Hosts drain emitted commands
+and translate them into application-specific behavior.
 
 ## 13. Framework composition
 
@@ -151,3 +152,14 @@ const restored = ui.fromSettings(JSON.parse(JSON.stringify(ui.fromSettings(setti
 A future KORE UI extension may wrap selected `ui` factories, provide a KORE
 theme, and translate emitted commands into local/online/map-selection routes
 without adding any KORE dependency to the generic UI SDK.
+
+## 17. Browser debug sandbox
+
+The standalone generic UI SDK sandbox is available only at `?debug=ui` (the
+diagnostic alias `?debugui=1` is also accepted). Its browser host is
+`src/debug/uiSandbox.ts`, not the generic SDK: it adapts p5 pointer/keyboard
+events into `UiInput`, explicitly calls `tick()` and `draw()`, and renders host
+diagnostics. The screens themselves are authored exclusively through the public
+`ui` SDK. It exercises component states, pointer/focus handling, text entry,
+navigation/history, JSON snapshot reconstruction, lifecycle switches,
+independent runtimes, and validation failures without booting KORE gameplay.

@@ -7,7 +7,10 @@ export type UiAction =
 	| { type: "navigate"; target: string }
 	| { type: "back" }
 	| { type: "emit"; command: string; payload?: JsonValue }
+	| { type: "emitValues"; command: string; targets: string[] }
 	| { type: "setValue"; target: string; value: JsonValue }
+	| { type: "setEnabled"; target: string; enabled: boolean }
+	| { type: "setText"; target: string; text: string }
 	| { type: "toggleVisibility"; target: string }
 	| { type: "closeOverlay" }
 	| { type: "select"; target: string; value: JsonValue };
@@ -76,6 +79,7 @@ export class UiRuntime {
 	private activeScreen: string;
 	private history: string[];
 	private pendingPress: string | undefined;
+	private hovered: string | undefined;
 	private pendingKeyboard: UiKeyboardState | undefined;
 	private pendingActions: UiAction[] = [];
 	private emitted: UiCommand[] = [];
@@ -99,6 +103,9 @@ export class UiRuntime {
 	}
 	public getActiveElements(): readonly UiRuntimeElement[] { return this.screens.get(this.activeScreen)!.elements; }
 	public getActiveScreen(): string { return this.activeScreen; }
+	public getFocusedElementId(): string | undefined { return this.getActiveElements().find(hasFocusable)?.id; }
+	public getHoveredElementId(): string | undefined { return this.hovered; }
+	public getPressedTargetId(): string | undefined { return this.pendingPress; }
 	public drainCommands(): UiCommand[] { const commands = this.emitted.map(clone); this.emitted = []; return commands; }
 	public explain(): string { return `UI '${this.settings.id}' uses ${this.systems.map(system => system.id).join(", ")} with explicit tick() and draw().`; }
 
@@ -119,10 +126,12 @@ export class UiRuntime {
 	}
 	public pointer(input: UiPointerState | undefined): void {
 		this.pendingPress = undefined;
-		if (!input?.justPressed) return;
+		this.hovered = undefined;
+		if (!input) return;
 		const point = { x: input.x, y: input.y };
 		const target = this.getActiveElements().find(element => hasPointerTarget(element) && element.visible && element.enabled && element.containsPoint(point));
-		this.pendingPress = target?.id;
+		this.hovered = target?.id;
+		if (input.justPressed) this.pendingPress = target?.id;
 	}
 	public focus(): void {
 		if (!this.pendingPress) return;
@@ -165,7 +174,17 @@ export class UiRuntime {
 			const element = this.getActiveElements().find(candidate => candidate.id === target); if (element) element.visible = !element.visible; return;
 		}
 		if (action.type === "setValue" || action.type === "select") {
-			const element = this.getActiveElements().find(candidate => candidate.id === action.target); if (element && hasTextInput(element) && typeof action.value === "string") element.value = action.value; return;
+			const element = this.getActiveElements().find(candidate => candidate.id === action.target); if (element && isTextInputElement(element) && typeof action.value === "string") element.value = action.value; return;
+		}
+		if (action.type === "setEnabled") { const element = this.getActiveElements().find(candidate => candidate.id === action.target); if (element) element.enabled = action.enabled; return; }
+		if (action.type === "setText") { const element = this.getActiveElements().find(candidate => candidate.id === action.target); if (element) element.text = action.text; return; }
+		if (action.type === "emitValues") {
+			const payload: { [key: string]: JsonValue } = {};
+			for (const target of action.targets) {
+				const element = this.getActiveElements().find(candidate => candidate.id === target);
+				if (element && isTextInputElement(element)) payload[target] = element.value;
+			}
+			this.emitted.push({ command: action.command, payload }); return;
 		}
 		if (action.type === "emit") this.emitted.push({ command: action.command, ...(action.payload === undefined ? {} : { payload: clone(action.payload) }) });
 	}
@@ -228,6 +247,7 @@ function hasPointerTarget(value: UiRuntimeElement): value is UiRuntimeElement & 
 function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return "focused" in value && value.kind !== "text"; }
 function hasPressable(value: UiRuntimeElement): value is UiRuntimeElement & IUiPressable { return value.kind === "button"; }
 function hasTextInput(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput" && value.focused === true; }
+function isTextInputElement(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput"; }
 function positive(value: number): boolean { return Number.isFinite(value) && value > 0; }
 function clone<T>(value: T): T { return structuredClone(value); }
 
@@ -260,6 +280,9 @@ function validateElement(element: UiElementSettings, ids: Set<string>, screenIds
 function validateAction(action: UiAction, screenIds: Set<string>): void {
 	if (action.type === "navigate" && !screenIds.has(action.target)) throw new Error("UI navigation target is missing");
 	if (action.type === "emit" && (!action.command || typeof action.command !== "string")) throw new Error("Invalid UI command");
+	if (action.type === "emitValues" && (!action.command || !Array.isArray(action.targets) || action.targets.some(target => typeof target !== "string"))) throw new Error("Invalid UI value command");
+	if (action.type === "setEnabled" && (typeof action.target !== "string" || typeof action.enabled !== "boolean")) throw new Error("Invalid UI enabled action");
+	if (action.type === "setText" && (typeof action.target !== "string" || typeof action.text !== "string")) throw new Error("Invalid UI text action");
 	assertJsonValue(action);
 }
 
@@ -274,6 +297,10 @@ export const ui = {
 	text(settings: Omit<UiElementSettings, "kind" | "action">): UiElementSettings { return { ...clone(settings), kind: "text", focusable: false }; },
 	textInput(settings: Omit<UiElementSettings, "kind">): UiElementSettings { return { ...clone(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text }; },
 	layout: { absolute(): UiLayout { return { type: "absolute" }; }, vertical(options: Omit<Extract<UiLayout, { type: "vertical" }>, "type"> = {}): UiLayout { return { type: "vertical", ...options }; } },
-	action: { navigate(target: string): UiAction { return { type: "navigate", target }; }, back(): UiAction { return { type: "back" }; }, emit(command: string, payload?: JsonValue): UiAction { return { type: "emit", command, ...(payload === undefined ? {} : { payload }) }; } },
+	action: {
+		navigate(target: string): UiAction { return { type: "navigate", target }; }, back(): UiAction { return { type: "back" }; }, emit(command: string, payload?: JsonValue): UiAction { return { type: "emit", command, ...(payload === undefined ? {} : { payload }) }; },
+		emitValues(command: string, targets: string[]): UiAction { return { type: "emitValues", command, targets: [...targets] }; },
+		setEnabled(target: string, enabled: boolean): UiAction { return { type: "setEnabled", target, enabled }; }, setText(target: string, text: string): UiAction { return { type: "setText", target, text }; },
+	},
 	types: { containsPoint(rect: UiRect, point: UiPoint): boolean { return point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height; } },
 } as const;

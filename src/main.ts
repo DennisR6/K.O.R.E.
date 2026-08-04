@@ -18,6 +18,7 @@ import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
 import { MatchResultOverlay } from "./ui/MatchResultOverlay.js";
 import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
+import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -36,7 +37,9 @@ let handler: GameHandler
 let router: LocalMatchSceneRouter | undefined
 const builder = new GameHandlerBuilder()
 	.defaultSystems()
-if (usersettings.replayToken) {
+if (isUiDebugSandboxUrl(uri)) {
+	startUiDebugSandbox()
+} else if (usersettings.replayToken) {
 	handler = new GameHandler()
 	const viewer = startReplayViewer(usersettings.replayToken)
 	startGame(handler, () => handler, () => viewer.advance())
@@ -374,15 +377,17 @@ window.addEventListener('mousemove', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+	const audio = (window as unknown as { game?: { audio?: AudioManager } }).game?.audio
+	if (!audio) return
 	switch (e.key) {
-		case "n": window.game.audio.nextTrack(); break
-		case "p": window.game.audio.previousTrack(); break
-		case "ArrowUp": window.game.audio.addVolume(0.05); break
-		case "ArrowDown": window.game.audio.addVolume(-0.05); break
+		case "n": audio.nextTrack(); break
+		case "p": audio.previousTrack(); break
+		case "ArrowUp": audio.addVolume(0.05); break
+		case "ArrowDown": audio.addVolume(-0.05); break
 	}
 });
 
-document.addEventListener('click', () => { window.game.audio.start() }, { once: true });
+document.addEventListener('click', () => { (window as unknown as { game?: { audio?: AudioManager } }).game?.audio?.start() }, { once: true });
 
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
 	window.addEventListener("load", () => {

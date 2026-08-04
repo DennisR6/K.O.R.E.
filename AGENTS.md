@@ -82,6 +82,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/main.ts`: browser bootstrap, menu/game selection, accessible online
   connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
   mouse events, keyboard audio controls, and `window.game` debug access.
+- `src/debug/uiSandbox.ts`: standalone p5 host for the generic UI SDK debug
+  sandbox. It activates only with `?debug=ui` (or `?debugui=1`) and keeps the
+  browser adapter and diagnostics outside the generic SDK.
 - `server.ts`: Bun static-file and native WebSocket server, in-memory lobby, and matchmaking loop.
 - `src-website/index.html`: standalone map-editor page.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
@@ -366,6 +369,7 @@ bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
+bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
 bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run
@@ -425,6 +429,9 @@ http://localhost:4001/?skipmenu=1
 ```
 
 `skipmenu` is truthy only for the values `1` and `true` in `src/main.ts`.
+`?debug=ui` opens the standalone generic UI SDK sandbox instead of normal
+menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
+is intentionally outside `src/engine/ui-sdk/`.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed
 but currently unused. The main menu's "Play Online" button fetches the
 server's `/config` advertisement (base URL from `KORE_BASE_URL`) and navigates
