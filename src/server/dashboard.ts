@@ -42,7 +42,7 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay">, publicBaseUrl?: string): Promise<Response | undefined> {
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView">, publicBaseUrl?: string): Promise<Response | undefined> {
 	const url = new URL(request.url); const pathname = url.pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
@@ -65,12 +65,20 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	}
 }
 
-function operatorReplays(request: Request, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay"> | undefined, pathname: string, requestedGameId: string | null, publicBaseUrl?: string): Response {
+function operatorReplays(request: Request, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView"> | undefined, pathname: string, requestedGameId: string | null, publicBaseUrl?: string): Response {
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	if (!database) return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
 	try {
 		const suffix = pathname.slice(DASHBOARD_REPLAYS_PATH.length).replace(/^\//, "");
-		if (suffix) {
+		const segments = suffix.split("/");
+		if (segments.length === 2 && segments[1] === "view" && segments[0]) {
+			const gameId = decodeURIComponent(segments[0]);
+			const replay = database.getOperatorReplay(gameId);
+			if (!replay) return notFound();
+			const view = database.createOperatorReplayView(gameId, replay);
+			return new Response(null, { status: 303, headers: { location: replayViewerUrl(view.token, publicBaseUrl), "cache-control": "no-store" } });
+		}
+		if (suffix && segments.length === 1) {
 			const replay = database.getOperatorReplay(decodeURIComponent(suffix));
 			if (!replay) return notFound();
 			return Response.json(replay, { headers: { "content-disposition": `attachment; filename="kore-replay-${safeFilename(suffix)}.json"`, "cache-control": "no-store" } });
@@ -78,7 +86,7 @@ function operatorReplays(request: Request, database: Pick<GameDatabase, "listOpe
 		const gameId = requestedGameId?.trim() || undefined;
 		const body: DashboardReplayIndexResponse = { schemaVersion: 1, replays: database.listOperatorReplays(gameId), filter: gameId ? { gameId } : {} };
 		if (wantsJson(request)) return Response.json(body, { headers: { "cache-control": "no-store" } });
-		return new Response(renderReplayDashboard(body, publicBaseUrl), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+		return new Response(renderReplayDashboard(body), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
 	}
@@ -191,9 +199,9 @@ function renderDashboard(metrics: DashboardMetricsResponse): string {
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE operator dashboard</title></head><body><main><h1>KORE operator dashboard</h1><p><a href="replays">Replay archive</a></p><dl><dt>All-time matches</dt><dd data-metric="allTime">${metrics.counts.allTime}</dd><dt>All-time players</dt><dd data-metric="playersAllTime">${metrics.counts.playersAllTime}</dd><dt>Players online</dt><dd data-metric="playersOnline">${metrics.counts.playersOnline}</dd><dt>Matches now</dt><dd data-metric="now">${metrics.counts.now}</dd><dt>Paused matches</dt><dd data-metric="paused">${metrics.counts.paused}</dd><dt>Sleeping matches</dt><dd data-metric="sleeping">${metrics.counts.sleeping}</dd><dt>Most played map</dt><dd data-metric="mostPlayedMap">${mostPlayed}</dd><dt>Measured at</dt><dd data-metric="measuredAt">${metrics.measuredAt}</dd></dl><table><caption>Map usage</caption><thead><tr><th>Map</th><th>Games</th><th>Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table><p data-freshness="metrics">${metrics.freshness}</p></main></body></html>`;
 }
 
-function renderReplayDashboard(response: DashboardReplayIndexResponse, publicBaseUrl?: string): string {
+function renderReplayDashboard(response: DashboardReplayIndexResponse): string {
 	const filter = response.filter.gameId ?? "";
-	const rows = response.replays.map(replay => `<tr><td>${escapeHtml(replay.gameId)}</td><td>${escapeHtml(replay.status)}</td><td>${replay.updatedAt}</td><td>${replay.actionCount}</td><td>${replay.replayToken ? `<a href="${escapeHtml(replayViewerUrl(replay.replayToken, publicBaseUrl))}">View replay</a> <a href="./${encodeURIComponent(replay.gameId)}">Download</a>` : "Available on completion"}</td></tr>`).join("") || "<tr><td colspan=\"5\">No replay found</td></tr>";
+	const rows = response.replays.map(replay => `<tr><td>${escapeHtml(replay.gameId)}</td><td>${escapeHtml(replay.status)}</td><td>${replay.updatedAt}</td><td>${replay.actionCount}</td><td><a href="./${encodeURIComponent(replay.gameId)}/view">View replay</a> <a href="./${encodeURIComponent(replay.gameId)}">Download</a></td></tr>`).join("") || "<tr><td colspan=\"5\">No replay found</td></tr>";
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE replay archive</title></head><body><main><h1>KORE replay archive</h1><p><a href="../dashboard">Dashboard</a></p><form method="get"><label>Match ID <input name="id" value="${escapeHtml(filter)}" autocomplete="off"></label><button type="submit">Filter</button></form><table><caption>Persisted match replays</caption><thead><tr><th>Match ID</th><th>Status</th><th>Updated</th><th>Actions</th><th>Replay</th></tr></thead><tbody data-replays="index">${rows}</tbody></table></main></body></html>`;
 }
 

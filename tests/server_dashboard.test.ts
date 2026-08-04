@@ -3,6 +3,8 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
+import { servePublicReplayShare } from "../src/server/replayShares.ts";
+import { ReplayViewer } from "../src/menu/replayViewer.ts";
 
 const secret = "0123456789abcdef0123456789abcdef";
 const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
@@ -97,13 +99,20 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	expect(await page.text()).toContain(`data-replays="index"`);
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
-	const token = database.listOperatorReplays(completed.id)[0]!.replayToken!;
 	expect(completedHtml).toContain("View replay");
-	expect(completedHtml).toContain(`?replay=${token}`);
+	expect(completedHtml).toContain(`./${completed.id}/view`);
 	const download = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(download.status).toBe(200);
 	expect(download.headers.get("content-disposition")).toContain("attachment");
 	expect(await download.json()).toMatchObject({ schemaVersion: 1, actions: [] });
+	const activeView = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/view`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(activeView.status).toBe(303);
+	const viewUrl = activeView.headers.get("location")!;
+	const viewToken = new URL(viewUrl, "https://operator.example").searchParams.get("replay")!;
+	const publicView = servePublicReplayShare(new Request(`https://operator.example/replays/${viewToken}`), registry)!;
+	expect(publicView.status).toBe(200);
+	const viewer = new ReplayViewer();
+	expect(viewer.loadReplay((await publicView.json() as { replay: unknown }).replay)).toBe(true);
 	database.close();
 });
 

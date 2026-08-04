@@ -316,7 +316,9 @@ After every change, check whether this guide still reflects the implementation a
   Every completed match automatically receives an unbroadcast replay token; the
   archive exposes a `View replay` link only to authenticated operators. These
   operator-only replay routes may expose match IDs and settings, while public
-  replay-share routes remain separately redacted.
+  replay-share routes remain separately redacted. An operator view of an active
+  match creates an unbroadcast opaque token containing only its current replay
+  document, so unfinished matches can be replayed without public listing.
   `GET /operator/dashboard?format=json` returns the same complete aggregate
   dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
   metrics alias. `GET /operator/login` serves a minimal password form and
