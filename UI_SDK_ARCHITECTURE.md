@@ -119,14 +119,16 @@ select optional systems or declared replacements through the same registry.
 
 The UI SDK has no KORE labels, colors, routes, maps, teams, or game modes.
 KORE pages retain their renderer/theme and translate generic `emit` commands.
-The production KORE main menu is the current full composition: its screens,
-buttons, navigation, and semantic commands are generic UI settings, while the
-KORE surface retains visual projection and application callback dispatch.
+The production KORE main menu is the current full composition: its serialized
+settings use generic strings, while `menuVocabulary.ts` authors KORE screens,
+IDs, styles, routes, intents, difficulty, and commands exclusively through
+enums before the KORE surface parses them for callback dispatch.
 
 The production KORE gameplay HUD follows the same boundary through
-`src/kore/ui/gameHud.ts`: generic actions remain serialized strings, while the
-KORE layer narrows them to enum-backed typed HUD commands before routing them to
-gameplay authority.
+`src/kore/ui/gameHud.ts`: generic actions remain serialized strings, while
+`hudCommands.ts` and `hudVocabulary.ts` author and narrow every KORE HUD command,
+identifier, style, label, and closed slot through enums before routing commands
+to gameplay authority. Neither vocabulary changes the generic UI SDK.
 
 Hosts may project dynamic state without reaching into element implementations:
 `UiRuntime.dispatch()`, `setElementVisible()`, `setElementEnabled()`, and

@@ -31,9 +31,11 @@ Generic UI actions remain string-based at the canonical boundary. KORE
 production authoring uses `KoreHudCommand` enum values from
 `src/kore/ui/hudCommands.ts`; serialized settings contain their stable strings.
 `KoreHudCommandPayloads`, `KoreHudCommandMessage`, and
-`parseKoreHudCommand()` provide typed payloads and runtime narrowing. The HUD
-uses exhaustive command routing; unknown/malformed commands are rejected and
-never reach gameplay.
+`parseKoreHudCommand()` provide typed payloads and runtime narrowing.
+`hudVocabulary.ts` owns the remaining enum-backed KORE HUD IDs, screen, styles,
+labels, and closed item slots. The HUD uses exhaustive command routing;
+unknown/malformed commands are rejected and never reach gameplay. Generic UI
+continues to use serialized strings and is unchanged.
 
 Current command domains are item use/skip, pause/resume, rematch, replay,
 share, and return-to-menu. Item actions propose a self target; `ItemPhaseUI`

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createGameHudComposition, validateKoreGameHudSettings } from "../src/kore/ui/gameHud.ts";
 import { createKoreGameHudSurface } from "../src/kore/ui/KoreGameHudSurface.ts";
 import { KoreHudCommand, parseKoreHudCommand } from "../src/kore/ui/hudCommands.ts";
+import { KoreHudElement, KoreHudId } from "../src/kore/ui/hudVocabulary.ts";
 import { GameState } from "../src/engine/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 
@@ -12,7 +13,8 @@ test("KORE HUD composition builds JSON-safe enum-backed canonical settings", () 
 	expect(() => validateKoreGameHudSettings(settings)).not.toThrow();
 	expect(JSON.parse(composition.buildJson())).toEqual(settings);
 	expect(settings.metadata.commandValues).toContain(KoreHudCommand.UseItem);
-	expect(settings.ui.screens[0]?.elements.find(element => element.id === "hud-skip-item")?.action).toMatchObject({ command: KoreHudCommand.SkipItemPhase });
+	expect(settings.id).toBe(KoreHudId.Composition);
+	expect(settings.ui.screens[0]?.elements.find(element => element.id === KoreHudElement.SkipItem)?.action).toMatchObject({ command: KoreHudCommand.SkipItemPhase });
 });
 
 test("HUD projection is idempotent, draw is pure, and item command routes through typed payload", () => {
@@ -43,8 +45,8 @@ test("host capabilities hide unavailable network controls and suppress unconfirm
 	const commands: unknown[] = []; const hud = createKoreGameHudSurface({ handle: command => { commands.push(command); return false; } }, undefined, undefined, { canSkipItemPhase: false, canPause: false });
 	hud.applyProjection(projection());
 	const elements = hud.getRuntime().toSettings().screens[0]!.elements;
-	expect(elements.find(element => element.id === "hud-skip-item")?.visible).toBe(false);
-	expect(elements.find(element => element.id === "hud-pause")?.visible).toBe(false);
+	expect(elements.find(element => element.id === KoreHudElement.SkipItem)?.visible).toBe(false);
+	expect(elements.find(element => element.id === KoreHudElement.Pause)?.visible).toBe(false);
 	hud.updateMouse(530, 85); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "freeze-shot", target: { type: "self" } } }]);
 	expect(hud.drainSoundCommands()).toEqual([]);

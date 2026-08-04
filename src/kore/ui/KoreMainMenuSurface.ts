@@ -5,7 +5,8 @@ import { UiRuntime, type UiCommand, type UiRenderer } from "../../engine/ui-sdk/
 import { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import type { AiDifficulty } from "../../ai/types.js";
 import { koreAudio } from "../audio.js";
-import { createMainMenuComposition, mapScreenId, validateKoreMainMenuSettings, type KoreMainMenuSettings, type KoreMenuMapIntent } from "./mainMenu.js";
+import { createMainMenuComposition, validateKoreMainMenuSettings, type KoreMainMenuSettings } from "./mainMenu.js";
+import { KoreMenuColor, KoreMenuCommand, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, asAiDifficulty, parseKoreMenuCommand, koreMenuMapScreen, type KoreMenuCommandMessage } from "./menuVocabulary.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;
@@ -19,7 +20,7 @@ export interface KoreMainMenuCallbacks {
 /** KORE controller/adapter around the SDK-authored canonical menu settings. */
 export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 	private readonly runtime: UiRuntime;
-	private readonly sounds = new AudioEmitter("kore.menu");
+	private readonly sounds = new AudioEmitter(KoreMenuId.AudioSource);
 	private mouse = { x: 0, y: 0 };
 	private landingTicks = 0;
 	public readonly soundSourceId = this.sounds.soundSourceId;
@@ -37,52 +38,55 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 	public handleMouseWheel(_event: WheelEvent): void { }
 	public tick(_deltaTime: number, _friction: number): void {
 		this.runtime.tick({});
-		if (this.runtime.getActiveScreen() === "landing" && this.landingTicks++ > 300) this.runtime.setElementVisible("landing-prompt", true);
+		if (this.runtime.getActiveScreen() === KoreMenuScreen.Landing && this.landingTicks++ > 300) this.runtime.setElementVisible(KoreMenuElement.LandingPrompt, true);
 		this.handleCommands(this.runtime.drainCommands());
 	}
 	public draw(ctx: RenderContext): void {
 		ctx.push(); ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG);
 		this.runtime.draw(new KoreMenuRenderer(ctx));
-		const error = this.callbacks.getStartError?.(); if (error) { ctx.setFillColor("#b91c1c"); ctx.drawText(error, 80, 390, 18); }
+		const error = this.callbacks.getStartError?.(); if (error) { ctx.setFillColor(KoreMenuColor.Error); ctx.drawText(error, 80, 390, 18); }
 		ctx.pop();
 	}
 	private handleCommands(commands: UiCommand[]): void {
 		for (const command of commands) {
-			if (command.command === "kore.menu.open-ai") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "difficulty" }); continue; }
-			if (command.command === "kore.menu.open-battle") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-battle" }); continue; }
-			if (command.command === "kore.menu.open-local-maps") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-local" }); continue; }
-			if (command.command === "kore.menu.open-online") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-online" }); continue; }
-			if (command.command === "kore.menu.start-local-game") { this.confirm(command.command); this.callbacks.onPlayLocal?.(); continue; }
-			if (command.command === "kore.menu.open-ai-maps") { const difficulty = command.payload && typeof command.payload === "object" && "difficulty" in command.payload ? (command.payload as { difficulty: AiDifficulty }).difficulty : undefined; if (difficulty) this.runtime.dispatch({ type: "navigate", target: mapScreenId("ai", difficulty) }); continue; }
-			if (command.command === "kore.menu.select-map") this.selectMap(command.payload);
+			const parsed = parseKoreMenuCommand(command.command, command.payload);
+			if (parsed) this.handleCommand(parsed);
 		}
 	}
-	private selectMap(payload: UiCommand["payload"]): void {
-		if (!payload || typeof payload !== "object") return;
-		const value = payload as { intent?: KoreMenuMapIntent; mapId?: string; difficulty?: AiDifficulty };
-		if (typeof value.mapId !== "string") return;
-		if (value.intent === "battle") this.callbacks.onPlayAiBattle?.(value.mapId);
-		else if (value.intent === "online") this.callbacks.onPlayOnline?.(value.mapId);
-		else if (value.intent === "ai" && value.difficulty) this.callbacks.onPlayAiOpponent?.(value.difficulty, value.mapId);
-		else if (value.intent === "local") this.callbacks.onSelectMap?.(value.mapId);
+	private handleCommand(command: KoreMenuCommandMessage): void {
+		switch (command.type) {
+			case KoreMenuCommand.OpenAi: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Difficulty }); return;
+			case KoreMenuCommand.OpenBattle: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapBattle }); return;
+			case KoreMenuCommand.OpenLocalMaps: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapLocal }); return;
+			case KoreMenuCommand.OpenOnline: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapOnline }); return;
+			case KoreMenuCommand.StartLocal: this.confirm(command.type); this.callbacks.onPlayLocal?.(); return;
+			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
+			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;
+		}
 	}
-	private confirm(command: string): void { if (this.initialSettings.metadata.confirmationCommands.includes(command)) this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId, this.initialSettings.metadata.confirmationSoundId)); }
+	private selectMap(value: Extract<KoreMenuCommandMessage, { type: KoreMenuCommand.SelectMap }> ["payload"]): void {
+		if (value.intent === KoreMenuMapIntent.Battle) this.callbacks.onPlayAiBattle?.(value.mapId);
+		else if (value.intent === KoreMenuMapIntent.Online) this.callbacks.onPlayOnline?.(value.mapId);
+		else if (value.intent === KoreMenuMapIntent.Ai && value.difficulty) this.callbacks.onPlayAiOpponent?.(asAiDifficulty(value.difficulty), value.mapId);
+		else if (value.intent === KoreMenuMapIntent.Local) this.callbacks.onSelectMap?.(value.mapId);
+	}
+	private confirm(command: KoreMenuCommand): void { if (this.initialSettings.metadata.confirmationCommands.includes(command)) this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId, this.initialSettings.metadata.confirmationSoundId)); }
 }
 
 /** KORE visual projection of generic UI elements; it owns no UI state or input. */
 class KoreMenuRenderer implements UiRenderer {
 	public constructor(private readonly ctx: RenderContext) { }
 	public drawText(element: Parameters<UiRenderer["drawText"]>[0]): void {
-		if (element.style === "kore.menu.landing-prompt") { this.ctx.setFillColor("blue"); this.ctx.drawText(element.text ?? "", element.rect.x, element.rect.y + 20, 48); return; }
-		this.ctx.setFillColor("white"); this.ctx.drawText(element.text ?? "", element.rect.x, element.rect.y + (element.style === "kore.menu.map-title" ? 30 : 16), element.style === "kore.menu.map-title" ? 34 : element.style === "kore.menu.difficulty-title" ? 28 : element.style === "kore.menu.map-note" ? 16 : 20);
+		if (element.style === KoreMenuStyle.LandingPrompt) { this.ctx.setFillColor(KoreMenuColor.Prompt); this.ctx.drawText(element.text ?? "", element.rect.x, element.rect.y + 20, 48); return; }
+		this.ctx.setFillColor(KoreMenuColor.Text); this.ctx.drawText(element.text ?? "", element.rect.x, element.rect.y + (element.style === KoreMenuStyle.MapTitle ? 30 : 16), element.style === KoreMenuStyle.MapTitle ? 34 : element.style === KoreMenuStyle.DifficultyTitle ? 28 : element.style === KoreMenuStyle.MapNote ? 16 : 20);
 	}
 	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void {
-		if (element.style === "kore.menu.landing-hitbox") return;
-		this.ctx.setFillColor(element.style === "kore.menu.difficulty-back" || element.style === "kore.menu.back" ? "#475569" : "#102a43");
-		this.ctx.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); this.ctx.setFillColor("white");
-		const size = element.style === "kore.menu.main-button" ? 28 : element.style === "kore.menu.map-row" ? 20 : element.style === "kore.menu.difficulty" ? 22 : 20;
+		if (element.style === KoreMenuStyle.LandingHitbox) return;
+		this.ctx.setFillColor(element.style === KoreMenuStyle.DifficultyBack || element.style === KoreMenuStyle.Back ? KoreMenuColor.BackButton : KoreMenuColor.Button);
+		this.ctx.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); this.ctx.setFillColor(KoreMenuColor.Text);
+		const size = element.style === KoreMenuStyle.MainButton ? 28 : element.style === KoreMenuStyle.MapRow ? 20 : element.style === KoreMenuStyle.Difficulty ? 22 : 20;
 		const label = element.text ?? "";
-		const x = element.style === "kore.menu.main-button" ? element.rect.x + 28 : element.style === "kore.menu.map-row" ? element.rect.x + 20 : element.rect.x + Math.max(8, (element.rect.width - label.length * (size * 0.5)) / 2);
+		const x = element.style === KoreMenuStyle.MainButton ? element.rect.x + 28 : element.style === KoreMenuStyle.MapRow ? element.rect.x + 20 : element.rect.x + Math.max(8, (element.rect.width - label.length * (size * 0.5)) / 2);
 		this.ctx.drawText(element.text ?? "", x, element.rect.y + (element.rect.height > 40 ? 31 : 25), size);
 	}
 	public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }

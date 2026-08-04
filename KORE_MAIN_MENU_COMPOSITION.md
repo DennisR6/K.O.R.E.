@@ -34,8 +34,11 @@ again by the reconstructed surface.
 ## Commands, navigation, and audio
 
 The UI SDK owns landing/main/map/difficulty navigation via declared `navigate`
-and `back` actions. External transitions are semantic commands handled by the
-KORE surface/router:
+and `back` actions. `menuVocabulary.ts` owns the enum-backed KORE commands,
+screens, element IDs, styles, map intents, and difficulty values; it also parses
+generic UI strings before they enter `KoreMainMenuSurface`. The generic UI SDK
+continues to serialize ordinary strings and is not changed by this KORE layer.
+External transitions are semantic commands handled by the KORE surface/router:
 
 - `kore.menu.start-local-game`
 - `kore.menu.open-online`

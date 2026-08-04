@@ -264,14 +264,18 @@ After every change, check whether this guide still reflects the implementation a
    game while remaining reproducible from its seed.
 - `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
   Its `.build()` result contains every production menu screen, element, action,
-  UI framework, and persistent menu-audio intent. `KoreMainMenuSurface.ts`
-  reconstructs that result as the KORE renderer/input/audio adapter; do not add
-  parallel pages, manual hitboxes, or browser resources to the composition.
+  UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
+  enum-backed KORE identifiers, commands, routes, styles, and parser;
+  `KoreMainMenuSurface.ts` reconstructs that result as the KORE renderer/input/
+  audio adapter. Do not add parallel pages, manual hitboxes, or browser
+  resources to the composition.
 - `src/kore/ui/gameHud.ts` and `KoreGameHudSurface.ts`: authoritative
   SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.
   `hudCommands.ts` owns the enum-backed KORE HUD command vocabulary and
-  `gameHudProjection.ts` owns the detached gameplay projection; generic UI
-  settings still serialize ordinary strings. The local pause command freezes
+  `hudVocabulary.ts` owns its enum-backed identifiers/styles/labels;
+  `gameHudProjection.ts` owns the detached gameplay projection. Generic UI
+  settings still serialize ordinary strings, but KORE must author and parse its
+  vocabulary exclusively through these enums. The local pause command freezes
   transient handler ticks; online skip/pause controls are hidden because the
   server protocol has no skip action and retains its separate mutual-pause DOM
   host. Do not add manual HUD hitboxes or direct `AudioManager` calls to
