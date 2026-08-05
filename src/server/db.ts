@@ -10,6 +10,8 @@ import type { FrozenReplayDocument, ReplayAction, ReplayDocument } from "../repl
 import { validateFrozenReplayDocument, validateReplayDocument, validateReplayOrigin } from "../replay/types.js";
 import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
+import type { OfflineMatchReport } from "./offlineMatchContract.js";
+import type { MatchResult } from "../rules/types.js";
 
 export type StoredGame = {
 	id: string;
@@ -32,6 +34,9 @@ export type PublicOperatorReplayView = { token: string; replay: ReplayDocument; 
 export type OperatorReplaySummary = { gameId: string; status: AuthoritativeMatchStatus; updatedAt: number; actionCount: number; replayToken?: string };
 export type StoredMapStatus = "draft" | "approved" | "retired";
 export type StoredMap = { id: string; document: MapDocument; status: StoredMapStatus; contentHash: string; createdAt: number; approvedAt: number | null };
+/** Persisted offline/KI match; the validated replay document is retained in full. */
+export type StoredOfflineMatch = OfflineMatchReport & { id: string; createdAt: number };
+export type StoredOfflineMatchSummary = Omit<StoredOfflineMatch, "replay">;
 
 type StoredGameRow = {
 	id: string;
@@ -125,6 +130,19 @@ export class GameDatabase {
 				replay_json TEXT NOT NULL,
 				updated_at INTEGER NOT NULL,
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS offline_matches (
+				id TEXT PRIMARY KEY NOT NULL,
+				mode TEXT NOT NULL CHECK (mode IN ('hotseat', 'human-vs-ai', 'ai-battle')),
+				map_id TEXT NOT NULL,
+				difficulty TEXT,
+				seed INTEGER NOT NULL,
+				players_json TEXT NOT NULL,
+				result_json TEXT NOT NULL,
+				replay_json TEXT NOT NULL,
+				created_at INTEGER NOT NULL
 			)
 		`);
 		this.db.run(`
@@ -279,6 +297,35 @@ export class GameDatabase {
 		this.db.query("INSERT INTO match_reports (id, game_id, reporter_user_id, category, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
 			.run(id, gameId, reporterUserId, category, text, now);
 		return id;
+	}
+
+	/** Persists one completed offline/KI match for later data analysis. */
+	public storeOfflineMatch(report: OfflineMatchReport, now: number = Date.now()): StoredOfflineMatch {
+		if (!Number.isSafeInteger(now) || now < 0) throw new Error("Offline match time must be a non-negative integer");
+		const id = crypto.randomUUID();
+		const replay = structuredClone(report.replay);
+		this.db.query(`
+			INSERT INTO offline_matches (id, mode, map_id, difficulty, seed, players_json, result_json, replay_json, created_at)
+			VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+		`).run(id, report.mode, report.mapId, report.difficulty ?? null, report.seed, JSON.stringify(report.players), JSON.stringify(report.result), JSON.stringify(replay), now);
+		return { id, mode: report.mode, mapId: report.mapId, difficulty: report.difficulty, seed: report.seed, players: [...report.players], result: structuredClone(report.result), replay, createdAt: now };
+	}
+
+	/** Lists offline match summaries (the heavy replay document is excluded). */
+	public listOfflineMatches(limit: number = 100): StoredOfflineMatchSummary[] {
+		const bounded = Math.max(1, Math.min(limit, 1_000));
+		const rows = this.db.query("SELECT id, mode, map_id, difficulty, seed, players_json, result_json, created_at FROM offline_matches ORDER BY created_at DESC, id ASC LIMIT ?1")
+			.all(bounded) as Array<{ id: string; mode: string; map_id: string; difficulty: string | null; seed: number; players_json: string; result_json: string; created_at: number }>;
+		return rows.map(row => ({
+			id: row.id,
+			mode: row.mode as StoredOfflineMatch["mode"],
+			mapId: row.map_id,
+			difficulty: (row.difficulty ?? undefined) as StoredOfflineMatch["difficulty"],
+			seed: row.seed,
+			players: JSON.parse(row.players_json) as string[],
+			result: JSON.parse(row.result_json) as MatchResult,
+			createdAt: row.created_at,
+		}));
 	}
 
 	/** Inserts one immutable declarative map revision. Updating a document is forbidden. */

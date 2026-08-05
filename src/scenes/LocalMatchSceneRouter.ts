@@ -1,29 +1,18 @@
-import { CombiEmitter } from "../emitter/InputEmitter.js";
-import { GameEmitter } from "../emitter/EngineEmitter.js";
-import { AiBattleSystem } from "../ai/AiBattleSystem.js";
-import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
-import type { AiDifficulty, AiSettings } from "../ai/types.js";
-import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
+import { GameHandler } from "../engine/Handler.js";
 import { GameState } from "../engine/types.js";
+import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
-import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
-import { validateGameSettings } from "../settings/settings.js";
-import { WinningSystem } from "../systems/WinningSystem.js";
-import { EmitterSystem } from "../systems/Emitter.js";
+import { CANONICAL_PLAYABLE_MATCH } from "../settings/canonicalPlayableMatch.js";
 import { UiSystem } from "../systems/UiSystem.js";
-import { ItemPhaseUI } from "../ui/ItemPhaseUI.js";
-import { buildMapSettings } from "../content/mapCatalog.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
 import { koreAudio } from "../kore/audio.js";
-import { createKoreGameHudSurface } from "../kore/ui/KoreGameHudSurface.js";
-import { KoreHudCommand } from "../kore/ui/hudCommands.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
+import { installGameplayHud } from "./gameplayHud.js";
+import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
+import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 
 export type LocalHandlerFactory = (mapId: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
-
-/** Bounded hard-AI search for browser-responsible KI-vs-KI decisions. */
-const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
 export class LocalMatchSceneRouter implements ISoundEmitter {
@@ -31,9 +20,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private starting = false;
 	private error: string | undefined;
 	private mapId: string | null = null;
+	private mode: MatchMode | undefined;
 	private aiBattle = false;
 	private battleSeed: number | undefined;
-	private hud: ReturnType<typeof createKoreGameHudSurface> | undefined;
+	private hud: ReturnType<typeof installGameplayHud> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
 	public readonly soundSourceId = "kore.scene-router";
 
@@ -43,7 +33,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly onPlayOnline?: (mapId?: string) => void,
 	) {
 		this.handler = new GameHandler();
-		const menu = createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
+		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
 	}
@@ -51,7 +41,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public getHandler(): GameHandler { return this.handler; }
 	public getError(): string | undefined { return this.error; }
 	public getMapId(): string | null { return this.mapId; }
-	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === "local-ice-duel-v1"; }
+	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === CANONICAL_PLAYABLE_MATCH.id; }
 	public isResultVisible(): boolean {
 		if (this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined) this.hud?.applyProjection(createKoreHudProjection(this.handler, this.handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined));
 		return this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined;
@@ -61,9 +51,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
-	/** Starts exactly one canonical match on the given map; failures leave the menu handler usable. */
+	/** Starts exactly one canonical hotseat match on the given map; failures leave the menu handler usable. */
 	public startLocalMatch(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.mode = "hotseat";
 		return this.startScene(() => this.createLocalHandler(mapId), mapId);
 	}
 
@@ -74,10 +65,13 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		this.mode = "ai-battle";
 		const started = this.startScene(() => createAiBattleHandler(mapId, seed), mapId);
 		if (started) {
 			this.aiBattle = true;
 			this.battleSeed = seed;
+		} else {
+			this.mode = undefined;
 		}
 		return started;
 	}
@@ -86,10 +80,13 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		this.mode = "human-vs-ai";
 		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed), mapId);
 		if (started) {
 			this.aiBattle = false;
 			this.battleSeed = seed;
+		} else {
+			this.mode = undefined;
 		}
 		return started;
 	}
@@ -102,6 +99,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.handler.dispose();
 			this.handler = next;
 			this.mapId = mapId;
+			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => { void reportOfflineMatch(record); });
 			this.installResultOverlay(next);
 			this.error = undefined;
 			return true;
@@ -118,32 +116,12 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private installResultOverlay(handler: GameHandler): void {
-		const gameplayInput = handler.getMouseHandler();
-		const emitter = handler.getSystems().find(system => (system as { systemId?: string }).systemId === "core.emitter") as EmitterSystem | undefined;
-		const itemUi = emitter ? new ItemPhaseUI(handler, emitter.emitter) : undefined;
-		let rejection: string | undefined;
-		emitter?.setErrorHandler(error => { rejection = hudRejection(error); });
-		const hud = createKoreGameHudSurface({ handle: command => {
-			switch (command.type) {
-				case KoreHudCommand.UseItem: {
-					const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam()));
-					if (!actor || !itemUi) throw new Error("Items are unavailable"); itemUi.use(actor.getId(), command.payload.itemId, command.payload.target); return;
-				}
-				case KoreHudCommand.SkipItemPhase: if (!itemUi) throw new Error("Item phase is unavailable"); itemUi.skip(); return;
-				case KoreHudCommand.Rematch: this.handleResultAction("rematch"); return;
-				case KoreHudCommand.ReturnToMenu: this.handleResultAction("menu"); return;
-				case KoreHudCommand.Replay: this.handleResultAction("replay"); return;
-				case KoreHudCommand.Share: this.handleResultAction("share"); return;
-				case KoreHudCommand.Pause: handler.setPaused(true); return;
-				case KoreHudCommand.Resume: handler.setPaused(false); return;
-			}
-		} }, gameplayInput);
-		this.hud = hud;
-		handler.setMouseHandler(hud);
-		const sync = () => createKoreHudProjection(handler, handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined, rejection);
-		hud.applyProjection(sync());
-		handler.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(sync()); hud.tick(dt); } });
-		handler.addPostDrawer({ draw: renderer => { hud.applyProjection(sync()); hud.draw(renderer); } });
+		this.hud = installGameplayHud(handler, {
+			onRematch: () => this.handleResultAction("rematch"),
+			onReturnToMenu: () => this.handleResultAction("menu"),
+			onReplay: () => this.handleResultAction("replay"),
+			onShare: () => this.handleResultAction("share"),
+		});
 	}
 
 	private handleResultAction(action: MatchResultAction): void {
@@ -166,6 +144,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.pendingSoundCommands.push(audio.command.stopSource({ sourceId: "kore.game.local", fadeOutMs: 150 }));
 		this.pendingSoundCommands.push(koreAudio.command.menuMusic("kore.menu"));
 		this.mapId = null;
+		this.mode = undefined;
 		this.hud = undefined;
 		this.aiBattle = false;
 		this.battleSeed = undefined;
@@ -173,85 +152,35 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuHandler(): GameHandler {
-		const menu = createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
 		const handler = new GameHandler();
+		const menu = this.createMenuSurface();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);
 		return handler;
 	}
+
+	private createMenuSurface() {
+		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
+	}
 }
 
-function hudRejection(error: unknown): string {
-	return (error instanceof Error ? error.message : "Action rejected").replace(/[\r\n]+/g, " ").replace(/^Error:\s*/, "").slice(0, 160);
-}
-
-/** Builds a local-match handler on any browser-available catalog map. */
+/** Builds a local hotseat match handler on any browser-available catalog map. */
 export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHandler {
-	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
-	validateGameSettings(settings);
-	const handler = new GameHandlerBuilder()
-		.defaultSystems()
-		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
-		.fromSettings(settings)
-		.build();
-	const ui = new UiSystem();
-	const emitters = new CombiEmitter();
-	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2));
-	handler.addSystem(ui);
-	handler.setMouseHandler(ui);
-	handler.addSystem(new EmitterSystem(emitters));
-	return handler;
+	return createMatchHandler({ mode: "hotseat", mapId });
 }
 
 /**
- * Builds an autonomous KI-vs-KI battle on the canonical arena. The battle uses
- * the same validated settings and winning evaluator as the local match, but
- * replaces all human input with an `AiBattleSystem` that drives both teams
- * through the shared `AiTurnEmitter` boundary. The battle seed defaults to a
- * fresh random draw and varies the hard-AI decisions deterministically, so
- * every battle is a new game; pass an explicit seed for reproducible games.
+ * Builds an autonomous KI-vs-KI battle on the canonical arena through the
+ * same pipeline as every other offline match, replacing human input with an
+ * `AiBattleSystem` that drives both teams. The battle seed defaults to a fresh
+ * random draw and varies the hard-AI decisions deterministically; pass an
+ * explicit seed for reproducible games.
  */
 export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
-	validateGameSettings(settings);
-	const handler = new GameHandlerBuilder()
-		.defaultSystems()
-		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
-		.fromSettings(settings)
-		.build();
-	// One seed per battle, derived seeds per team so the battle is fully
-	// reproducible from its recorder.
-	const emitters = new CombiEmitter();
-	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2, seed));
-	const aiTeam0: AiSettings = { difficulty: "hard", seed: seed * 2, team: 0, decisionLimits: AI_BATTLE_LIMITS };
-	const aiTeam1: AiSettings = { difficulty: "hard", seed: seed * 2 + 1, team: 1, decisionLimits: AI_BATTLE_LIMITS };
-	const aiBattle = new AiBattleSystem(handler, emitters, aiTeam0, aiTeam1);
-	handler.addSystem(aiBattle);
-	// The passive battle input becomes the wrapped gameplay input of the
-	// result overlay; clicks are ignored while the battle plays.
-	handler.setMouseHandler(aiBattle);
-	return handler;
+	return createMatchHandler({ mode: "ai-battle", mapId, seed });
 }
 
 /** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
 export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	const settings = buildMapSettings(mapId, createCanonicalPlayableMatchSettings());
-	settings.myTeam = [0];
-	settings.allTeams = ["Human", `${difficulty} KI`];
-	const aiSettings: AiSettings = { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) };
-	settings.ai = aiSettings;
-	validateGameSettings(settings);
-	const handler = new GameHandlerBuilder()
-		.defaultSystems()
-		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
-		.fromSettings(settings)
-		.build();
-	const ui = new UiSystem();
-	const emitters = new CombiEmitter();
-	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, 2, seed));
-	handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings));
-	handler.addSystem(ui);
-	handler.setMouseHandler(ui);
-	handler.addSystem(new EmitterSystem(emitters));
-	return handler;
+	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed });
 }

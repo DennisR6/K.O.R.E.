@@ -41,6 +41,10 @@ export class CombiEmitter implements IInputEmitter, ISoundEmitter {
 			this.emitters.push(em)
 		}
 	}
+	/** Returns the registered emitters so host code can reach recording children. */
+	getEmitters(): IInputEmitter[] {
+		return this.emitters;
+	}
 	/** Forwards optional semantic audio capability without knowing child classes. */
 	drainSoundCommands(): AudioCommand[] {
 		return this.emitters.flatMap(emitter => {

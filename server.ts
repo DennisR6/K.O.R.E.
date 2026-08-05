@@ -4,6 +4,7 @@ import { GameRegistry } from "./src/server/gameRegistry.ts";
 import { readServerConfig, resolveGameDatabasePath, serveConfig } from "./src/server/config.ts";
 import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
 import { servePublicReplayShare } from "./src/server/replayShares.ts";
+import { serveOfflineMatchReport } from "./src/server/offlineMatches.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -27,6 +28,8 @@ Bun.serve<WebSocketData>({
 		if (dashboard) return dashboard;
 		const replay = servePublicReplayShare(req, runtime.getRegistry());
 		if (replay) return replay;
+		const offline = await serveOfflineMatchReport(req, database);
+		if (offline) return offline;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		// The offline shell lives in public/ but must register at root scope.

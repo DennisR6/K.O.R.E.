@@ -112,7 +112,9 @@ describe("KI vs KI battle rematch re-seeding", () => {
 		expect(router.startAiBattle()).toBe(true);
 		const battle = router.getHandler();
 		expect(tickUntilOver(battle)).toBeGreaterThan(0);
-		// Press the overlay's Menu button.
+		// Refresh the result overlay like the browser frame does, then press
+		// the overlay's Menu button.
+		expect(router.isResultVisible()).toBe(true);
 		battle.updateMouse(410, 310);
 		battle.handleMousePressed();
 		expect(router.getBattleSeed()).toBeUndefined();

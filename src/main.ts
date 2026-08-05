@@ -15,16 +15,13 @@ import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNe
 import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
-import { ItemPhaseUI } from "./ui/ItemPhaseUI.js";
+import { installGameplayHud } from "./scenes/gameplayHud.js";
 import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
 import { buildOnlineJoinUrl } from "./utils/onlineConfig.js";
 import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
 import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
-import { createKoreGameHudSurface } from "./kore/ui/KoreGameHudSurface.js";
-import { KoreHudCommand } from "./kore/ui/hudCommands.js";
-import { createKoreHudProjection } from "./kore/ui/gameHudProjection.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -78,7 +75,7 @@ if (isUiDebugSandboxUrl(uri)) {
 		.addSystem(ems)
 	handler = builder.build()
 	em.addEmitter(new GameEmitter(handler))
-	installStandaloneHud(handler, ui, em, ems)
+	installGameplayHud(handler, { onReturnToMenu: () => window.location.assign(window.location.pathname) })
 	startGame(handler)
 }
 
@@ -150,21 +147,17 @@ function startNetworkGame(serverUrl: string) {
 			.addSystem(new EmitterSystem(emitter))
 			.build()
 		handler.setRuleState(init.ruleState)
-		const hud = createKoreGameHudSurface({ handle: command => {
-			switch (command.type) {
-				case KoreHudCommand.UseItem: { const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam())); if (!actor) throw new Error("No active item actor"); emitter.sendItemUse(actor.getId(), command.payload.itemId, command.payload.target); return false; }
-				case KoreHudCommand.Rematch: socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false;
-				case KoreHudCommand.Replay: replayShareAction = "view"; emitter.requestReplayShare(); return false;
-				case KoreHudCommand.Share: replayShareAction = "share"; emitter.requestReplayShare(); return false;
-				case KoreHudCommand.ReturnToMenu: window.location.assign(window.location.pathname); return false;
-				case KoreHudCommand.SkipItemPhase: throw new Error("Network item skipping is unavailable");
-				case KoreHudCommand.Pause: case KoreHudCommand.Resume: return false;
-			}
-		} }, ui, undefined, { canSkipItemPhase: false, canPause: false });
-		handler.setMouseHandler(hud);
-		const syncHud = () => createKoreHudProjection(handler, ui);
-		handler.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(syncHud()); hud.tick(dt); } });
-		handler.addPostDrawer({ draw: renderer => { hud.applyProjection(syncHud()); hud.draw(renderer); } });
+		// The online branch installs the same gameplay HUD as every offline mode;
+		// only the semantic actions and capability limits differ.
+		installGameplayHud(handler, {
+			canSkipItemPhase: false,
+			canPause: false,
+			onUseItem: (actorId, itemId, target) => { emitter.sendItemUse(actorId, itemId, target); return false; },
+			onRematch: () => { socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false; },
+			onReplay: () => { replayShareAction = "view"; emitter.requestReplayShare(); return false; },
+			onShare: () => { replayShareAction = "share"; emitter.requestReplayShare(); return false; },
+			onReturnToMenu: () => { window.location.assign(window.location.pathname); return false; },
+		});
 		installTurnReceiver(socket, handler)
 		installReplayShareControls(socket, url => {
 			if (replayShareAction !== "view") return false
@@ -380,35 +373,6 @@ function flushBrowserAudio(active: GameHandler): void {
 	browserAudioRuntime.tick([active.getMouseHandler(), router, ...systemEmitters])
 	browserAudioMixer.submit(browserAudioRuntime.drainOutput())
 	browserAudioOutput.apply(browserAudioMixer.flush())
-}
-
-/** KORE HUD/gameplay bridge for direct local diagnostics; browser listeners stay above this boundary. */
-function installStandaloneHud(active: GameHandler, input: UiSystem, emitter: CombiEmitter, emitterSystem: EmitterSystem): void {
-	const itemUi = new ItemPhaseUI(active, emitter);
-	let rejection: string | undefined;
-	emitterSystem.setErrorHandler(error => { rejection = hudRejection(error); });
-	const hud = createKoreGameHudSurface({ handle: command => {
-		switch (command.type) {
-			case KoreHudCommand.UseItem: {
-				const actor = active.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(active.getActiveTeam()));
-				if (!actor) throw new Error("No active item actor"); itemUi.use(actor.getId(), command.payload.itemId, command.payload.target); return;
-			}
-		case KoreHudCommand.SkipItemPhase: itemUi.skip(); return;
-		case KoreHudCommand.Rematch: active.rematch(); return;
-		case KoreHudCommand.ReturnToMenu: window.location.assign(window.location.pathname); return;
-			case KoreHudCommand.Pause: active.setPaused(true); return;
-			case KoreHudCommand.Resume: active.setPaused(false); return;
-			case KoreHudCommand.Replay: case KoreHudCommand.Share: return;
-		}
-	} }, input);
-	active.setMouseHandler(hud);
-	const sync = () => createKoreHudProjection(active, input, rejection);
-	active.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(sync()); hud.tick(dt); } });
-	active.addPostDrawer({ draw: renderer => { hud.applyProjection(sync()); hud.draw(renderer); } });
-}
-
-function hudRejection(error: unknown): string {
-	return (error instanceof Error ? error.message : "Action rejected").replace(/[\r\n]+/g, " ").replace(/^Error:\s*/, "").slice(0, 160);
 }
 
 const customCursor = document.getElementById('my-cursor')!;

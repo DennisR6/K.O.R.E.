@@ -82,6 +82,9 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		}
 	}
 
+	/** Exposes the authoritative shot emitter for recorder/analysis introspection. */
+	public getEmitter(): IInputEmitter | undefined { return this.targetEmitter; }
+
 	// Passive mouse contract: a battle never accepts pointer input, but the
 	// result overlay wraps this handler as its gameplay pass-through.
 	public handleMousePressed(): void { }
