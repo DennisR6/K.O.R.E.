@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -11,8 +11,10 @@ import { resolve } from "node:path";
  * that the Section 16 checklist is complete, and that the evidence files from
  * tasks 16.1-16.5 exist. The authoritative browser evidence is the record in
  * `docs/release-verification.md` plus the real `test:browser:smoke` and
- * `test:browser:full` runs (the latter runs inside the normal `bun test`
- * suite as part of the 640+ passing tests).
+ * `test:browser:full` runs. Since the Section 16 migration the specs run
+ * under the node-based `@playwright/test` runner (`playwright test`) instead
+ * of the Bun test runner; the package scripts keep the same names and are
+ * still invoked as `bun run test:browser:...` from CI.
  */
 
 const ROOT = process.cwd();
@@ -46,7 +48,7 @@ const reportItems = [
 	"Final status",
 ];
 
-describe("Section 16.6 browser gameplay release gate", () => {
+test.describe("Section 16.6 browser gameplay release gate", () => {
 	test("package.json and CI wire both required browser commands", () => {
 		const pkg = read("package.json");
 		expect(pkg).toContain('"test:browser:smoke"');
@@ -70,7 +72,7 @@ describe("Section 16.6 browser gameplay release gate", () => {
 	test("the browser gate commands both pass in the record", () => {
 		const report = read("docs/release-verification.md");
 		expect(report).toMatch(/bun run test:browser:smoke.*PASS: 10 pass \/ 0 fail/);
-		expect(report).toMatch(/bun run test:browser:full.*PASS: 19 pass \/ 0 fail/);
+		expect(report).toMatch(/bun run test:browser:full.*PASS: 34 pass \/ 0 fail/);
 		expect(report).toContain("PASS - browser-playable");
 	});
 

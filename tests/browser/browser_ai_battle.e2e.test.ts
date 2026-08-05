@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import {
 	activeBrowserServers,
 	assertCleanConsole,
@@ -8,6 +8,7 @@ import {
 	ensureBrowserBuild,
 	finiteEntities,
 	launchBrowser,
+	closeBrowser,
 	openPage,
 	readMatchState,
 	startTestServer,
@@ -22,8 +23,8 @@ import {
  * teams take turns without any pointer input, and the authoritative handler
  * advances its turn counter while keeping every entity state finite.
  */
-describe("browser KI vs KI battle", () => {
-	afterAll(() => {
+test.describe("browser KI vs KI battle", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -81,12 +82,12 @@ describe("browser KI vs KI battle", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("starts a human 1-vs-KI match after difficulty and map selection", async () => {
 		await ensureBrowserBuild();
@@ -103,9 +104,9 @@ describe("browser KI vs KI battle", () => {
 			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
 		expect(await page.evaluate(() => (window as any).game?.handler?.getTeam?.() ?? null)).toEqual([0]);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
-	}, 60_000);
+	});
 });

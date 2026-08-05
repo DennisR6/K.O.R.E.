@@ -1,26 +1,19 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "@playwright/test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDefaultGameSettings } from "../../src/settings/settings.ts";
-import { GameDatabase } from "../../src/server/db.ts";
-import { GameRegistry } from "../../src/server/gameRegistry.ts";
-import { ensureBrowserBuild, launchBrowser, nextTestPort, startTestServer, waitFor } from "./browserHarness.ts";
+import { ensureBrowserBuild, launchBrowser, closeBrowser, nextTestPort, runBunScript, startTestServer, waitFor } from "./browserHarness.ts";
 
 const secret = "operator-replay-viewer-secret-at-least-32-bytes";
-const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
 
-test.serial("operator View replay starts playback for an unfinished persisted match", async () => {
+test("operator View replay starts playback for an unfinished persisted match", async () => {
 	await ensureBrowserBuild();
 	const directory = mkdtempSync(join(tmpdir(), "kore-operator-replay-"));
 	const dbPath = join(directory, "replay.db");
-	const database = new GameDatabase(dbPath);
-	const registry = new GameRegistry(database);
-	const record = registry.create(createDefaultGameSettings(2, 1), users);
-	const actorId = record.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!.getId();
-	expect(registry.submitTurn(users[0]!, { actorId, angle: 0, power: 4 }).ok).toBe(true);
-	const gameId = record.id;
-	database.close();
+	// Authoritative match creation needs bun:sqlite, so it runs in the bun
+	// fixture helper; the game id is printed to stdout.
+	const gameId = runBunScript("tests/browser/prepare_replay_fixture.ts", ["operator", dbPath]);
+	expect(gameId).toMatch(/^[a-f0-9-]{8,}$/);
 	const port = nextTestPort();
 	const server = await startTestServer({ port, dbPath, env: { KORE_BASE_URL: `http://localhost:${port}`, KORE_DASHBOARD_OPERATOR_SECRET: secret } });
 	const browser = await launchBrowser();
@@ -34,8 +27,8 @@ test.serial("operator View replay starts playback for an unfinished persisted ma
 		await waitFor(async () => await page.locator("#replay-viewer-controls [role=status]").textContent() === "Replay loaded. Playback is read-only.", 10_000, 50, "operator replay load");
 		await waitFor(async () => await page.evaluate(() => (window as any).replayViewer?.getPlayer?.()?.getHandler?.().getState?.() === "GameState.Playing"), 10_000, 25, "operator replay playback start");
 	} finally {
-		await browser.close();
+		await closeBrowser(browser);
 		await server.stop();
 		rmSync(directory, { recursive: true, force: true });
 	}
-}, 120_000);
+});

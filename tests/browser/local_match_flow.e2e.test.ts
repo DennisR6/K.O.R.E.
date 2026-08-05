@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import {
 	activeBrowserServers,
 	activeGameModeId,
@@ -10,6 +10,7 @@ import {
 	ensureBrowserBuild,
 	finiteEntities,
 	launchBrowser,
+	closeBrowser,
 	openPage,
 	readMatchState,
 	startTestServer,
@@ -137,8 +138,8 @@ async function playMatch(page: import("playwright").Page, useItemOnLastKill: boo
 	}
 }
 
-describe("Section 16.4 browser gameplay controls and result flow", () => {
-	afterAll(() => {
+test.describe("Section 16.4 browser gameplay controls and result flow", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -192,11 +193,11 @@ describe("Section 16.4 browser gameplay controls and result flow", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 300_000);
+	});
 
 	test("a drag during the item phase is rejected without mutating the match", async () => {
 		await ensureBrowserBuild();
@@ -224,9 +225,9 @@ describe("Section 16.4 browser gameplay controls and result flow", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

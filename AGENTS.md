@@ -85,7 +85,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/debug/uiSandbox.ts`: standalone p5 host for the generic UI SDK debug
   sandbox. It activates only with `?debug=ui` (or `?debugui=1`) and keeps the
   browser adapter and diagnostics outside the generic SDK.
-- `server.ts`: Bun static-file and native WebSocket server, in-memory lobby, and matchmaking loop.
+- `server.ts`: Bun static-file and native WebSocket server, in-memory lobby,
+  matchmaking loop, and the validated `/offline-matches` upload route backed by
+  the SQLite offline-match store.
 - `src-website/index.html`: standalone map-editor page.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
   storage and in-place restore for the editor's shared `mapData` object.
@@ -254,14 +256,34 @@ After every change, check whether this guide still reflects the implementation a
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
+- `src/scenes/matchPipeline.ts`: the single offline-match pipeline.
+  `createMatchHandler` builds the canonical match for every mode (`hotseat`,
+  `human-vs-ai`, `ai-battle`), installs the `WinningSystem` and the `GameEmitter`
+  recorder (hotseat seeds `12345` for legacy reproducibility; AI modes draw a
+  random seed or accept one), and applies the only mode-specific header: the
+  versus mode sets `myTeam: [0]`, `allTeams: ["Human", "<difficulty> KI"]`, and
+  `settings.ai`. Hotseat/versus add `UiSystem` + `EmitterSystem`; versus also
+  adds `AiOpponentSystem`; the battle adds `AiBattleSystem` as the passive mouse
+  handler only.
+- `src/scenes/gameplayHud.ts`: shared `installGameplayHud(handler, actions)`
+  installer around the SDK-authored `KoreGameHudSurface` used by every gameplay
+  scene (local, online, standalone). It wires `ItemPhaseUI` from the
+  `EmitterSystem`, default offline Pause/Resume/Rematch actions, and refreshes
+  the result overlay projection on both the ticker and draw paths; the local
+  pause command freezes transient handler ticks.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
-  without retaining stale handlers; `createLocalGameplayHandler()` wires
-  `UiSystem` and `EmitterSystem` around a canonical match, then installs the
-  SDK-authored `KoreGameHudSurface`; `createAiBattleHandler()` builds an
-  autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
-  Every battle start and battle rematch draws a fresh battle seed (injectable
-  `battleSeedSource`, exposed as `getBattleSeed()`), so each battle is a new
-   game while remaining reproducible from its seed.
+  without retaining stale handlers. `createLocalGameplayHandler`,
+  `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
+  `createMatchHandler`; `startScene` installs `installGameplayHud` and the
+  offline match report; battle rematches re-draw the battle seed through a fresh
+  scene (injectable `battleSeedSource`, exposed as `getBattleSeed()`), and the
+  menu exit releases the local audio source before creating the fresh menu.
+- `src/net/offlineMatchReport.ts`: browser-side `installOfflineMatchReport`
+  (fires exactly once per finished match on the draw path, re-arms after a
+  rematch), `collectOfflineMatchRecord`, and `reportOfflineMatch` (same-origin
+  POST, never throws). The produced `OfflineMatchRecordPayload` carries the
+  mode header, map id, recorder seed, optional difficulty, players, result, and
+  the validated replay document.
 - `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
   Its `.build()` result contains every production menu screen, element, action,
   UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
@@ -335,7 +357,15 @@ After every change, check whether this guide still reflects the implementation a
 	`completed`) for durable aggregate match metrics. It also stores immutable
 	UUID-keyed declarative map revisions with canonical content hashes and
 	draft/approved/retired lifecycle state; map documents are always structurally
-	validated and never updated in place.
+	validated and never updated in place. It stores completed offline/KI match
+	records in an `offline_matches` table (`storeOfflineMatch`/`listOfflineMatches`
+	without the replay payload).
+- `src/server/offlineMatchContract.ts`: `OfflineMatchReport` type plus
+  `validateOfflineMatchReport` for untrusted browser uploads (validated mode,
+  safe-int seed, non-empty players, result, and replay document with a pristine
+  origin).
+- `src/server/offlineMatches.ts`: `serveOfflineMatchReport` route handler for
+  `/offline-matches` (POST only, 2 MB body cap, 400 on malformed records).
 - `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
   `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
   retired revisions for new matches while preserving them in storage. Its
@@ -382,7 +412,7 @@ Useful commands:
 
 ```sh
 bun run test           # ≤60s fast deterministic suite; excludes long qualifications/browser E2E
-bun test               # raw all Bun-discovered tests, including browser E2E
+bun test               # raw all Bun-discovered tests; browser E2E runs under the Playwright runner instead
 bun run test:qualification # browser, fuzz, map, and gameplay release qualifications
 bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
 bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
@@ -391,13 +421,14 @@ npx tsc --noEmit       # strict check of src/**/* without changing dist
 bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
-bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
+bun run test:browser:smoke  # Section 16 startup/menu browser smoke (playwright runner; builds dist, manages the server)
 bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
 bun run test:browser:audio # Generic audio aggregation browser E2E
 bun run test:browser:menu-sdk # SDK-authored production main-menu browser E2E
 bun run test:browser:hud # SDK-authored gameplay HUD browser E2E
-bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
+bun run test:browser:full   # Section 16/17.8 browser gameplay verification (playwright runner, all tests/browser specs)
 bun run test:browser        # alias for test:browser:full
+npx playwright test         # direct node-based runner; E2E_WORKERS overrides the default worker count
 bun run test:maps           # Section 17 dev smoke map matrix run
 bun run test:maps:matrix    # Section 17 full release map matrix comparison
 bun run start               # run Bun HTTP/WebSocket server
@@ -447,6 +478,22 @@ the Bun server lifecycle through the harness. Browser E2E is intentionally
 excluded from `test:fast` because its server/Chromium lifecycle runs in its
 dedicated CI job.
 
+The browser specs run under the node-based `@playwright/test` runner
+(`playwright test` with `playwright.config.ts` in the repo root), not under
+the Bun test runner: the Bun runtime wedges Playwright protocol calls after
+~2-3 minutes of continuous browser activity per process, which made the long
+sequential runs hang intermittently (verified experimentally; the identical
+workload completes cleanly under node). The specs themselves still drive
+everything through `tests/browser/browserHarness.ts`, which builds the
+bundle, spawns the Bun server, and launches Chromium without fixture pages;
+every page protocol call is bounded so a dead renderer fails fast. Files in
+`tests/browser` are therefore no longer discovered by `bun test`; the
+`test:browser:*` package scripts keep their names and remain the CI entry
+points (`bun run` wraps the `playwright test` invocation). SQLite-backed
+fixture preparation that needs `bun:sqlite` runs through the
+`tests/browser/prepare_replay_fixture.ts` helper (`runBunScript` in the
+harness).
+
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:
 
@@ -478,11 +525,14 @@ Account for this mismatch when changing rendering APIs.
 2. `PhysicsSystem`
 3. `GameStateManager`
 
-The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`,
-then wraps input/drawing with `KoreGameHudSurface`; `defaultSystems()` remains
+The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`
+through `createMatchHandler`, then installs input/drawing/result wiring with the
+shared `installGameplayHud`; `defaultSystems()` remains
 the sole registration point for physics and playback. The network branch waits
 for the server `INIT` settings, then installs the same UI systems with
-`NetworkEmitter` and a capability-limited HUD surface.
+`NetworkEmitter` through the same HUD installer (capability-limited: item-phase
+skip and pause are hidden because the server protocol has no skip action or
+pause surface).
 
 `GameHandlerBuilder.fromSettings()` installs the background, teams, players,
 wrapped map structures, handler effects, items, and map friction. It restores

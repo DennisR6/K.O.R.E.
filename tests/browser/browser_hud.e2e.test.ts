@@ -1,8 +1,8 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, ensureBrowserBuild, launchBrowser, openPage, readMatchState, startTestServer, waitFor } from "./browserHarness.ts";
+import { afterAll, describe, expect, test } from "@playwright/test";
+import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, ensureBrowserBuild, launchBrowser, closeBrowser, openPage, readMatchState, startTestServer, waitFor } from "./browserHarness.ts";
 
-describe("SDK-authored gameplay HUD", () => {
-	afterAll(() => expect(activeBrowserServers()).toBe(0));
+test.describe("SDK-authored gameplay HUD", () => {
+	test.afterAll(() => expect(activeBrowserServers()).toBe(0));
 	test("local match uses the HUD surface for projected turn status and item-phase commands", async () => {
 		await ensureBrowserBuild(); const server = await startTestServer(); const browser = await launchBrowser();
 		try {
@@ -18,7 +18,7 @@ describe("SDK-authored gameplay HUD", () => {
 			await clickWorld(page, 660, 327);
 			await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 50, "HUD skip item phase");
 			assertCleanConsole(capture);
-		} finally { await browser.close(); await server.stop(); }
+		} finally { await closeBrowser(browser); await server.stop(); }
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

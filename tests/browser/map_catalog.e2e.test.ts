@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import {
 	activeBrowserServers,
 	activeGameModeId,
@@ -10,6 +10,7 @@ import {
 	ensureBrowserBuild,
 	finiteEntities,
 	launchBrowser,
+	closeBrowser,
 	openPage,
 	readMatchState,
 	startTestServer,
@@ -225,8 +226,8 @@ async function playHazardTerminalMatch(page: import("playwright").Page): Promise
 	}
 }
 
-describe("Section 17.8 browser verification of qualified maps", () => {
-	afterAll(() => {
+test.describe("Section 17.8 browser verification of qualified maps", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -302,11 +303,11 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 600_000);
+	});
 
 	test("full journey: hazard-control menu -> map -> terminal result -> rematch -> menu", async () => {
 		const entry = QUALIFIED_MAPS.find(candidate => candidate.id === "hazard-control");
@@ -373,11 +374,11 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 300_000);
+	});
 });
 
 /** Reads the authoritative match result (null while the match is running). */

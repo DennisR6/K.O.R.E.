@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import {
 	activeBrowserServers,
 	activeGameModeId,
@@ -10,6 +10,7 @@ import {
 	ensureBrowserBuild,
 	finiteEntities,
 	launchBrowser,
+	closeBrowser,
 	openPage,
 	readMatchState,
 	startTestServer,
@@ -29,8 +30,8 @@ import {
 /** World-coordinate center of the SDK HUD "Skip phase" button. */
 const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 
-describe("Section 16.3 local turn through browser input", () => {
-	afterAll(() => {
+test.describe("Section 16.3 local turn through browser input", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -102,11 +103,11 @@ describe("Section 16.3 local turn through browser input", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("diagnostic route: skipmenu=1 opens the direct gameplay route and completes one turn", async () => {
 		await ensureBrowserBuild();
@@ -138,9 +139,9 @@ describe("Section 16.3 local turn through browser input", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

@@ -1,8 +1,8 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, ensureBrowserBuild, launchBrowser, openPage, startTestServer, waitFor } from "./browserHarness.ts";
+import { afterAll, describe, expect, test } from "@playwright/test";
+import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, ensureBrowserBuild, launchBrowser, closeBrowser, openPage, startTestServer, waitFor } from "./browserHarness.ts";
 
-describe("SDK-authored production main menu", () => {
-	afterAll(() => expect(activeBrowserServers()).toBe(0));
+test.describe("SDK-authored production main menu", () => {
+	test.afterAll(() => expect(activeBrowserServers()).toBe(0));
 	test("builds the canonical menu, navigates through SDK screens, emits audio, and hands off to local play", async () => {
 		await ensureBrowserBuild(); const server = await startTestServer(); const browser = await launchBrowser();
 		try {
@@ -28,7 +28,7 @@ describe("SDK-authored production main menu", () => {
 			expect(commands).toContain("kore.ui.confirm");
 			expect(commands).toContain("kore.music.match");
 			assertCleanConsole(capture);
-		} finally { await browser.close(); await server.stop(); }
+		} finally { await closeBrowser(browser); await server.stop(); }
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

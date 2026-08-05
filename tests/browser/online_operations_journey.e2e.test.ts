@@ -1,7 +1,7 @@
-import { expect, test } from "bun:test";
-import { ensureBrowserBuild, launchBrowser, nextTestPort, startTestServer, waitFor } from "./browserHarness.ts";
+import { expect, test } from "@playwright/test";
+import { ensureBrowserBuild, launchBrowser, closeBrowser, nextTestPort, startTestServer, waitFor } from "./browserHarness.ts";
 
-test.serial("online match join honors map preference without mounting legacy HTML match controls", async () => {
+test("online match join honors map preference without mounting legacy HTML match controls", async () => {
 	await ensureBrowserBuild();
 	const port = nextTestPort();
 	const secret = "section-20-dashboard-secret-with-at-least-32-bytes";
@@ -28,7 +28,7 @@ test.serial("online match join honors map preference without mounting legacy HTM
 		await contextA.close();
 		await contextB.close();
 	} finally {
-		await browser.close();
+		await closeBrowser(browser);
 		await server.stop();
 	}
-}, 120_000);
+});

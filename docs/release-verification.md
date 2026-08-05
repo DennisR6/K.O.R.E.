@@ -10,8 +10,8 @@ Section 15 human-playtest release blocker.
 | `bun run test:fast` | PASS: 584 pass, 3 skip, 0 fail; 6,952 assertions across 156 files [8.35s] |
 | `npx tsc --noEmit` | PASS: 0 type errors |
 | `bun run build` | PASS: generated browser bundle and assets |
-| `bun run test:browser:full` | PASS: 19 pass, 0 fail; 331 assertions across 6 files [153.52s] |
-| `bun test tests/online_operations_gate.test.ts tests/browser/online_operations_journey.e2e.test.ts` | PASS: 3 pass, 0 fail; 27 assertions [5.09s] |
+| `bun run test:browser:full` | PASS: 34 pass, 0 fail (node-based @playwright/test runner) [1.2m] |
+| `bun test tests/online_operations_gate.test.ts` + `npx playwright test online_operations_journey` | PASS: 3 pass, 0 fail; 27 assertions [5.09s] |
 
 - Dashboard bearer authentication and aggregate privacy: verified.
 - Online loading, submitted preference, authoritative map selection, and
@@ -349,12 +349,22 @@ in the E2E tests is a real Playwright pointer event, never a direct engine call.
 
 | Command | Result |
 | --- | --- |
-| `bun run test:browser:smoke` | PASS: 10 pass / 0 fail, 44 assertions across 1 file [21.50s] |
-| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files [80.29s] |
+| `bun run test:browser:smoke` | PASS: 10 pass / 0 fail [23.4s] |
+| `bun run test:browser:full` | PASS: 34 pass / 0 fail (node-based @playwright/test runner) [1.2m] |
 
 Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 `bun run build`) and manage the Bun server lifecycle through the harness
 (isoated port, readiness poll, SIGTERM/SIGKILL teardown, leak accounting).
+
+Since the Section 16 runner migration the specs execute under the node-based
+`@playwright/test` runner (`playwright test` with `playwright.config.ts`); the
+package script names and the `bun run` CI invocation are unchanged. The
+migration replaced the Bun test runner, whose Playwright binding wedges
+protocol calls after ~2-3 minutes of continuous browser activity per process
+(verified experimentally: the identical 4-cycle/12-match workload hangs under
+Bun and completes cleanly under node in 381s). Four consecutive full-suite
+runs pass 34/34 under the node runner, including the previously intermittently
+freezing `local_match_flow`.
 
 ### Required Report
 
@@ -407,7 +417,7 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 | --- | --- |
 | `bun run test:maps` | PASS (cache-backed smoke check of shipped maps) |
 | `bun run test:maps:matrix` | PASS: 504 cells matched byte-for-byte in attempt `release-2026-08-01` |
-| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files |
+| `bun run test:browser:full` | PASS: 34 pass / 0 fail |
 | `bun test` | PASS: 819 tests across 218 files |
 | `npx tsc --noEmit` | PASS: 0 type errors |
 | `bun run build` | PASS: `dist/main.js` and browser assets compiled |

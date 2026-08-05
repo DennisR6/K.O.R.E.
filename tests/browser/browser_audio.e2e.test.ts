@@ -1,8 +1,8 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, dragWorld, ensureBrowserBuild, launchBrowser, openPage, readMatchState, startTestServer, waitFor } from "./browserHarness.ts";
+import { afterAll, describe, expect, test } from "@playwright/test";
+import { activeBrowserServers, assertCleanConsole, canvasGeometry, captureConsole, clickWorld, dragWorld, ensureBrowserBuild, launchBrowser, closeBrowser, openPage, readMatchState, startTestServer, waitFor } from "./browserHarness.ts";
 
-describe("browser audio aggregation pilots", () => {
-	afterAll(() => expect(activeBrowserServers()).toBe(0));
+test.describe("browser audio aggregation pilots", () => {
+	test.afterAll(() => expect(activeBrowserServers()).toBe(0));
 	test("menu and local gameplay submit semantic music and UI/gameplay cues through the one browser manager", async () => {
 		await ensureBrowserBuild(); const server = await startTestServer(); const browser = await launchBrowser();
 		try {
@@ -22,7 +22,7 @@ describe("browser audio aggregation pilots", () => {
 			await dragWorld(page, { x: actor.x, y: actor.y }, { x: actor.x + 40, y: actor.y - 20 });
 			await waitFor(async () => await page.evaluate(() => (window as any).game.audio.getAppliedCommands().some((command: any) => command.soundId === "kore.game.shot")), 5_000, 50, "shot sound request");
 			assertCleanConsole(capture);
-		} finally { await browser.close(); await server.stop(); }
+		} finally { await closeBrowser(browser); await server.stop(); }
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

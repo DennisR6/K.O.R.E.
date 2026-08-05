@@ -1,6 +1,9 @@
 # Browser failure diagnostics (Section 16.5)
 .browser-diagnostics
 
+# Cross-worker browser build lock (browserHarness)
+.browser-build.lock
+
 # Logs
 logs
 *.log

@@ -1,0 +1,9 @@
+# Bun runtime configuration.
+[test]
+# The browser E2E specs in tests/browser run under the node-based
+# @playwright/test runner (playwright.config.ts), not under the Bun test
+# runner: the Bun runtime wedges Playwright protocol calls after ~2-3 minutes
+# of continuous browser activity per process (verified experimentally), and
+# the Playwright `test` API throws if Bun's runner loads the files.
+# Excluding the directory keeps `bun test` discovery free of these specs.
+pathIgnorePatterns = ["tests/browser/**"]

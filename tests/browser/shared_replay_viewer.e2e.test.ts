@@ -1,29 +1,18 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "@playwright/test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GameHandlerBuilder } from "../../src/engine/Handler.ts";
-import { MatchEndReason, MatchStatus } from "../../src/rules/types.ts";
-import { createDefaultGameSettings } from "../../src/settings/settings.ts";
-import { GameDatabase } from "../../src/server/db.ts";
-import { ensureBrowserBuild, launchBrowser, startTestServer, waitFor } from "./browserHarness.ts";
+import { ensureBrowserBuild, launchBrowser, closeBrowser, runBunScript, startTestServer, waitFor } from "./browserHarness.ts";
 
-function createFrozenShare(dbPath: string): string {
-	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings()).build();
-	handler.finishMatch({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 0 });
-	const finalSettings = handler.toSettings();
-	const db = new GameDatabase(dbPath);
-	db.createGame({ id: "private-game", settings: finalSettings, users: ["private-a", "private-b"], currentTeam: 0, turnNumber: 0, updatedAt: 1, lifecycle: { version: 1, status: "completed", createdAt: 1, statusChangedAt: 1, completedAt: 1 } });
-	const token = db.createReplayShare("private-game", { schemaVersion: 1, initialSettings: createDefaultGameSettings(), seed: 1, actions: [], finalSettings, result: finalSettings.matchResult!, completedAt: 1 }).token;
-	db.close();
-	return token;
-}
-
-test.serial("shared replay viewer loads by URL and manual token without opening a gameplay socket", async () => {
+test("shared replay viewer loads by URL and manual token without opening a gameplay socket", async () => {
 	await ensureBrowserBuild();
 	const directory = mkdtempSync(join(tmpdir(), "kore-replay-viewer-"));
 	const dbPath = join(directory, "replay.db");
-	const token = createFrozenShare(dbPath);
+	// Persisting the completed match and its frozen replay share needs
+	// bun:sqlite, so it runs in the bun fixture helper; the token is printed
+	// to stdout.
+	const token = runBunScript("tests/browser/prepare_replay_fixture.ts", ["share", dbPath]);
+	expect(token).toMatch(/^[a-f0-9]{32}$/);
 	const server = await startTestServer({ dbPath });
 	const browser = await launchBrowser();
 	try {
@@ -50,8 +39,8 @@ test.serial("shared replay viewer loads by URL and manual token without opening 
 		await page.getByRole("button", { name: "Load replay" }).evaluate((button: HTMLButtonElement) => button.click());
 		expect(await page.locator("#replay-viewer-controls [role=status]").textContent()).toBe("Enter a valid replay share ID.");
 	} finally {
-		await browser.close();
+		await closeBrowser(browser);
 		await server.stop();
 		rmSync(directory, { recursive: true, force: true });
 	}
-}, 120_000);
+});
