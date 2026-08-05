@@ -121,8 +121,9 @@ After every change, check whether this guide still reflects the implementation a
 
 ### Entities, effects, and items
 
-- `src/entity/Player.ts`: the runtime puck/figure. Construct it with a complete
-  `PlayerSettings` snapshot and serialize it with `toSettings()`.
+- `src/entity/Player.ts`: the runtime puck/figure. Construct it through the authoritative `createRuntimePlayer()` factory in `src/entity/runtimeFactory.ts` and serialize it with `toSettings()`.
+- `src/entity/runtimeFactory.ts`: single KORE runtime player factory boundary (`createRuntimePlayer`). Production code constructs runtime players exclusively through this adapter.
+- `src/kore/sdk/index.ts`: KORE SDK entry point exposing `kore.createPlayer()` / `createPlayer()` for authoring detached canonical `PlayerSettings` snapshots.
 - `src/entity/Entity.ts` and `src/entity/types.ts`: entity and snapshot
   contracts.
 - `src/entity/EntityManager.ts`: storage, ID lookup, click hit testing,

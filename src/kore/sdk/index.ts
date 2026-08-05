@@ -10,9 +10,12 @@ import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../.
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
+import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+import type { InventoryItem } from "../../item/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
+
 
 type SerializableEffect = { toSettings(): EffectSettings };
 type EffectInput = SerializableEffect | EffectSettings | FullEffectSettings;
@@ -59,6 +62,89 @@ export interface KoreWorldEffects {
 	effects: EffectInput[];
 	trigger?: EffectTrigger;
 	triggerValue?: unknown;
+}
+
+/** Input contract for authoring a canonical KORE player snapshot via `kore.createPlayer()`. */
+export interface KorePlayerInput {
+	id?: string;
+	teamNr?: number;
+	team?: number[];
+	position?: Vector2D;
+	velocity?: Vector2D;
+	rotation?: number;
+	angularVelocity?: number;
+	hp?: number;
+	bouncyness?: number;
+	mass?: number;
+	radius?: number;
+	size?: number;
+	friction?: number;
+	color?: string;
+	playericon?: AssetList;
+	hoop?: AssetList;
+	isPhysicsEnabled?: boolean;
+	isDead?: boolean;
+	effects?: FullEffectSettings[];
+	inventory?: InventoryItem[];
+}
+
+/** Authors a detached, canonical `PlayerSettings` object with KORE defaults and structural validation. */
+export function createPlayer(input: KorePlayerInput = {}): PlayerSettings {
+	if (input.id !== undefined && (typeof input.id !== "string" || input.id.trim().length === 0)) {
+		throw new Error("Player ID must be a non-empty string");
+	}
+	if (input.teamNr !== undefined) {
+		if (!Number.isSafeInteger(input.teamNr) || input.teamNr < 0) {
+			throw new Error("Player teamNr must be a non-negative integer");
+		}
+	}
+	if (input.position !== undefined) {
+		if (!Number.isFinite(input.position.x) || !Number.isFinite(input.position.y)) {
+			throw new Error("Player position must contain finite numbers");
+		}
+	}
+	if (input.velocity !== undefined) {
+		if (!Number.isFinite(input.velocity.x) || !Number.isFinite(input.velocity.y)) {
+			throw new Error("Player velocity must contain finite numbers");
+		}
+	}
+	const radius = input.radius ?? input.size;
+	if (radius !== undefined) {
+		if (!Number.isFinite(radius) || radius <= 0) {
+			throw new Error("Player radius must be a finite positive number");
+		}
+	}
+	if (input.mass !== undefined) {
+		if (!Number.isFinite(input.mass) || input.mass <= 0) {
+			throw new Error("Player mass must be a finite positive number");
+		}
+	}
+	if (input.hp !== undefined && !Number.isFinite(input.hp)) {
+		throw new Error("Player hp must be a finite number");
+	}
+
+	const team = input.teamNr !== undefined ? [input.teamNr] : (input.team ? [...input.team] : undefined);
+
+	return createPlayerSettings({
+		...(input.id !== undefined ? { id: input.id as PlayerSettings["id"] } : {}),
+		...(team !== undefined ? { team } : {}),
+		...(input.position !== undefined ? { position: { x: input.position.x, y: input.position.y } } : {}),
+		...(input.velocity !== undefined ? { velocity: { x: input.velocity.x, y: input.velocity.y } } : {}),
+		...(input.rotation !== undefined ? { rotation: input.rotation } : {}),
+		...(input.angularVelocity !== undefined ? { angularVelocity: input.angularVelocity } : {}),
+		...(input.hp !== undefined ? { hp: input.hp } : {}),
+		...(input.bouncyness !== undefined ? { bouncyness: input.bouncyness } : {}),
+		...(input.mass !== undefined ? { mass: input.mass } : {}),
+		...(radius !== undefined ? { size: radius } : {}),
+		...(input.friction !== undefined ? { friction: input.friction } : {}),
+		...(input.color !== undefined ? { color: input.color } : {}),
+		...(input.playericon !== undefined ? { playericon: input.playericon } : {}),
+		...(input.hoop !== undefined ? { hoop: input.hoop } : {}),
+		...(input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {}),
+		...(input.isDead !== undefined ? { isDead: input.isDead } : {}),
+		...(input.effects !== undefined ? { effects: input.effects.map(e => ({ ...e })) } : {}),
+		...(input.inventory !== undefined ? { inventory: input.inventory.map(i => ({ ...i })) } : {}),
+	});
 }
 
 class TeamBuilder implements KoreTeam {
@@ -222,7 +308,7 @@ export class KoreMapBuilder {
 		for (const team of teams) {
 			const teamTemplate = templates.find(player => player.team.includes(team))!;
 			for (const spawn of this.spawns.filter(candidate => candidate.teamNr === team)) {
-				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayerSettings({ ...teamTemplate, id: crypto.randomUUID() as PlayerSettings["id"], team: [team], color: this.teams.get(team)?.color ?? teamTemplate.color }));
+				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayer({ ...teamTemplate, id: crypto.randomUUID(), teamNr: team, color: this.teams.get(team)?.color ?? teamTemplate.color }));
 				arrangePlayers(spawned, spawn);
 				players.push(...spawned);
 			}
@@ -289,6 +375,8 @@ export const kore = {
 	engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
 	/** Creates a reusable serializable team definition. */
 	createTeam(settings: KoreTeamSettings): KoreTeam { return new TeamBuilder(settings); },
+	/** Authors a detached, canonical `PlayerSettings` snapshot with KORE defaults and structural validation. */
+	createPlayer(input: KorePlayerInput = {}): PlayerSettings { return createPlayer(input); },
 	/** Creates an empty two-team map builder with an 800×450 containment boundary. */
 	createDefaultMap(options: KoreMapOptions = {}): KoreMapBuilder {
 		const worldSize = options.worldSize ?? { x: 800, y: 450 };

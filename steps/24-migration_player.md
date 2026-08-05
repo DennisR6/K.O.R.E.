@@ -225,19 +225,19 @@ Do not create a replacement contract merely to match the desired SDK API.
 
 ## Checklist
 
-* [ ] Locate the authoritative `PlayerSettings` definition.
-* [ ] Identify all required serialized fields.
-* [ ] Identify optional fields and their defaults.
-* [ ] Identify runtime-only fields that must not be serialized.
-* [ ] Identify fields derived during construction.
-* [ ] Identify fields that must remain stable for replay compatibility.
-* [ ] Identify fields used by save/load.
-* [ ] Identify fields used by networking.
-* [ ] Identify fields used by AI.
-* [ ] Identify fields used by rendering.
-* [ ] Identify legacy aliases or deprecated fields.
-* [ ] Confirm whether schema versioning already exists.
-* [ ] Document the exact canonical lifecycle.
+* [x] Locate the authoritative `PlayerSettings` definition.
+* [x] Identify all required serialized fields.
+* [x] Identify optional fields and their defaults.
+* [x] Identify runtime-only fields that must not be serialized.
+* [x] Identify fields derived during construction.
+* [x] Identify fields that must remain stable for replay compatibility.
+* [x] Identify fields used by save/load.
+* [x] Identify fields used by networking.
+* [x] Identify fields used by AI.
+* [x] Identify fields used by rendering.
+* [x] Identify legacy aliases or deprecated fields.
+* [x] Confirm whether schema versioning already exists.
+* [x] Document the exact canonical lifecycle.
 
 Expected lifecycle:
 
@@ -292,18 +292,18 @@ Do not force a component redesign merely to complete the migration.
 
 ## Checklist
 
-* [ ] Identify existing generic entity contracts.
-* [ ] Reuse existing position contracts.
-* [ ] Reuse existing health contracts.
-* [ ] Reuse existing collision-shape contracts.
-* [ ] Reuse existing material or physics contracts where generic.
-* [ ] Avoid introducing parallel vector or geometry types.
-* [ ] Keep team ownership in KORE.
-* [ ] Keep turn-state concepts in KORE.
-* [ ] Keep KORE item state in KORE.
-* [ ] Keep game-specific render vocabulary outside the Engine SDK.
-* [ ] Add only missing generic authoring helpers that are independently useful.
-* [ ] Add architecture tests preventing reverse dependencies.
+* [x] Identify existing generic entity contracts.
+* [x] Reuse existing position contracts.
+* [x] Reuse existing health contracts.
+* [x] Reuse existing collision-shape contracts.
+* [x] Reuse existing material or physics contracts where generic.
+* [x] Avoid introducing parallel vector or geometry types.
+* [x] Keep team ownership in KORE.
+* [x] Keep turn-state concepts in KORE.
+* [x] Keep KORE item state in KORE.
+* [x] Keep game-specific render vocabulary outside the Engine SDK.
+* [x] Add only missing generic authoring helpers that are independently useful.
+* [x] Add architecture tests preventing reverse dependencies.
 
 The Engine SDK should be able to author a generic entity without knowing that it is a player.
 
@@ -377,22 +377,22 @@ The public API must:
 
 ## Checklist
 
-* [ ] Add the public SDK input type.
-* [ ] Add `kore.createPlayer()` or the chosen equivalent.
-* [ ] Reuse canonical `PlayerSettings`.
-* [ ] Normalize optional values.
-* [ ] Clone mutable nested records.
-* [ ] Validate finite position values.
-* [ ] Validate positive collision dimensions.
-* [ ] Validate health ranges.
-* [ ] Validate team number.
-* [ ] Validate stable non-empty ID.
-* [ ] Validate JSON safety.
-* [ ] Apply exact existing defaults.
-* [ ] Document every applied default.
-* [ ] Export the API through `src/kore/sdk/index.ts`.
-* [ ] Preserve the deprecated compatibility entry if currently required.
-* [ ] Add public API examples.
+* [x] Add the public SDK input type.
+* [x] Add `kore.createPlayer()` or the chosen equivalent.
+* [x] Reuse canonical `PlayerSettings`.
+* [x] Normalize optional values.
+* [x] Clone mutable nested records.
+* [x] Validate finite position values.
+* [x] Validate positive collision dimensions.
+* [x] Validate health ranges.
+* [x] Validate team number.
+* [x] Validate stable non-empty ID.
+* [x] Validate JSON safety.
+* [x] Apply exact existing defaults.
+* [x] Document every applied default.
+* [x] Export the API through `src/kore/sdk/index.ts`.
+* [x] Preserve the deprecated compatibility entry if currently required.
+* [x] Add public API examples.
 
 ---
 
@@ -424,15 +424,15 @@ The initial implementation may wrap the legacy constructor exactly.
 
 ## Checklist
 
-* [ ] Add one authoritative runtime player factory.
-* [ ] Make it accept canonical `PlayerSettings`.
-* [ ] Make it validate or normalize only where currently required.
-* [ ] Delegate to the existing legacy constructor initially.
-* [ ] Add a runtime round-trip test.
-* [ ] Confirm no SDK builder returns runtime instances.
-* [ ] Confirm runtime-only dependencies remain outside the SDK.
-* [ ] Add a deprecation comment to direct legacy construction paths where appropriate.
-* [ ] Prevent new direct construction in production code through an architecture test or lint-style test.
+* [x] Add one authoritative runtime player factory.
+* [x] Make it accept canonical `PlayerSettings`.
+* [x] Make it validate or normalize only where currently required.
+* [x] Delegate to the existing legacy constructor initially.
+* [x] Add a runtime round-trip test.
+* [x] Confirm no SDK builder returns runtime instances.
+* [x] Confirm runtime-only dependencies remain outside the SDK.
+* [x] Add a deprecation comment to direct legacy construction paths where appropriate.
+* [x] Prevent new direct construction in production code through an architecture test or lint-style test.
 
 Target production rule:
 
@@ -470,24 +470,24 @@ expect(sdkRuntime.toSettings()).toEqual(
 
 ## Required parity cases
 
-* [ ] default player;
-* [ ] explicit ID;
-* [ ] team 0;
-* [ ] team 1;
-* [ ] custom position;
-* [ ] custom velocity;
-* [ ] custom radius or collision shape;
-* [ ] custom health;
-* [ ] dead player;
-* [ ] active effects;
-* [ ] inventory state if player-owned;
-* [ ] render metadata if canonical;
-* [ ] snapshot reconstruction;
-* [ ] JSON round-trip;
-* [ ] effect round-trip;
-* [ ] representative old save fixture;
-* [ ] representative replay initial settings;
-* [ ] representative network payload.
+* [x] default player;
+* [x] explicit ID;
+* [x] team 0;
+* [x] team 1;
+* [x] custom position;
+* [x] custom velocity;
+* [x] custom radius or collision shape;
+* [x] custom health;
+* [x] dead player;
+* [x] active effects;
+* [x] inventory state if player-owned;
+* [x] render metadata if canonical;
+* [x] snapshot reconstruction;
+* [x] JSON round-trip;
+* [x] effect round-trip;
+* [x] representative old save fixture;
+* [x] representative replay initial settings;
+* [x] representative network payload.
 
 Do not begin production migration until parity is demonstrated.
 

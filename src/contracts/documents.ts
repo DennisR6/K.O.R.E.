@@ -4,6 +4,8 @@ import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 
+
+
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
 export interface VersionedDocument {

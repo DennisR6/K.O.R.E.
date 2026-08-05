@@ -12,6 +12,8 @@ import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
 import { Player } from "../entity/Player.js";
+import { createRuntimePlayer } from "../entity/runtimeFactory.js";
+
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
@@ -795,7 +797,7 @@ export class GameHandlerBuilder {
 		this.engine.loadEffects(gameSettings.effects)
 
 		// Player
-		players.forEach((player) => this.addPlayer(new Player(player)))
+		players.forEach((player) => this.addPlayer(createRuntimePlayer(player)))
 		if (!("state" in gameSettings)) {
 			this.engine.initializeFixedLoadouts()
 			this.engine.initializeItemDraws()
