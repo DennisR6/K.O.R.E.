@@ -6,6 +6,7 @@ import { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import type { AiDifficulty } from "../../ai/types.js";
 import { koreAudio } from "../audio.js";
 import { createMainMenuComposition, mapScreenId, validateKoreMainMenuSettings, type KoreMainMenuSettings, type KoreMenuMapIntent } from "./mainMenu.js";
+import { KoreMenuCommand, parseKoreMenuCommand } from "./menuVocabulary.js";
 import { Canvas2DUiRenderer, type UiElementState } from "./koreUiTheme.js";
 
 export interface KoreMainMenuCallbacks {
@@ -43,7 +44,9 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
     public handleMouseWheel(_event: WheelEvent): void { }
 
     public tick(_deltaTime: number, _friction: number): void {
-        this.runtime.tick({});
+        // Keep pointer state flowing through the SDK even when no button event
+        // occurred. This is what makes the renderer's hover state live.
+        this.runtime.tick({ pointer: { ...this.mouse } });
         if (this.runtime.getActiveScreen() === "landing" && this.landingTicks++ > 300) this.runtime.setElementVisible("landing-prompt", true);
         this.handleCommands(this.runtime.drainCommands());
     }
@@ -65,13 +68,15 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 
     private handleCommands(commands: UiCommand[]): void {
         for (const command of commands) {
-            if (command.command === "kore.menu.open-ai") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "difficulty" }); continue; }
-            if (command.command === "kore.menu.open-battle") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-battle" }); continue; }
-            if (command.command === "kore.menu.open-local-maps") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-local" }); continue; }
-            if (command.command === "kore.menu.open-online") { this.confirm(command.command); this.runtime.dispatch({ type: "navigate", target: "map-online" }); continue; }
-            if (command.command === "kore.menu.start-local-game") { this.confirm(command.command); this.callbacks.onPlayLocal?.(); continue; }
-            if (command.command === "kore.menu.open-ai-maps") { const difficulty = command.payload && typeof command.payload === "object" && "difficulty" in command.payload ? (command.payload as { difficulty: AiDifficulty }).difficulty : undefined; if (difficulty) this.runtime.dispatch({ type: "navigate", target: mapScreenId("ai", difficulty) }); continue; }
-            if (command.command === "kore.menu.select-map") this.selectMap(command.payload);
+            const parsed = parseKoreMenuCommand(command.command, command.payload);
+            if (!parsed) continue;
+            if (parsed.type === KoreMenuCommand.OpenAi) { this.confirm(parsed.type); this.runtime.dispatch({ type: "navigate", target: "difficulty" }); continue; }
+            if (parsed.type === KoreMenuCommand.OpenBattle) { this.confirm(parsed.type); this.runtime.dispatch({ type: "navigate", target: "map-battle" }); continue; }
+            if (parsed.type === KoreMenuCommand.OpenLocalMaps) { this.confirm(parsed.type); this.runtime.dispatch({ type: "navigate", target: "map-local" }); continue; }
+            if (parsed.type === KoreMenuCommand.OpenOnline) { this.confirm(parsed.type); this.runtime.dispatch({ type: "navigate", target: "map-online" }); continue; }
+            if (parsed.type === KoreMenuCommand.StartLocal) { this.confirm(parsed.type); this.callbacks.onPlayLocal?.(); continue; }
+            if (parsed.type === KoreMenuCommand.OpenAiMaps) { this.runtime.dispatch({ type: "navigate", target: mapScreenId("ai", parsed.payload.difficulty) }); continue; }
+            if (parsed.type === KoreMenuCommand.SelectMap) this.selectMap(parsed.payload);
         }
     }
 

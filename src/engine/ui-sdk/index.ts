@@ -50,12 +50,14 @@ export interface IUiPosition { rect: UiRect }
 export interface IUiVisible { visible: boolean }
 export interface IUiEnabled { enabled: boolean }
 export interface IUiFocusable { focused: boolean }
+export interface IUiHovered { hovered: boolean }
+export interface IUiPressState { pressed: boolean }
 export interface IUiPointerTarget extends IUiPosition { containsPoint(point: UiPoint): boolean }
 export interface IUiPressable { action?: UiAction }
 export interface IUiTextContent { text: string }
 export interface IUiTextInput extends IUiTextContent, IUiFocusable { value: string; insertText(value: string): void; deleteBackward(): void }
 
-interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiPressable>, Partial<IUiTextInput> {
+export interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiHovered>, Partial<IUiPressState>, Partial<IUiPressable>, Partial<IUiTextInput> {
 	id: string;
 	kind: UiElementKind;
 	style?: string;
@@ -154,10 +156,16 @@ export class UiRuntime {
 	public pointer(input: UiPointerState | undefined): void {
 		this.pendingPress = undefined;
 		this.hovered = undefined;
+		for (const element of this.getActiveElements()) {
+			if ("hovered" in element) element.hovered = false;
+			if ("pressed" in element) element.pressed = false;
+		}
 		if (!input) return;
 		const point = { x: input.x, y: input.y };
 		const target = this.getActiveElements().find(element => hasPointerTarget(element) && element.visible && element.enabled && element.containsPoint(point));
 		this.hovered = target?.id;
+		if (target && "hovered" in target) target.hovered = true;
+		if (target && input.pressed && "pressed" in target) target.pressed = true;
 		if (input.justPressed) this.pendingPress = target?.id;
 	}
 	public focus(): void {
@@ -218,8 +226,8 @@ export class UiRuntime {
 }
 
 class UiElement implements UiRuntimeElement {
-	public visible: boolean; public enabled: boolean; public focused: boolean; public value: string;
-	public constructor(private readonly settings: UiElementSettings) { this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.value = settings.value ?? settings.text; }
+	public visible: boolean; public enabled: boolean; public focused: boolean; public hovered: boolean; public pressed: boolean; public value: string;
+	public constructor(private readonly settings: UiElementSettings) { this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.hovered = false; this.pressed = false; this.value = settings.value ?? settings.text; }
 	public get id(): string { return this.settings.id; } public get kind(): UiElementKind { return this.settings.kind; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get text(): string { return this.settings.text; } public set text(value: string) { this.settings.text = value; }

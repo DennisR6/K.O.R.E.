@@ -4,6 +4,7 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { ui, validateUiSettings, type UiMenuSettings } from "../../engine/ui-sdk/index.js";
 import { MAP_CATALOG } from "../../content/mapCatalog.js";
 import { koreAudio, createKoreAudioSettings } from "../audio.js";
+import { KoreMenuCommand, KoreMenuElement, KoreMenuScreen, KoreMenuStyle, KoreMenuText } from "./menuVocabulary.js";
 
 export type KoreMenuMapIntent = "local" | "online" | "battle" | "ai";
 export type KoreMainMenuSettings = {
@@ -22,9 +23,10 @@ export type KoreMainMenuSettings = {
 
 const SIZE = { width: 800, height: 450 };
 
-// Button-Dimensionen für kompaktes blaues Design
-const BTN_W = 140;
-const BTN_H = 32;
+// The production menu is authored in world coordinates and consumed by the
+// generic UI SDK. Keep these bounds aligned with the browser/world contract.
+const BTN_W = 260;
+const BTN_H = 58;
 const BTN_STYLE = "kore.button.blue";
 
 // Zentrierung für ein horizontales Layout am unteren Bildschirmrand
@@ -32,33 +34,17 @@ const BTN_STYLE = "kore.button.blue";
 // 4 Buttons mit 140px Breite + 12px Lücke = 596px Gesamtbreite
 // Start-X: (800 - 596) / 2 = 102px
 // Y-Position unten: 450 - 32 (Höhe) - 20 (Abstand zum Rand) = 398px
-const BOTTOM_ROW = [
-  rect(102, 398, BTN_W, BTN_H),
-  rect(254, 398, BTN_W, BTN_H),
-  rect(406, 398, BTN_W, BTN_H),
-  rect(558, 398, BTN_W, BTN_H),
-];
-
-// Zentrierung für Untermenüs mit 3 Buttons (Gesamtbreite 444px, Start-X: 178px)
-const BOTTOM_ROW_3 = [
-  rect(178, 398, BTN_W, BTN_H),
-  rect(330, 398, BTN_W, BTN_H),
-  rect(482, 398, BTN_W, BTN_H),
-];
+const MAIN_BUTTONS = [rect(270, 112, BTN_W, BTN_H), rect(270, 176, BTN_W, BTN_H), rect(270, 240, BTN_W, BTN_H), rect(270, 304, BTN_W, BTN_H), rect(270, 368, BTN_W, BTN_H)];
 
 // Semantic Actions für KORE
 export const MAIN_ACTIONS = {
-  openOnline: "kore.menu.open-online",
-  openFriends: "kore.menu.open-friends",
-  openBattle: "kore.menu.open-battle",
-  openAi: "kore.menu.open-ai",
-  openLocalMaps: "kore.menu.open-local-maps",
-  openAiMaps: "kore.menu.open-ai-maps",
-  openAiVsAi: "kore.menu.open-ai-vs-ai",
-  selectMap: "kore.menu.select-map",
-  startLocal: "kore.menu.start-local-game",
-  openSettings: "kore.menu.open-settings",
-  openCredits: "kore.menu.open-credits",
+  openOnline: KoreMenuCommand.OpenOnline,
+  openBattle: KoreMenuCommand.OpenBattle,
+  openAi: KoreMenuCommand.OpenAi,
+  openLocalMaps: KoreMenuCommand.OpenLocalMaps,
+  openAiMaps: KoreMenuCommand.OpenAiMaps,
+  selectMap: KoreMenuCommand.SelectMap,
+  startLocal: KoreMenuCommand.StartLocal,
 } as const;
 
 function buildUiSettings(): UiMenuSettings {
@@ -88,120 +74,58 @@ function buildUiSettings(): UiMenuSettings {
     })
   );
 
-  // 1. HAUPTMENÜ (Horizontal unten zentriert: Online | Lokal | Settings | Credits)
+  // 1. HAUPTMENÜ. All interaction remains declared in SDK settings; the
+  // renderer only projects the resulting runtime state.
   builder.addScreen(
     ui.screen({
       id: "main",
       layout: ui.layout.absolute(),
       elements: [
+        ui.text({ id: "main-title", text: KoreMenuText.Title, rect: rect(300, 35, 200, 48), style: KoreMenuStyle.MapTitle }),
         ui.button({
-          id: "btn-online",
-          text: "Online",
-          rect: BOTTOM_ROW[0]!,
+          id: KoreMenuElement.MainAi,
+          text: KoreMenuText.Ai,
+          rect: MAIN_BUTTONS[0]!,
           style: BTN_STYLE,
-          action: ui.action.navigate("online-menu"),
+          action: ui.action.navigate(KoreMenuScreen.Difficulty),
         }),
         ui.button({
-          id: "btn-lokal",
-          text: "Lokal",
-          rect: BOTTOM_ROW[1]!,
+          id: KoreMenuElement.MainBattle,
+          text: KoreMenuText.Battle,
+          rect: MAIN_BUTTONS[1]!,
           style: BTN_STYLE,
-          action: ui.action.navigate("local-menu"),
+          action: ui.action.navigate(KoreMenuScreen.MapBattle),
         }),
         ui.button({
-          id: "btn-settings",
-          text: "Settings",
-          rect: BOTTOM_ROW[2]!,
+          id: KoreMenuElement.MainOnline,
+          text: KoreMenuText.Online,
+          rect: MAIN_BUTTONS[2]!,
           style: BTN_STYLE,
-          action: ui.action.emit(MAIN_ACTIONS.openSettings),
+          action: ui.action.navigate(KoreMenuScreen.MapOnline),
         }),
         ui.button({
-          id: "btn-credits",
-          text: "Credits",
-          rect: BOTTOM_ROW[3]!,
+          id: KoreMenuElement.MainLocal,
+          text: KoreMenuText.Local,
+          rect: MAIN_BUTTONS[3]!,
           style: BTN_STYLE,
-          action: ui.action.emit(MAIN_ACTIONS.openCredits),
-        }),
-      ],
-    })
-  );
-
-  // 2. ONLINE SUB-MENÜ (Horizontal unten zentriert: Matchmaking | vs Friends | Zurück)
-  builder.addScreen(
-    ui.screen({
-      id: "online-menu",
-      layout: ui.layout.absolute(),
-      elements: [
-        ui.button({
-          id: "btn-matchmaking",
-          text: "Matchmaking",
-          rect: BOTTOM_ROW_3[0]!,
-          style: BTN_STYLE,
-          action: ui.action.emit(MAIN_ACTIONS.openOnline),
+          action: ui.action.emit(MAIN_ACTIONS.startLocal),
         }),
         ui.button({
-          id: "btn-vs-friends",
-          text: "vs Friends",
-          rect: BOTTOM_ROW_3[1]!,
-          style: BTN_STYLE,
-          action: ui.action.emit(MAIN_ACTIONS.openFriends),
-        }),
-        ui.button({
-          id: "btn-online-back",
-          text: "Zurück",
-          rect: BOTTOM_ROW_3[2]!,
-          style: "kore.button.blue-back",
-          action: ui.action.back(),
-        }),
-      ],
-    })
-  );
-
-  // 3. LOKAL SUB-MENÜ (Horizontal unten zentriert: vs KI | vs Player | Ki vs Ki | Zurück)
-  builder.addScreen(
-    ui.screen({
-      id: "local-menu",
-      layout: ui.layout.absolute(),
-      elements: [
-        ui.button({
-          id: "btn-vs-ki",
-          text: "vs KI",
-          rect: BOTTOM_ROW[0]!,
-          style: BTN_STYLE,
-          action: ui.action.navigate("difficulty"),
-        }),
-        ui.button({
-          id: "btn-vs-player",
-          text: "vs Player",
-          rect: BOTTOM_ROW[1]!,
+          id: KoreMenuElement.MainMaps,
+          text: KoreMenuText.ChooseMap,
+          rect: MAIN_BUTTONS[4]!,
           style: BTN_STYLE,
           action: ui.action.emit(MAIN_ACTIONS.openLocalMaps),
         }),
-        ui.button({
-          id: "btn-ki-vs-ki",
-          text: "Ki vs Ki",
-          rect: BOTTOM_ROW[2]!,
-          style: BTN_STYLE,
-          action: ui.action.emit(MAIN_ACTIONS.openAiVsAi),
-        }),
-        ui.button({
-          id: "btn-local-back",
-          text: "Zurück",
-          rect: BOTTOM_ROW[3]!,
-          style: "kore.button.blue-back",
-          action: ui.action.back(),
-        }),
       ],
     })
   );
 
-  // 4. KI-SCHWIERIGKEITS-SCREEN
-  builder.addScreen(difficultyScreen());
-
-  // 5. DYNAMISCHE MAP-SCREENS
+  // 2. Map and difficulty screens are all declared in the same SDK menu.
   for (const intent of ["local", "online", "battle"] as const) {
     builder.addScreen(mapScreen(intent));
   }
+  builder.addScreen(difficultyScreen());
   for (const difficulty of ["easy", "medium", "hard"] as const) {
     builder.addScreen(mapScreen("ai", difficulty));
   }
@@ -231,14 +155,10 @@ export class KoreMainMenuComposition {
           MAIN_ACTIONS.openAi,
           MAIN_ACTIONS.openBattle,
           MAIN_ACTIONS.openOnline,
-          MAIN_ACTIONS.openFriends,
           MAIN_ACTIONS.openLocalMaps,
           MAIN_ACTIONS.openAiMaps,
-          MAIN_ACTIONS.openAiVsAi,
           MAIN_ACTIONS.selectMap,
           MAIN_ACTIONS.startLocal,
-          MAIN_ACTIONS.openSettings,
-          MAIN_ACTIONS.openCredits,
         ],
         confirmationSoundId: koreAudio.sounds.uiConfirm,
       },
