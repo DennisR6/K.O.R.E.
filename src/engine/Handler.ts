@@ -11,13 +11,11 @@ import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, vali
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
-import { Player } from "../entity/Player.js";
 import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
-import { MetaEffect } from "../effects/effects.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
