@@ -1,6 +1,7 @@
 import { type IEntity } from "./Entity.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
+import { createRuntimePlayer } from "./runtimeFactory.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { PlayerSettings } from "./types.js";
 
@@ -19,7 +20,7 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Playe
 	 * @param entities - Initiale Liste von Entities (z.B. Spieler oder Pucks).
 	 */
 	constructor(entities: PlayerSettings[] = []) {
-		this.entities = entities.map(entity => new Player(entity))
+		this.entities = entities.map(entity => createRuntimePlayer(entity))
 	}
 
 	/**
@@ -94,12 +95,12 @@ export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<Playe
 				entity.applySettings(settings)
 				return entity
 			}
-			return new Player(settings)
+			return createRuntimePlayer(settings)
 		})
 	}
 
 	public addPlayer(data: PlayerSettings) {
-		this.entities.push(new Player(data));
+		this.entities.push(createRuntimePlayer(data));
 	}
 
 	/**

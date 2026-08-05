@@ -5,6 +5,8 @@ import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
+import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
@@ -84,7 +86,7 @@ export class Player implements IEntity {
 		this.effectAlways = []
 		this.effectCollision = []
 		this.effectRound = []
-		for (const effect of settings.effects) this.addEffect(effect.trigger, new MetaEffect(effect))
+		for (const effect of settings.effects) this.addEffect(effect.trigger, createRuntimeEffect(effect))
 	}
 
 	/**

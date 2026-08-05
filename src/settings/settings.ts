@@ -2,6 +2,8 @@ import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
 import { isStructureCollisionRole, SHAPE, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
+
+
 import IceMap from "./iceMap.js";
 import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
