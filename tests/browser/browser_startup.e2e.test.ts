@@ -214,7 +214,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			// Landing page: any press advances to the main menu page.
 			await clickWorld(page, 400, 100);
 			// Main menu page exposes "Play Local Game" at world (270..530, 300..358).
-			await clickWorld(page, 400, 325);
+			await clickWorld(page, 551, 143);
 
 			// The local-play action starts exactly one canonical match.
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
@@ -281,7 +281,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			await waitFor(async () => (await canvasGeometry(pageA)).width > 0, 10_000, 100, "menu canvas");
 			await clickWorld(pageA, 400, 100); // landing page -> main menu page
 			// "Play Online" at world (270..530, 220..278).
-			await clickWorld(pageA, 400, 250);
+			await clickWorld(pageA, 400, 143);
 			// The online map page expresses a non-binding preference before join.
 			await clickWorld(pageA, 400, 100);
 

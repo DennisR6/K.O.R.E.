@@ -69,6 +69,22 @@ runtime elements. Screens own elements and layouts. They are not special objects
 outside the runtime and retain no DOM nodes, renderer handles, listeners, or
 browser events in settings.
 
+Containers are recursive, layout-only elements. `ui.container()` accepts child
+elements and a serializable `absolute`, `horizontal`, or `vertical` layout.
+Padding, gap, `justify`, `align`, and `stretch` are resolved deterministically
+in declaration order. Hidden flow children collapse; disabled children retain
+their space; overflowing layouts preserve requested sizes and fall back to
+start justification. Containers never require a renderer method.
+
+```ts
+const actions = ui.container({
+  id: "actions",
+  rect: { x: 0, y: 0, width: 740, height: 64 },
+  layout: ui.layout.horizontal({ gap: 16, justify: "space-evenly", align: "center" }),
+  elements: [ui.button({ id: "play", text: "Play", rect: { x: 0, y: 0, width: 132, height: 58 }, action: ui.action.emit("play") })],
+});
+```
+
 ## 8. Input lifecycle
 
 The host supplies platform-neutral `UiInput`: normalized pointer coordinates,

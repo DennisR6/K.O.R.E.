@@ -45,7 +45,7 @@ test.describe("browser KI vs KI battle", () => {
 			// Landing page -> main menu -> "KI vs KI" at world (270..530, 176..234)
 			// opens the Choose Map page; the first row (Ice Map) starts the battle.
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 400, 205);
+			await clickWorld(page, 249, 143);
 			await clickWorld(page, 400, 100);
 
 			// The battle handler boots the canonical arena.
@@ -97,7 +97,7 @@ test.describe("browser KI vs KI battle", () => {
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100); // landing -> main menu
-			await clickWorld(page, 400, 141); // 1 vs KI
+			await clickWorld(page, 99, 143); // 1 vs KI
 			await clickWorld(page, 400, 214); // Medium KI
 			await clickWorld(page, 400, 100); // Ice Map
 			await waitFor(async () => (await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.ai?.difficulty ?? null)) === "medium", 10_000, 100, "human-vs-KI start");
