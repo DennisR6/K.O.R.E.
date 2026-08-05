@@ -132,6 +132,7 @@ After every change, check whether this guide still reflects the implementation a
 - `src/effects/types.ts`: `EffectType`, `EffectTrigger`, and serialized effect
   shapes.
 - `src/effects/effects.ts`: `MetaEffect` (the hardened serialized-type factory that rejects unknown types) and `MultiEffect` (a true ordered multi-effect over child settings).
+- `src/effects/runtimeFactory.ts`: single KORE runtime effect factory boundary (`createRuntimeEffect`). Production code constructs runtime effects exclusively through this adapter.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
 - `src/effects/modifyForce.ts`: serializable multiplicative force modifier for

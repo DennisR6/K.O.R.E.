@@ -4,7 +4,7 @@ import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
-import { EffectTrigger, EffectType, type EffectSettings, type FullEffectSettings, type ModifySettingValue } from "../../effects/types.js";
+import { EffectTrigger, EffectType, ItemEffectType, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler, GameHandlerBuilder } from "../../engine/Handler.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
@@ -390,19 +390,101 @@ export const kore = {
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
 	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
 	audio: koreAudio,
-	/** Runtime effect constructors; pass their results into `addWorldEffects` or structure effect arrays. */
+	/** Declarative effect authoring helpers producing detached, JSON-safe settings. */
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
 		physics(values: FrictionSettings): EffectPhysics { return new EffectPhysics({ typeValue: values }); },
-		damage(damage: number): EffectDamage { return new EffectDamage({ typeValue: { damage } }); },
-		mass(mass: number): EffectModifyMass { return new EffectModifyMass({ typeValue: { mass } }); },
+		damage(damage: number): EffectDamage {
+			if (!Number.isFinite(damage) || damage < 0) throw new Error("Damage must be a non-negative finite number");
+			return new EffectDamage({ typeValue: { damage } });
+		},
+		mass(mass: number): EffectModifyMass {
+			if (!Number.isFinite(mass) || mass <= 0) throw new Error("Mass must be a finite positive number");
+			return new EffectModifyMass({ typeValue: { mass } });
+		},
+		size(size: number): EffectSettings {
+			if (!Number.isFinite(size) || size <= 0) throw new Error("Size must be a finite positive number");
+			return { type: EffectType.ModifySize, typeValue: { size } };
+		},
+		position(position: Vector2D): EffectSettings {
+			if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error("Position coordinates must be finite numbers");
+			return { type: EffectType.Position, typeValue: { ...position } };
+		},
+		velocity(velocity: Vector2D): EffectSettings {
+			if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) throw new Error("Velocity components must be finite numbers");
+			return { type: EffectType.Velocity, typeValue: { ...velocity } };
+		},
+		team(team: number[]): EffectSettings {
+			return { type: EffectType.Team, typeValue: { team: [...team] } };
+		},
 		modifySetting(values: ModifySettingValue): EffectModifySetting { return new EffectModifySetting({ typeValue: values }); },
 		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
+
+		// Item Effect Authoring Helpers
+		itemEffect(type: ItemEffectType, typeValue: Record<string, unknown> = {}): ItemEffectSettings {
+			return { type, typeValue: clone(typeValue) };
+		},
+		shield(capacity: number): ItemEffectSettings {
+			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");
+			return { type: ItemEffectType.Shield, typeValue: { capacity } };
+		},
+		freeze(durationTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
+			return { type: ItemEffectType.Freeze, typeValue: { durationTurns } };
+		},
+		magnet(strength: number, range: number): ItemEffectSettings {
+			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
+			return { type: ItemEffectType.Magnet, typeValue: { strength, range } };
+		},
+		temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary wall lifetimeTurns must be a positive integer");
+			return { type: ItemEffectType.TemporaryWall, typeValue: { lifetimeTurns } };
+		},
+		ghostMode(durationTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Ghost mode durationTurns must be a positive integer");
+			return { type: ItemEffectType.GhostMode, typeValue: { durationTurns } };
+		},
+		modifyForce(multiplier: number): ItemEffectSettings {
+			if (!Number.isFinite(multiplier) || multiplier <= 0) throw new Error("Modify force multiplier must be a positive finite number");
+			return { type: ItemEffectType.ModifyForce, typeValue: { multiplier } };
+		},
+		modifyRotation(angle: number): ItemEffectSettings {
+			if (!Number.isFinite(angle)) throw new Error("Modify rotation angle must be a finite number");
+			return { type: ItemEffectType.ModifyRotation, typeValue: { angle } };
+		},
+		applyTorque(torque: number): ItemEffectSettings {
+			if (!Number.isFinite(torque)) throw new Error("Torque must be a finite number");
+			return { type: ItemEffectType.ApplyTorque, typeValue: { torque } };
+		},
+		delayedEffect(delayTicks: number, effect: ItemEffectSettings): ItemEffectSettings {
+			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
+			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effect: clone(effect) } };
+		},
+		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
+			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
+			return { type: ItemEffectType.SpawnTrigger, typeValue: { delayTicks, triggerType } };
+		},
 	},
 	/** Shared engine enums and friction presets for declarative authoring. */
 	types: {
 		shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
 		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, damage: EffectType.Damage, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
+		itemEffectType: {
+			modifyForce: ItemEffectType.ModifyForce,
+			modifyRotation: ItemEffectType.ModifyRotation,
+			lockRotation: ItemEffectType.LockRotation,
+			applyTorque: ItemEffectType.ApplyTorque,
+			spawnTrigger: ItemEffectType.SpawnTrigger,
+			delayedEffect: ItemEffectType.DelayedEffect,
+			shield: ItemEffectType.Shield,
+			freeze: ItemEffectType.Freeze,
+			swapPosition: ItemEffectType.SwapPosition,
+			temporaryWall: ItemEffectType.TemporaryWall,
+			ghostMode: ItemEffectType.GhostMode,
+			magnet: ItemEffectType.Magnet,
+			selectionLock: ItemEffectType.SelectionLock,
+			aimVariance: ItemEffectType.AimVariance,
+		},
 		effectTrigger: { always: EffectTrigger.Always, collision: EffectTrigger.Collision, round: EffectTrigger.Round },
 		friction: FRICTION_TABLE,
 	},

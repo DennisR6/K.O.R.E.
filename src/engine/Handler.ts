@@ -18,6 +18,8 @@ import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import { MetaEffect } from "../effects/effects.js";
+import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
@@ -661,9 +663,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.effectCollision = []
 		for (const effect of effects) {
 			switch (effect.trigger) {
-				case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(effect)); break
-				case EffectTrigger.Round: this.effectRound.push(new MetaEffect(effect)); break
-				case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(effect)); break
+				case EffectTrigger.Always: this.effectAlways.push(createRuntimeEffect(effect)); break
+				case EffectTrigger.Round: this.effectRound.push(createRuntimeEffect(effect)); break
+				case EffectTrigger.Collision: this.effectCollision.push(createRuntimeEffect(effect)); break
 			}
 		}
 	}
