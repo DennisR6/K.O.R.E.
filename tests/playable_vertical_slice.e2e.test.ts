@@ -17,6 +17,7 @@ function renderer(text: string[]): RenderContext {
 		drawCircle() { }, drawRect() { }, drawText(value: string) { text.push(value); }, line() { }, rotate() { }, scale() { }, translate() { },
 		drawImage() { }, getScreenSize: () => ({ width: 800, height: 450 }), resizeCanvas() { }, setScaleFactor() { }, getScaleFactor: () => 1,
 		toWorld: (value: number) => value, toPixel: (value: number) => value, windowScale: () => 1, beginClip() { }, endClip() { }, mouseWheel() { },
+		noStroke() { }, getTextWidth: (text: string, size: number) => text.length * size * 0.6,
 	};
 }
 
