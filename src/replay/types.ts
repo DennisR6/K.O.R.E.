@@ -29,6 +29,11 @@ export function validateReplayDocument(document: unknown): asserts document is R
  * actors that are already dead or resolve a completed match, which makes the
  * first recorded action unplayable. Every replay export boundary must reject
  * those documents instead of serving them.
+ *
+ * The opening team is deliberately NOT restricted: first-turn-swapped matches
+ * (a legitimate variant that lets team 1 open at turn zero) produce pristine
+ * origins with `activeTeam === 1`. The pristine-origin guarantees are turn
+ * zero, a pre-result pre-phase-complete state, and alive healthy actors.
  */
 export function validateReplayOrigin(document: ReplayDocument): asserts document is ReplayDocument {
 	const initial = document.initialSettings;
@@ -36,11 +41,9 @@ export function validateReplayOrigin(document: ReplayDocument): asserts document
 	if (initial.state === "GameState.Game_over") throw new Error("Replay origin cannot be a completed match");
 	if (initial.matchResult !== undefined && initial.matchResult !== null) throw new Error("Replay origin cannot carry a match result");
 	if (initial.turnNumber !== undefined && initial.turnNumber !== 0) throw new Error("Replay origin must start at turn zero");
-	if (initial.activeTeam !== undefined && initial.activeTeam !== 0) throw new Error("Replay origin must start with team zero");
 	if (isRecord(initial.ruleState)) {
 		if (initial.ruleState.phase === "complete") throw new Error("Replay origin cannot resolve past the turn phases");
 		if (initial.ruleState.turnNumber !== undefined && initial.ruleState.turnNumber !== 0) throw new Error("Replay origin rule state must start at turn zero");
-		if (initial.ruleState.activeTeam !== undefined && initial.ruleState.activeTeam !== 0) throw new Error("Replay origin rule state must start with team zero");
 	}
 	if (Array.isArray(initial.players)) {
 		for (const player of initial.players) {
