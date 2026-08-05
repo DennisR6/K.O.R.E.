@@ -174,6 +174,49 @@ export const vodkaZeroItem: ItemDocument = {
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
 };
 
+export const mysteryBoxItem: ItemDocument = {
+	schemaVersion: 1,
+	id: "mystery-box",
+	name: "Wunderkiste",
+	description: "Spawns randomly on the map and grants either a specific item or a random item from the pool.",
+	type: "utility",
+	effects: [{ type: "spawnTrigger", value: { triggerId: "mystery-box-grant", delayTurns: 0 } }],
+	targetType: "self",
+	duration: { type: "instant", value: 0 },
+	useLimit: { perTurn: 1, perGame: 3 },
+	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+};
+
+export interface MysteryBoxRewardOptions {
+	specificItemId?: string;
+	candidatePool?: string[];
+	seed?: number;
+}
+
+/** Resolves either a specific item ID or a random item ID from the candidate pool using SDK item definitions. */
+export function resolveMysteryBoxReward(options: MysteryBoxRewardOptions = {}): string {
+	if (options.specificItemId) {
+		return options.specificItemId;
+	}
+	const pool = options.candidatePool ?? ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
+	if (pool.length === 0) throw new Error("Mystery Box pool must not be empty");
+	const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 100000);
+	const index = Math.abs(seed) % pool.length;
+	return pool[index]!;
+}
+
+/** Generates a random map pickup region bounds within world bounds for random item spawning. */
+export function generateRandomMapPickupPosition(worldSize: { x: number; y: number }, padding: number = 40, seed?: number): { x: number; y: number; w: number; h: number } {
+	const minX = padding;
+	const maxX = Math.max(minX + 1, worldSize.x - padding - 40);
+	const minY = padding;
+	const maxY = Math.max(minY + 1, worldSize.y - padding - 40);
+	const rng = seed !== undefined ? Math.abs(seed) : Math.floor(Math.random() * 100000);
+	const x = minX + (rng % Math.floor(maxX - minX + 1));
+	const y = minY + (Math.floor(rng / 7) % Math.floor(maxY - minY + 1));
+	return { x, y, w: 40, h: 40 };
+}
+
 /** Creates the validated built-in catalog used by the official item pipeline. */
 export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
@@ -199,6 +242,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	loader.registerBuiltIn(switchItem);
 	loader.registerBuiltIn(jaegermeisterElixierItem);
 	loader.registerBuiltIn(vodkaZeroItem);
+	loader.registerBuiltIn(mysteryBoxItem);
 	return loader;
 }
 
