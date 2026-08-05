@@ -1,5 +1,6 @@
 import type { AudioCommandBatch, ResolvedAudioCommand } from "../engine/audio-sdk/index.js";
 import { KORE_AUDIO_ASSETS } from "../kore/audio.js";
+type BrowserVoiceCommand = Extract<ResolvedAudioCommand, { type: "playSound" | "startLoop" | "playMusic" }>;
 
 export interface BrowserAudioElement {
 	src: string;
@@ -64,6 +65,17 @@ export class AudioManager {
 	private applyCommand(command: ResolvedAudioCommand): void {
 		if (command.type === "setBusVolume" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "stopAll" || command.type === "stopSource" || command.type === "stopMusic" || command.type === "stopInstance") { this.applyControl(command); return; }
 		const url = this.resolveAsset(command.soundId); if (!url) return;
+		// Audio files are optional in a source checkout. Probe browser-served
+		// assets before constructing HTMLAudioElement; otherwise a missing file
+		// produces an uncaught browser media error even though the semantic audio
+		// command itself was handled correctly.
+		if (typeof window !== "undefined" && url.startsWith("/public/audio/")) {
+			void fetch(url, { method: "HEAD" }).then(response => { if (response.ok) this.startAudio(command, url); });
+			return;
+		}
+		this.startAudio(command, url);
+	}
+	private startAudio(command: BrowserVoiceCommand, url: string): void {
 		const key = command.type === "playSound" ? `${command.globalSourceId}:${command.instanceId ?? command.sequence}` : command.globalSourceId;
 		if (command.type !== "playSound") this.stopSource(command.globalSourceId);
 		const element = this.createElement(url); element.loop = command.type === "startLoop" || command.type === "playMusic"; element.volume = 0;

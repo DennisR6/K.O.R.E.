@@ -35,7 +35,15 @@ Bun.serve<WebSocketData>({
 		// The offline shell lives in public/ but must register at root scope.
 		if (url.pathname === "/sw.js") return new Response(Bun.file("./public/sw.js"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {
-			return new Response(Bun.file(`.${url.pathname}`));
+			const file = Bun.file(`.${url.pathname}`);
+			if (!(await file.exists())) {
+				// Audio is an optional ignored asset in source checkouts. Returning
+				// no content keeps browser audio probing quiet without hiding other
+				// missing public resources behind a successful response.
+				if (url.pathname.startsWith("/public/audio/")) return new Response(null, { status: 204 });
+				return new Response("Not found", { status: 404 });
+			}
+			return new Response(file);
 		}
 		return new Response("Not found", { status: 404 });
 	},
