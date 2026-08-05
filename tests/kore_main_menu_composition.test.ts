@@ -42,3 +42,24 @@ test("KORE menu runtime narrows generic commands through its enum vocabulary", (
 	expect(parseKoreMenuCommand("kore.menu.unknown", undefined)).toBeUndefined();
 	expect(parseKoreMenuCommand(KoreMenuCommand.SelectMap, { intent: "unknown", mapId: "ice-map-v1" })).toBeUndefined();
 });
+
+test("SDK menu exposes live hover and focused states to its renderer", () => {
+	const menu = createKoreMainMenuSurface();
+	menu.updateMouse(400, 100);
+	menu.handleMousePressed();
+	menu.updateMouse(400, 140);
+	menu.tick(16, 0);
+	let states: Record<string, { hovered?: boolean; focused?: boolean }> = {};
+	menu.getRuntime().draw({
+		drawText() {},
+		drawTextInput() {},
+		drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; },
+	});
+	expect(states["main-ai"]?.hovered).toBe(true);
+
+	menu.updateMouse(400, 325);
+	menu.handleMousePressed();
+	states = {};
+	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
+	expect(states["main-local"]).toEqual({ hovered: true, focused: true });
+});
