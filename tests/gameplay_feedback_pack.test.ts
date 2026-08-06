@@ -29,6 +29,31 @@ test("feedback output failure is safe", () => {
 	expect(() => surface.tick(1)).not.toThrow();
 });
 
+test("feedback rendering applies animated opacity until the presentation expires", () => {
+	const opacity: number[] = [];
+	const labels: string[] = [];
+	const renderer = {
+		WORLD_SIZE_X: 800,
+		push() {}, pop() {}, setOpacity(value: number) { opacity.push(value); },
+		setFillColor() {}, drawText(value: string) { labels.push(value); },
+	} as any;
+	const surface = new KoreGameplayFeedbackSurface();
+	surface.accept({ schemaVersion: 1, sequence: 0, turnNumber: 0, type: KoreGameplayFeedbackType.Shot });
+	surface.tick(1);
+	surface.draw(renderer);
+	surface.tick(1);
+	surface.tick(1);
+	surface.tick(1);
+	surface.draw(renderer);
+	surface.tick(1);
+	surface.tick(1);
+	surface.tick(1);
+	surface.draw(renderer);
+
+	expect(opacity).toEqual([1, 0]);
+	expect(labels).toEqual(["Shot", "Shot"]);
+});
+
 test("accepted authoritative turns produce feedback without changing the engine snapshot", () => {
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createCanonicalPlayableMatchSettings()).build();
 	const actor = handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(handler.getActiveTeam()))!;
