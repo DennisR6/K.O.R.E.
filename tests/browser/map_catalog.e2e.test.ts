@@ -76,7 +76,7 @@ const QUALIFIED_MAPS = MAP_CATALOG.filter(entry => entry.browserAvailable);
 
 /** World-center of a map-selection row (menu layout: 500x40 rows at y 80+50i). */
 function mapRowWorld(index: number): { x: number; y: number } {
-	return { x: 400, y: 100 + index * 36 };
+	return { x: 400, y: 106 + index * 2 * 18 };
 }
 
 /** Grid-quantized drag start (mirrors the Section 16 killDrag helper). */
@@ -236,7 +236,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 	});
 
 	test("every browser-available map opens through the UI, renders, and resolves one legal pointer action", async () => {
-		expect(QUALIFIED_MAPS.length).toBe(6);
+		expect(QUALIFIED_MAPS.length).toBe(9);
 		expect(QUALIFIED_MAPS.every(entry => entry.id !== "frostbite-arena")).toBe(true);
 		expect(QUALIFIED_MAPS.every(entry => entry.status === "browser-qualified")).toBe(true);
 
@@ -254,7 +254,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 				if (index > 0) await openMapSelection(page);
 				const row = mapRowWorld(index);
 				await clickWorld(page, row.x, row.y);
-				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, `${entry.id} selection`);
+				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, `${entry.id} selection`);
 
 				// Stable map ID, finite visible entities, item phase open.
 				const state = await readMatchState(page);
@@ -330,7 +330,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 			// Select Hazard Control through the production UI.
 			const row = mapRowWorld(index);
 			await clickWorld(page, row.x, row.y);
-			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "hazard-control selection");
+			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, "hazard-control selection");
 			await waitFor(async () => colorNear(await probePixel(page, 300, 225), [0xd9, 0x4b, 0x28], 60), 8_000, 100, "hazard zone pixel");
 
 			// Turn 1: weak opening, no elimination.

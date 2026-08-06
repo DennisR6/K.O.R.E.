@@ -184,7 +184,7 @@ export const koreMenuCommands = MAIN_ACTIONS;
 
 function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "hard" | undefined, language: LanguageCatalog) {
   const eligible = MAP_CATALOG.filter((entry) => entry.browserAvailable && (intent !== "battle" || entry.battleAvailable));
-  const rowHeight = 36;
+  const rowHeight = intent === "local" || intent === "online" ? 18 : 36;
   const elements = [
     ui.text({ id: `map-${intent}-${difficulty ?? "root"}-title`, text: translate(language, KoreMenuText.ChooseMap), rect: rect(155, 25, 580, 42), style: "kore.menu.map-title" }),
     ...(intent === "online"
@@ -194,7 +194,7 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "h
       ui.button({
         id: `map-${intent}-${difficulty ?? "root"}-${entry.id}${mode ? `-${mode.id}` : ""}`,
         text: `${entry.name}${mode ? ` - ${mode.name}` : ""} (${entry.id})`,
-        rect: rect(150, 80 + (eligible.indexOf(entry) * (intent === "local" || intent === "online" ? getSelectableGameModes().length : 1) + index) * rowHeight, 500, 32),
+        rect: rect(150, 80 + (eligible.indexOf(entry) * (intent === "local" || intent === "online" ? getSelectableGameModes().length : 1) + index) * rowHeight, 500, rowHeight - 2),
         style: "kore.menu.map-row",
         action: ui.action.emit(MAIN_ACTIONS.selectMap, { intent, mapId: entry.id, ...(mode ? { modeId: mode.id } : {}), ...(difficulty ? { difficulty } : {}) }),
       })

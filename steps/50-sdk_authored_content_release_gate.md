@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Implemented: technical gate recorded; human/platform evidence remains blocked or pending
 
 ## Objective
 
@@ -46,3 +46,13 @@ Depends on Milestone 49.
 - No gameplay or content feature implementation belongs in this gate.
 - No deletion or weakening of existing behavioral, security, browser, or packaging tests.
 - No claim that automation substitutes for external human playtest evidence.
+
+## Implementation Record
+
+- Added `tests/sdk_content_release_gate.test.ts` as the aggregate inventory,
+  package-hash, evidence-link, import, and status-classification gate.
+- Added `scripts/contentReleaseGate.ts` and the `content:release-gate` package
+  command. It runs authoritative checks sequentially and fails loudly.
+- Recorded technical PASS, intentional SKIP, external-evidence BLOCKED, and
+  platform PENDING states in `docs/sdk-content-release-verification.md`.
+- No gameplay or content implementation was added by this milestone.

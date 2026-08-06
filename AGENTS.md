@@ -454,6 +454,7 @@ bun run test:browser:hud # SDK-authored gameplay HUD browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (playwright runner, all tests/browser specs)
 bun run test:browser        # alias for test:browser:full
 bun run sdk:release-gate    # final SDK-only source, example, qualification, browser, and desktop gate
+bun run content:release-gate # Milestone 50 aggregate content gate; stops on technical failure and preserves human blockers
 npx playwright test         # direct node-based runner; E2E_WORKERS overrides the default worker count
 bun run test:maps           # Section 17 dev smoke map matrix run
 bun run test:maps:matrix    # Section 17 full release map matrix comparison
@@ -486,6 +487,13 @@ Milestone 49 content cross-system qualification is recorded in
 `docs/content-qualification-report.md` and
 `tests/content_cross_system_qualification.test.ts`. It retains explicit
 technical skips and human/platform blockers; Milestone 50 remains separate.
+
+Milestone 50 SDK-authored content release verification is recorded in
+`docs/sdk-content-release-verification.md`, with the aggregate command in
+`scripts/contentReleaseGate.ts` and the focused evidence gate in
+`tests/sdk_content_release_gate.test.ts`. The technical command is fail-fast;
+human gameplay evidence remains `BLOCKED` and unverified platform evidence
+remains `PENDING`.
 
 ## Browser Workflow
 
