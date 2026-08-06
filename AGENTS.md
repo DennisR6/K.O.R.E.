@@ -295,7 +295,9 @@ After every change, check whether this guide still reflects the implementation a
   passive AI input handler; the result controls are installed only after the
   battle reaches `Game_over`.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
-  without retaining stale handlers. `createLocalGameplayHandler`,
+  without retaining stale handlers. The menu switches from its landing artwork
+  to a passive autonomous KI-vs-KI preview rendered behind the SDK menu once
+  the main menu is active. `createLocalGameplayHandler`,
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
   `createMatchHandler`; `startScene` installs `installGameplayHud` for player
   matches and leaves the KI-vs-KI engine HUD-free, while installing the
