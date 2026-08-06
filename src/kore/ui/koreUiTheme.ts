@@ -132,15 +132,7 @@ export class Canvas2DUiRenderer {
 
     this.ctx.push();
 
-    // 1. AUSSEN-BORDER
-    if (style.borderWidth > 0 && style.borderColor !== "transparent") {
-      this.ctx.setNoFill();
-      this.ctx.setStrokeColor(style.borderColor);
-      this.ctx.setStroke(style.borderWidth);
-      this.ctx.drawRect(rect.x, rect.y, rect.width, rect.height, style.borderRadius);
-    }
-
-    // 2. INNEN-BODY
+    // 1. INNEN-BODY
     this.ctx.push();
     this.drawSeamlessRoundedRect(
       rect.x,
@@ -152,6 +144,14 @@ export class Canvas2DUiRenderer {
       style.backgroundAlpha
     );
     this.ctx.pop();
+
+    // 2. AUSSEN-BORDER
+    if (style.borderWidth > 0 && style.borderColor !== "transparent") {
+      this.ctx.setNoFill();
+      this.ctx.setStrokeColor(style.borderColor);
+      this.ctx.setStroke(style.borderWidth);
+      this.ctx.drawRect(rect.x, rect.y, rect.width, rect.height, style.borderRadius);
+    }
 
     // 3. TEXT: wrap long labels at word boundaries and center every line.
     if (text) {
