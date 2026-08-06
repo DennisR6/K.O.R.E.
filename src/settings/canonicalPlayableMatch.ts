@@ -1,6 +1,5 @@
-import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
+import { GameHandler } from "../engine/Handler.js";
 import { RulePhase, WinCondition } from "../rules/types.js";
-import { WinningSystem } from "../systems/WinningSystem.js";
 import { createDefaultGameSettings, validateGameSettings, type GameSettings } from "./settings.js";
 import { SHAPE } from "../physics/physics.js";
 import { FitWorldCamera } from "../ui/FitWorldCamera.js";
@@ -9,6 +8,7 @@ import {
 	vodkaZeroItem
 
 } from "../item/officialItems.js";
+import { kore } from "../kore/sdk/index.js";
 
 
 
@@ -24,29 +24,39 @@ export const CANONICAL_PLAYABLE_MATCH = {
 	result: "last-team-standing",
 } as const;
 
+const CANONICAL_MATCH_ID = "00000000-0000-4000-8000-000000000014";
+
+/** Deterministic player ids derived from the canonical match id. */
+function canonicalPlayerIds(count: number): string[] {
+	return Array.from({ length: count }, (_, index) => `00000000-0000-4000-8000-00000000014${index.toString(16)}`);
+}
+
 /** Returns a detached, validated and deterministic reference-match snapshot. */
 export function createCanonicalPlayableMatchSettings(): GameSettings {
-	const settings = createDefaultGameSettings(2, 6);
-	settings.id = "00000000-0000-4000-8000-000000000014";
-	settings.myTeam = [0, 1];
-	settings.allTeams = ["Local team 0", "Local team 1"];
-	settings.players.forEach((player, index) => {
-		player.id = `00000000-0000-4000-8000-00000000014${index.toString(16)}`;
+	const base = createDefaultGameSettings(2, 6);
+	// The arena geometry (roles, containment) is map authoring; it migrates to
+	// KORE map descriptors in milestone 29. The match header, teams, ids,
+	// items, and game mode are authored through the KORE match SDK.
+	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
+	base.mapBoundarys.unshift({ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
+	const settings = kore.authorMatchSettings(base, {
+		matchId: CANONICAL_MATCH_ID,
+		myTeam: [0, 1],
+		allTeams: ["Local team 0", "Local team 1"],
+		playerIds: canonicalPlayerIds(base.players.length),
+		items: [powerDashItem, vodkaZeroItem],
+		gameMode: kore.createGameMode({
+			id: CANONICAL_PLAYABLE_MATCH.id,
+			phases: [RulePhase.Item, RulePhase.Physics],
+			maxItemsPerTurn: 1,
+			winCondition: WinCondition.LastTeamStanding,
+			itemEconomy: { fixedLoadouts: [{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }] }, { team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }] }], mapPickups: [] },
+		}),
 	});
-	settings.items = [powerDashItem, vodkaZeroItem];
-	settings.mapBoundarys = settings.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
-	settings.mapBoundarys.unshift({ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
-	settings.gameMode = {
-		id: CANONICAL_PLAYABLE_MATCH.id,
-		phases: [RulePhase.Item, RulePhase.Physics],
-		maxItemsPerTurn: 1,
-		winCondition: WinCondition.LastTeamStanding,
-		itemEconomy: { fixedLoadouts: [{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }] }, { team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }] }], mapPickups: [] },
-	};
 	validateGameSettings(settings);
 	validateReferenceMapSettings(settings);
 	validateReferenceSpawnAndCamera(settings);
-	return JSON.parse(JSON.stringify(settings)) as GameSettings;
+	return settings;
 }
 
 /** Validates the semantic safety contract for the shipped Ice Duel arena. */
@@ -82,9 +92,13 @@ export function validateReferenceSpawnAndCamera(settings: GameSettings): void {
 
 /** Builds the canonical local handler with its authoritative winning evaluator. */
 export function createCanonicalPlayableMatchHandler(): GameHandler {
-	return new GameHandlerBuilder()
-		.defaultSystems()
-		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
-		.fromSettings(createCanonicalPlayableMatchSettings())
-		.build();
+	const settings = createCanonicalPlayableMatchSettings();
+	const definition = kore.createMatchDefinition({
+		mapId: CANONICAL_PLAYABLE_MATCH.mapId,
+		settings,
+		gameMode: settings.gameMode!,
+		seed: 12345,
+		header: { myTeam: settings.myTeam, allTeams: settings.allTeams },
+	});
+	return kore.createRuntimeMatch(definition);
 }
