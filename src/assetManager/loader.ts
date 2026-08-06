@@ -1,14 +1,15 @@
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
 type ImageKey = AssetKey | string;
+type LoadedImage = HTMLImageElement | ImageBitmap;
 
 class EngineAssetManager {
-	private cache: Map<ImageKey, HTMLImageElement> = new Map();
+	private cache: Map<ImageKey, LoadedImage> = new Map();
 	private errorCount: Map<ImageKey, number> = new Map();
 	private MAX_RETRIES = 2;
 	private isLoading: Set<ImageKey> = new Set();
 
-	get(key: ImageKey): HTMLImageElement | null {
+	get(key: ImageKey): LoadedImage | null {
 		if (key === undefined) {
 			console.log(`${key}:${typeof key === "number" ? AssetPaths[key] : key} is undefined`, key)
 			return null
@@ -36,12 +37,9 @@ class EngineAssetManager {
 			if (!response.ok) throw new Error("Netzwerkfehler");
 
 			const blob = await response.blob();
-			const objectUrl = URL.createObjectURL(blob);
-			const img = new Image();
-			img.src = objectUrl;
-			await img.decode();
+			const image = await this.decodeImage(blob, key);
 
-			this.cache.set(key, img);
+			this.cache.set(key, image);
 			this.errorCount.delete(key);
 			this.isLoading.delete(key)
 		} catch (e) {
@@ -53,6 +51,28 @@ class EngineAssetManager {
 				console.error(`Fallback auf JSON für: ${key}`);
 				await this.loadJsonFallback(key);
 			}
+		}
+	}
+
+	private async decodeImage(blob: Blob, key: ImageKey): Promise<LoadedImage> {
+		// Rasterizing SVGs as ImageBitmaps gives the p5 canvas a concrete image
+		// source and avoids browser-specific SVG drawImage behavior.
+		if (isSvgAsset(key) && typeof createImageBitmap === "function") {
+			try {
+				return await createImageBitmap(blob);
+			} catch {
+				// Fall back to HTMLImageElement for browsers without SVG bitmap support.
+			}
+		}
+
+		const objectUrl = URL.createObjectURL(blob);
+		try {
+			const img = new Image();
+			img.src = objectUrl;
+			await img.decode();
+			return img;
+		} finally {
+			URL.revokeObjectURL(objectUrl);
 		}
 	}
 
@@ -74,6 +94,11 @@ class EngineAssetManager {
 			console.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
 		}
 	}
+}
+
+function isSvgAsset(key: ImageKey): boolean {
+	const path = typeof key === "string" ? key : AssetPaths[key];
+	return typeof path === "string" && /\.svg(?:$|[?#])/i.test(path);
 }
 
 export const assetManager = new EngineAssetManager();
