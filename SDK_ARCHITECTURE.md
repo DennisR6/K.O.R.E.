@@ -35,7 +35,7 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
 | Team numbers, spawn regions, player materialization | `src/kore_sdk.ts` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
 | Default map size/friction, containment, game mode | `src/kore_sdk.ts` | KORE SDK | KORE defaults; medium risk. |
 | KORE effects, assets, map structures | `src/kore_sdk.ts` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
-| `GameHandlerBuilder` runtime construction | `src/kore_sdk.ts` | KORE runtime SDK | Current handler and default systems are KORE-composed; compatibility preserved. |
+| `GameHandlerBuilder` runtime construction | `src/engine/runtimeFactory.ts` | Runtime factory | Designated handler construction boundary (milestone 28); match authoring composes via KORE match APIs instead. |
 | `GameSettings`, `MapDocument`, system snapshots | existing contracts | Canonical contracts | Stable serialization boundary; do not duplicate. |
 
 ## 4. Engine SDK responsibilities

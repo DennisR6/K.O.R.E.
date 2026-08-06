@@ -5,8 +5,9 @@ import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
 import { EffectTrigger, EffectType, ItemEffectType, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
-import { GameHandler, GameHandlerBuilder } from "../../engine/Handler.js";
+import { GameHandler } from "../../engine/Handler.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
+import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
@@ -15,6 +16,18 @@ import type { InventoryItem } from "../../item/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
+import {
+	authorMatchSettings,
+	createGameMode,
+	createMatchDefinition,
+	createMatchSystemProfile,
+	createRuntimeMatch,
+	validateKoreMatchDefinition,
+	type KoreGameModeInput,
+	type KoreMatchDefinition,
+	type KoreMatchHeader,
+	type KoreMatchOptions,
+} from "./match.js";
 
 
 type SerializableEffect = { toSettings(): EffectSettings };
@@ -368,7 +381,7 @@ export function createDefaultKoreFramework(): EngineFrameworkSettings {
  *   .addPlayerSpawn({ x: 640, y: 150, w: 120, h: 140, teamNr: 1, playerCount: 2 })
  *   .addWorldEffects({ effects: [kore.effects.move({ deltaTime: 0, x: 0, y: 0 })] })
  *   .build();
- * new GameHandlerBuilder().defaultSystems().fromSettings(map).build();
+ * kore.createHandler(map);
  */
 export const kore = {
 	/** Deliberately selected generic primitives for KORE authors who need custom framework metadata. */
@@ -385,11 +398,23 @@ export const kore = {
 	/** Revalidates a JSON-safe engine settings object before runtime import. */
 	validate(settings: unknown): asserts settings is GameSettings { validateGameSettings(settings); },
 	/** Builds a runtime handler from a validated SDK map snapshot. */
-	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return new GameHandlerBuilder().defaultSystems().fromSettings(settings).build(); },
+	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return createRuntimeHandler(settings); },
 	/** Returns KORE's default deterministic runtime system profile as serializable framework metadata. */
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
 	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
 	audio: koreAudio,
+	/**
+	 * Match authoring: canonical handler creation, match composition, systems,
+	 * rule configuration, teams, and mode setup (milestone 28). Definitions
+	 * are detached, validated, JSON-safe; runtime construction happens only
+	 * inside the engine handler runtime factory.
+	 */
+	createGameMode,
+	createMatchSystemProfile,
+	authorMatchSettings,
+	createMatchDefinition,
+	validateMatchDefinition: validateKoreMatchDefinition,
+	createRuntimeMatch,
 	/** Declarative effect authoring helpers producing detached, JSON-safe settings. */
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
@@ -489,3 +514,5 @@ export const kore = {
 		friction: FRICTION_TABLE,
 	},
 } as const;
+
+export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };

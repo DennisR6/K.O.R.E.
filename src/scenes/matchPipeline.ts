@@ -3,13 +3,12 @@ import { GameEmitter } from "../emitter/EngineEmitter.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
-import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
-import { WinningSystem } from "../systems/WinningSystem.js";
+import type { GameHandler } from "../engine/Handler.js";
+import { kore } from "../kore/sdk/index.js";
+import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
+import { buildMapSettings } from "../content/mapCatalog.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
-import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
-import { validateGameSettings, type GameSettings } from "../settings/settings.js";
-import { buildMapSettings } from "../content/mapCatalog.js";
 
 /** Bounded hard-AI search for browser-responsible KI-vs-KI decisions. */
 export const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
@@ -26,23 +25,21 @@ export type MatchPipelineConfig = {
 };
 
 /**
- * The single pipeline that starts every offline match. All modes build the
- * same canonical settings, the same systems, the same emitter stack, and the
- * same recorder; only the mode "header" (team names, AI settings, seed, and
- * the input system that drives the match) differs. The seed defaults are
- * stable per mode: the hotseat reference match stays reproducible at 12345
- * (its legacy default) while AI modes draw a fresh seed so every game is new.
+ * The single pipeline that starts every offline match. Canonical match
+ * authoring (settings header, game mode, teams, engine system profile, and
+ * seed) flows through the KORE match SDK, and the runtime handler is built
+ * through the engine handler runtime factory. Only the transport adapters
+ * (UI, emitters, and AI drivers) remain application-owned.
  */
 export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const seed = config.seed ?? (config.mode === "hotseat" ? 12345 : Math.floor(Math.random() * 0x7fffffff));
 	const settings = buildMapSettings(config.mapId, createCanonicalPlayableMatchSettings());
-	applyModeHeader(settings, config, seed);
-	validateGameSettings(settings);
-	const handler = new GameHandlerBuilder()
-		.defaultSystems()
-		.addSystem(new WinningSystem(CANONICAL_PLAYABLE_MATCH.teamCount))
-		.fromSettings(settings)
-		.build();
+	const difficulty = config.difficulty ?? "medium";
+	const header = config.mode === "human-vs-ai"
+		? { myTeam: [0] as number[], allTeams: ["Human", `${difficulty} KI`], ai: { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) } }
+		: { myTeam: settings.myTeam, allTeams: settings.allTeams };
+	const definition = kore.createMatchDefinition({ mapId: config.mapId, settings, gameMode: settings.gameMode!, seed, header });
+	const handler = kore.createRuntimeMatch(definition);
 	const emitters = new CombiEmitter();
 	emitters.addEmitter(new GameEmitter(handler, handler.getSettings()?.gameMode, CANONICAL_PLAYABLE_MATCH.teamCount, seed));
 	switch (config.mode) {
@@ -66,7 +63,6 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 			handler.setMouseHandler(ui);
 			handler.addSystem(new EmitterSystem(emitters));
 			if (config.mode === "human-vs-ai") {
-				const difficulty = config.difficulty ?? "medium";
 				const aiSettings: AiSettings = { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) };
 				handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings));
 			}
@@ -74,13 +70,4 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 		}
 	}
 	return handler;
-}
-
-/** Applies the only mode-specific fields: team/settings headers and AI metadata. */
-function applyModeHeader(settings: GameSettings, config: MatchPipelineConfig, seed: number): void {
-	if (config.mode !== "human-vs-ai") return;
-	const difficulty = config.difficulty ?? "medium";
-	settings.myTeam = [0];
-	settings.allTeams = ["Human", `${difficulty} KI`];
-	settings.ai = { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) };
 }
