@@ -12,7 +12,9 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
-import type { InventoryItem } from "../../item/types.js";
+import { createItemDocument, validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
+import { ItemValidator } from "../../item/validate.js";
+import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
@@ -88,6 +90,42 @@ export interface KoreHazardZone {
 export interface KoreForceHazardZone extends KoreHazardZone {
 	angle: number;
 	power: number;
+}
+
+export interface KoreItemInput {
+	id: string;
+	name: string;
+	type: string;
+	effects?: Array<{ type: string; value?: Record<string, unknown> }>;
+	targetType?: ItemDocument["targetType"];
+	duration?: ItemDocument["duration"];
+	useLimit?: ItemDocument["useLimit"];
+	targetValidation?: ItemDocument["targetValidation"];
+	description?: string;
+	cooldown?: number;
+}
+
+const SDK_ITEM_EFFECT_TYPES = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"] as const;
+const SDK_ITEM_EFFECT_TYPE_SET = new Set<string>(SDK_ITEM_EFFECT_TYPES);
+
+/** Creates a validated declarative item document without constructing runtime effects. */
+export function createItem(input: KoreItemInput): ItemDocument {
+	const item = createItemDocument({
+		...input,
+		effects: (input.effects ?? []).map(effect => ({ type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) })),
+	});
+	const validator = new ItemValidator();
+	for (const effectType of SDK_ITEM_EFFECT_TYPES) validator.registerEffectType(effectType);
+	for (const effect of item.effects) if (!SDK_ITEM_EFFECT_TYPE_SET.has(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+	return clone(validator.validate(item));
+}
+
+/** Composes multiple declarative item effects while keeping their order stable. */
+export function composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> {
+	return effects.map(effect => {
+		if (!SDK_ITEM_EFFECT_TYPE_SET.has(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+		return { type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) };
+	});
 }
 
 /** Input contract for authoring a canonical KORE player snapshot via `kore.createPlayer()`. */
@@ -190,6 +228,8 @@ export class KoreMapBuilder {
 	private readonly structures: MapBoundarySettings[] = [];
 	private readonly generatedHazardStructureIndexes = new Set<number>();
 	private readonly hazards: HazardDocument[] = [];
+	private readonly items: ItemDocument[] = [];
+	private readonly itemEconomy: ItemEconomySettings = { fixedLoadouts: [], mapPickups: [] };
 	private background: SettingsBackground = { type: "color", color: "#dff6ff" };
 	private built: GameSettings | undefined;
 
@@ -292,6 +332,49 @@ export class KoreMapBuilder {
 		return this;
 	}
 
+	/** Registers one validated item document for this map/match composition. */
+	public addItem(item: ItemDocument): this {
+		const validated = createItem(item);
+		if (this.items.some(candidate => candidate.id === validated.id)) throw new Error(`Item ${validated.id} is already registered`);
+		this.items.push(validated);
+		this.built = undefined;
+		return this;
+	}
+
+	/** Adds one team loadout using item IDs and positive use counts. */
+	public addFixedLoadout(loadout: FixedItemLoadout): this {
+		if (!Number.isSafeInteger(loadout.team) || loadout.team < 0 || !Array.isArray(loadout.items) || loadout.items.length === 0) throw new Error("Fixed loadouts require a non-negative team and items");
+		if (this.itemEconomy.fixedLoadouts.some(candidate => candidate.team === loadout.team)) throw new Error(`Team ${loadout.team} already has an item loadout`);
+		if (loadout.items.some(item => !Number.isSafeInteger(item.uses) || item.uses < 1 || typeof item.itemId !== "string" || item.itemId.length === 0)) throw new Error("Fixed loadout items require an ID and positive use count");
+		this.itemEconomy.fixedLoadouts.push(clone(loadout));
+		this.built = undefined;
+		return this;
+	}
+
+	/** Adds a validated map pickup to the item economy. */
+	public addItemPickup(pickup: ItemPickup): this {
+		validateItemPickup(pickup);
+		this.itemEconomy.mapPickups.push(clone(pickup));
+		this.built = undefined;
+		return this;
+	}
+
+	/** Configures deterministic per-turn item draws. */
+	public setSeededItemDraw(draw: SeededItemDrawSettings): this {
+		if (!Number.isSafeInteger(draw.seed) || !Array.isArray(draw.itemIds) || draw.itemIds.length === 0 || draw.itemIds.some(id => typeof id !== "string" || id.length === 0) || !Number.isSafeInteger(draw.drawsPerTurn) || draw.drawsPerTurn < 1) throw new Error("Seeded item draws require a safe seed, item IDs, and positive draws per turn");
+		this.itemEconomy.randomDraw = clone(draw);
+		this.built = undefined;
+		return this;
+	}
+
+	/** Configures the deterministic reward pool for the built-in mystery box. */
+	public setMysteryBox(settings: MysteryBoxSettings): this {
+		if (!Array.isArray(settings.candidatePool) || settings.candidatePool.length === 0 || settings.candidatePool.some(id => typeof id !== "string" || id.length === 0)) throw new Error("Mystery box rewards require a non-empty candidate pool");
+		this.itemEconomy.mysteryBox = clone(settings);
+		this.built = undefined;
+		return this;
+	}
+
 	/** Produces validated `GameSettings`, directly accepted by `GameHandlerBuilder.fromSettings()`. */
 	public build(): GameSettings {
 		if (this.built) return clone(this.built);
@@ -306,6 +389,7 @@ export class KoreMapBuilder {
 		if (figuresPerTeam[0] !== figuresPerTeam[1]) throw new Error("SDK maps require the same figure count for both teams");
 		const template = createDefaultGameSettings(2, 1);
 		const players = this.createPlayers(template.players, teamNumbers);
+		this.validateItemReferences();
 		const settings: GameSettings = {
 			...template,
 			id: this.options.id as GameSettings["id"],
@@ -315,8 +399,18 @@ export class KoreMapBuilder {
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
 			players,
+			items: clone(this.items),
 			mapBoundarys: clone(genericWorld.structures as unknown as MapBoundarySettings[]),
 			effects: clone(genericWorld.effects as unknown as FullEffectSettings[]),
+			...(this.hasItemEconomy() ? {
+				gameMode: {
+					id: `${this.options.id}-mode`,
+					phases: [RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics, RulePhase.Complete],
+					maxItemsPerTurn: 1,
+					winCondition: WinCondition.LastTeamStanding,
+					itemEconomy: clone(this.itemEconomy),
+				},
+			} : {}),
 			allTeams: teamNumbers.map(team => this.teams.get(team)?.name ?? `Team ${team + 1}`),
 			myTeam: [],
 			allTeamSize: teamNumbers.length,
@@ -357,6 +451,23 @@ export class KoreMapBuilder {
 		if (typeof settings.id !== "string" || settings.id.trim().length === 0) throw new Error("Hazard ID must be a non-empty string");
 		if (![settings.x, settings.y, settings.r].every(Number.isFinite) || settings.r <= 0) throw new Error("Hazard zone requires finite coordinates and a positive radius");
 		if (this.hazards.some(hazard => hazard.id === settings.id)) throw new Error(`Hazard ${settings.id} is already registered`);
+	}
+
+	private hasItemEconomy(): boolean {
+		return this.items.length > 0 || this.itemEconomy.fixedLoadouts.length > 0 || this.itemEconomy.mapPickups.length > 0 || this.itemEconomy.randomDraw !== undefined || this.itemEconomy.mysteryBox !== undefined;
+	}
+
+	private validateItemReferences(): void {
+		if (!this.hasItemEconomy()) return;
+		validateItemEconomySettings(this.itemEconomy);
+		const known = new Set(this.items.map(item => item.id));
+		const references = [
+			...this.itemEconomy.fixedLoadouts.flatMap(loadout => loadout.items.map(item => item.itemId)),
+			...this.itemEconomy.mapPickups.map(pickup => pickup.itemId),
+			...(this.itemEconomy.randomDraw?.itemIds ?? []),
+			...(this.itemEconomy.mysteryBox?.candidatePool ?? []),
+		];
+		if (references.some(itemId => !known.has(itemId))) throw new Error("Item economy references an unknown item");
 	}
 
 	private createPlayers(templates: PlayerSettings[], teams: number[]): PlayerSettings[] {
@@ -433,6 +544,10 @@ export const kore = {
 	createTeam(settings: KoreTeamSettings): KoreTeam { return new TeamBuilder(settings); },
 	/** Authors a detached, canonical `PlayerSettings` snapshot with KORE defaults and structural validation. */
 	createPlayer(input: KorePlayerInput = {}): PlayerSettings { return createPlayer(input); },
+	/** Creates a validated declarative item document. */
+	createItem(input: KoreItemInput): ItemDocument { return createItem(input); },
+	/** Composes validated declarative item effects in declaration order. */
+	composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> { return composeItemEffects(...effects); },
 	/** Creates an empty two-team map builder with an 800×450 containment boundary. */
 	createDefaultMap(options: KoreMapOptions = {}): KoreMapBuilder {
 		const worldSize = options.worldSize ?? { x: 800, y: 450 };
