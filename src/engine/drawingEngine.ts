@@ -169,7 +169,7 @@ export class P5Renderer implements RenderContext {
 		}
 	}
 	setStroke(weight: number): void {
-		this.p5ctx.stroke(weight)
+		this.p5ctx.strokeWeight(weight)
 	}
 	rotate(x: number): void {
 		if (Number.isNaN(x)) {
