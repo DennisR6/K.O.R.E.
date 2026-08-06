@@ -92,7 +92,7 @@ const EN_EN_STRINGS: Record<LanguageKey, string> = {
 	[LANGUAGE_KEYS.MenuAiButton]: "1 vs AI",
 	[LANGUAGE_KEYS.MenuBattleButton]: "AI vs AI",
 	[LANGUAGE_KEYS.MenuOnlineButton]: "Play Online",
-	[LANGUAGE_KEYS.MenuLocalButton]: "Play Local Game",
+	[LANGUAGE_KEYS.MenuLocalButton]: "Play Offline",
 	[LANGUAGE_KEYS.MenuChooseMapButton]: "Choose Map",
 	[LANGUAGE_KEYS.MenuOnlineMapNote]: "Preference only - the server may choose Ice Map",
 	[LANGUAGE_KEYS.MenuBackButton]: "Back",

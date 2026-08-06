@@ -25,10 +25,8 @@ export type KoreMainMenuSettings = {
 
 const SIZE = { width: 800, height: 450 };
 
-// The production menu is authored in world coordinates and consumed by the
-// generic UI SDK. Keep these bounds aligned with the browser/world contract.
-const BTN_W = 132;
-const BTN_H = 58;
+const BTN_W = 140;
+const BTN_H = 48;
 const BTN_STYLE = "kore.button.blue";
 
 // Semantic Actions für KORE
@@ -40,6 +38,7 @@ export const MAIN_ACTIONS = {
   openAiMaps: KoreMenuCommand.OpenAiMaps,
   selectMap: KoreMenuCommand.SelectMap,
   startLocal: KoreMenuCommand.StartLocal,
+  openOnlineFriends: "kore.menu.open-online-friends",
 } as const;
 
 function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
@@ -69,32 +68,97 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
     })
   );
 
-  // 1. HAUPTMENÜ. All interaction remains declared in SDK settings; the
-  // renderer only projects the resulting runtime state.
+  // 1. HAUPTMENÜ (Online, Lokal, Settings, Credits)
   builder.addScreen(
     ui.screen({
       id: "main",
-      layout: ui.layout.vertical({ gap: 28, justify: "space-between", align: "center", padding: { top: 35, right: 30, bottom: 50, left: 30 } }),
+      layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
       elements: [
         ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
         ui.container({
           id: KoreMenuElement.MainActions,
-          rect: rect(0, 0, 740, BTN_H),
-          layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
+          rect: rect(0, 0, 740, 240),
+          layout: ui.layout.horizontal({ gap: 12, justify: "center", align: "center", padding: { top: 200, right: 0, bottom: 0, left: 0 } }),
           style: KoreMenuStyle.MainActions,
           elements: [
-            ui.button({ id: KoreMenuElement.MainAi, text: translate(language, KoreMenuText.Ai), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
-            ui.button({ id: KoreMenuElement.MainBattle, text: translate(language, KoreMenuText.Battle), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
-            ui.button({ id: KoreMenuElement.MainOnline, text: translate(language, KoreMenuText.Online), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
-            ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
-            ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openLocalMaps) }),
+            ui.button({ id: "main-btn-online", text: translate(language, KoreMenuText.Online), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate("online_sub") }),
+            ui.button({ id: "main-btn-local", text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate("local_sub") }),
+            ui.button({ id: "main-btn-settings", text: "Settings", rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate("settings") }),
+            ui.button({ id: "main-btn-credits", text: "Credits", rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate("credits") }),
           ],
         }),
       ],
     })
   );
 
-  // 2. Map and difficulty screens are all declared in the same SDK menu.
+  // 2. ONLINE SUBMENU (Matchmaking, vs Friends)
+  builder.addScreen(
+    ui.screen({
+      id: "online_sub",
+      layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
+      elements: [
+        ui.text({ id: "online-sub-title", text: translate(language, KoreMenuText.Online), rect: rect(0, 0, 200, 40), style: KoreMenuStyle.MapTitle }),
+        ui.container({
+          id: "online-sub-actions",
+          rect: rect(0, 0, 740, 200),
+          layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center" }),
+          elements: [
+            ui.button({ id: "online-btn-matchmaking", text: "Matchmaking", rect: rect(0, 0, 180, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
+            ui.button({ id: "online-btn-friends", text: "vs Friends", rect: rect(0, 0, 180, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openOnlineFriends) }),
+            ui.button({ id: "online-btn-back", text: translate(language, KoreMenuText.Back), rect: rect(0, 0, 120, 36), style: "kore.button.blue-back", action: ui.action.back() }),
+          ],
+        }),
+      ],
+    })
+  );
+
+  // 3. LOKAL SUBMENU (vs KI, vs Player, KI vs KI)
+  builder.addScreen(
+    ui.screen({
+      id: "local_sub",
+      layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
+      elements: [
+        ui.text({ id: "local-sub-title", text: translate(language, KoreMenuText.Local), rect: rect(0, 0, 200, 40), style: KoreMenuStyle.MapTitle }),
+        ui.container({
+          id: "local-sub-actions",
+          rect: rect(0, 0, 740, 220),
+          layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center" }),
+          elements: [
+            ui.button({ id: "local-btn-vski", text: "vs KI", rect: rect(0, 0, 180, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
+            ui.button({ id: "local-btn-vsplayer", text: "vs Player", rect: rect(0, 0, 180, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
+            ui.button({ id: "local-btn-kivski", text: "KI vs KI", rect: rect(0, 0, 180, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
+            ui.button({ id: "local-btn-back", text: translate(language, KoreMenuText.Back), rect: rect(0, 0, 120, 36), style: "kore.button.blue-back", action: ui.action.back() }),
+          ],
+        }),
+      ],
+    })
+  );
+
+  // 4. SETTINGS SCREEN
+  builder.addScreen(
+    ui.screen({
+      id: "settings",
+      layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center" }),
+      elements: [
+        ui.text({ id: "settings-title", text: "Settings", rect: rect(0, 0, 200, 40), style: KoreMenuStyle.MapTitle }),
+        ui.button({ id: "settings-back", text: translate(language, KoreMenuText.Back), rect: rect(0, 0, 120, 36), style: "kore.button.blue-back", action: ui.action.back() }),
+      ],
+    })
+  );
+
+  // 5. CREDITS SCREEN
+  builder.addScreen(
+    ui.screen({
+      id: "credits",
+      layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center" }),
+      elements: [
+        ui.text({ id: "credits-title", text: "Credits", rect: rect(0, 0, 200, 40), style: KoreMenuStyle.MapTitle }),
+        ui.button({ id: "credits-back", text: translate(language, KoreMenuText.Back), rect: rect(0, 0, 120, 36), style: "kore.button.blue-back", action: ui.action.back() }),
+      ],
+    })
+  );
+
+  // 6. MAP & DIFFICULTY SCREENS
   for (const intent of ["local", "online", "battle"] as const) {
     builder.addScreen(mapScreen(intent, undefined, language));
   }
@@ -107,8 +171,8 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 }
 
 export class KoreMainMenuComposition {
-	public constructor(private readonly language: LanguageCatalog = createEnglishLanguage()) {}
-	public build(): KoreMainMenuSettings {
+  public constructor(private readonly language: LanguageCatalog = createEnglishLanguage()) {}
+  public build(): KoreMainMenuSettings {
     const menuMusic = koreAudio.command.menuMusic("kore.menu");
     const audioSettings = createKoreAudioSettings("kore.menu.runtime");
 
@@ -133,6 +197,7 @@ export class KoreMainMenuComposition {
           MAIN_ACTIONS.openAiMaps,
           MAIN_ACTIONS.selectMap,
           MAIN_ACTIONS.startLocal,
+          MAIN_ACTIONS.openOnlineFriends,
         ],
         confirmationSoundId: koreAudio.sounds.uiConfirm,
       },
@@ -225,7 +290,7 @@ function difficultyScreen(language: LanguageCatalog) {
           action: ui.action.emit(MAIN_ACTIONS.openAiMaps, { difficulty }),
         })
       ),
-      ui.button({ id: "difficulty-back", text: "Zurück", rect: rect(270, 320, 260, 36), style: "kore.button.blue-back", action: ui.action.back() }),
+      ui.button({ id: "difficulty-back", text: translate(language, KoreMenuText.Back), rect: rect(270, 320, 260, 36), style: "kore.button.blue-back", action: ui.action.back() }),
     ],
   });
 }

@@ -22,7 +22,7 @@ export interface UiElementTheme {
 export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   "kore.button.blue": {
     normal: {
-      background: "#1d4ed8",
+      background: "#1d4fd849",
       borderColor: "#60a5fa",
       borderWidth: 2,
       borderRadius: 12,
