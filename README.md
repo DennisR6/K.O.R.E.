@@ -90,6 +90,9 @@ bun run docs
 
 `src/kore/sdk/index.ts` exports one `kore` entry point for authoring validated,
 engine-importable JSON settings. `bun run build` emits the browser bundle.
+The complete authoring surface, layer boundaries, migration notes, and runnable
+examples are documented in [`docs/sdk-authoring-guide.md`](docs/sdk-authoring-guide.md)
+and [`examples/`](examples/).
 
 ```ts
 import { kore } from "./src/kore/sdk/index.ts";

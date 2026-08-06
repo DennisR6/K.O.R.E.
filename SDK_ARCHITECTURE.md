@@ -127,6 +127,11 @@ documented canonical outputs and stable IDs remain compatible.
 
 ## 12. Examples
 
+The supported authoring guide is [`docs/sdk-authoring-guide.md`](docs/sdk-authoring-guide.md).
+Runnable Engine SDK, KORE map/item, match lifecycle, UI, and audio examples are
+in [`examples/`](examples/) and are compiled and executed by
+`tests/sdk_examples_ci.test.ts`.
+
 ```ts
 import { engine } from "./src/engine/sdk/index.js";
 
