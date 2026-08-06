@@ -11,6 +11,7 @@ import { installGameplayHud } from "./gameplayHud.js";
 import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
+import type { RenderContext } from "../engine/RenderContext.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -24,6 +25,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private mode: MatchMode | undefined;
 	private aiBattle = false;
 	private battleSeed: number | undefined;
+	private menuPreview: MenuBattlePreview | undefined;
 	private hud: ReturnType<typeof installGameplayHud> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
 	public readonly soundSourceId = "kore.scene-router";
@@ -38,6 +40,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
+		this.handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
 		this.handler.addPreTickAndDraw(menu);
 	}
 
@@ -100,6 +103,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			const next = factory();
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
+			this.menuPreview?.dispose();
+			this.menuPreview = undefined;
 			this.handler.dispose();
 			this.handler = next;
 			this.mapId = mapId;
@@ -161,12 +166,42 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		handler.setMouseHandler(menu);
+		handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
 		handler.addPreTickAndDraw(menu);
 		return handler;
 	}
 
 	private createMenuSurface() {
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) }, createMainMenuComposition(this.language).build());
+		this.menuPreview?.dispose();
+		const preview = new MenuBattlePreview();
+		this.menuPreview = preview;
+		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId), drawBackground: renderer => preview.draw(renderer) }, createMainMenuComposition(this.language).build());
+	}
+}
+
+/** Runs a spectator battle behind the menu without exposing its input surface. */
+class MenuBattlePreview {
+	private handler = createAiBattleHandler("ice-map-v1");
+	private visible = false;
+
+	public tick(visible: boolean): void {
+		this.visible = visible;
+		if (!visible) return;
+		if (this.handler.getState() === GameState.Game_over) {
+			this.handler.dispose();
+			this.handler = createAiBattleHandler("ice-map-v1");
+		}
+		this.handler.tick();
+	}
+
+	public draw(renderer: RenderContext): boolean {
+		if (!this.visible) return false;
+		this.handler.drawWorld(renderer);
+		return true;
+	}
+
+	public dispose(): void {
+		this.handler.dispose();
 	}
 }
 

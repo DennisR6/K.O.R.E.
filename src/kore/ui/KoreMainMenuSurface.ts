@@ -16,6 +16,8 @@ export interface KoreMainMenuCallbacks {
     onPlayOnline?: (mapId?: string, modeId?: string) => void;
     onPlayAiBattle?: (mapId: string) => void;
     onPlayAiOpponent?: (difficulty: AiDifficulty, mapId: string) => void;
+    /** Draws an optional world layer underneath the menu UI. */
+    drawBackground?: (renderer: RenderContext) => boolean;
 }
 
 /** KORE controller/adapter around the SDK-authored canonical menu settings. */
@@ -53,7 +55,8 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 
     public draw(ctx: RenderContext): void {
         ctx.push(); 
-        ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG);
+        const backgroundDrawn = this.callbacks.drawBackground?.(ctx) ?? false;
+        if (!backgroundDrawn) ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG);
         
         // Nutzt den modernisierten Theme-Renderer für das Canvas-Viewport
         this.runtime.draw(new KoreMenuRenderer(ctx));

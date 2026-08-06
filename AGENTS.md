@@ -292,7 +292,9 @@ After every change, check whether this guide still reflects the implementation a
   the result overlay projection on both the ticker and draw paths; the local
   pause command freezes transient handler ticks.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
-  without retaining stale handlers. `createLocalGameplayHandler`,
+  without retaining stale handlers. The menu switches from its landing artwork
+  to a passive autonomous KI-vs-KI preview rendered behind the SDK menu once
+  the main menu is active. `createLocalGameplayHandler`,
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
   `createMatchHandler`; `startScene` installs `installGameplayHud` and the
   offline match report; battle rematches re-draw the battle seed through a fresh
