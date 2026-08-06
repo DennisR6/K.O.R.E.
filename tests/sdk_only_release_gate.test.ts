@@ -120,7 +120,7 @@ test("final SDK-only documentation and release command are linked and coherent",
 	expect(checklist).toContain("| 37 | `[x]`");
 	expect(checklist).toContain("| 38 | `[x]`");
 	expect(checklist).toContain("| 39 | `[x]`");
-	expect(checklist).toContain("| 40 | `[ ]`");
+	expect(checklist).toContain("| 40 | `[x]`");
 	expect(read("steps/37-legacy_api_removal_and_dependency_enforcement.md")).toContain("legacy_api_removal");
 	expect(read("steps/38-kore_sdk_documentation_examples_and_mod_authoring.md")).toContain("SDK Documentation");
 	expect(read("steps/39-sdk_migration_cross_system_qualification.md")).toContain("cross-system");
