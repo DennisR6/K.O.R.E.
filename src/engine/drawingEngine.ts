@@ -66,8 +66,20 @@ export class P5Renderer implements RenderContext {
 		}
 		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), this.toPixel(radius * 2))
 	}
-	drawRect(x: number, y: number, width: number, height: number) {
-		this.p5ctx.rect(this.toPixel(x), this.toPixel(y), this.toPixel(width), this.toPixel(height))
+	drawRect(x: number, y: number, width: number, height: number, borderRadius = 0) {
+		if (![x, y, width, height, borderRadius].every(Number.isFinite)) {
+			console.error("Variable not Specified")
+			return
+		}
+
+		const radius = Math.max(0, Math.min(borderRadius, width / 2, height / 2));
+		this.p5ctx.rect(
+			this.toPixel(x),
+			this.toPixel(y),
+			this.toPixel(width),
+			this.toPixel(height),
+			this.toPixel(radius)
+		)
 	}
 	drawText(text: string, x: number, y: number, fontSize?: number) {
 		if (isNaN(x) || isNaN(y)) {
