@@ -22,6 +22,7 @@ import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
 import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
+import { createReplayViewerControls } from "./menu/replayViewerControls.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -173,17 +174,10 @@ function startNetworkGame(serverUrl: string) {
 function startReplayViewer(initialToken: string): ReplayViewer {
 	const viewer = new ReplayViewer();
 	(window as unknown as { replayViewer: ReplayViewer }).replayViewer = viewer;
-	const panel = document.createElement("section");
-	panel.id = "replay-viewer-controls";
-	const heading = document.createElement("h1"); heading.textContent = "Replay viewer";
-	const input = document.createElement("input"); input.setAttribute("aria-label", "Replay share ID"); input.value = initialToken;
-	const load = document.createElement("button"); load.type = "button"; load.textContent = "Load replay";
-	const paste = document.createElement("button"); paste.type = "button"; paste.textContent = "Paste from clipboard";
-	const status = document.createElement("p"); status.setAttribute("role", "status");
-	const loadToken = async () => {
-		const token = input.value.trim();
-		if (!REPLAY_TOKEN.test(token)) { status.textContent = "Enter a valid replay share ID."; console.error(`[replay] invalid replay share ID: ${JSON.stringify(token)}`); return; }
-		status.textContent = "Loading replay…";
+	const loadToken = async (rawToken: string) => {
+		const token = rawToken.trim();
+		if (!REPLAY_TOKEN.test(token)) { controls.setStatus("Enter a valid replay share ID."); console.error(`[replay] invalid replay share ID: ${JSON.stringify(token)}`); return; }
+		controls.setStatus("Loading replay…");
 		const endpoint = buildReplayShareEndpoint(window.location.href, token);
 		console.log(`[replay] requesting replay from ${endpoint}`);
 		try {
@@ -197,22 +191,23 @@ function startReplayViewer(initialToken: string): ReplayViewer {
 			const loadedPlayer = viewer.getPlayer()!;
 			const world = handler.getSettings()?.worldSize;
 			console.log(`[replay] loaded: state=${handler.getState()} entities=${handler.getEntityManager().getEntities().length} actions=${loadedPlayer.getActionCount()} world=${JSON.stringify(world)} rendererWorldWidth=${GameSettings.screenResolution.x}`);
-			status.textContent = loadedPlayer.getActionCount() > 0
+			controls.setStatus(loadedPlayer.getActionCount() > 0
 				? "Replay loaded. Playback is read-only."
-				: "Replay loaded. No actions have been recorded yet.";
+				: "Replay loaded. No actions have been recorded yet.");
 		} catch (error) {
 			console.error("[replay] replay load failed:", error);
-			status.textContent = "Replay unavailable. Check the share ID and try again.";
+			controls.setStatus("Replay unavailable. Check the share ID and try again.");
 		}
 	};
-	load.addEventListener("click", () => { void loadToken(); });
-	paste.addEventListener("click", async () => {
-		try { input.value = await navigator.clipboard.readText(); status.textContent = "Pasted replay ID. Press Load replay."; }
-		catch { status.textContent = "Clipboard access was denied. Paste the replay ID into the field manually."; input.focus(); }
+	const controls = createReplayViewerControls(initialToken, {
+		onLoad: loadToken,
+		onPaste: async () => {
+			try { const value = await navigator.clipboard.readText(); controls.setStatus("Pasted replay ID. Press Load replay."); return value; }
+			catch { controls.setStatus("Clipboard access was denied. Paste the replay ID into the field manually."); return undefined; }
+		},
 	});
-	panel.append(heading, input, load, paste, status);
-	document.body.append(panel);
-	if (initialToken) void loadToken();
+	document.body.append(controls.element);
+	if (initialToken) void loadToken(initialToken);
 	return viewer;
 }
 
