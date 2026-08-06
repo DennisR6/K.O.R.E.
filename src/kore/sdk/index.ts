@@ -6,7 +6,7 @@ import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
 import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
-import type { EngineSettings } from "../../engine/types.js";
+import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
@@ -657,6 +657,9 @@ export const kore = {
 	},
 	/** Shared engine enums and friction presets for declarative authoring. */
 	types: {
+		gameState: { yourTurn: GameState.Your_turn, gameOver: GameState.Game_over },
+		rulePhase: { item: RulePhase.Item, aim: RulePhase.Aim, charge: RulePhase.Charge, push: RulePhase.Push, physics: RulePhase.Physics, complete: RulePhase.Complete },
+		winCondition: { lastTeamStanding: WinCondition.LastTeamStanding },
 		shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
 		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, damage: EffectType.Damage, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
 		itemEffectType: {
@@ -681,3 +684,4 @@ export const kore = {
 } as const;
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };
+export type { GameSettings } from "../../settings/settings.js";

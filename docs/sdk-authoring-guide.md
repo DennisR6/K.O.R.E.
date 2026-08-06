@@ -40,28 +40,33 @@ economy settings. `build()` returns validated `GameSettings`; use
 
 `kore.createItem()` creates a declarative `ItemDocument`. Item effects are
 written as `{ type, value }` data and are checked against the SDK effect
-allowlist. Local mods must still pass through `ItemValidator` and
-`ItemLoader.registerLocalMod()`.
+allowlist. `kore.validate()` is the public settings validation wrapper; direct
+settings-validator imports are not part of the published example contract.
 
 ### Matches and lifecycle
 
 Use `kore.createGameMode()`, `kore.createMatchDefinition()`, and
-`kore.validateMatchDefinition()` to create the detached match boundary. A
-runtime is created with `kore.createRuntimeMatch()` or `kore.createHandler()`.
+`kore.validateMatchDefinition()` to create the detached match boundary. Match
+phase and win-condition vocabulary is exposed as `kore.types.rulePhase` and
+`kore.types.winCondition`; consumers do not need to import `src/rules`.
+A runtime is created with `kore.createRuntimeMatch()` or `kore.createHandler()`.
 The supported lifecycle is:
 
 ```ts
 const definition = kore.createMatchDefinition({ settings, gameMode, seed: 12345 });
 const wireCopy = JSON.parse(JSON.stringify(definition));
-validateKoreMatchDefinition(wireCopy);
+kore.validateMatchDefinition(wireCopy);
 const handler = kore.createRuntimeMatch(wireCopy);
 const packet = handler.simulateTurn(actorId, angle, power);
 const snapshot = handler.toSettings();
 const restored = kore.restoreHandler(snapshot);
 ```
 
-`simulateTurn()` does not mutate the authoritative handler. `toSettings()` and
-`restoreHandler()` are the persistence, replay, and reconnect boundary.
+`simulateTurn()` does not mutate the authoritative handler. `resolveTurn()`
+commits an accepted result. `toSettings()` and `restoreHandler()` are the
+persistence, replay, and reconnect boundary. Match runtime construction and
+direct constructors such as `GameHandlerBuilder` are application/runtime
+boundaries, not content authoring APIs.
 
 ### UI, audio, and AI
 
@@ -69,9 +74,12 @@ The generic UI SDK is explicitly driven: build settings with `ui.createMenu`
 and `ui.screen`, reconstruct with `ui.fromSettings`, then call `tick(input)`,
 `draw(renderer)`, and `drainCommands()`. It owns no browser listeners or loop.
 
-The audio SDK accepts semantic commands from `audio.emitter()` and processes
-them through `audio.createRuntime(settings)`. KORE sound IDs and bus presets
-come from `koreAudio`; browser media is owned by the application output port.
+The generic audio SDK accepts semantic commands from `audio.emitter()` and
+processes them through `audio.createRuntime(settings)`. The supported KORE
+audio surface is `kore.audio`, including sound IDs, bus presets, settings, and
+semantic commands. `src/kore/audio.ts` is its implementation module, not the
+preferred published import. Browser media is owned by the application output
+port.
 
 AI profiles are detached settings from `kore.ai.createSettings()`. Use
 `kore.ai.createProducer()` or `createTurnEmitter()` at the application/runtime
@@ -82,13 +90,17 @@ by human and server paths.
 
 Map mods should export a function that builds a fresh map from stable IDs and
 validated data. Do not mutate a previously built snapshot. Item mods should
-declare only JSON values, register supported effect names with an
-`ItemValidator`, and load with `ItemLoader.registerLocalMod()`.
+declare only JSON values with `kore.createItem()`, serialize them at the wire
+boundary, and re-author/revalidate them through the same public function.
+`duration: { type: "instant", value: 0 }` means the item activation is
+immediate; persistent effects such as a shield own their remaining state in
+the runtime effect snapshot.
 
-The item loader distinguishes `built-in` and `local-mod` sources, rejects
-duplicate IDs, rejects executable fields, and returns defensive copies. A mod
-cannot introduce a runtime effect by putting a function or module path in an
-item document.
+`ItemLoader` and `ItemValidator` are internal runtime/mod-loading boundaries,
+not public SDK authoring exports. They are used by built-in/server integration
+and enforce the same declarative rules, but published mods must not import
+`src/item/*` directly. A mod cannot introduce a runtime effect by putting a
+function or module path in an item document.
 
 ## Migration
 
@@ -96,9 +108,9 @@ item document.
 | --- | --- |
 | Direct legacy handler construction | `kore.createHandler(settings)` or `kore.createRuntimeMatch(definition)` |
 | Hand-written map settings | `kore.createDefaultMap(...).build()` |
-| Runtime item objects in content | `kore.createItem()` plus `ItemLoader` |
+| Runtime item objects in content | `kore.createItem()` and JSON round-trip |
 | Browser UI hitboxes and listeners | `ui.createMenu()` plus explicit `tick()` input |
-| Direct audio playback | semantic `audio.command` / `koreAudio.command` output |
+| Direct audio playback | semantic `audio.command` / `kore.audio.command` output |
 | Unvalidated AI actions | `kore.ai.createTurnEmitter()` and the shared emitter boundary |
 | Editor JSON passed directly to the engine | `validateEditorMapDocument()` then `convertEditorMapDocument()` |
 
@@ -117,6 +129,9 @@ Do not:
   Engine/KORE SDK modules;
 - pass editor `mapData` directly to `GameHandlerBuilder.fromSettings()`;
 - use executable item fields, arbitrary effect names, or unvalidated JSON;
+- import `ItemLoader`, `ItemValidator`, direct settings validators, or direct
+  runtime constructors from internal `src/item`, `src/settings`, or engine
+  modules in published content;
 - add manual HUD/menu hitboxes or direct `AudioManager` calls to gameplay
   scenes;
 - treat generated `dist/` output as the authoring source of truth.

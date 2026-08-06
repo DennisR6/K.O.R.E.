@@ -12,7 +12,7 @@ export function run(): Record<string, unknown> {
 		.setBackground({ type: "color", color: "#101820" })
 		.addEntity(engine.createEntity({ id: "token", capabilities: ["position", "visible"] }))
 		.addStructure(engine.createStructure({ id: "floor", shape: "rectangle", x: 0, y: 0, w: 320, h: 180 }))
-		.addEffect(engine.createEffect({ id: "drift", type: "move", x: 1, y: 0 }))
+		.addEffect(engine.createEffect({ id: "example-effect", type: "example.effect", x: 1, y: 0 }))
 		.build();
 
 	const framework = engine.createSystemRegistry()
@@ -23,10 +23,10 @@ export function run(): Record<string, unknown> {
 	return {
 		id: world.id,
 		worldSize: world.worldSize,
-		entities: world.entities.length,
-		structures: world.structures.length,
-		effects: world.effects.length,
-		systems: framework.systems.length,
-		jsonSafe: JSON.parse(json).id === world.id,
+		entityCount: world.entities.length,
+		structureCount: world.structures.length,
+		effectCount: world.effects.length,
+		systemCount: framework.systems.length,
+		jsonRoundTripPreservedId: JSON.parse(json).id === world.id,
 	};
 }

@@ -1,8 +1,6 @@
-import { ItemLoader } from "../src/item/loader.js";
-import { ItemValidator } from "../src/item/validate.js";
 import { kore } from "../src/kore/sdk/index.js";
 
-/** A declarative local item mod loaded through the same validator as built-ins. */
+/** A declarative item mod authored and revalidated through the public SDK. */
 export function run(): Record<string, unknown> {
 	const shield = kore.createItem({
 		id: "example.super-shield",
@@ -15,9 +13,7 @@ export function run(): Record<string, unknown> {
 		description: "Absorbs three hits.",
 	});
 
-	const validator = new ItemValidator();
-	validator.registerEffectType("shield");
-	const loader = new ItemLoader(validator);
-	const stored = loader.registerLocalMod(shield);
-	return { id: stored.id, source: loader.getSource(stored.id), effects: stored.effects.length };
+	const wireCopy = JSON.parse(JSON.stringify(shield)) as typeof shield;
+	const restored = kore.createItem(wireCopy);
+	return { id: restored.id, effects: restored.effects.length, duration: restored.duration.type };
 }

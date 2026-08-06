@@ -1,7 +1,4 @@
-import { GameState } from "../src/engine/types.js";
-import { RulePhase, WinCondition } from "../src/rules/types.js";
 import { kore } from "../src/kore/sdk/index.js";
-import { validateKoreMatchDefinition, type KoreMatchDefinition } from "../src/kore/sdk/match.js";
 
 /** Author, validate, run, serialize, and restore one deterministic match. */
 export function run(): Record<string, unknown> {
@@ -13,9 +10,9 @@ export function run(): Record<string, unknown> {
 		.build();
 	const gameMode = kore.createGameMode({
 		id: "example-04-mode",
-		phases: [RulePhase.Item, RulePhase.Physics],
+		phases: [kore.types.rulePhase.item, kore.types.rulePhase.physics],
 		maxItemsPerTurn: 1,
-		winCondition: WinCondition.LastTeamStanding,
+		winCondition: kore.types.winCondition.lastTeamStanding,
 	});
 	const definition = kore.createMatchDefinition({
 		mapId: settings.id,
@@ -26,22 +23,29 @@ export function run(): Record<string, unknown> {
 	});
 
 	const wire = JSON.stringify(definition);
-	const restoredDefinition: KoreMatchDefinition = JSON.parse(wire) as KoreMatchDefinition;
-	validateKoreMatchDefinition(restoredDefinition);
+	const restoredDefinition: ReturnType<typeof kore.createMatchDefinition> = JSON.parse(wire) as ReturnType<typeof kore.createMatchDefinition>;
+	const validateMatchDefinition: typeof kore.validateMatchDefinition = kore.validateMatchDefinition;
+	validateMatchDefinition(restoredDefinition);
 	const handler = kore.createRuntimeMatch(restoredDefinition);
+	const initialState = handler.getState();
 	const actorId = restoredDefinition.settings.players[0]!.id;
 	const aiSettings = kore.ai.createSettings({ difficulty: "easy", seed: 7, team: 0 });
 	const aiShots: Array<{ actorId: string; angle: number; power: number }> = [];
 	const aiDecided = kore.ai.createTurnEmitter(aiSettings).executeTurn(handler, aiSettings, {
 		sendShot: (actor, angle, power) => aiShots.push({ actorId: actor, angle, power }),
 	});
-	const packet = handler.simulateTurn(actorId, aiShots[0]?.angle ?? 90, aiShots[0]?.power ?? 5);
+	const shot = aiShots[0] ?? { actorId, angle: 90, power: 5 };
+	const packet = handler.simulateTurn(shot.actorId, shot.angle, shot.power);
+	handler.resolveTurn(shot);
+	const finalState = handler.getState();
 	const snapshot = handler.toSettings();
 	const restored = kore.restoreHandler(snapshot);
 
 	return {
-		initialState: handler.getState(),
-		startsOnYourTurn: handler.getState() === GameState.Your_turn,
+		initialState,
+		finalState,
+		startsOnYourTurn: initialState === kore.types.gameState.yourTurn,
+		restoredState: restored.getState(),
 		aiDecided,
 		aiShots: aiShots.length,
 		durationFrames: packet.durationFrames,

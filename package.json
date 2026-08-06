@@ -9,6 +9,8 @@
     "watch:ts": "tsc --watch",
     "serve": "live-server",
     "build": "tsc && cp index.html dist/ && cp -r public dist/",
+    "examples:typecheck": "tsc -p examples/tsconfig.json --noEmit",
+    "examples:verify": "bun test tests/sdk_examples_ci.test.ts",
     "playtest:build": "bun run build && bun run desktop:build",
     "test": "bun run test:fast",
     "test:fast": "bun run scripts/testFast.ts",
