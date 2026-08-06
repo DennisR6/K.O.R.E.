@@ -10,7 +10,7 @@ const commands: readonly string[][] = [
 
 for (const command of commands) {
 	console.log(`\n[content-release-gate] ${command.join(" ")}`);
-	const result = Bun.spawnSync(command, { stdout: "inherit", stderr: "inherit" });
+	const result = Bun.spawnSync(command, { stdout: "inherit", stderr: "inherit", env: command.includes("test:browser:full") ? { ...process.env, E2E_WORKERS: "1" } : undefined });
 	if (result.exitCode !== 0) {
 		console.error(`[content-release-gate] FAILED (${result.exitCode}): ${command.join(" ")}`);
 		process.exit(result.exitCode || 1);

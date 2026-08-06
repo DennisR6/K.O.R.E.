@@ -158,7 +158,7 @@ test.describe("browser KI vs KI battle", () => {
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100); // landing -> main menu
-			await clickWorld(page, 99, 143); // 1 vs KI
+		await clickWorld(page, 99, 368); // 1 vs KI
 			await clickWorld(page, 400, 214); // Medium KI
 			await clickWorld(page, 400, 100); // Ice Map
 			await waitFor(async () => (await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.ai?.difficulty ?? null)) === "medium", 10_000, 100, "human-vs-KI start");
