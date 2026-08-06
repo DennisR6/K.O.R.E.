@@ -169,19 +169,10 @@ export class Canvas2DUiRenderer {
     r: number,
     color: string
   ): void {
-    const radius = Math.min(r, w / 2, h / 2);
-
-    this.ctx.noStroke();
-    this.ctx.setFillColor(color);
-
-    this.ctx.drawRect(x + radius, y, w - 2 * radius, h);
-    this.ctx.drawRect(x, y + radius, w, h - 2 * radius);
-
-    this.ctx.drawCircle(x + radius, y + radius, radius);
-    this.ctx.drawCircle(x + w - radius, y + radius, radius);
-    this.ctx.drawCircle(x + radius, y + h - radius, radius);
-    this.ctx.drawCircle(x + w - radius, y + h - radius, radius);
-  }
+		this.ctx.noStroke();
+		this.ctx.setFillColor(color);
+		this.ctx.drawRect(x, y, w, h, r);
+	}
 }
 
 function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string) => number): string[] {
