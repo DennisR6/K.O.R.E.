@@ -75,9 +75,16 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 	}
 	public tick(_dt: number): void { this.frame = this.runtime.tick(); try { this.output?.apply(this.frame); } catch { /* unsupported renderer */ } }
 	public draw(renderer: RenderContext): void {
-		const events = this.visible.splice(0); if (events.length === 0) return;
-		const last = events[events.length - 1]!;
-		renderer.setFillColor("white"); renderer.drawText(feedbackLabel(last), renderer.WORLD_SIZE_X / 2 - 70, 32, 16);
+		const last = this.visible[this.visible.length - 1]; if (!last) return;
+		const animation = this.frame.animations.find(item => item.channel === `feedback.${last.type}`);
+		if (!animation) { this.visible = []; return; }
+		const opacity = animation.values.opacity;
+		if (typeof opacity !== "number") return;
+		renderer.push();
+		renderer.setOpacity(opacity);
+		renderer.setFillColor("white");
+		renderer.drawText(feedbackLabel(last), renderer.WORLD_SIZE_X / 2 - 70, 32, 16);
+		renderer.pop();
 	}
 	public drainSoundCommands(): AudioCommand[] { return this.sounds.drainSoundCommands(); }
 	public getFrame(): PresentationFrame { return clone(this.frame); }

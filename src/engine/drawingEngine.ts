@@ -53,6 +53,14 @@ export class P5Renderer implements RenderContext {
 	setFillColor(color: string): void {
 		this.p5ctx.fill(color)
 	}
+	setOpacity(alpha: number): void {
+		if (!Number.isFinite(alpha)) {
+			console.error("Variable not Specified")
+			return
+		}
+		const context = this.p5ctx.drawingContext as CanvasRenderingContext2D
+		context.globalAlpha = Math.max(0, Math.min(1, alpha))
+	}
 	setNoFill(): void {
 		this.p5ctx.noFill()
 	}
