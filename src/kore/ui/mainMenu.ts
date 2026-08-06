@@ -183,6 +183,7 @@ export const koreMenuCommands = MAIN_ACTIONS;
 
 function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "hard" | undefined, language: LanguageCatalog) {
   const eligible = MAP_CATALOG.filter((entry) => entry.browserAvailable && (intent !== "battle" || entry.battleAvailable));
+  const rowHeight = 36;
   const elements = [
     ui.text({ id: `map-${intent}-${difficulty ?? "root"}-title`, text: translate(language, KoreMenuText.ChooseMap), rect: rect(155, 25, 580, 42), style: "kore.menu.map-title" }),
     ...(intent === "online"
@@ -192,7 +193,7 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "h
       ui.button({
         id: `map-${intent}-${difficulty ?? "root"}-${entry.id}`,
         text: `${entry.name} (${entry.id})`,
-        rect: rect(150, 80 + index * 50, 500, 40),
+        rect: rect(150, 80 + index * rowHeight, 500, 32),
         style: "kore.menu.map-row",
         action: ui.action.emit(MAIN_ACTIONS.selectMap, { intent, mapId: entry.id, ...(difficulty ? { difficulty } : {}) }),
       })
@@ -200,7 +201,7 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "h
     ui.button({
       id: `map-${intent}-${difficulty ?? "root"}-back`,
       text: translate(language, KoreMenuText.Back),
-      rect: rect(150, 80 + eligible.length * 50 + 8, 120, 34),
+      rect: rect(150, 80 + eligible.length * rowHeight + 8, 120, 34),
       style: "kore.button.blue-back",
       action: ui.action.back(),
     }),

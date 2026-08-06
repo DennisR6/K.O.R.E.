@@ -24,6 +24,7 @@ export const SDK_MIGRATION_INVENTORY_VERSION = 1 as const;
 export const sourceClassificationRules: readonly SdkMigrationEntry[] = [
 	{ path: "src/engine/sdk/", classification: "engine-sdk", owner: "Engine SDK", targetMilestone: null, note: "Generic JSON-safe engine authoring and framework metadata." },
 	{ path: "src/engine/contracts/", classification: "engine-sdk", owner: "Engine SDK", targetMilestone: null, note: "Runtime-neutral engine contracts." },
+	{ path: "src/environment/", classification: "kore-sdk", owner: "KORE environmental mechanics", targetMilestone: 46, note: "Versioned declarative map mechanics and lifecycle contracts." },
 	{ path: "src/engine/ui-sdk/", classification: "engine-sdk", owner: "Engine UI SDK", targetMilestone: null, note: "Generic renderer-neutral UI composition." },
 	{ path: "src/engine/audio-sdk/", classification: "engine-sdk", owner: "Engine Audio SDK", targetMilestone: null, note: "Generic renderer/device-neutral audio capabilities." },
 	{ path: "src/kore/sdk/", classification: "kore-sdk", owner: "KORE SDK", targetMilestone: null, note: "KORE authoring APIs composed from Engine SDK primitives." },

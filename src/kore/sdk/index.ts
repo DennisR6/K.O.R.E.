@@ -14,6 +14,7 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
 import { createItemDocument, validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
 import { ItemValidator } from "../../item/validate.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
@@ -234,6 +235,7 @@ export class KoreMapBuilder {
 	private readonly structures: MapBoundarySettings[] = [];
 	private readonly generatedHazardStructureIndexes = new Set<number>();
 	private readonly hazards: HazardDocument[] = [];
+	private readonly environmentalMechanics: EnvironmentalMechanic[] = [];
 	private readonly items: ItemDocument[] = [];
 	private readonly itemEconomy: ItemEconomySettings = { fixedLoadouts: [], mapPickups: [] };
 	private background: SettingsBackground = { type: "color", color: "#dff6ff" };
@@ -338,6 +340,28 @@ export class KoreMapBuilder {
 		return this;
 	}
 
+	/** Adds a tick-driven hazard whose collision structure follows a deterministic schedule. */
+	public addTimedHazard(settings: Omit<TimedHazard, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "timed-hazard" }); }
+	/** Adds a zone activated by entity entry for a fixed number of simulation ticks. */
+	public addTriggeredZone(settings: Omit<TriggeredZone, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "triggered-zone" }); }
+	/** Adds a persistent force-field structure; force/kill behavior is supplied through its declarative effects. */
+	public addForceField(settings: Omit<ForceField, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "force-field" }); }
+	/** Adds a structure that moves along a deterministic linear path. */
+	public addMovingStructure(settings: Omit<MovingStructure, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "moving-structure" }); }
+	/** Adds a repeating enabled/disabled environmental cycle. */
+	public addEnvironmentalCycle(settings: Omit<EnvironmentalCycle, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "environmental-cycle" }); }
+
+	private addEnvironmental(mechanic: EnvironmentalMechanic): this {
+		validateEnvironmentalMechanics([mechanic]);
+		if (this.environmentalMechanics.some(candidate => candidate.id === mechanic.id)) throw new Error(`Environmental mechanic ${mechanic.id} is already registered`);
+		this.environmentalMechanics.push(clone(mechanic));
+		const structureIndex = this.structures.length;
+		this.addStructure({ ...clone(mechanic.structure), effects: clone(mechanic.effects ?? mechanic.structure.effects) });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		this.built = undefined;
+		return this;
+	}
+
 	/** Registers one validated item document for this map/match composition. */
 	public addItem(item: ItemDocument): this {
 		const validated = createItem(item);
@@ -405,6 +429,7 @@ export class KoreMapBuilder {
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
 			players,
+			environmentalMechanics: clone(this.environmentalMechanics),
 			items: clone(this.items),
 			mapBoundarys: clone(genericWorld.structures as unknown as MapBoundarySettings[]),
 			effects: clone(genericWorld.effects as unknown as FullEffectSettings[]),
@@ -450,6 +475,7 @@ export class KoreMapBuilder {
 			arenaGeometry: clone((genericWorld.structures as unknown as MapBoundarySettings[]).filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),
 			spawnRegions: spawnRegions.map(clone),
 			hazards: clone(this.hazards),
+			environmentalMechanics: clone(this.environmentalMechanics),
 		};
 	}
 

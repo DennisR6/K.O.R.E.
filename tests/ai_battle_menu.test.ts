@@ -8,7 +8,7 @@ const MAP_ROW = { x: 400, y: 100 };
 // Back sits below the rows: local mode shows 6 rows (y 388..422), battle
 // mode shows only the battleAvailable rows (5 -> y 338..372).
 const LOCAL_BACK = { x: 210, y: 405 };
-const BATTLE_BACK = { x: 210, y: 355 };
+const BATTLE_BACK = { x: 210, y: 385 };
 
 function pressAt(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);
@@ -67,7 +67,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		const picked: string[] = [];
 		for (let index = 0; index < battleMaps.length; index++) {
 		pressAt(menu, 249, 368); // KI vs KI (battle mode)
-			pressAt(menu, 400, 100 + index * 50);
+			pressAt(menu, 400, 100 + index * 36);
 			picked.push(recorder.battle[recorder.battle.length - 1]!);
 			pressAt(menu, BATTLE_BACK.x, BATTLE_BACK.y); // back to the menu
 		}

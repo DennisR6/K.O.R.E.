@@ -28,6 +28,7 @@ import { currentTurnMode } from "../rules/defaultGameModes.js";
 import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
+import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { validateItemTarget } from "../item/target.js";
@@ -896,6 +897,10 @@ export class GameHandlerBuilder {
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
+		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
+			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
+			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))
+		}
 
 		if ("state" in gameSettings) {
 			this.state = gameSettings.state

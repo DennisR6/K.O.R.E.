@@ -76,7 +76,7 @@ const QUALIFIED_MAPS = MAP_CATALOG.filter(entry => entry.browserAvailable);
 
 /** World-center of a map-selection row (menu layout: 500x40 rows at y 80+50i). */
 function mapRowWorld(index: number): { x: number; y: number } {
-	return { x: 400, y: 100 + index * 50 };
+	return { x: 400, y: 100 + index * 36 };
 }
 
 /** Grid-quantized drag start (mirrors the Section 16 killDrag helper). */

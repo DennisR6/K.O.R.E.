@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Complete
 
 ## Objective
 
@@ -38,6 +38,14 @@ moving structures, and environmental cycles as validated data-driven mechanics.
 ## Dependencies
 
 Depends on Milestone 45. Its reusable mechanics feed Milestones 49 and 50.
+
+## Implementation Record
+
+Added versioned KORE-authored environmental mechanics and the deterministic
+`core.environmental` system. Canonical map loading, direct engine settings,
+snapshot restoration, and unsupported mechanic rejection use the same validated
+declarative boundary. Lifecycle state is tick-based and includes activation,
+trigger, cycle, and moving-structure progress.
 
 ## Explicit Non-Goals
 

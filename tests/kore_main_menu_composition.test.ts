@@ -24,7 +24,7 @@ test("SDK menu surface uses explicit ticks, pure draws, semantic transitions, an
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
 	menu.updateMouse(249, 368); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.MapBattle);
-	menu.updateMouse(210, 355); menu.handleMousePressed();
+	menu.updateMouse(210, 385); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
 	const restored = createKoreMainMenuSurface({}, JSON.parse(JSON.stringify(menu.toSettings())));
 	expect(restored.toSettings().ui).toEqual(menu.toSettings().ui);
