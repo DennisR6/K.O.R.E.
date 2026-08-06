@@ -1,12 +1,10 @@
-import { AiTurnEmitter, type IAiTurnProducer } from "./aiEmitter.js";
-import { EasyAi } from "./easyAi.js";
-import { HardAi } from "./hardAi.js";
-import { MediumAi } from "./mediumAi.js";
+import { AiTurnEmitter } from "./aiEmitter.js";
 import type { AiSettings } from "./types.js";
 import type { GameHandler } from "../engine/Handler.js";
 import { GameState, type IInputEmitter } from "../engine/types.js";
 import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "../systems/types.js";
+import { koreAi } from "../kore/ai.js";
 
 /** Drives one AI-controlled team while leaving the other team available to UI input. */
 export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
@@ -18,7 +16,7 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 		private readonly targetEmitter: IInputEmitter | undefined,
 		private readonly settings: AiSettings,
 	) {
-		this.emitter = new AiTurnEmitter(new (producerFor(settings))());
+		this.emitter = koreAi.createTurnEmitter(settings);
 	}
 
 	public static fromSettings(state: Record<string, unknown>): AiOpponentSystem {
@@ -42,13 +40,5 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 		if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
 		const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(this.settings.team));
 		if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
-	}
-}
-
-function producerFor(settings: AiSettings): new () => IAiTurnProducer {
-	switch (settings.difficulty) {
-		case "easy": return EasyAi;
-		case "medium": return MediumAi;
-		case "hard": return HardAi;
 	}
 }

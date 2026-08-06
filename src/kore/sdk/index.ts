@@ -18,6 +18,7 @@ import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoa
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
+import { koreAi } from "../ai.js";
 import {
 	authorMatchSettings,
 	createGameMode,
@@ -562,6 +563,8 @@ export const kore = {
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
 	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
 	audio: koreAudio,
+	/** KORE AI profiles and the shared validated decision-to-input boundary. */
+	ai: koreAi,
 	/**
 	 * Match authoring: canonical handler creation, match composition, systems,
 	 * rule configuration, teams, and mode setup (milestone 28). Definitions

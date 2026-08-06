@@ -36,7 +36,7 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const settings = buildMapSettings(config.mapId, createCanonicalPlayableMatchSettings());
 	const difficulty = config.difficulty ?? "medium";
 	const header = config.mode === "human-vs-ai"
-		? { myTeam: [0] as number[], allTeams: ["Human", `${difficulty} KI`], ai: { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) } }
+		? { myTeam: [0] as number[], allTeams: ["Human", `${difficulty} KI`], ai: kore.ai.createSettings({ difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) }) }
 		: { myTeam: settings.myTeam, allTeams: settings.allTeams };
 	const definition = kore.createMatchDefinition({ mapId: config.mapId, settings, gameMode: settings.gameMode!, seed, header });
 	const handler = kore.createRuntimeMatch(definition);
@@ -47,8 +47,8 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 			// One seed per battle, derived seeds per team so the battle is fully
 			// reproducible from its recorder.
 			const aiSettings: AiSettings[] = [
-				{ difficulty: "hard", seed: seed * 2, team: 0, decisionLimits: AI_BATTLE_LIMITS },
-				{ difficulty: "hard", seed: seed * 2 + 1, team: 1, decisionLimits: AI_BATTLE_LIMITS },
+				kore.ai.createSettings({ difficulty: "hard", seed: seed * 2, team: 0, decisionLimits: AI_BATTLE_LIMITS }),
+				kore.ai.createSettings({ difficulty: "hard", seed: seed * 2 + 1, team: 1, decisionLimits: AI_BATTLE_LIMITS }),
 			];
 			// The passive battle input becomes the wrapped gameplay input of the
 			// result overlay; clicks are ignored while the battle plays.
@@ -63,7 +63,7 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 			handler.setMouseHandler(ui);
 			handler.addSystem(new EmitterSystem(emitters));
 			if (config.mode === "human-vs-ai") {
-				const aiSettings: AiSettings = { difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) };
+				const aiSettings: AiSettings = kore.ai.createSettings({ difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) });
 				handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings));
 			}
 			break;
