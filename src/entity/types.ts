@@ -101,6 +101,6 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		isDead: overrides.isDead ?? false,
 		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
-		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) })) } : {}),
+		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 	};
 }

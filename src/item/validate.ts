@@ -13,6 +13,7 @@ const ITEM_FIELDS = new Set([
 	"useLimit",
 	"targetValidation",
 	"cooldown",
+	"interaction",
 ]);
 const EFFECT_FIELDS = new Set(["type", "value"]);
 const DURATION_FIELDS = new Set(["type", "value"]);
@@ -23,6 +24,7 @@ const TARGET_VALIDATION_FIELDS = new Set([
 	"allowEnemy",
 	"maxRange",
 ]);
+const INTERACTION_FIELDS = new Set(["mode", "with", "order"]);
 
 function isPlainObject(value: object): value is Record<string, unknown> {
 	const prototype = Object.getPrototypeOf(value);
@@ -169,6 +171,15 @@ export class ItemValidator {
 		assertKnownObject(item.useLimit, "item.useLimit", USE_LIMIT_FIELDS);
 		if (item.targetValidation !== undefined) {
 			assertKnownObject(item.targetValidation, "item.targetValidation", TARGET_VALIDATION_FIELDS);
+		}
+		if (item.interaction !== undefined) {
+			const interaction = assertKnownObject(item.interaction, "item.interaction", INTERACTION_FIELDS);
+			if (interaction.with !== undefined) {
+				const overrides = assertKnownObject(interaction.with, "item.interaction.with", new Set(Object.keys(interaction.with as object)));
+				for (const [itemId, mode] of Object.entries(overrides)) {
+					if (!itemId || typeof mode !== "string") throw new Error("item.interaction.with must contain item modes");
+				}
+			}
 		}
 
 		return document;

@@ -31,6 +31,7 @@ import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { validateItemTarget } from "../item/target.js";
+import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSwapPosition } from "../effects/swapPosition.js";
@@ -436,7 +437,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void {
-		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => entity.resetItemUses())
+		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => { entity.resetItemUses(); entity.advanceItemEffectsTurn() })
 		this.context.currTurn = turnNumber
 		this.ruleState.turnNumber = turnNumber
 	}
@@ -667,16 +668,20 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			this.resolveMysteryBoxUse(actor, item)
 			return
 		}
+		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
+		if (!targetEntity) throw new Error("Item target entity not found")
 		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) }))
 		const inventory = actor.getInventory()
 		// Validate and reserve the use before applying effects. The live inventory
 		// is committed only after all effect constructors and target checks pass.
 		consumeInventoryItem(inventory, item)
-		this.applyItemEffects(actor, target, runtimeEffects)
+		const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map(candidate => [candidate.id, candidate])))
+		targetEntity.removeItemEffects(combination.removeItemIds)
+		this.applyItemEffects(actor, target, runtimeEffects, item)
 		actor.setInventory(inventory)
 	}
 
-	private applyItemEffects(actor: IEntity, target: { type: string; entityId?: string; position?: { x: number; y: number } }, effects: RuntimeItemEffect[]): void {
+	private applyItemEffects(actor: IEntity, target: { type: string; entityId?: string; position?: { x: number; y: number } }, effects: RuntimeItemEffect[], item: ItemDocument): void {
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
 		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
 		for (const effect of effects) {
@@ -684,7 +689,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
 			} else {
-				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never)
+				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
 			}
 		}
 	}

@@ -17,6 +17,17 @@ export interface ItemUseLimit {
 	perGame: number;
 }
 
+export type ItemInteractionMode = "stack" | "replace" | "reject";
+
+/** Declarative composition policy for effects already installed on a target. */
+export interface ItemInteractionPolicy {
+	mode: ItemInteractionMode;
+	/** Per-item overrides; the other item's policy may define the reverse pair. */
+	with?: Record<string, ItemInteractionMode>;
+	/** Lower orders are applied first when effects are composed. */
+	order?: number;
+}
+
 export interface ItemTargetValidation {
 	allowSelf: boolean;
 	allowAlly: boolean;
@@ -36,6 +47,7 @@ export interface ItemDocument {
 	useLimit: ItemUseLimit;
 	targetValidation?: ItemTargetValidation;
 	cooldown?: number;
+	interaction?: ItemInteractionPolicy;
 }
 
 export interface InventoryItem {
@@ -67,6 +79,7 @@ export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemD
 		targetType: overrides.targetType ?? "self",
 		duration: overrides.duration ?? { type: "instant", value: 0 },
 		useLimit: overrides.useLimit ?? { perTurn: 1, perGame: 1 },
+		interaction: overrides.interaction ?? { mode: "stack", order: 0 },
 		...overrides,
 	};
 }
@@ -91,6 +104,7 @@ export function createItemPickup(overrides: Partial<ItemPickup> = {}): ItemPicku
 const VALID_DURATION_TYPES: string[] = ["instant", "turns", "rounds"];
 const VALID_TARGET_TYPES: string[] = ["self", "entity", "position", "zone"];
 const VALID_ACTIVATION_TYPES: string[] = ["collision", "proximity"];
+const VALID_INTERACTION_MODES: string[] = ["stack", "replace", "reject"];
 
 export function validateItemDocument(document: unknown): asserts document is ItemDocument {
 	if (typeof document !== "object" || document === null) throw new Error("Item document must be a non-null object");
@@ -123,6 +137,18 @@ export function validateItemDocument(document: unknown): asserts document is Ite
 		if (tv.maxRange !== undefined && (typeof tv.maxRange !== "number" || !Number.isFinite(tv.maxRange) || tv.maxRange < 0)) throw new Error("Item targetValidation maxRange must be a non-negative finite number");
 	}
 	if (doc.cooldown !== undefined && (typeof doc.cooldown !== "number" || !Number.isSafeInteger(doc.cooldown) || doc.cooldown < 0)) throw new Error("Item cooldown must be a non-negative integer");
+	if (doc.interaction !== undefined) {
+		if (typeof doc.interaction !== "object" || doc.interaction === null) throw new Error("Item interaction must be an object");
+		const interaction = doc.interaction as Record<string, unknown>;
+		if (!VALID_INTERACTION_MODES.includes(interaction.mode as string)) throw new Error("Item interaction must have a valid mode");
+		if (interaction.order !== undefined && (!Number.isSafeInteger(interaction.order) || (interaction.order as number) < 0)) throw new Error("Item interaction order must be a non-negative integer");
+		if (interaction.with !== undefined) {
+			if (typeof interaction.with !== "object" || interaction.with === null || Array.isArray(interaction.with)) throw new Error("Item interaction overrides must be an object");
+			for (const [itemId, mode] of Object.entries(interaction.with as Record<string, unknown>)) {
+				if (!itemId || !VALID_INTERACTION_MODES.includes(mode as string)) throw new Error("Item interaction overrides must contain valid item IDs and modes");
+			}
+		}
+	}
 }
 
 export function validateInventoryItem(item: unknown): asserts item is InventoryItem {

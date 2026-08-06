@@ -55,6 +55,8 @@ export interface AngularState {
 export interface ItemEffectSettings {
 	type: ItemEffectType;
 	typeValue: Record<string, unknown>;
+	itemId?: string;
+	order?: number;
 }
 export const enum SettingOperation {
 	Set = "set",

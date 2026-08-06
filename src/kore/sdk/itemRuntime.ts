@@ -34,17 +34,17 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.ModifyForce:
 			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor", "multiplier") } });
 		case ItemEffectType.Freeze:
-			return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor", "factor", 0.25), durationTurns: integerValue(value, "durationTurns") } });
+			return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor", "factor", 0.25), durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.GhostMode:
-			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns") } });
+			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Magnet:
 			return new EffectMagnet({ typeValue: { mode: value.mode === undefined ? "attract" : value.mode as "attract" | "repel", force: numberValue(value, "force", "strength"), range: numberValue(value, "range") } });
 		case ItemEffectType.SelectionLock:
-			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns") } });
+			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Shield:
 			return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
 		case ItemEffectType.SpawnTrigger:
-			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0) } });
+			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }) } });
 		case ItemEffectType.DelayedEffect: {
 			const nested = value.effectValue ?? value.effect;
 			return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined, delayTicks: integerValue(value, "delayTicks") } });
@@ -52,7 +52,7 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.TemporaryWall:
 			return new EffectTemporaryWall({ typeValue: {
 				wallId: stringValue(value, "wallId"), x: numberValue(value, "x", undefined, 0), y: numberValue(value, "y", undefined, 0),
-				w: numberValue(value, "w", undefined, 1), h: numberValue(value, "h", undefined, 1), durationTurns: integerValue(value, "durationTurns", "lifetimeTurns"),
+				w: numberValue(value, "w", undefined, 1), h: numberValue(value, "h", undefined, 1), durationTurns: integerValue(value, "durationTurns", "lifetimeTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.active === undefined ? {} : { active: value.active as boolean }),
 			} });
 		case ItemEffectType.AimVariance:
 			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
@@ -65,6 +65,17 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 
 export function resolveRuntimeItemEffects(effects: readonly { type: string; value?: Record<string, unknown> }[]): RuntimeItemEffect[] {
 	return effects.map(effect => createRuntimeItemEffect({ type: effect.type as ItemEffectType, typeValue: structuredClone(effect.value ?? {}) }));
+}
+
+/** Advances turn-scoped item primitives and drops effects at their boundary. */
+export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffectSettings | undefined {
+	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
+	if (advance) advance.call(runtime);
+	const next = runtime.toSettings();
+	const value = next.typeValue as Record<string, unknown>;
+	if (value.remainingTurns === 0 || value.active === false || value.fired === true) return undefined;
+	return { ...effect, typeValue: structuredClone(value) };
 }
 
 export function applyRuntimeForceEffects(force: ForceInput, effects: readonly RuntimeItemEffect[]): ForceInput {

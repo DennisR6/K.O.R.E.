@@ -107,6 +107,7 @@ export interface KoreItemInput {
 	targetValidation?: ItemDocument["targetValidation"];
 	description?: string;
 	cooldown?: number;
+	interaction?: ItemDocument["interaction"];
 }
 
 function sdkItemEffectTypes(): readonly string[] {

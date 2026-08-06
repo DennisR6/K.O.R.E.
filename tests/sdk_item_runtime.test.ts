@@ -39,7 +39,7 @@ test("ordinary SDK item use applies state atomically and survives handler restor
 
 	const used = actor.toSettings();
 	expect(used.inventory).toEqual([{ itemId: "sdk-freeze", remainingUses: 0, usesThisTurn: 1 }]);
-	expect(used.itemEffects).toEqual([{ type: ItemEffectType.Freeze, typeValue: { speedFactor: 0.25, durationTurns: 2, remainingTurns: 2 } }]);
+	expect(used.itemEffects).toEqual([{ type: ItemEffectType.Freeze, typeValue: { speedFactor: 0.25, durationTurns: 2, remainingTurns: 2 }, itemId: "sdk-freeze", order: 0 }]);
 
 	const snapshot = JSON.parse(JSON.stringify(handler.toSettings()));
 	const restored = kore.restoreHandler(snapshot);

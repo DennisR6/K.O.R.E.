@@ -5,6 +5,7 @@ import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { advanceRuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
@@ -83,7 +84,7 @@ export class Player implements IEntity {
 		this.isPhysicsEnabled = settings.isPhysicsEnabled
 		this.dead = settings.isDead
 		this.items = settings.inventory.map(item => ({ ...item }))
-		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) }))
+		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
 		this.effectAlways = []
 		this.effectCollision = []
 		this.effectRound = []
@@ -232,7 +233,7 @@ export class Player implements IEntity {
 				...sett2,
 			],
 			inventory: this.items.map(item => ({ ...item })),
-			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) })) } : {}),
+			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 		}
 	}
 	public setTeam(team: number[]) { this.team = team }
@@ -248,8 +249,20 @@ export class Player implements IEntity {
 	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
-	public addItemEffect(effect: ItemEffectSettings): void { this.itemEffects.push({ type: effect.type, typeValue: structuredClone(effect.typeValue) }) }
-	public getItemEffects(): ItemEffectSettings[] { return this.itemEffects.map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) })) }
+	public addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void {
+		this.itemEffects.push({ ...effect, ...(source ?? {}), typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings)
+		this.itemEffects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+	}
+	public removeItemEffects(itemIds: ReadonlySet<string>): void {
+		this.itemEffects = this.itemEffects.filter(effect => !effect.itemId || !itemIds.has(effect.itemId))
+	}
+	public advanceItemEffectsTurn(): void {
+		this.itemEffects = this.itemEffects.flatMap(effect => {
+			const next = advanceRuntimeItemEffect(effect)
+			return next ? [{ ...next, ...(effect.itemId ? { itemId: effect.itemId } : {}), ...(effect.order === undefined ? {} : { order: effect.order }) }] : []
+		})
+	}
+	public getItemEffects(): ItemEffectSettings[] { return this.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) }
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
 		switch (trigger) {
 			case EffectTrigger.Always: this.effectAlways.push(effect); break
