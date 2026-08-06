@@ -43,6 +43,7 @@ Completed on branch `milestone-40-sdk-only-release-gate`.
 - `bun run build`: passed.
 - `bun run test:fast`: 723 pass, 3 skip, 0 fail.
 - `bun run test:browser:smoke`: 10 pass, 0 fail.
+- `bun run test:browser:full`: 34 pass, 0 fail.
 - `bun run desktop:build`: passed and produced:
   - `src-tauri/target/release/slipstrike`
   - `src-tauri/target/release/bundle/deb/Slipstrike_0.0.1_amd64.deb`

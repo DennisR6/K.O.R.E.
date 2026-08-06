@@ -52,7 +52,8 @@ const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 const LANDING_WORLD = { x: 400, y: 100 };
-const CHOOSE_MAP_BUTTON_WORLD = { x: 400, y: 409 };
+// SDK main-menu flow layout: Choose Map is the fifth horizontal action button.
+const CHOOSE_MAP_BUTTON_WORLD = { x: 701, y: 143 };
 
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;

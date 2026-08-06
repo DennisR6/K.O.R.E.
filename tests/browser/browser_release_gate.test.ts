@@ -84,9 +84,9 @@ test.describe("Section 16.6 browser gameplay release gate", () => {
 
 	test("completed delivery record summarizes browser qualification", () => {
 		const checklist = read("step-by-step.md");
-		expect(checklist).toContain("## 16. Real Browser Gameplay Verification");
-		expect(checklist).toContain("browser-playable release");
-		expect(checklist).toContain("smoke test and complete gameplay E2E both pass");
+		expect(checklist).toContain("| 16 | `[x]`");
+		expect(checklist).toContain("Real Browser Gameplay Verification");
+		expect(checklist).toContain("tests/browser/browser_release_gate.test.ts");
 	});
 
 	test("AGENTS.md documents the browser commands and headed/debug mode", () => {
