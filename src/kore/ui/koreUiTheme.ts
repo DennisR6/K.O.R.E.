@@ -9,6 +9,8 @@ export interface UiStyleToken {
   borderWidth: number;
   borderRadius: number;
   textColor: string;
+  textOutlineColor?: string;
+  textOutlineWidth?: number;
   fontSize: number;
 }
 
@@ -119,7 +121,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
 };
 
 export class Canvas2DUiRenderer {
-  constructor(private readonly ctx: RenderContext) {}
+  constructor(private readonly ctx: RenderContext) { }
 
   public drawButton(
     rect: { x: number; y: number; width: number; height: number },
@@ -155,6 +157,13 @@ export class Canvas2DUiRenderer {
 
     // 3. TEXT: wrap long labels at word boundaries and center every line.
     if (text) {
+      const textOutlineWidth = style.textOutlineWidth ?? 0;
+      if (textOutlineWidth > 0 && style.textOutlineColor) {
+        this.ctx.setStrokeColor(style.textOutlineColor);
+        this.ctx.setStroke(textOutlineWidth);
+      } else {
+        this.ctx.noStroke();
+      }
       this.ctx.setFillColor(style.textColor);
       const lines = wrapButtonLabel(text, rect.width - 16, value => this.ctx.getTextWidth(value, style.fontSize));
       const lineHeight = style.fontSize * 1.1;
@@ -180,10 +189,10 @@ export class Canvas2DUiRenderer {
     color: string,
     alpha?: number
   ): void {
-		this.ctx.noStroke();
-		this.ctx.setFillColor(color, alpha);
-		this.ctx.drawRect(x, y, w, h, r);
-	}
+    this.ctx.noStroke();
+    this.ctx.setFillColor(color, alpha);
+    this.ctx.drawRect(x, y, w, h, r);
+  }
 }
 
 function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string) => number): string[] {
