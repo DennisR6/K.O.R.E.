@@ -1,7 +1,7 @@
 import { GameState } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PlayerSettings } from "../entity/types.js";
-import type { IGameContext } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /**
  * Das PlaybackSystem kontrolliert die zeitliche Wiedergabe von Spielzügen 
@@ -12,7 +12,8 @@ import type { IGameContext } from "./types.js";
  * eventuelle Abweichungen (Drift), die durch physikalische Ungenauigkeiten 
  * entstanden sind.
  */
-export class PlaybackSystem implements PlaybackSystem {
+export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.playback";
 	/** Anzahl der verbleibenden Frames, bis der Endzustand erzwungen wird. */
 	private remainingFrames = 0;
 	/** True, sobald der Countdown abgelaufen ist und der Sync aussteht. */
@@ -35,6 +36,9 @@ export class PlaybackSystem implements PlaybackSystem {
 		this.remainingFrames = frames;
 		this.syncPending = frames === 0;
 		this.cb = cb;
+	}
+	public toSettings(): SystemSettings {
+		return { systemId: this.systemId, schemaVersion: 1, state: { remainingFrames: this.remainingFrames, syncPending: this.syncPending, completionPending: this.completionPending, finalState: this.finalState ? JSON.parse(JSON.stringify(this.finalState)) : null } };
 	}
 
 	/**

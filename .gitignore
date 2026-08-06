@@ -38,3 +38,4 @@ src-tauri/Cargo.lock
 
 # Section 17.7 resumable shipped-map matrix cell cache
 .matrix-cache
+data

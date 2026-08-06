@@ -1,4 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
+import type { Page } from "playwright";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -204,9 +205,9 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			const capture = captureConsole(page);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 
-			// The menu is active: mouse handler is the MainMenu, no match yet.
+			// The SDK-composed KORE menu surface is active; no match exists yet.
 			const menuHandler = await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.constructor?.name ?? null);
-			expect(menuHandler).toBe("MainMenu");
+			expect(menuHandler).toBe("KoreMainMenuSurface");
 			expect(await activeGameModeId(page)).toBeNull();
 
 			// Landing page: any press advances to the main menu page.
@@ -224,8 +225,8 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 				};
 			});
 			expect(matchInfo.settingsMode).toBe("local-ice-duel-v1");
-			// Two figures (one per team) exist in the authoritative handler.
-			expect(matchInfo.entities).toBe(2);
+			// Twelve figures (six per team) exist in the authoritative handler.
+			expect(matchInfo.entities).toBe(12);
 
 			assertCleanConsole(capture);
 		} finally {
@@ -261,6 +262,61 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			await browser.close();
 			await server.stop();
 		}
+		expect(server.isAlive()).toBe(false);
+		expect(activeBrowserServers()).toBe(0);
+	}, 120_000);
+
+	test("menu Play Online joins the configured server and starts a matched game", async () => {
+		await ensureBrowserBuild();
+		// The harness server advertises itself through KORE_BASE_URL so the
+		// join flow targets a real reachable WebSocket endpoint.
+		const port = nextTestPort();
+		const server = await startTestServer({ port, env: { KORE_BASE_URL: `http://localhost:${port}` } });
+		const browser = await launchBrowser();
+		try {
+			// Tab A starts on the menu and clicks "Play Online".
+			const pageA = await openPage(browser, server.url);
+			const captureA = captureConsole(pageA);
+			await waitFor(async () => (await canvasGeometry(pageA)).width > 0, 10_000, 100, "menu canvas");
+			await clickWorld(pageA, 400, 100); // landing page -> main menu page
+			// "Play Online" at world (270..530, 220..278).
+			await clickWorld(pageA, 400, 250);
+			// The online map page expresses a non-binding preference before join.
+			await clickWorld(pageA, 400, 100);
+
+			// The join action navigates to the configured server with skipmenu.
+			await waitFor(async () => (await pageA.url()).includes("skipmenu=1"), 10_000, 100, "online join navigation");
+			const joinedUrl = new URL(pageA.url());
+			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
+			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
+			expect(joinedUrl.searchParams.get("map")).toBe("ice-map-v1");
+			await waitFor(async () => await pageA.locator("#network-loading").count() === 1, 10_000, 100, "online loading screen");
+			expect(await pageA.locator("#network-loading").textContent()).toContain("Joining online game");
+
+			// Tab B joins the same match from a fresh incognito context.
+			const contextB = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+			const pageB = await contextB.newPage();
+			const captureB = captureConsole(pageB);
+			const response = await pageB.goto(joinedUrl.toString(), { waitUntil: "load" });
+			expect(response?.status()).toBe(200);
+
+			// Matchmaking pairs both users and both tabs boot a game handler.
+			const matchMode = (page: Page) =>
+				page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id ?? null);
+			await waitFor(async () => (await matchMode(pageA)) !== null, 20_000, 200, "tab A matched game");
+			await waitFor(async () => (await matchMode(pageB)) !== null, 20_000, 200, "tab B matched game");
+			const entities = await pageB.evaluate(
+				() => (window as any).game?.handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
+			);
+			expect(entities).toBeGreaterThan(0);
+
+			assertCleanConsole(captureA);
+			assertCleanConsole(captureB);
+		} finally {
+			await browser.close();
+			await server.stop();
+		}
+		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
 	}, 120_000);
 });

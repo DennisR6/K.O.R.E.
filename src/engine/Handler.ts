@@ -4,7 +4,8 @@ import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { GameState } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, ItemDrawState, TurnPacket } from "./types.js"
-import type { IGameContext, ISystem } from "../systems/types.js";
+import type { IGameContext, ISerializableSystem, ISystem } from "../systems/types.js";
+import { createSystemFromSettings, validateSystemSettingsList } from "../systems/systemSettings.js";
 import { defaultPhysics } from "../physics/defaultPhysics.js";
 import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../settings/settings.js"
 import type { IStructure } from "../structures/types.js";
@@ -113,6 +114,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private ruleState: RuleState = { phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 }
 	private matchResult: MatchResult | undefined
 	private disposed = false
+	/** Transient local host pause; it is intentionally not an authoritative snapshot field. */
+	private paused = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
 	/**
@@ -171,6 +174,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
+		// Autonomous drivers are input adapters, not physics participants.  A
+		// simulated shot must not let an AI submit nested turns in its clone.
+		if (settings.systems && settings.systemOrder) {
+			settings.systems = settings.systems.filter((system: { systemId: string }) => system.systemId !== "ai.battle" && system.systemId !== "ai.opponent")
+			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
+		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
 		return g.resolveTurn({ actorId, angle, power })
 	}
@@ -228,7 +237,6 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				this.setState(GameState.Playing_done)
 			}
 			onComplete?.()
-			console.log("done")
 		});
 	}
 
@@ -252,6 +260,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	public tick(dt: number = this.dt) {
 		if (this.disposed) return
+		if (this.paused) return
 		// Completed matches are frozen: the accepted final turn has been
 		// synchronized and its result stored. No later tick may mutate
 		// entities, effects, structures, systems, inventories, or outcome
@@ -400,6 +409,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 	public getContext(): IGameContext { return { ...this.context }; }
 	public addSystem(system: ISystem) { this.systems.push(system) }
+	/** Snapshot-only inspection; callers must not mutate the returned systems. */
+	public getSystems(): readonly ISystem[] { return this.systems }
+	/** Builder-only replacement used when restoring the serialized system graph. */
+	public replaceSystems(systems: ISystem[]): void { this.systems = systems }
 	public getEntityManager(): EntityManager { return this.entityManager }
 
 	public setState(state: GameState): void {
@@ -487,6 +500,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.resetMapItemPickups()
 		const initialPhase = settings.gameMode?.phases?.[0] ?? RulePhase.Physics
 		this.startTurn({ phase: initialPhase, activeTeam: 0, turnNumber: 0, itemUses: 0 })
+		this.paused = false
 		this.setMatchResult(undefined)
 		this.saveSettings(settings)
 		this.mouseHandler?.reset?.()
@@ -506,6 +520,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.postDrawers = []
 	}
 	public isDisposed(): boolean { return this.disposed }
+	/** Freezes local host ticking without changing serializable authoritative match state. */
+	public setPaused(paused: boolean): void { this.paused = paused }
+	public isPaused(): boolean { return this.paused }
 	public getActiveTeam(): number { return this.context.activeTeam }
 	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
@@ -567,6 +584,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			allTeamSize: this.teamSize,
 			playerCount: this.settings?.playerCount ?? 1,
 			figuresPerPlayer: this.settings?.figuresPerPlayer ?? Math.max(1, this.entityManager.getEntities().length),
+			...(this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {}),
 			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
 			...(this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {}),
 			turnNumber: this.getContext().currTurn,
@@ -574,6 +592,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
 			matchResult: this.getMatchResult(),
 			physicsState: this.getPhysicsState(),
+			systems: (() => {
+				const serialized = this.systems.map(system => {
+				if (!("systemId" in system) || !("toSettings" in system)) throw new Error("All registered systems must implement ISettingsSerialize")
+				return (system as ISerializableSystem).toSettings()
+				})
+				if (new Set(serialized.map(system => system.systemId)).size !== serialized.length) throw new Error("Duplicate system IDs are not serializable")
+				return serialized.sort((a, b) => a.systemId.localeCompare(b.systemId))
+			})(),
+			systemOrder: this.systems.map(system => {
+				if (!("systemId" in system)) throw new Error("All registered systems require a stable systemId")
+				return (system as ISerializableSystem).systemId
+			}),
 			tickRate: this.getTickRate(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
@@ -732,13 +762,27 @@ export class GameHandlerBuilder {
 		validateFigureCounts(playerCount, figuresPerPlayer)
 		if (gameSettings.gameMode !== undefined) validateItemEconomySettings(gameSettings.gameMode.itemEconomy)
 		this.engine.saveSettings({ ...gameSettings, drift, playerCount, figuresPerPlayer })
-		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, physicsState: _physicsState, tickRate: _tickRate, ...initialSettings } = gameSettings as EngineSettings
+		const { state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, itemDrawState: _itemDrawState, itemPickupState: _itemPickupState, matchResult: _matchResult, physicsState: _physicsState, tickRate: _tickRate, systems: _systems, systemOrder: _systemOrder, ...initialSettings } = gameSettings as EngineSettings
 		this.engine.setInitialSettings(initialSettings)
 		const { screenResolution, worldSize = screenResolution, background, myTeam, mapBoundarys, players } = gameSettings
 		this.engine.setId(gameSettings.id)
 		this.engine.setTickRate((gameSettings as EngineSettings).tickRate ?? 1)
 		this.engine.setWorldSize(worldSize)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
+		const snapshot = gameSettings as EngineSettings
+		if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
+			validateSystemSettingsList(snapshot.systems, snapshot.systemOrder)
+			const systemSettings = snapshot.systems as import("../systems/types.js").SystemSettings[]
+			const systemOrder = snapshot.systemOrder as string[]
+			const byId = new Map(systemSettings.map(system => [system.systemId, system]))
+			const restored = new Map<string, ISerializableSystem>()
+			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
+			if (byId.has("core.simulator")) restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator")!, restored))
+			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
+			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
+			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
+			restoredPhysics.strategy = this.engine.getPhysics()
+		}
 
 		// Adding Background
 		let backgroundSettings: IBackground = getBackgoundSystem(background)

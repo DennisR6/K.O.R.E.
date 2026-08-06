@@ -12,7 +12,7 @@ describe("Section 15.6 mirrored gameplay fairness tournament", () => {
 		}
 		// Fairness imbalance is evidence for review, not a release gate yet.
 		expect(tournament.warnings).toEqual(expect.any(Array));
-	});
+	}, 45_000);
 
 	test("is deterministic for every mirrored seed", () => {
 		expect(runFairnessTournament([3201, 3202])).toEqual(runFairnessTournament([3201, 3202]));

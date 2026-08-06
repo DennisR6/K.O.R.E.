@@ -93,7 +93,7 @@ export class P5Renderer implements RenderContext {
 			this.p5ctx.pop();
 		}
 	}
-	drawImage(key: AssetKey, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
+	drawImage(key: AssetKey | string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
 		const img = assetManager.get(key);
 		if (!img) return;
 
@@ -191,4 +191,12 @@ export class P5Renderer implements RenderContext {
 	toWorld(val: number) { return val / this.renderScale; }
 
 	windowScale = () => (window.window.innerWidth * 0.9) / 16
+
+	public noStroke(): void {
+  	this.p5ctx.noStroke();
+	}
+	public getTextWidth(text: string, size: number): number {
+  		this.p5ctx.textSize(size);
+  		return this.p5ctx.textWidth(text);
+	}
 }

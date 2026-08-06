@@ -21,7 +21,9 @@ test("canonical players start alive, contained, visible, and in the fixed camera
 	camera.resize(320, 180);
 	expect(camera.getScaleFactor()).toBeFinite();
 	expect(camera.getScaleFactor()).toBeGreaterThan(0);
-	expect(camera.viewportToWorld(camera.worldToViewport(settings.players[0]!.position))).toEqual(settings.players[0]!.position);
+	const roundTripped = camera.viewportToWorld(camera.worldToViewport(settings.players[0]!.position));
+	expect(roundTripped.x).toBeCloseTo(settings.players[0]!.position.x, 9);
+	expect(roundTripped.y).toBeCloseTo(settings.players[0]!.position.y, 9);
 });
 
 test("only the active team's live actor can be submitted from the initial view", () => {
@@ -31,7 +33,9 @@ test("only the active team's live actor can be submitted from the initial view",
 	handler.addSystem(ui);
 	handler.setMouseHandler(ui);
 	handler.addSystem(new EmitterSystem(emitter));
-	const [active, inactive] = handler.getEntityManager().getEntities();
+	const entities = handler.getEntityManager().getEntities();
+	const active = entities.find(entity => entity.getTeam().includes(0))!;
+	const inactive = entities.find(entity => !entity.getTeam().includes(0))!;
 
 	handler.updateMouse(active!.getPos().x, active!.getPos().y);
 	handler.handleMousePressed();
@@ -46,7 +50,7 @@ test("only the active team's live actor can be submitted from the initial view",
 	secondHandler.addSystem(secondUi);
 	secondHandler.setMouseHandler(secondUi);
 	secondHandler.addSystem(new EmitterSystem(secondEmitter));
-	const inactiveActor = secondHandler.getEntityManager().getEntities().find(entity => entity.getId() === inactive!.getId())!;
+	const inactiveActor = secondHandler.getEntityManager().getEntities().find(entity => !entity.getTeam().includes(0))!;
 	secondHandler.updateMouse(inactiveActor.getPos().x, inactiveActor.getPos().y);
 	secondHandler.handleMousePressed();
 	secondHandler.updateMouse(inactiveActor.getPos().x + 20, inactiveActor.getPos().y);

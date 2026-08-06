@@ -19,7 +19,7 @@ describe("Share Validated Game Settings", () => {
 		expect(() => registry.create(invalidSettings as any, ["user-1", "user-2"])).toThrow();
 	});
 
-	test("ServerRuntime handles shared validated settings and distributes INIT", () => {
+	test("ServerRuntime rejects client-supplied settings at the authoritative map boundary", () => {
 		const db = new GameDatabase(":memory:");
 		const registry = new GameRegistry(db);
 		const runtime = new ServerRuntime(registry);
@@ -40,12 +40,10 @@ describe("Share Validated Game Settings", () => {
 		runtime.open(socket2);
 
 		runtime.message(socket1, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "user-1" }));
-		runtime.message(socket2, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "user-2" }));
-
 		const validSettings = createDefaultGameSettings();
 		runtime.message(socket1, JSON.stringify({ type: "CREATE_GAME", settings: validSettings }));
 
-		expect(messages1.some(m => m.includes("INIT"))).toBe(true);
-		expect(messages2.some(m => m.includes("INIT"))).toBe(true);
+		expect(messages1.at(-1)).toContain("Client-supplied game settings are not accepted");
+		expect(messages2.some(m => m.includes("INIT"))).toBe(false);
 	});
 });

@@ -2,7 +2,7 @@ import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
 import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /**
  * Das Herzstück der Bewegungs-Logik.
@@ -17,7 +17,8 @@ import type { IGameContext, ISystem } from "./types.js";
  * 3. Update der Positionen
  * 4. Stoppen von Mikrobewegungen via `STOP_THRESHOLD`
  */
-export class PhysicsSystem implements ISystem {
+export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.physics";
 	/** 
 	 * Geschwindigkeit, unter der eine Entity als "stehend" betrachtet wird.
 	 * Verhindert unendliches "Zittern" durch Gleitkomma-Berechnungen.
@@ -45,6 +46,7 @@ export class PhysicsSystem implements ISystem {
 		this.DEFAULTFPS = fps
 		// strategy.printSettings("Physics")
 	}
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { fps: this.DEFAULTFPS, contacts: [...this.activeContactPairs].sort() } }; }
 
 	/**
 	 * Orchestriert die Physik-Berechnung pro Tick.

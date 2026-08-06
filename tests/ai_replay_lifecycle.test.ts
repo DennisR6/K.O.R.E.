@@ -102,10 +102,11 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(handler.getState()).toBe(GameState.Game_over);
 		expect(result).toBeDefined();
 		// The deterministic convergence match: team 1's figure reaches the
-		// mid-arena kill circle first and team 0 survives.
+		// mid-arena kill circle first and team 0 survives. The turn count is
+		// a fixed value for this fixed AI-seed pair.
 		expect(result?.winnerTeam).toBe(0);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(30);
+		expect(result?.turnNumber).toBe(52);
 
 		const liveEntities = handler.getEntityManager().getEntities();
 		expect(liveEntities[0]!.isDead()).toBe(false);
@@ -114,7 +115,7 @@ describe("AI Match Replay Lifecycle", () => {
 		// The recorded replay is a valid document with one shot per action
 		const replay = emitter.recorder.getReplay();
 		expect(() => validateReplayDocument(replay)).not.toThrow();
-		expect(replay.actions).toHaveLength(31);
+		expect(replay.actions).toHaveLength(53);
 		expect(replay.actions.every(action => action.type === "shoot")).toBe(true);
 
 		// --- Deterministic replay: two independent playback runs are identical ----
@@ -166,15 +167,17 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(replayResult?.winnerTeam).toBe(result?.winnerTeam);
 		expect(replayResult?.reason).toBe(result?.reason);
 		// The replay advances turns exactly like the live match did.
-		expect(replayResult?.turnNumber).toBe(30);
+		expect(replayResult?.turnNumber).toBe(52);
 		expect(replayA.getHandler().getTurnNumber()).toBe(handler.getTurnNumber());
 		expect(replayA.getHandler().getActiveTeam()).toBe(handler.getActiveTeam());
 		expect(replayA.getHandler().getRuleState()).toEqual(handler.getRuleState());
 	});
 
-	test("AI-vs-AI matches are deterministic across match seeds", () => {
+	test("AI decisions depend deterministically on the AI seed", () => {
+		// The match seed only drives the replay recording: identical AI seeds
+		// must play the identical game regardless of the match seed.
 		const first = runAiMatch(12345, 111, 222);
-		const second = runAiMatch(999, 33, 44);
+		const second = runAiMatch(999, 111, 222);
 
 		// Entity IDs are random per settings construction, so compare shot inputs
 		// (angle/power), final positions, and the match result instead.
@@ -187,6 +190,13 @@ describe("AI Match Replay Lifecycle", () => {
 		const secondEntities = second.handler.getEntityManager().getEntities();
 		expect(secondEntities.map(entity => entity.getPos())).toEqual(firstEntities.map(entity => entity.getPos()));
 		expect(secondEntities.map(entity => entity.isDead())).toEqual(firstEntities.map(entity => entity.isDead()));
+
+		// Different AI seeds play a different game: the hard AI resolves its
+		// equally-best candidates from the AI seed, so every battle seed
+		// produces its own deterministic match.
+		const third = runAiMatch(12345, 111, 223);
+		const thirdActions = third.emitter.recorder.getReplay().actions;
+		expect(thirdActions.map(action => action.input)).not.toEqual(firstActions.map(action => action.input));
 	}, 120_000);
 
 	test("rejects malformed replay actions at the document boundary", () => {

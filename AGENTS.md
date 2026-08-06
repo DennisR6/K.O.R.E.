@@ -39,6 +39,20 @@ Items, AI, winning and completed-round rules, out-of-bounds elimination are
 fully implemented and verified at their automated contract boundaries; this
 does not promote blocked gameplay configurations or pending human evidence.
 
+## Hybrid ECS/OOP Architecture
+
+The engine uses a hybrid Entity Component System (ECS) and Object-Oriented Programming (OOP) architecture.
+
+Serializable component data serves as the canonical game state, while runtime objects provide a convenient, behavior-oriented API during execution.
+
+Every runtime object follows a deterministic lifecycle:
+
+- Construct from serialized state.
+- Execute gameplay behavior.
+- Serialize back into an equivalent snapshot.
+
+This bidirectional lifecycle guarantees that runtime state is always reproducible from its serialized representation, enabling deterministic save/load, multiplayer synchronization, replays, AI simulation, rollback, and state validation without coupling gameplay logic to serialization or networking.
+
 ## Source Of Truth
 
 - `src/` is the authoritative game, engine, and server-library source.
@@ -49,7 +63,8 @@ does not promote blocked gameplay configurations or pending human evidence.
 - `gdd.md` describes product intent, and implementation is completed across all master phases.
 - `TODO.md` is a reconciled planning inventory; current source and verified tests remain authoritative.
 - `requirements.md` maps TODO/GDD requirements to implementation checklist sections and verified test evidence.
-- `step-by-step.md` is the current commit-sized execution checklist. Update its status in the same atomic commit as each completed task.
+- `step-by-step.md` is the compact completed-delivery record. Keep its milestone
+  summaries and commit links accurate when a material delivery changes them.
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
 - `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
 - `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
@@ -64,7 +79,12 @@ After every change, check whether this guide still reflects the implementation a
 ### Runtime entry points
 
 - `index.html`: browser shell; loads vendored `public/p5.min.js` and generated `dist/main.js`.
-- `src/main.ts`: browser bootstrap, menu/game selection, p5 setup, render loop, DOM mouse events, keyboard audio controls, and `window.game` debug access.
+- `src/main.ts`: browser bootstrap, menu/game selection, accessible online
+  connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
+  mouse events, keyboard audio controls, and `window.game` debug access.
+- `src/debug/uiSandbox.ts`: standalone p5 host for the generic UI SDK debug
+  sandbox. It activates only with `?debug=ui` (or `?debugui=1`) and keeps the
+  browser adapter and diagnostics outside the generic SDK.
 - `server.ts`: Bun static-file and native WebSocket server, in-memory lobby, and matchmaking loop.
 - `src-website/index.html`: standalone map-editor page.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
@@ -156,6 +176,25 @@ After every change, check whether this guide still reflects the implementation a
   validation and inventory tests, but item effects are not yet installed by
   `GameHandler.useItem()`.
 
+### AI drivers
+
+- `src/ai/aiEmitter.ts`: `AiTurnEmitter` executes a producer decision against
+  a target emitter and filters wrong-team/dead actors through the pure
+  `src/input/validate.ts` boundary (it must not import server modules, or the
+  browser bundle would pull in `bun:sqlite`).
+- `src/ai/easyAi.ts`, `mediumAi.ts`, and `hardAi.ts`: deterministic
+  shot-only producers; `HardAi` samples bounded simulations
+  (`decisionLimits`) and resolves equal-scoring candidates through its seed
+  (seeded tie-break plus a rotated fallback angle grid), keeping killing
+  moves preferred and non-killing ties aimed at an enemy, so every battle
+  seed plays a different game while matches keep terminating.
+- `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
+  `decisionLimits`) and `validateAiSettings`.
+- `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
+  skips the item phase, submits one legal shot per physics phase through
+  `AiTurnEmitter`, and implements the passive `IMouse` contract so the result
+  overlay can wrap it without accepting human input.
+
 ### Physics, structures, and systems
 
 - `src/physics/physics.ts`: vector and physics contracts plus numeric `SHAPE`
@@ -180,7 +219,6 @@ After every change, check whether this guide still reflects the implementation a
   final position and velocity.
 - `src/systems/GameStateManager.ts`: incomplete state transitions.
 - `src/systems/TurnSystem.ts`: client turn-state mapping for controlled teams.
-- `src/systems/DirectionArrow.ts`: shot-direction overlay.
 - `src/systems/RoundSystem.ts`, `WinningSystem.ts`, `BoundarySystem.ts`,
   `EffectSystem.ts`, `Simulator.ts`, and related helpers: partial, placeholder,
   or archival implementations. Verify each before relying on it.
@@ -189,6 +227,24 @@ After every change, check whether this guide still reflects the implementation a
 
 - `src/settings/settings.ts`: canonical `GameSettings`, friction presets,
   default teams/entities, active settings object, and grid arrangement.
+- `src/engine/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
+  JSON-safe worlds/entities/structures/effects and deterministic framework
+  metadata selection. It must not import KORE/game domains or runtime adapters.
+- `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
+  menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
+  no browser loop/listeners, and must not import KORE/game or browser domains.
+- `src/engine/audio-sdk/index.ts`: generic `audio` SDK built on the Engine SDK.
+  It owns JSON-safe semantic commands, narrow emitter capabilities,
+  deterministic aggregation, persistent intent, framework metadata, and an
+  output port; it must not import KORE, UI, browser, or audio-device APIs.
+- `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
+  validated engine-importable `GameSettings` JSON maps, serializable teams,
+  spawns, KORE effects/defaults, and KORE handler composition. Root
+  `src/kore_sdk.ts` is the supported deprecated compatibility re-export.
+- `src/kore/audio.ts`: KORE semantic sound IDs, bus presets, and the optional
+  browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
+  output-port adapter; `src/menu/AudioManager.ts` owns media resources and
+  autoplay unlocking, never game entities.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
@@ -198,25 +254,43 @@ After every change, check whether this guide still reflects the implementation a
 - `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
   map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
-- `src/ui/GameplayFeedback.ts`: shared input-rejection feedback for local
-  gameplay.
-- `src/ui/ItemPhaseControls.ts`: browser-visible item-phase panel (draws the
-  phase state and skip/use buttons, routes use/skip through the validated
-  `ItemPhaseUI` -> emitter -> `RuleInterpreter` chain, delegates presses
-  outside the panel to the gameplay input).
-- `src/ui/MatchResultOverlay.ts`: completed-match result screen with rematch
-  and menu actions; it passes mouse events through to the gameplay input while
-  hidden and resets the wrapped input surface on rematch/dispose.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
   without retaining stale handlers; `createLocalGameplayHandler()` wires
-  `UiSystem`, `DirectionArrow`, `GameplayFeedback`, `ItemPhaseControls`, and
-  `EmitterSystem` around a canonical match.
+  `UiSystem` and `EmitterSystem` around a canonical match, then installs the
+  SDK-authored `KoreGameHudSurface`; `createAiBattleHandler()` builds an
+  autonomous KI-vs-KI battle with the `AiBattleSystem` as the passive input.
+  Every battle start and battle rematch draws a fresh battle seed (injectable
+  `battleSeedSource`, exposed as `getBattleSeed()`), so each battle is a new
+   game while remaining reproducible from its seed.
+- `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
+  Its `.build()` result contains every production menu screen, element, action,
+  UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
+  enum-backed KORE identifiers, commands, routes, styles, and parser;
+  `KoreMainMenuSurface.ts` reconstructs that result as the KORE renderer/input/
+  audio adapter. Do not add parallel pages, manual hitboxes, or browser
+  resources to the composition.
+- `src/kore/ui/gameHud.ts` and `KoreGameHudSurface.ts`: authoritative
+  SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.
+  `hudCommands.ts` owns the enum-backed KORE HUD command vocabulary and
+  `hudVocabulary.ts` owns its enum-backed identifiers/styles/labels;
+  `gameHudProjection.ts` owns the detached gameplay projection, including
+  active-player dots and pull-arrow world geometry. Generic UI
+  settings still serialize ordinary strings, but KORE must author and parse its
+  vocabulary exclusively through these enums. The local pause command freezes
+  transient handler ticks; online skip/pause controls are hidden because the
+  server protocol has no skip action or production pause surface. Do not add
+  manual HUD hitboxes or direct `AudioManager` calls to
+  gameplay scenes.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- `src/menu/Menu.ts`: landing and menu pages; the main menu offers
-  "Play Local Game" and a "Choose Map" page listing every
-  `browserAvailable` catalog map (`MapSelectionPage`).
-- `src/menu/AudioManager.ts`: browser playlist using ignored MP3 files.
+- The SDK main menu offers "1 vs KI" (world rect `(270..530, 112..170)`),
+  "KI vs KI" `(270..530, 176..234)`, "Play Online" `(270..530, 240..298)`,
+  "Play Local Game" `(270..530, 304..362)`, and "Choose Map"
+  `(270..530, 368..426)`. Its KORE composition generates browser-available
+  catalog-map screens and filters battle screens to `battleAvailable` maps.
+- `src/menu/AudioManager.ts`: single browser media owner. It resolves KORE
+  sound IDs, manages media elements/volume/unlock/disposal, buffers persistent
+  intent while locked, and retains playlist keyboard compatibility.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.
 - `src/assetManager/loader.ts`: lazy browser image fetch/cache with a currently
@@ -229,14 +303,51 @@ After every change, check whether this guide still reflects the implementation a
 ### Networking and utilities
 
 - `src/server/types.ts`: JSON wire protocol and packet types.
+- `src/server/config.ts`: server-published online-play configuration; reads
+  `KORE_BASE_URL` (default `https://lupricht.net/kore`), derives the matching
+  WebSocket URL, and serves the `/config` JSON contract used by the browser
+  "Play Online" action.
+- `src/server/dashboard.ts`: exact authenticated operator dashboard routes for
+  aggregate lifecycle/player metrics plus durable map usage/count/percentage
+  and most-played-map metrics; an unset or short
+  `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
+  `/operator/replays` lists every persisted replay and filters by exact match
+  ID; `/operator/replays/<id>` downloads that deterministic replay document.
+  Every completed match automatically receives an unbroadcast replay token; the
+  archive exposes a `View replay` link only to authenticated operators. These
+  operator-only replay routes may expose match IDs and settings, while public
+  replay-share routes remain separately redacted. An operator view of an active
+  match creates an unbroadcast opaque token containing only its current replay
+  document, so unfinished matches can be replayed without public listing.
+  `GET /operator/dashboard?format=json` returns the same complete aggregate
+  dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
+  metrics alias. `GET /operator/login` serves a minimal password form and
+  `POST /operator/login` accepts the operator secret and issues a signed,
+  HttpOnly, Secure, SameSite=Strict eight-hour cookie accepted by the dashboard
+  routes; `POST /operator/logout` expires it. Authenticated `GET /operator/db`
+  downloads a consistent SQLite backup and is never available through public
+  static-file routing.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
-  `EngineSettings` snapshots and maintains player-to-game membership rows.
+	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
+	maintains player-to-game membership rows, and
+	migrates versioned lifecycle rows (`resident`, `paused`, `sleeping`, or
+	`completed`) for durable aggregate match metrics. It also stores immutable
+	UUID-keyed declarative map revisions with canonical content hashes and
+	draft/approved/retired lifecycle state; map documents are always structurally
+	validated and never updated in place.
+- `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
+  `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
+  retired revisions for new matches while preserving them in storage. Its
+  explicit revisioned cache refresh affects only future map lookups.
 - `src/server/gameRegistry.ts`: authoritative match cache, turn ownership,
-  input checks, simulation commits, rule progression, persistence, and lazy
-  SQLite restoration.
+  input checks, simulation commits, rule progression, lifecycle-gated paused/
+  completed actions, persistence, metric aggregation, and lazy SQLite
+  restoration. `now` metrics are explicitly scoped to this process's cache.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
-  matchmaking, input dispatch, and broadcasts.
+  matchmaking, input dispatch, and broadcasts. When configured with a
+  `MapRepository`, matchmaking accepts only approved database map UUIDs and
+  expands them server-side before match construction.
 - `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
   used by the active server runtime.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
@@ -246,6 +357,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
   emitter composition, test capture, and replay-oriented helpers.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
+- `src/utils/onlineConfig.ts`: browser-side online-play config; fetches the
+  server's `/config` advertisement, falls back to the page origin and then to
+  the built-in default deployment, and builds the `skipmenu=1&url=...` join URL
+  used by the menu's "Play Online" action.
 - `src/utils/random.ts`: deterministic pseudo-random source for replayable
   gameplay decisions.
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
@@ -266,7 +381,9 @@ bunx playwright install chromium   # once per machine for browser E2E tests
 Useful commands:
 
 ```sh
-bun test               # all Bun-discovered tests
+bun run test           # ≤60s fast deterministic suite; excludes long qualifications/browser E2E
+bun test               # raw all Bun-discovered tests, including browser E2E
+bun run test:qualification # browser, fuzz, map, and gameplay release qualifications
 bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
 bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
 bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)
@@ -275,8 +392,12 @@ bun run build          # compile src/**/* to dist; does not clean stale files
 bun run test:gameplay-matrix     # Section 15 deterministic content matrix
 bun run test:gameplay-tournament # Section 15 mirrored fairness tournament
 bun run test:browser:smoke  # Section 16 fast startup/menu browser smoke (builds dist, manages the server)
+bun run test:browser:ui-debug # Generic UI SDK browser debug-sandbox E2E
+bun run test:browser:audio # Generic audio aggregation browser E2E
+bun run test:browser:menu-sdk # SDK-authored production main-menu browser E2E
+bun run test:browser:hud # SDK-authored gameplay HUD browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (startup/menu/local turn/match flow/diagnostics/map catalog)
-bun run test:browser        # alias for test:browser:full; runs in the normal `bun test` suite too
+bun run test:browser        # alias for test:browser:full
 bun run test:maps           # Section 17 dev smoke map matrix run
 bun run test:maps:matrix    # Section 17 full release map matrix comparison
 bun run start               # run Bun HTTP/WebSocket server
@@ -286,12 +407,13 @@ bun run serve          # live-server only; no WebSocket backend
 bun run createAssets   # intentionally regenerate registry and asset packs
 ```
 
-There is no lint or formatting script. CI currently runs only
-`bun install --frozen-lockfile` and `bun test`, and only targets the `main`
-branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
+There is no lint or formatting script. CI runs `bun install --frozen-lockfile`,
+`bun run test:fast`, map verification, and a separate browser job; it targets
+only the `main` branch. `tsconfig.json` includes only `src/**/*`; root `server.ts`, tests,
 scripts, and `src-website/` are not typechecked by `npx tsc --noEmit`.
 
-The root `.env` currently sets `PORT=4001`; the server fallback is 3000.
+The root `.env` currently sets `PORT=4001` and
+`KORE_BASE_URL=https://lupricht.net/kore/`; the server fallback is 3000.
 
 Section 15 gameplay release qualification is recorded in
 `docs/gameplay-balance-report.md` and `docs/release-verification.md`, with
@@ -321,7 +443,9 @@ is never the release gate. `test:browser:smoke` covers startup/menu, and
 Section 17.8 map-catalog E2E (every browser-available map opens through the
 production menu, renders its structures/hazards, resolves one legal pointer
 action, and returns to the menu); both build the generated bundle and manage
-the Bun server lifecycle through the harness.
+the Bun server lifecycle through the harness. Browser E2E is intentionally
+excluded from `test:fast` because its server/Chromium lifecycle runs in its
+dedicated CI job.
 
 The default URL opens the menu. Local gameplay is selected with a non-empty
 `skipmenu` query parameter, for example:
@@ -330,9 +454,15 @@ The default URL opens the menu. Local gameplay is selected with a non-empty
 http://localhost:4001/?skipmenu=1
 ```
 
-Query values are assigned as strings, so even `?skipmenu=false` is truthy.
+`skipmenu` is truthy only for the values `1` and `true` in `src/main.ts`.
+`?debug=ui` opens the standalone generic UI SDK sandbox instead of normal
+menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
+is intentionally outside `src/engine/ui-sdk/`.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed
-but currently unused.
+but currently unused. The main menu's "Play Online" button fetches the
+server's `/config` advertisement (base URL from `KORE_BASE_URL`) and navigates
+to `?skipmenu=1&url=<derived-ws-url>`; the manual `?url=` override still wins
+when present.
 
 The browser runtime is the vendored p5 file in `public/` (currently p5
 1.11.x), while `package.json` declares p5 2.x and the typings are 1.7.x.
@@ -348,10 +478,11 @@ Account for this mismatch when changing rendering APIs.
 2. `PhysicsSystem`
 3. `GameStateManager`
 
-The local gameplay branch in `src/main.ts` adds `UiSystem`, `DirectionArrow`,
-and `EmitterSystem`; `defaultSystems()` remains the sole registration point for
-physics and playback. The network branch waits for the server `INIT` settings,
-then installs the same UI systems with `NetworkEmitter`.
+The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`,
+then wraps input/drawing with `KoreGameHudSurface`; `defaultSystems()` remains
+the sole registration point for physics and playback. The network branch waits
+for the server `INIT` settings, then installs the same UI systems with
+`NetworkEmitter` and a capability-limited HUD surface.
 
 `GameHandlerBuilder.fromSettings()` installs the background, teams, players,
 wrapped map structures, handler effects, items, and map friction. It restores
@@ -406,7 +537,7 @@ The canonical engine map/game model is `GameSettings` in
 - `screenResolution: { x, y }`
 - `players: PlayerSettings[]`
 - `mapBoundarys`: numeric circle/line/rectangle shape settings
-- `background`: color or numeric `AssetList` image
+- `background`: color, numeric `AssetList` image, or HTTP(S)/same-origin image URL
 - `friction: { friction, linearDrag, stopThreshold }`
 - `drift`: finite `[0, 1]` per-tick, speed-preserving steering blend toward each
   player's rotation; it does not apply at or below the physics stop threshold
@@ -414,6 +545,10 @@ The canonical engine map/game model is `GameSettings` in
   they serialize with engine snapshots. `createDefaultGameSettings()` generates
   the two-sided ice-map layout from them.
 - handler `effects`, `items`, teams, and player-count metadata
+
+Database-derived settings additionally preserve `{ mapId, contentHash }` in
+`mapReference`; the expanded geometry remains in the same snapshot so a retired
+map revision can still restore an existing match deterministically.
 
 Versioned game/map/item/hazard/AI/replay document contracts live in
 `src/contracts/documents.ts`; legacy documents without a version migrate to
@@ -436,6 +571,9 @@ remain unsupported.
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.
+It also carries sorted, versioned stable system settings plus explicit tick order;
+the allowlisted system factory rejects unknown, duplicate, malformed, executable,
+or unsupported-version system data during restoration.
 `GameModeSettings` can carry an `ItemEconomySettings` contract for fixed
 per-team loadouts, declared map pickups, and deterministic seeded draw pools;
 the selected optional mode is preserved in engine snapshots.
@@ -494,12 +632,28 @@ Treat registry order changes as data-contract changes.
 
 ## Testing Guidance
 
-Run at minimum after source changes:
+For each commit-sized checklist task, run the named focused test file(s), nearby
+subsystem coverage, and TypeScript validation:
+
+```sh
+npx tsc --noEmit
+```
+
+Run `bun run build` when browser/runtime code, exported contracts, or generated
+browser output changes. Run task-specific browser, server, fuzz, benchmark, or
+packaging commands when the checklist requires them.
+
+Run the complete serial suite only for a chapter's final qualification, release
+gate, or an explicitly requested repository-wide validation:
 
 ```sh
 bun test
-npx tsc --noEmit
 ```
+
+Do not use `bun test --parallel` or `bun test --changed` as a substitute for
+the final qualification suite. Use `test.serial(...)` for tests that share a
+process-global resource, mutate a common fixture, bind a fixed port, or require
+ordered lifecycle transitions; keep independent tests parallel-safe.
 
 Add focused Bun tests near the relevant behavior. Existing test names use both
 `*.test.ts` and `*_test.ts`, and imports inconsistently use `.ts`, `.js`, or no
@@ -525,7 +679,7 @@ For changes in these areas, explicitly cover:
 
 ### Section 11 Cross-System Validation Suite
 
-`step-by-step.md` section 11 is a commit-sized cross-system validation suite;
+`step-by-step.md` section 11 records the cross-system validation suite;
 each of its nine tasks ships one focused test plus the checklist flip. The
 suite proves deterministic engine snapshots (`handler_snapshot_isolation`,
 `simulate_turn_isolation`, `parallel_engine_instances`), hard-AI decision
@@ -544,7 +698,7 @@ update the smoke file.
 
 ### Section 12 Defect Hardening And Release Qualification
 
-`step-by-step.md` section 12 qualifies the release candidate after targeted
+`step-by-step.md` section 12 records release-candidate qualification after targeted
 defect hardening, each task shipped as one atomic commit with focused tests:
 match completion gating (`tests/match_completion_gate.test.ts`), the explicit
 match status model (`tests/match_status_model.test.ts`), winner-state
@@ -602,20 +756,34 @@ authoritative `REMATCH` resets the handler and broadcasts fresh per-player
 `INIT` settings. `GameHandler` objects
 are an evictable cache: the final disconnect removes them immediately and idle
 handlers are removed after one minute; the next turn/reconnect restores them
-from SQLite. The database path is `GAME_DB_PATH` or `./data/kore.db`.
+from SQLite. The database path is explicit `GAME_DB_PATH` or a default anchored
+to `<server-root>/data/kore.db`, never the process working directory.
+Completed-match replay shares are idempotent per game: either participant may
+request the same public token and the runtime broadcasts it to both connected
+participants. The requesting online HUD `Replay` action opens the read-only
+viewer; `Share` exposes the same URL for copying.
+The server advertises its public base URL through `/config`: `KORE_BASE_URL`
+(default `https://lupricht.net/kore`) is read at startup, the matching WebSocket
+URL is derived, and both are served as a never-cached JSON contract. The
+browser "Play Online" action reads that contract to build its join URL.
 
 Do not trust values from a `SHOOT` packet. `GameRegistry` must continue to
 validate finite angle/power ranges, actor ownership/activity, game membership,
 and turn ownership before resolving a turn. Keep the registry/runtime testable
 by injecting `new GameDatabase(":memory:")`.
+Clients likewise cannot create an authoritative match from a raw settings or map
+payload: matchmaking accepts a server-approved map ID and expands it through
+`MapRepository`.
 
 Be careful when running `bun run start`:
 
 - The static handler serves `index.html`, `/sw.js` (from `public/sw.js` for the
-  root-scope offline shell), `public/`, and `dist/`; continue to keep secrets
-  out of this repository and do not broaden that allowlist casually.
-- The production server writes `./data/kore.db` by default. `*.db` is ignored;
-  do not commit database files. Set `GAME_DB_PATH` for another durable path.
+  root-scope offline shell), `public/`, `dist/`, and the `/config` JSON contract;
+  continue to keep secrets out of this repository and do not broaden that
+  allowlist casually.
+- The production server writes `<server-root>/data/kore.db` by default. `*.db`
+  is ignored; do not commit database files. Set `GAME_DB_PATH` for another
+  durable path.
 
 `window.game.handler` is a getter over the active scene handler (menu -> match
 -> rematch -> menu), so the debug surface always reflects the authoritative
@@ -663,7 +831,8 @@ Before finishing a change:
 2. Check `git status` and preserve unrelated modifications.
 3. Keep generated output and source changes clearly separated.
 4. Add or update tests for behavior and serialization boundaries.
-5. Run `bun test` and `npx tsc --noEmit`.
+5. Run focused task/subsystem tests and `npx tsc --noEmit`; reserve `bun test`
+   for the chapter-final qualification, release gate, or an explicit request.
 6. If browser behavior changed, build and test the generated `dist/main.js`
    path, including `?skipmenu=1` when gameplay is required.
 7. If server/editor/scripts changed, verify them separately because the main

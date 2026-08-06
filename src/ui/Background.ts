@@ -30,9 +30,9 @@ export function getBackgoundSystem(settings?: SettingsBackground): BackgroundCol
  */
 export class BackgroundImageSystem implements IBackground {
 	/** URL zum Bild-Asset. */
-	private url: AssetList
+	private url: AssetList | string
 
-	constructor(url: AssetList) {
+	constructor(url: AssetList | string) {
 		this.url = url
 	}
 

@@ -17,10 +17,11 @@ export interface RenderContext {
 	setNoFill(): void;
 	setStrokeColor(color: string): void;
 	setStroke(weight: number): void;
+	noStroke(): void;
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
-	drawImage(key: AssetList, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
+	drawImage(key: AssetList | string, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
 	getScreenSize(): { width: number, height: number };
 	clear(color?: string): void;
 	// --- Zustandsspeicher (Wichtig für Junior!) ---
@@ -39,6 +40,7 @@ export interface RenderContext {
 	beginClip(): void;
 	endClip(): void;
 	mouseWheel(func: (e: WheelEvent) => void): void;
+	getTextWidth(text: string, size: number): number;
 }
 
 /** 

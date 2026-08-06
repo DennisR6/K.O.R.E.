@@ -1,8 +1,9 @@
 import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import type { UiSystem } from "./UiSystem.js";
 
-export class MatchStateIndicator implements IDrawer, ISystem {
+export class MatchStateIndicator implements IDrawer, ISerializableSystem<SystemSettings> {
+	public readonly systemId = "ui.match-state-indicator";
 	private context: IGameContext | undefined;
 	private rulePhase: string = "physics";
 	private selectedItemId: string | null = null;
@@ -12,6 +13,7 @@ export class MatchStateIndicator implements IDrawer, ISystem {
 		private readonly getRulePhase?: () => string,
 		private readonly getSelectedItem?: () => string | null,
 	) { }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { rulePhase: this.rulePhase, selectedItemId: this.selectedItemId } }; }
 
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		this.context = ctx;

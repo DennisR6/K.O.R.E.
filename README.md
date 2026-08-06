@@ -74,9 +74,49 @@ bun run docs
 ## Gameplay Modes
 
 1. **Local Hotseat Play:** Serve static client with `bun run serve` or open `index.html?skipmenu=1` in your browser.
-2. **Authoritative Network Multiplayer:** Run `bun run start` and connect multiple browser tabs to `http://localhost:4001/?url=ws://localhost:4001`.
-3. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
-4. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
+2. **KI vs KI Battle:** Press **KI vs KI** in the main menu to watch an
+   autonomous spectator battle: both teams are played by the bounded
+   hard-AI driver on the canonical arena, with no pointer input required.
+3. **Authoritative Network Multiplayer:** Run `bun run start`, open the page
+   and press **Play Online** in the main menu. The server advertises its public
+   base URL through `/config`; join a second browser tab to get matched into a
+   game. The advertised URL defaults to `https://lupricht.net/kore` and is
+   overridable with the `KORE_BASE_URL` environment variable. Manual override
+   remains available: `http://localhost:4001/?skipmenu=1&url=ws://localhost:4001`.
+4. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
+5. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
+
+## Map SDK
+
+`src/kore_sdk.ts` exports one `kore` entry point for authoring validated,
+engine-importable JSON settings. `bun run build` emits `dist/kore_sdk.js`
+alongside the browser bundle.
+
+```ts
+import { kore } from "./src/kore_sdk.ts";
+
+const penguins = kore.createTeam({ teamNr: 0, name: "Penguins", playerCount: 2 });
+const map = kore.createDefaultMap({ name: "Training Arena" })
+  .addBackground({ type: "color", color: "#dff6ff" })
+  .addTeam(penguins)
+  .addPlayerSpawn({ x: 40, y: 130, w: 180, h: 180, team: penguins })
+  .addPlayerSpawn({ x: 580, y: 130, w: 180, h: 180, teamNr: 1, playerCount: 2 })
+  .addWorldEffects({ effects: [kore.effects.move({ deltaTime: 0, x: 0, y: 0 })] })
+  .build();
+
+const handler = kore.createHandler(map);
+```
+
+Use `{ type: "url", url: "https://…" }` for an HTTP(S) background image or
+`{ type: "asset", asset: /* AssetList numeric key */ }` for a generated asset.
+
+## Environment Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` (root `.env` sets `4001`) | HTTP/WebSocket server port |
+| `GAME_DB_PATH` | `<server-root>/data/kore.db` | SQLite match database path |
+| `KORE_BASE_URL` | `https://lupricht.net/kore` | Public base URL advertised via `/config` and used by the menu's "Play Online" join action (http(s); the WebSocket URL is derived) |
 
 ---
 

@@ -1,5 +1,6 @@
 import { type IInputEmitter } from "../engine/types.js";
 import type { ItemTarget } from "../item/target.js";
+import type { AudioCommand, ISoundEmitter } from "../engine/audio-sdk/index.js";
 
 /**
  * Die "Steckerleiste" für Inputs.
@@ -8,8 +9,9 @@ import type { ItemTarget } from "../item/target.js";
  * zu senden. So kann ein Zug gleichzeitig im Netzwerk gesendet, geloggt 
  * und lokal verarbeitet werden.
  */
-export class CombiEmitter implements IInputEmitter {
+export class CombiEmitter implements IInputEmitter, ISoundEmitter {
 	private emitters: IInputEmitter[];
+	public readonly soundSourceId = "kore.combi-emitter";
 
 	/**
 		 * @param emitters - Eine Liste von Emittern, die beim Start registriert werden.
@@ -38,6 +40,13 @@ export class CombiEmitter implements IInputEmitter {
 		for (const em of emitter) {
 			this.emitters.push(em)
 		}
+	}
+	/** Forwards optional semantic audio capability without knowing child classes. */
+	drainSoundCommands(): AudioCommand[] {
+		return this.emitters.flatMap(emitter => {
+			const candidate = emitter as Partial<ISoundEmitter>;
+			return typeof candidate.drainSoundCommands === "function" ? candidate.drainSoundCommands() : [];
+		});
 	}
 }
 

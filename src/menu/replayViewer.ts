@@ -12,7 +12,7 @@ export class ReplayViewer {
 		try {
 			validateReplayDocument(rawReplay);
 			this.player = new ReplayPlayer(rawReplay as ReplayDocument);
-			this.player.playAll();
+			this.player.advance();
 			return true;
 		} catch (error) {
 			this.errorState = error instanceof Error ? error.message : "Malformed or incompatible replay";
@@ -28,6 +28,9 @@ export class ReplayViewer {
 	public getPlayer(): ReplayPlayer | undefined {
 		return this.player;
 	}
+
+	/** Advances to the next recorded action after the current visible turn settles. */
+	public advance(): void { this.player?.advance(); }
 
 	public draw(ctx: RenderContext): void {
 		ctx.push();

@@ -189,6 +189,27 @@ test("a reconnect restores the stored game instead of entering matchmaking", () 
 	database.close()
 })
 
+test("explicit leave ends the match and lets the same user enter a fresh lobby", () => {
+	const { runtime, first, second } = connectMatchedRuntime()
+	const oldGameId = runtime.getRegistry().getForUser(userOne)!.id
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.LEAVE_GAME }))
+	expect(packet(first)).toEqual({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" })
+	expect(packet(second)).toEqual({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" })
+	expect(runtime.getRegistry().getForUser(userOne)).toBeUndefined()
+	expect(runtime.getRegistry().getForUser(userTwo)).toBeUndefined()
+
+	runtime.close(first)
+	const retry = new FakeSocket({ connectionId: "77777777-7777-4777-8777-777777777778" })
+	const replacement = new FakeSocket({ connectionId: "88888888-8888-4888-8888-888888888888" })
+	runtime.open(retry)
+	runtime.open(replacement)
+	runtime.message(retry, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne }))
+	runtime.message(replacement, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "33333333-3333-4333-8333-333333333333" }))
+	runtime.matchmakeOnce()
+	expect(packet(retry).type).toBe(NetworkMessageType.INIT)
+	expect(packet(retry).settings.id).not.toBe(oldGameId)
+})
+
 test("NetworkEmitter sends only shot input and TURN fully reconciles the local entity", () => {
 	const source = createPlayerSettings({ id: "33333333-3333-4333-8333-333333333333", position: { x: 0, y: 0 }, team: [0] })
 	const handler = new GameHandlerBuilder().defaultSystems().setPlayerTeam([0]).addPlayer(new Player(source)).build()

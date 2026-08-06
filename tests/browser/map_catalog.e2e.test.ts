@@ -36,9 +36,10 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
  * local match is a fresh boot that must stay console-clean).
  *
  * The full-journey case uses Hazard Control's broad verified terminal route
- * (the mirrored kill zones, 17.6): after a weak opening, the team-1 figure
- * drives itself into the east kill zone with a power-6 shot, the result
- * overlay offers rematch, and a second terminal match exits to the menu.
+ * (17.6): after a weak opening, every team-1 figure drives itself into the
+ * right arena wall (a containment kill; the wall route is verified to kill
+ * exactly the shooter without touching team 0), the result overlay offers
+ * rematch, and a second terminal match exits to the menu.
  *
  * Failure evidence reuses the Section 16 bounded diagnostics via the shared
  * harness; tests never call `GameEmitter`, handler mutation methods, or
@@ -46,7 +47,7 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
  */
 
 /** World-coordinate centers of the visible browser controls. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 151 };
+const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 const LANDING_WORLD = { x: 400, y: 100 };
@@ -54,8 +55,16 @@ const CHOOSE_MAP_BUTTON_WORLD = { x: 400, y: 409 };
 
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;
-/** Hazard Control kill drive: power ~6 straight into the near kill zone. */
-const KILL_DRAG_DX = 60;
+
+/** Verified grid-exact containment suicide drags per team-1 spawn index. */
+const SUICIDE_DRAGS = [
+	{ from: { x: 650, y: 225 }, to: { x: 533.125, y: 195.625 } },
+	{ from: { x: 750, y: 225 }, to: { x: 630, y: 225 } },
+	{ from: { x: 650, y: 325 }, to: { x: 533.125, y: 295.625 } },
+	{ from: { x: 750, y: 325 }, to: { x: 630, y: 325 } },
+	{ from: { x: 650, y: 425 }, to: { x: 531.25, y: 403.75 } },
+	{ from: { x: 750, y: 425 }, to: { x: 630, y: 425 } },
+] as const;
 
 /**
  * The qualified maps in production selection order (catalog order filtered
@@ -130,8 +139,7 @@ async function openMapSelection(page: import("playwright").Page): Promise<void> 
 
 /** Skips the item phase and plays a weak legal opening for the active team. */
 async function playWeakOpening(page: import("playwright").Page): Promise<{ movedBy: number; maxPlayback: number }> {
-	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
+	await skipItemPhase(page);
 	const shooter = (await readMatchState(page)).entities.find(entity => entity.team.includes(0))!;
 	const start = quantized(shooter);
 	await dragWorld(page, start, { x: start.x + WEAK_DRAG_DX, y: start.y });
@@ -146,6 +154,75 @@ async function playWeakOpening(page: import("playwright").Page): Promise<{ moved
 	const settled = await readMatchState(page);
 	const moved = settled.entities.find(entity => entity.team.includes(0))!;
 	return { movedBy: Math.hypot(moved.x - shooter.x, moved.y - shooter.y), maxPlayback };
+}
+
+/**
+ * Hazard Control mid-match weak turn: the live team-0 figure nearest to the
+ * team-0 spawn corner (150,225) drifts ~12 world units right. Mirroring the
+ * verified engine sequence, the nearest figure is picked every turn because
+ * the low-power shot travels far on tiles friction; the pick switches to the
+ * next spawn figure instead of pushing one figure out of the arena.
+ */
+async function playHazardWeak(page: import("playwright").Page): Promise<void> {
+	await skipItemPhase(page);
+	const shooter = (await readMatchState(page)).entities
+		.filter(entity => entity.team.includes(0) && !entity.dead)
+		.sort((a, b) => Math.hypot(a.x - 150, a.y - 225) - Math.hypot(b.x - 150, b.y - 225))[0];
+	expect(shooter).toBeDefined();
+	const start = quantized(shooter);
+	await dragWorld(page, start, { x: start.x + WEAK_DRAG_DX, y: start.y });
+	await waitFor(async () => {
+		const state = await readMatchState(page);
+		return state.state === "GameState.Your_turn" && state.activeTeam === 1;
+	}, 60_000, 50, "hazard weak turn resolution");
+}
+
+/**
+ * Waits until the turn provably started: either the Playing state is observed,
+ * or the match already resolved it (wall suicides resolve in a few frames and
+ * can complete between polls). A rejected drag leaves the state untouched, so
+ * the turn number stays equal and this times out with a clear message.
+ */
+async function waitForPlaybackOrResolution(page: import("playwright").Page, label: string): Promise<void> {
+	const before = await readMatchState(page);
+	await waitFor(async () => {
+		const state = await readMatchState(page);
+		return state.state === "GameState.Playing"
+			|| state.state === "GameState.Game_over"
+			|| (state.state === "GameState.Your_turn" && state.turnNumber !== before.turnNumber);
+	}, 10_000, 20, label);
+}
+
+/**
+ * Hazard Control terminal turn: the team-1 figure at spawn `spawnIndex`
+ * (pristine until its turn) drives itself into the right arena wall with the
+ * verified power-10 drag; the containment kill eliminates exactly that
+ * shooter. After the last spawn the match ends (team 1 eliminated).
+ */
+async function playSuicideTurn(page: import("playwright").Page, spawnIndex: number, expectEnd: boolean): Promise<void> {
+	await skipItemPhase(page);
+	const drag = SUICIDE_DRAGS[spawnIndex]!;
+	await dragWorld(page, drag.from, drag.to);
+	await waitForPlaybackOrResolution(page, "playback start");
+	await waitFor(async () => (await readMatchState(page)).state === (expectEnd ? "GameState.Game_over" : "GameState.Your_turn"), 90_000, 100, expectEnd ? "terminal result" : "suicide turn resolution");
+}
+
+async function skipItemPhase(page: import("playwright").Page): Promise<void> {
+	await waitFor(async () => await page.evaluate(() => {
+		const element = (window as any).game.handler.getMouseHandler()?.getRuntime?.().toSettings().screens[0].elements.find((candidate: any) => candidate.id === "hud-skip-item");
+		return element?.visible === true && element?.enabled === true;
+	}), 5_000, 50, "HUD skip control");
+	await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
+	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
+}
+
+/** Plays one full Hazard Control terminal match (weak opening + 6 wall suicides). */
+async function playHazardTerminalMatch(page: import("playwright").Page): Promise<void> {
+	await playWeakOpening(page);
+	for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
+		await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
+		if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
+	}
 }
 
 describe("Section 17.8 browser verification of qualified maps", () => {
@@ -180,8 +257,8 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 				expect(state.phase).toBe("item");
 				expect(state.turnNumber).toBe(0);
 				expect(state.activeTeam).toBe(0);
-				expect(state.entities).toHaveLength(2);
-				expect(state.entities.filter(entity => !entity.dead)).toHaveLength(2);
+				expect(state.entities).toHaveLength(12);
+				expect(state.entities.filter(entity => !entity.dead)).toHaveLength(12);
 				expect(finiteEntities(state)).toBe(true);
 
 				// Authoritative geometry matches the catalog contract. Document
@@ -214,7 +291,7 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 				expect(settled.turnNumber).toBe(1);
 				expect(settled.playbackFrames).toBe(0);
 				expect(finiteEntities(settled)).toBe(true);
-				expect(settled.entities.filter(entity => !entity.dead)).toHaveLength(2);
+				expect(settled.entities.filter(entity => !entity.dead)).toHaveLength(12);
 				expect(movedBy).toBeGreaterThan(1);
 				expect(await readMatchResult(page)).toBeNull();
 
@@ -255,16 +332,16 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 			const first = await playWeakOpening(page);
 			expect(first.maxPlayback).toBeGreaterThan(0);
 			expect(first.maxPlayback).toBeLessThanOrEqual(1200);
-			expect((await readMatchState(page)).entities.filter(entity => !entity.dead)).toHaveLength(2);
+			expect((await readMatchState(page)).entities.filter(entity => !entity.dead)).toHaveLength(12);
 
-			// Turn 2: the team-1 figure drives itself into the east kill zone
-			// (the broad verified terminal route: power ~6 straight left).
-			await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-			await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
-			const defender = (await readMatchState(page)).entities.find(entity => entity.team.includes(1))!;
-			const start = quantized(defender);
-			await dragWorld(page, start, { x: start.x + KILL_DRAG_DX, y: start.y });
-			await waitFor(async () => (await readMatchState(page)).state === "GameState.Game_over", 60_000, 100, "terminal result");
+			// Turns 2-11: every team-1 figure drives itself into the right
+			// arena wall (the verified containment terminal route; the wall
+			// kills exactly the shooter without touching team 0), with team-0
+			// weak turns in between. The sixth wall suicide ends the match.
+			for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
+				await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
+				if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
+			}
 
 			const result = await readMatchResult(page);
 			expect(result).not.toBeNull();
@@ -272,8 +349,8 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 			expect(result?.winnerTeam).toBe(0);
 			expect(result?.reason).toBe("last-team-standing");
 			const ended = await readMatchState(page);
-			expect(ended.entities.find(entity => entity.team.includes(1))?.dead).toBe(true);
-			expect(ended.entities.find(entity => entity.team.includes(0))?.dead).toBe(false);
+			expect(ended.entities.filter(entity => entity.team.includes(1)).every(entity => entity.dead)).toBe(true);
+			expect(ended.entities.filter(entity => entity.team.includes(0)).every(entity => !entity.dead)).toBe(true);
 			expect(await windowMapId(page)).toBe("hazard-control");
 
 			// Rematch restores a fresh playable state on the same map.
@@ -283,18 +360,12 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 			expect(fresh.turnNumber).toBe(0);
 			expect(fresh.phase).toBe("item");
 			expect(fresh.itemUses).toBe(0);
-			expect(fresh.entities.filter(entity => !entity.dead)).toHaveLength(2);
+			expect(fresh.entities.filter(entity => !entity.dead)).toHaveLength(12);
 			expect(await readMatchResult(page)).toBeNull();
 			expect(await windowMapId(page)).toBe("hazard-control");
 
 			// Play a second terminal match, then exit through the overlay menu.
-			await playWeakOpening(page);
-			await clickWorld(page, SKIP_BUTTON_WORLD.x, SKIP_BUTTON_WORLD.y);
-			await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
-			const defender2 = (await readMatchState(page)).entities.find(entity => entity.team.includes(1))!;
-			const start2 = quantized(defender2);
-			await dragWorld(page, start2, { x: start2.x + KILL_DRAG_DX, y: start2.y });
-			await waitFor(async () => (await readMatchState(page)).state === "GameState.Game_over", 60_000, 100, "second terminal result");
+			await playHazardTerminalMatch(page);
 			expect((await readMatchResult(page))?.status).toBe("winner");
 			await clickWorld(page, MENU_BUTTON_WORLD.x, MENU_BUTTON_WORLD.y);
 			await waitFor(async () => (await activeGameModeId(page)) === null && (await windowMapId(page)) === null, 5_000, 100, "menu state");

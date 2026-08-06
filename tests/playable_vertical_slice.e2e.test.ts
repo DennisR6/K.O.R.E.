@@ -4,11 +4,9 @@ import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameState } from "../src/engine/types.ts";
 import type { RenderContext } from "../src/engine/RenderContext.ts";
 import { ItemPhaseUI } from "../src/ui/ItemPhaseUI.ts";
-import { GameplayFeedback } from "../src/ui/GameplayFeedback.ts";
 import { LocalMatchSceneRouter } from "../src/scenes/LocalMatchSceneRouter.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
-import { DirectionArrow } from "../src/systems/DirectionArrow.ts";
 import { EmitterSystem } from "../src/systems/Emitter.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
 
@@ -31,13 +29,9 @@ function createHarness() {
 		const emitters = new CombiEmitter();
 		emitters.addEmitter(new GameEmitter(handler, handler.getSettings()!.gameMode, 2));
 		itemUI = new ItemPhaseUI(handler, emitters);
-		const arrow = new DirectionArrow(ui);
 		handler.addSystem(ui);
 		handler.setMouseHandler(ui);
-		handler.addSystem(arrow);
 		handler.addSystem(new EmitterSystem(emitters));
-		handler.addPostDrawer(arrow);
-		handler.addPostDrawer(new GameplayFeedback(handler, ui));
 		return handler;
 	});
 	return { router, getItemUI: () => itemUI!, getUi: () => ui! };

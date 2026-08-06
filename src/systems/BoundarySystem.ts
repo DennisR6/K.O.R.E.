@@ -1,9 +1,11 @@
 import { containsCircle, getOuterContainmentBoundaries } from "../structures/containment.js";
 import type { IPhysics, SHAPE } from "../physics/physics.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /** Eliminates active players outside every inferred outer containment boundary. */
-export class BoundarySystem implements ISystem {
+export class BoundarySystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.boundary";
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		const boundaries = getOuterContainmentBoundaries(ctx.structures as unknown as IPhysics<SHAPE>[]);
 		if (boundaries.length === 0) return;

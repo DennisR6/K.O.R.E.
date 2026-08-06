@@ -37,6 +37,8 @@ export interface GameSettings {
 	minPlayers: number,
 	maxPlayers: number,
 	turn?: number
+	/** Immutable database-map identity retained with expanded runtime settings. */
+	mapReference?: { mapId: string; contentHash: string }
 }
 
 export interface SettingsScreenResolution {
@@ -48,7 +50,8 @@ export type SettingsBackground = SettingsBackgroundColor | SettingsBackgroundIma
 
 export interface SettingsBackgroundImage {
 	type: "image"
-	url: AssetKey
+	/** A generated asset key or an HTTP(S)/same-origin image URL. */
+	url: AssetKey | string
 }
 export interface SettingsBackgroundColor {
 	type: "color"
@@ -119,6 +122,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	validateFigureCounts(settings.playerCount, settings.figuresPerPlayer)
 	if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam)) throw new Error("Invalid team settings")
 	if (!Array.isArray(settings.players) || !settings.players.every(player => isRecord(player) && isVector(player.position) && isVector(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect))) throw new Error("Invalid player settings")
+	if (!isBackground(settings.background)) throw new Error("Invalid background settings")
 	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
@@ -135,6 +139,16 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }
 function isVector(value: unknown): value is Vector2D { return isRecord(value) && Number.isFinite(value.x) && Number.isFinite(value.y) }
+function isBackground(value: unknown): value is SettingsBackground {
+	if (!isRecord(value)) return false
+	if (value.type === "color") return typeof value.color === "string"
+	if (value.type !== "image" || (typeof value.url !== "number" && typeof value.url !== "string")) return false
+	if (typeof value.url !== "string") return true
+	try {
+		const url = new URL(value.url, "https://kore.invalid")
+		return url.protocol === "http:" || url.protocol === "https:"
+	} catch { return false }
+}
 function isTeam(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 }
 function isEffect(value: unknown): value is FullEffectSettings {
 	const types = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting]

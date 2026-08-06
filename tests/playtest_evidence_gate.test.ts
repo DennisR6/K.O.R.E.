@@ -43,12 +43,11 @@ describe("Section 15.10 human playtest evidence", () => {
 		expect(pending).toContain("This is an evidence-status record, not a completed playtest result");
 	});
 
-	test("checklist and release record report the pending human-evidence status", () => {
+	test("delivery and release records report the pending human-evidence status", () => {
 		const checklist = read("step-by-step.md");
-		const task = checklist.slice(checklist.indexOf("- [x] **Task [15.10]"), checklist.indexOf("- [ ] **Task [15.11]"));
-		expect(task).toContain("playtest_evidence_gate.test.ts");
-		expect(task).toContain("BLOCKED / PENDING");
-		expect(task.toLowerCase()).toContain("no external tester session");
+		expect(checklist).toContain("playtest_evidence_gate.test.ts");
+		expect(checklist).toContain("BLOCKED / PENDING");
+		expect(checklist.toLowerCase()).toContain("no external tester session");
 
 		const release = read("docs/release-verification.md");
 		expect(release).toContain("Section 15.10 Human Playtest Evidence");

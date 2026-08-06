@@ -1,5 +1,32 @@
 # Slipstrike (KORE) Release Verification Record
 
+## Section 20 Online Operations Qualification
+
+Date: 2026-08-03. Automated evidence is qualified independently from the
+Section 15 human-playtest release blocker.
+
+| Command | Result |
+| --- | --- |
+| `bun run test:fast` | PASS: 584 pass, 3 skip, 0 fail; 6,952 assertions across 156 files [8.35s] |
+| `npx tsc --noEmit` | PASS: 0 type errors |
+| `bun run build` | PASS: generated browser bundle and assets |
+| `bun run test:browser:full` | PASS: 19 pass, 0 fail; 331 assertions across 6 files [153.52s] |
+| `bun test tests/online_operations_gate.test.ts tests/browser/online_operations_journey.e2e.test.ts` | PASS: 3 pass, 0 fail; 27 assertions [5.09s] |
+
+- Dashboard bearer authentication and aggregate privacy: verified.
+- Online loading, submitted preference, authoritative map selection, and
+  unanimous pause behavior: verified.
+- Report validation/no-mutation, immutable replay shares, revoked-token safety,
+  clipboard recovery, manual/direct viewer entry, and no-live-action viewer
+  boundary: verified by focused protocol, security, and browser evidence.
+- `bun test` remains the raw all-discovered release/qualification command; it
+  intentionally includes long browser and fuzz workloads. The CI fast gate is
+  `bun run test:fast`, with browser and qualification suites run separately.
+
+**PASS - automated online operations.** This does not override the existing
+**BLOCKED / NOT QUALIFIED** Section 15 status pending external human playtest
+evidence.
+
 Date: 2026-07-31
 Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x (vendored 1.11.x in `public/`)
 Branch: `test` (Section 12 release-candidate qualification complete)
@@ -322,8 +349,8 @@ in the E2E tests is a real Playwright pointer event, never a direct engine call.
 
 | Command | Result |
 | --- | --- |
-| `bun run test:browser:smoke` | PASS: 9 pass / 0 fail, 37 assertions across 1 file [17.88s] |
-| `bun run test:browser:full` | PASS: 17 pass / 0 fail, 301 assertions across 5 files [71.22s] |
+| `bun run test:browser:smoke` | PASS: 10 pass / 0 fail, 44 assertions across 1 file [21.50s] |
+| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files [80.29s] |
 
 Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 `bun run build`) and manage the Bun server lifecycle through the harness
@@ -338,20 +365,23 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 | Tested URL | `http://localhost:<isolated-port>/` (harness ports 4187+, `E2E_TEST_PORT` overridable) |
 | Build result | PASS (`bun run build` via harness; `dist/main.js` + vendored p5 loaded) |
 | Server readiness result | PASS (root URL HTTP 200; isolated `PORT` and temp `GAME_DB_PATH`) |
-| Menu startup result | PASS (landing -> main menu -> "Play Local Game" with real mouse clicks) |
+| Menu startup result | PASS (landing -> main menu -> "Play Local Game" with real mouse clicks; "Play Online" joins a matched network game against the configured server in a second browser context) |
 | Completed turns | 4 (2 in `tests/browser/local_turn.e2e.test.ts`, 2 kill turns in `tests/browser/local_match_flow.e2e.test.ts`) |
 | Completed matches | 2 (both reached explicit `winner` team 0 results via the result overlay) |
 | Console errors | 0 unexpected (empty console-policy allowlist; the diagnostics fixture asserts its own deliberately injected errors) |
 | Page exceptions | 0 unexpected (same policy; fixture-injected exception asserted in the fixture test) |
 | Screenshots/traces on failure | None needed (all runs passed); the `BrowserDiagnostics` capture writes git-ignored `.browser-diagnostics/` evidence (screenshot, bounded console, page errors, context, interaction log) on any failure |
-| Command duration | smoke 17.88s, full 51.16s |
+| Command duration | smoke 21.64s, full 73.60s |
 | Final status | PASS - browser-playable (smoke + complete local-match flow both pass) |
 
 ### Section 16 Evidence Gate
 
 - Harness: `tests/browser/browserHarness.ts`; console policy:
   `assertCleanConsole()` with an empty allowlist.
-- Startup/menu: `tests/browser/browser_startup.e2e.test.ts`.
+- Startup/menu: `tests/browser/browser_startup.e2e.test.ts` (menu boot, local-play
+  action, and the Section 18 online-join action: "Play Online" navigates to the
+  `KORE_BASE_URL`-advertised WebSocket URL and a second incognito tab is matched
+  into the same game).
 - Local turn: `tests/browser/local_turn.e2e.test.ts` (menu path and diagnostic
   `?skipmenu=1` route).
 - Full match flow: `tests/browser/local_match_flow.e2e.test.ts` (item use and
@@ -362,8 +392,8 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
   bounded artifact set and identifies the failed step).
 - Release gate: `tests/browser/browser_release_gate.test.ts`; CI runs both
   commands headless in the `browser` job of `.github/workflows/node.js.yml`.
-- Full suite at qualification: 640 pass / 5 skip / 0 fail across 198 files
-  (7,996 assertions), `npx tsc --noEmit` clean, `bun run build` clean.
+- Full suite at qualification: 800 pass / 5 skip / 0 fail across 214 files
+  (11,097 assertions), `npx tsc --noEmit` clean, `bun run build` clean.
 - Section 16 does not change the Section 15 gameplay qualification status:
   automated browser verification passes, but the overall gameplay release
   record remains `BLOCKED / NOT QUALIFIED` pending the external two-match
@@ -377,8 +407,8 @@ Both commands build the generated browser bundle (`ensureBrowserBuild` runs
 | --- | --- |
 | `bun run test:maps` | PASS (cache-backed smoke check of shipped maps) |
 | `bun run test:maps:matrix` | PASS: 504 cells matched byte-for-byte in attempt `release-2026-08-01` |
-| `bun run test:browser:full` | PASS: 17 pass / 0 fail, 301 assertions across 5 files |
-| `bun test` | PASS: 780 tests across 209 files |
+| `bun run test:browser:full` | PASS: 19 pass / 0 fail, 317 assertions across 6 files |
+| `bun test` | PASS: 819 tests across 218 files |
 | `npx tsc --noEmit` | PASS: 0 type errors |
 | `bun run build` | PASS: `dist/main.js` and browser assets compiled |
 | `git diff --check` | PASS: no git whitespace or format errors |

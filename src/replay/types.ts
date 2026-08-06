@@ -1,7 +1,11 @@
 import { DOCUMENT_SCHEMA_VERSION, migrateDocument } from "../contracts/documents.js";
 import type { ReplayDocument, ReplayAction } from "../contracts/documents.js";
+import type { EngineSettings } from "../engine/types.js";
+import type { MatchResult } from "../rules/types.js";
 
 export type { ReplayDocument, ReplayAction };
+/** Immutable authoritative artifact intentionally separate from a live match. */
+export type FrozenReplayDocument = ReplayDocument & { finalSettings: EngineSettings; result: MatchResult; completedAt: number };
 export { DOCUMENT_SCHEMA_VERSION, migrateDocument };
 
 const SHOOT_ACTION_KEYS = ["type", "actorId", "input"] as const;
@@ -16,6 +20,14 @@ export function validateReplayDocument(document: unknown): asserts document is R
 		throw new Error("Invalid replay document structure");
 	}
 	for (const action of document.actions) validateReplayAction(action);
+}
+
+export function validateFrozenReplayDocument(document: unknown): asserts document is FrozenReplayDocument {
+	validateReplayDocument(document);
+	const frozen = document as unknown as Record<string, unknown>;
+	if (!isRecord(frozen.finalSettings) || !isRecord(frozen.result) || !Number.isSafeInteger(frozen.completedAt) || (frozen.completedAt as number) < 0) throw new Error("Invalid frozen replay document");
+	if (frozen.finalSettings.state !== "GameState.Game_over" || !isRecord(frozen.finalSettings.matchResult)) throw new Error("Frozen replay must contain a completed final snapshot");
+	if (JSON.stringify(frozen.finalSettings.matchResult) !== JSON.stringify(frozen.result)) throw new Error("Frozen replay result does not match final snapshot");
 }
 
 function validateReplayAction(action: unknown): void {

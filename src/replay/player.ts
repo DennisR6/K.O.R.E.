@@ -22,6 +22,7 @@ export class ReplayPlayer {
 	private emitter: GameEmitter;
 	private replay: ReplayDocument;
 	private tickCount = 0;
+	private actionIndex = 0;
 
 	public constructor(replay: ReplayDocument) {
 		validateReplayDocument(replay);
@@ -41,33 +42,39 @@ export class ReplayPlayer {
 	}
 
 	public playAll(): PlayerSettings[] {
-		for (const action of this.replay.actions) {
-			if (action.type === "shoot") {
-				if (this.handler.getRuleState().phase === RulePhase.Item) {
-					// The same authoritative phase skip the live flow performs
-					// before a shot (RuleInterpreter.advancePhase).
-					this.handler.skipCurrentPhase();
-				}
-				if (this.handler.getRuleState().phase !== RulePhase.Physics) {
-					throw new Error(
-						`Replay shot cannot resolve in rule phase ${String(this.handler.getRuleState().phase)}`,
-					)
-				}
-				this.emitter.sendShot(action.actorId, action.input!.angle, action.input!.power);
-				// Drive the playback to completion exactly like the live loop;
-				// the emitter completion callback then advances the rule state.
-				let guard = 0;
-				while (this.handler.getState() === GameState.Playing && guard < 10_000) {
-					this.handler.tick();
-					guard++;
-					this.tickCount++;
-				}
-				if (guard >= 10_000) throw new Error("Replay playback did not settle within 10,000 ticks")
-			} else {
-				this.emitter.sendItemUse(action.actorId, action.itemId!, action.target as never);
-			}
-		}
+		while (this.advance()) this.settlePlayback();
 		return this.handler.getEntityManager().serialize();
+	}
+
+	/** Starts one recorded action. The caller ticks the handler to display its movement. */
+	public advance(): boolean {
+		if (this.handler.getState() === GameState.Playing || this.actionIndex >= this.replay.actions.length) return false;
+		const action = this.replay.actions[this.actionIndex++]!;
+		if (action.type === "itemUse") {
+			this.emitter.sendItemUse(action.actorId, action.itemId!, action.target as never);
+			return true;
+		}
+		if (this.handler.getRuleState().phase === RulePhase.Item) {
+			// The same authoritative phase skip the live flow performs before a shot.
+			this.handler.skipCurrentPhase();
+		}
+		if (this.handler.getRuleState().phase !== RulePhase.Physics) {
+			throw new Error(`Replay shot cannot resolve in rule phase ${String(this.handler.getRuleState().phase)}`);
+		}
+		this.emitter.sendShot(action.actorId, action.input!.angle, action.input!.power);
+		return true;
+	}
+
+	public isComplete(): boolean { return this.actionIndex >= this.replay.actions.length && this.handler.getState() !== GameState.Playing; }
+
+	private settlePlayback(): void {
+		let guard = 0;
+		while (this.handler.getState() === GameState.Playing && guard < 10_000) {
+			this.handler.tick();
+			guard++;
+			this.tickCount++;
+		}
+		if (guard >= 10_000) throw new Error("Replay playback did not settle within 10,000 ticks");
 	}
 
 	public getHandler(): GameHandler {

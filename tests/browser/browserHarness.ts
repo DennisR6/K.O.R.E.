@@ -29,7 +29,13 @@ export class BrowserHarnessError extends Error {
 /** Default isolated test port; overridable so parallel workers cannot collide. */
 const BASE_TEST_PORT = Number(process.env.E2E_TEST_PORT ?? 4187);
 
-let nextPort = BASE_TEST_PORT;
+/**
+ * Per-worker deterministic port sequence. The PID offset keeps parallel
+ * workers (`bun test --parallel`, one Bun process per test file) on disjoint
+ * port ranges, while the in-worker counter stays deterministic.
+ */
+const WORKER_PORT_OFFSET = (process.pid % 256) * 64;
+let nextPort = BASE_TEST_PORT + WORKER_PORT_OFFSET;
 
 /** Returns the next deterministic isolated test port for this worker. */
 export function nextTestPort(): number {
@@ -110,6 +116,8 @@ export interface StartTestServerOptions {
 	pollIntervalMs?: number;
 	/** SQLite database path; defaults to a fresh temp directory. */
 	dbPath?: string;
+	/** Extra environment variables for the spawned server (e.g. KORE_BASE_URL). */
+	env?: Record<string, string>;
 	/** Server command; defaults to the real `bun run server.ts`. */
 	command?: string[];
 }
@@ -130,7 +138,7 @@ export async function startTestServer(options: StartTestServerOptions = {}): Pro
 	const proc = Bun.spawn({
 		cmd: command,
 		cwd: REPO_ROOT,
-		env: { ...process.env, PORT: String(port), GAME_DB_PATH: dbPath },
+		env: { ...process.env, PORT: String(port), GAME_DB_PATH: dbPath, ...options.env },
 		stdout: "pipe",
 		stderr: "pipe",
 	});

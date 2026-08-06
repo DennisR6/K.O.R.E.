@@ -26,8 +26,8 @@ import {
  * emitter, or gameplay method may be invoked from the test.
  */
 
-/** World-coordinate center of the ItemPhaseControls "Skip phase" button. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 151 };
+/** World-coordinate center of the SDK HUD "Skip phase" button. */
+const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 
 describe("Section 16.3 local turn through browser input", () => {
 	afterAll(() => {
@@ -48,14 +48,14 @@ describe("Section 16.3 local turn through browser input", () => {
 			await clickWorld(page, 400, 325); // "Play Local Game"
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 
-			// The canonical match starts in the item phase with two live figures.
+			// The canonical match starts in the item phase with twelve live figures.
 			const initial = await readMatchState(page);
 			expect(initial.state).toBe("GameState.Your_turn");
 			expect(initial.phase).toBe("item");
 			expect(initial.turnNumber).toBe(0);
 			expect(initial.activeTeam).toBe(0);
-			expect(initial.entities).toHaveLength(2);
-			expect(initial.entities.filter(entity => !entity.dead)).toHaveLength(2);
+			expect(initial.entities).toHaveLength(12);
+			expect(initial.entities.filter(entity => !entity.dead)).toHaveLength(12);
 			expect(finiteEntities(initial)).toBe(true);
 
 			// Skip the item phase through the visible browser panel.

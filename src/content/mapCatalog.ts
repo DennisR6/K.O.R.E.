@@ -56,6 +56,13 @@ export interface MapCatalogEntry {
 	figuresPerTeam: number[];
 	/** Whether the production browser selection path can currently expose the map. */
 	browserAvailable: boolean;
+	/**
+	 * Whether an autonomous KI-vs-KI battle terminates on this map with the
+	 * stock hard AI. Maps whose geometry blocks every AI kill route (e.g. a
+	 * wall sealing all direct lines and no hazards) stay selectable for human
+	 * local play but are hidden from the battle map selection.
+	 */
+	battleAvailable: boolean;
 	/** Current qualification status; evidence lives in `docs/map-qualification-report.md`. */
 	status: MapQualificationStatus;
 	/** Set only for planned Section 17 candidates whose source file does not exist yet. */
@@ -89,6 +96,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1, 2, 6],
 		browserAvailable: true,
+	battleAvailable: true,
 		status: "browser-qualified",
 		knownLimitations: [
 			"Shipped local-match arena; browser-qualified by the 17.8 E2E evidence",
@@ -112,6 +120,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1, 2, 6],
 		browserAvailable: true,
+	battleAvailable: true,
 		status: "browser-qualified",
 		knownLimitations: [
 			"Browser-qualified by the 17.8 E2E evidence; selectable in the production menu",
@@ -134,6 +143,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1, 2, 6],
 		browserAvailable: false,
+	battleAvailable: false,
 		status: "blocked",
 		knownLimitations: [
 			"Blocked-from-selection in the gameplay content registry; expected blocked by the 17.7 matrix (Section 13 solver failure)",
@@ -156,6 +166,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1, 2, 6],
 		browserAvailable: true,
+	battleAvailable: true,
 		status: "browser-qualified",
 		knownLimitations: [
 			"Browser-qualified by the 17.8 E2E evidence; selectable in the production menu",
@@ -179,8 +190,12 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1],
 		browserAvailable: true,
+	battleAvailable: false,
 		status: "browser-qualified",
-		knownLimitations: ["One containment rect plus one central wall; the central wall blocks every straight first-turn line, so early elimination is only reachable through banked or flanking shots."],
+		knownLimitations: [
+			"One containment rect plus one central wall; the central wall blocks every straight first-turn line, so early elimination is only reachable through banked or flanking shots.",
+			"Not selectable for KI battles: the stock hard AI cannot terminate on this map (no hazards and every direct line is wall-sealed), so the battle map selection hides it.",
+		],
 	},
 	{
 		id: "structure-control",
@@ -198,6 +213,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1],
 		browserAvailable: true,
+	battleAvailable: true,
 		status: "browser-qualified",
 		knownLimitations: ["One containment rect, four mirrored columns, and one central blocker; the blocker seals the direct spawn corridor so first-turn contact is impossible, and the arena walls remain the containment kill boundary."],
 	},
@@ -217,6 +233,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		teamLayouts: [2],
 		figuresPerTeam: [1],
 		browserAvailable: true,
+	battleAvailable: true,
 		status: "browser-qualified",
 		knownLimitations: [
 			"Two mirrored kill zones guard the center corridor: every straight crossing is self-eliminating, and the opponent is protected behind its own zone",

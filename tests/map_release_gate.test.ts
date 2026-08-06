@@ -101,11 +101,10 @@ describe("Section 17.10 map release gate", () => {
 		expect(requirements).toContain("map_release_gate.test.ts");
 	});
 
-	test("step-by-step.md marks tasks 17.1 through 17.10 complete", () => {
+	test("completed delivery record summarizes map qualification", () => {
 		const checklist = read("step-by-step.md");
-		for (let i = 1; i <= 10; i++) {
-			expect(checklist).toContain(`* [x] **Task [17.${i}]`);
-		}
+		expect(checklist).toContain("## 17. Qualified Map Production And Verification");
+		expect(checklist).toContain("map qualification matrix");
 	});
 
 	test("map qualification rules are strictly followed", () => {

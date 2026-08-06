@@ -1,12 +1,13 @@
 import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
 import { GameState, type IMouse } from "../engine/types.js";
 import type { Vector2D } from "../physics/physics.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { isValidInput } from "../input/validate.js";
 
-export interface IUiSystem extends ISystem, IDrawer, IMouse { }
+export interface IUiSystem extends ISerializableSystem, IDrawer, IMouse { }
 
 export class UiSystem implements IUiSystem {
+	public readonly systemId = "ui.pointer-input";
 	private static readonly MIN_DRAG_DISTANCE = 8
 	start: Vector2D | null = null
 	end: Vector2D | null = null
@@ -16,6 +17,7 @@ export class UiSystem implements IUiSystem {
 	selectedActorId: string | null = null
 
 	constructor() { }
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { start: this.start, end: this.end, currentMouse: this.currentMouse, aimAngle: this.aimAngle, chargePower: this.chargePower, selectedActorId: this.selectedActorId } }; }
 
 	private getLocalInput(start: Vector2D, now: Vector2D): { angle: number, power: number } | undefined {
 		if (![start.x, start.y, now.x, now.y].every(Number.isFinite)) return undefined;
