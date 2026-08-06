@@ -50,8 +50,27 @@ export class P5Renderer implements RenderContext {
 	getScaleFactor(): number {
 		return this.renderScale
 	}
-	setFillColor(color: string): void {
-		this.p5ctx.fill(color)
+	setFillColor(color: string, alpha?: number): void {
+		if (color.trim().toLowerCase() === "transparent") {
+			this.p5ctx.noFill()
+			return
+		}
+		if (alpha === undefined) {
+			this.p5ctx.fill(color)
+			return
+		}
+		if (!Number.isFinite(alpha)) {
+			console.error("Variable not Specified")
+			return
+		}
+		const normalizedAlpha = Math.max(0, Math.min(1, alpha))
+		if (normalizedAlpha === 0) {
+			this.p5ctx.noFill()
+			return
+		}
+		const parsedColor = this.p5ctx.color(color)
+		parsedColor.setAlpha(normalizedAlpha * 255)
+		this.p5ctx.fill(parsedColor)
 	}
 	setOpacity(alpha: number): void {
 		if (!Number.isFinite(alpha)) {
@@ -216,7 +235,7 @@ export class P5Renderer implements RenderContext {
   	this.p5ctx.noStroke();
 	}
 	public getTextWidth(text: string, size: number): number {
-  		this.p5ctx.textSize(size);
-  		return this.p5ctx.textWidth(text);
+		this.p5ctx.textSize(size);
+		return this.p5ctx.textWidth(text);
 	}
 }
