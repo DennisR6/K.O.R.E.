@@ -1,9 +1,9 @@
 # Step 27: SDK Migration Inventory And Contract Freeze
 
-- **Status**: `[-]` In progress
+- **Status**: `[x]` Completed
 - **Branch**: `milestone-27-sdk-migration-inventory`
-- **Implementation Commit Hash**: pending
-- **Merge Result**: pending
+- **Implementation Commit Hash**: `73787b2`
+- **Merge Result**: not merged; the pre-existing fast-suite baseline is failing
 
 ## Objective
 
@@ -24,4 +24,21 @@ boundary before the later migration milestones.
 
 ## Implementation Record
 
-Pending implementation.
+Implemented the machine-checkable migration inventory in
+`src/sdkMigration/inventory.ts`. It classifies every TypeScript module under
+`src/`, validates the frozen classification vocabulary and migration targets,
+and records the direct legacy construction/configuration/deserialization paths
+discovered during the audit. Added `SDK_MIGRATION_CONTRACT.md` to freeze the
+Engine SDK -> KORE SDK -> application/adapter layering and runtime-factory
+rules.
+
+## Evidence
+
+- `tests/sdk_migration_inventory.test.ts`: 2 passed; all production TypeScript
+  modules classified and audited legacy paths present.
+- `npx tsc --noEmit`: passed.
+- `git diff --check`: passed.
+- `bun run test:fast`: 689 passed, 3 skipped, 10 pre-existing failures. The
+  failures are stale section-based roadmap assertions, missing packaging
+  artifacts, and an existing vertical-slice interaction failure; no failure
+  references the milestone implementation.
