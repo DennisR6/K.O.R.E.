@@ -13,7 +13,7 @@ export interface RenderContext {
 	drawCircle(x: number, y: number, radius: number): void;
 	drawRect(x: number, y: number, width: number, height: number, borderRadius?: number): void;
 	drawText(text: string, x: number, y: number, fontSize?: number): void;
-	setFillColor(color: string): void;
+	setFillColor(color: string, alpha?: number): void;
 	setOpacity(alpha: number): void;
 	setNoFill(): void;
 	setStrokeColor(color: string): void;

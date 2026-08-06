@@ -4,6 +4,7 @@ export type UiElementState = "normal" | "hover" | "active" | "focused" | "disabl
 
 export interface UiStyleToken {
   background: string;
+  backgroundAlpha?: number;
   borderColor: string;
   borderWidth: number;
   borderRadius: number;
@@ -23,6 +24,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   "kore.button.blue": {
     normal: {
       background: "#1d4ed8",
+      backgroundAlpha: 0,
       borderColor: "#60a5fa",
       borderWidth: 2,
       borderRadius: 12,
@@ -31,6 +33,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     hover: {
       background: "#2563eb",
+      backgroundAlpha: 0,
       borderColor: "#f97316",
       borderWidth: 3,
       borderRadius: 12,
@@ -39,6 +42,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     active: {
       background: "#1e40af",
+      backgroundAlpha: 0,
       borderColor: "#ea580c",
       borderWidth: 2,
       borderRadius: 12,
@@ -47,6 +51,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     focused: {
       background: "#2563eb",
+      backgroundAlpha: 0,
       borderColor: "#fb923c",
       borderWidth: 3,
       borderRadius: 12,
@@ -55,6 +60,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     disabled: {
       background: "#334155",
+      backgroundAlpha: 0,
       borderColor: "#475569",
       borderWidth: 1,
       borderRadius: 12,
@@ -66,6 +72,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   "kore.button.blue-back": {
     normal: {
       background: "#0f172a",
+      backgroundAlpha: 0,
       borderColor: "#334155",
       borderWidth: 2,
       borderRadius: 12,
@@ -74,6 +81,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     hover: {
       background: "#1e293b",
+      backgroundAlpha: 0,
       borderColor: "#f97316",
       borderWidth: 3,
       borderRadius: 12,
@@ -82,6 +90,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     active: {
       background: "#020617",
+      backgroundAlpha: 0,
       borderColor: "#ea580c",
       borderWidth: 2,
       borderRadius: 12,
@@ -90,6 +99,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     focused: {
       background: "#1e293b",
+      backgroundAlpha: 0,
       borderColor: "#fb923c",
       borderWidth: 3,
       borderRadius: 12,
@@ -98,6 +108,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
     },
     disabled: {
       background: "#020617",
+      backgroundAlpha: 0,
       borderColor: "#1e293b",
       borderWidth: 1,
       borderRadius: 12,
@@ -123,25 +134,24 @@ export class Canvas2DUiRenderer {
 
     // 1. AUSSEN-BORDER
     if (style.borderWidth > 0 && style.borderColor !== "transparent") {
-      this.drawSeamlessRoundedRect(
-        rect.x - style.borderWidth,
-        rect.y - style.borderWidth,
-        rect.width + style.borderWidth * 2,
-        rect.height + style.borderWidth * 2,
-        style.borderRadius + style.borderWidth,
-        style.borderColor
-      );
+      this.ctx.setNoFill();
+      this.ctx.setStrokeColor(style.borderColor);
+      this.ctx.setStroke(style.borderWidth);
+      this.ctx.drawRect(rect.x, rect.y, rect.width, rect.height, style.borderRadius);
     }
 
     // 2. INNEN-BODY
+    this.ctx.push();
     this.drawSeamlessRoundedRect(
       rect.x,
       rect.y,
       rect.width,
       rect.height,
       style.borderRadius,
-      style.background
+      style.background,
+      style.backgroundAlpha
     );
+    this.ctx.pop();
 
     // 3. TEXT: wrap long labels at word boundaries and center every line.
     if (text) {
@@ -167,10 +177,11 @@ export class Canvas2DUiRenderer {
     w: number,
     h: number,
     r: number,
-    color: string
+    color: string,
+    alpha?: number
   ): void {
 		this.ctx.noStroke();
-		this.ctx.setFillColor(color);
+		this.ctx.setFillColor(color, alpha);
 		this.ctx.drawRect(x, y, w, h, r);
 	}
 }
