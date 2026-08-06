@@ -105,8 +105,9 @@ export interface KoreItemInput {
 	cooldown?: number;
 }
 
-const SDK_ITEM_EFFECT_TYPES = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"] as const;
-const SDK_ITEM_EFFECT_TYPE_SET = new Set<string>(SDK_ITEM_EFFECT_TYPES);
+function sdkItemEffectTypes(): readonly string[] {
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+}
 
 /** Creates a validated declarative item document without constructing runtime effects. */
 export function createItem(input: KoreItemInput): ItemDocument {
@@ -115,15 +116,15 @@ export function createItem(input: KoreItemInput): ItemDocument {
 		effects: (input.effects ?? []).map(effect => ({ type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) })),
 	});
 	const validator = new ItemValidator();
-	for (const effectType of SDK_ITEM_EFFECT_TYPES) validator.registerEffectType(effectType);
-	for (const effect of item.effects) if (!SDK_ITEM_EFFECT_TYPE_SET.has(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+	for (const effectType of sdkItemEffectTypes()) validator.registerEffectType(effectType);
+	for (const effect of item.effects) if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
 	return clone(validator.validate(item));
 }
 
 /** Composes multiple declarative item effects while keeping their order stable. */
 export function composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> {
 	return effects.map(effect => {
-		if (!SDK_ITEM_EFFECT_TYPE_SET.has(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+		if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
 		return { type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) };
 	});
 }
