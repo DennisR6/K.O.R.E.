@@ -29,6 +29,7 @@ export const sourceClassificationRules: readonly SdkMigrationEntry[] = [
 	{ path: "src/kore/sdk/", classification: "kore-sdk", owner: "KORE SDK", targetMilestone: null, note: "KORE authoring APIs composed from Engine SDK primitives." },
 	{ path: "src/kore/ui/", classification: "kore-sdk", owner: "KORE UI SDK", targetMilestone: 31, note: "KORE vocabulary and UI projections." },
 	{ path: "src/kore/audio.ts", classification: "kore-sdk", owner: "KORE Audio", targetMilestone: 33, note: "KORE semantic audio vocabulary." },
+	{ path: "src/kore/ai.ts", classification: "kore-sdk", owner: "KORE AI", targetMilestone: 34, note: "KORE AI authoring entry points for difficulty, seed, team, and decision limits." },
 	{ path: "src/kore_sdk.ts", classification: "kore-sdk", owner: "KORE SDK compatibility export", targetMilestone: 37, note: "Supported deprecated re-export until legacy API removal." },
 	{ path: "src/entity/runtimeFactory.ts", classification: "runtime-factory", owner: "Player runtime factory", targetMilestone: null, note: "Only permitted Player runtime construction boundary." },
 	{ path: "src/engine/runtimeFactory.ts", classification: "runtime-factory", owner: "Handler runtime factory", targetMilestone: null, note: "Only permitted GameHandler construction boundary for canonical match creation (milestone 28)." },
