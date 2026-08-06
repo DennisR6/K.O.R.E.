@@ -647,7 +647,8 @@ export async function readMatchState(page: Page): Promise<{
 	activeTeam: number;
 	phase: string;
 	itemUses: number;
-	playbackFrames: number;
+	playbackFrames: number | undefined;
+	paused: boolean;
 	entities: Array<{ id: string; x: number; y: number; vx: number; vy: number; dead: boolean; team: number[] }>;
 }> {
 	return await boundedPageCall(
@@ -670,6 +671,7 @@ export async function readMatchState(page: Page): Promise<{
 				phase: ruleState.phase,
 				itemUses: ruleState.itemUses,
 				playbackFrames: handler.getPlaybackFramesRemaining?.(),
+				paused: handler.isPaused?.() === true,
 				entities,
 			};
 		}),

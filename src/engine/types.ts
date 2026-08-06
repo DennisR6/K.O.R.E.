@@ -119,6 +119,8 @@ export type GameStateType = keyof typeof GameState;
  * Definiert die Interaktionsmöglichkeiten mit der Maus.
  */
 export interface IMouse {
+	/** Allows an overlay adapter to receive UI clicks while gameplay is locked. */
+	acceptsUiInputWhileLocked?: boolean;
 	handleMousePressed(): void;
 	updateMouse(x: number, y: number): void;
 	handleMouseReleased(): void;

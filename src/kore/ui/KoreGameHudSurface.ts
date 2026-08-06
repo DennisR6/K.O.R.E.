@@ -19,6 +19,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	private projection: KoreHudProjection | undefined;
 	private mouse = { x: 0, y: 0 }; private paused = false; private rejection: string | undefined;
 	public readonly soundSourceId = this.sounds.soundSourceId;
+	public readonly acceptsUiInputWhileLocked = true;
 	public constructor(private readonly port: KoreHudCommandPort, private readonly gameplayInput?: IMouse, private readonly initialSettings: KoreGameHudSettings = createGameHudComposition().build(), private readonly capabilities: Required<KoreGameHudCapabilities> = { canSkipItemPhase: true, canPause: true }) { validateKoreGameHudSettings(initialSettings); this.runtime = UiRuntime.fromSettings(initialSettings.ui); }
 	public getRuntime(): UiRuntime { return this.runtime; }
 	public getGameplayInput(): IMouse | undefined { return this.gameplayInput; }
@@ -38,11 +39,12 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;
-		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.Menu, KoreHudElement.Replay, KoreHudElement.Share]) this.runtime.setElementVisible(id, resultVisible);
+		this.paused = projection.match.paused;
+		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.Replay, KoreHudElement.Share]) this.runtime.setElementVisible(id, resultVisible);
+		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || this.paused);
 		this.setText(KoreHudElement.Result, hudResultText(projection.match.result));
 		this.rejection = projection.rejection; this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? `Action rejected: ${this.rejection}` : "");
-		this.paused = projection.match.paused;
-		this.runtime.setElementVisible(KoreHudElement.Paused, this.paused && this.capabilities.canPause); this.runtime.setElementVisible(KoreHudElement.Resume, this.paused && this.capabilities.canPause); this.runtime.setElementVisible(KoreHudElement.Pause, !this.paused && !resultVisible && this.capabilities.canPause);
+		this.setPauseControls(this.paused, resultVisible);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }
 	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
@@ -61,13 +63,20 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		switch (command.type) {
 			case KoreHudCommand.UseItem: this.dispatch(command); return;
 			case KoreHudCommand.SkipItemPhase: this.dispatch(command); return;
-			case KoreHudCommand.Pause: this.dispatch(command); this.paused = true; return;
-			case KoreHudCommand.Resume: this.dispatch(command); this.paused = false; return;
+			case KoreHudCommand.Pause: this.dispatch(command); this.setPauseControls(true); return;
+			case KoreHudCommand.Resume: this.dispatch(command); this.setPauseControls(false); return;
 			case KoreHudCommand.Rematch: case KoreHudCommand.Replay: case KoreHudCommand.Share: case KoreHudCommand.ReturnToMenu: this.dispatch(command); return;
 			default: return assertNeverHudCommand(command);
 		}
 	}
 	private dispatch(command: KoreHudCommandMessage): void { if (this.port.handle(command) !== false) this.confirm(); }
+	private setPauseControls(paused: boolean, resultVisible = !!this.projection?.match.result): void {
+		this.paused = paused;
+		this.runtime.setElementVisible(KoreHudElement.Paused, paused && this.capabilities.canPause);
+		this.runtime.setElementVisible(KoreHudElement.Resume, paused && this.capabilities.canPause);
+		this.runtime.setElementVisible(KoreHudElement.Pause, !paused && !resultVisible && this.capabilities.canPause);
+		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || paused);
+	}
 	private confirm(): void { this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId)); }
 	private setText(id: KoreHudElement | string, text: string): void { this.runtime.dispatch({ type: "setText", target: id, text }); }
 	/** Renders only immutable projection geometry; gameplay input and state stay outside the surface. */
