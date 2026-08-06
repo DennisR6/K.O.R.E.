@@ -1,7 +1,7 @@
 # KORE SDK Authoring Guide
 
 This guide describes the supported authoring boundary for KORE maps, matches,
-items, UI, audio, and AI. The examples in [`../examples/`](../examples/) are
+items, UI, audio, presentation, and AI. The examples in [`../examples/`](../examples/) are
 compiled and executed by CI.
 
 ## Layering
@@ -86,6 +86,14 @@ AI profiles are detached settings from `kore.ai.createSettings()`. Use
 boundary. Decisions still pass through the same validated input emitter used
 by human and server paths.
 
+The generic presentation SDK uses `presentation.createAnimation()` for
+versioned, JSON-safe tick timelines. A `PresentationRuntime` receives semantic
+play/cancel events, applies deterministic priority and interruption rules, and
+returns renderer-neutral frames from `tick()`. Its runtime settings restore
+only visual playback state; they are not part of `GameSettings` or
+`EngineSettings`. Browser, desktop, and test adapters consume the same frame
+through a `PresentationOutputPort`.
+
 ## Mod Authoring
 
 Map mods should export a function that builds a fresh map from stable IDs and
@@ -150,6 +158,8 @@ Supported authoring entry points are:
 - `src/engine/sdk/index.ts` for generic worlds and system metadata;
 - `src/engine/ui-sdk/index.ts` for JSON UI menus and explicit input ticks;
 - `src/engine/audio-sdk/index.ts` for semantic audio commands and runtimes;
+- `src/engine/presentation-sdk/index.ts` for deterministic visual timelines and
+  semantic presentation events;
 - `src/kore/sdk/index.ts` for KORE maps, items, matches, AI, audio, and runtime
   restoration through the `kore` object.
 

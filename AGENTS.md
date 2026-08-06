@@ -246,6 +246,10 @@ After every change, check whether this guide still reflects the implementation a
   It owns JSON-safe semantic commands, narrow emitter capabilities,
   deterministic aggregation, persistent intent, framework metadata, and an
   output port; it must not import KORE, UI, browser, or audio-device APIs.
+- `src/engine/presentation-sdk/index.ts`: generic `presentation` SDK for
+  versioned JSON-safe animation tracks, semantic event ordering, priority,
+  interruption/cancellation, deterministic tick projection, and visual-only
+  runtime restoration. It must not import KORE, UI, browser, or device APIs.
 - `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
   validated engine-importable `GameSettings` JSON maps, serializable teams,
   spawns, KORE effects/defaults, and KORE handler composition.

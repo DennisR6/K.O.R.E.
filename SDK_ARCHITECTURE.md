@@ -31,6 +31,7 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
 | --- | --- | --- | --- |
 | JSON world, entity, structure, effect records | SDK builder | Engine SDK | Generic JSON authoring; low risk. |
 | System selection, dependency/order validation | new | Engine SDK | Framework metadata is game-agnostic; new API. |
+| Deterministic animation and presentation projection | new | Engine SDK presentation SDK | Visual playback is renderer-neutral and excluded from gameplay snapshots. |
 | JSON serialization/validation | mixed SDK code | Engine SDK | Generic boundary; low risk. |
 | Team numbers, spawn regions, player materialization | `src/kore/sdk/` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
 | Default map size/friction, containment, game mode | `src/kore/sdk/` | KORE SDK | KORE defaults; medium risk. |
@@ -47,6 +48,12 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
   JSON-safe records;
 - `createSystemRegistry()` for deterministic framework selection;
 - `validate()` and `buildJson()` for serialization boundaries.
+
+The sibling presentation SDK (`src/engine/presentation-sdk/index.ts`) authors
+versioned animation tracks and semantic play/cancel events. Its explicit tick
+runtime orders events by priority and submission ordinal, applies declared
+interruption policy, and emits detached projection frames. Runtime restoration
+contains only presentation state and never changes canonical gameplay settings.
 
 The Engine SDK has no KORE team count, spawn, player, item, turn, map, or
 victory assumptions. It does not create the current `GameHandler`: that runtime

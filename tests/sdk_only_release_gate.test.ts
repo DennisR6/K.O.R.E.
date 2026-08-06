@@ -35,11 +35,13 @@ const PUBLISHED_EXAMPLES = [
 	"04-kore-match-lifecycle.ts",
 	"05-kore-ui-menu.ts",
 	"06-kore-audio.ts",
+	"07-engine-presentation.ts",
 ] as const;
 const ALLOWED_EXAMPLE_IMPORTS = new Set([
 	"../src/engine/sdk/index.js",
 	"../src/engine/ui-sdk/index.js",
 	"../src/engine/audio-sdk/index.js",
+	"../src/engine/presentation-sdk/index.js",
 	"../src/kore/sdk/index.js",
 ]);
 

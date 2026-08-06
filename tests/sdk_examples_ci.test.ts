@@ -8,12 +8,14 @@ import { run as runItemMod } from "../examples/03-kore-item-mod.ts";
 import { run as runLifecycle } from "../examples/04-kore-match-lifecycle.ts";
 import { run as runMapMod } from "../examples/02-kore-map-mod.ts";
 import { run as runUi } from "../examples/05-kore-ui-menu.ts";
+import { run as runPresentation } from "../examples/07-engine-presentation.ts";
 
 const root = resolve(import.meta.dir, "..");
 const allowedExampleImports = new Set([
 	"../src/engine/sdk/index.js",
 	"../src/engine/ui-sdk/index.js",
 	"../src/engine/audio-sdk/index.js",
+	"../src/engine/presentation-sdk/index.js",
 	"../src/kore/sdk/index.js",
 ]);
 
@@ -67,6 +69,7 @@ test("SDK examples execute deterministically with semantic results", () => {
 		["match lifecycle", runLifecycle],
 		["UI menu", runUi],
 		["audio", runAudio],
+		["presentation", runPresentation],
 	] as const;
 	for (const [name, run] of examples) {
 		const first = run();
@@ -82,4 +85,5 @@ test("SDK examples execute deterministically with semantic results", () => {
 	expect(lifecycle.durationFrames).toBeGreaterThan(0);
 	expect(runUi()).toEqual({ screen: "main", commands: [{ command: "menu.start" }], restoredScreen: "main" });
 	expect(runAudio()).toEqual({ runtimeId: "example-06-audio", commands: 1, soundId: "kore.ui.confirm", bus: "ui" });
+	expect(runPresentation()).toEqual({ tick: 1, values: { scale: 1 }, eventTypes: ["play"] });
 });
