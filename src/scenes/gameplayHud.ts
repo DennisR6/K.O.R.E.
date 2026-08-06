@@ -23,6 +23,7 @@ export type GameplayHudActions = {
 	onReturnToMenu?: () => boolean | void;
 	onReplay?: () => boolean | void;
 	onShare?: () => boolean | void;
+	onReplayShare?: () => boolean | void;
 	onPause?: () => boolean | void;
 	onResume?: () => boolean | void;
 	language?: LanguageCatalog;
@@ -88,6 +89,11 @@ function handleHudCommand(command: KoreHudCommandMessage, handler: GameHandler, 
 			if (deps.onReplay) return deps.onReplay();
 			return;
 		case KoreHudCommand.Share:
+			if (deps.onShare) return deps.onShare();
+			return;
+		case KoreHudCommand.ReplayShare:
+			if (deps.onReplayShare) return deps.onReplayShare();
+			if (deps.onReplay) return deps.onReplay();
 			if (deps.onShare) return deps.onShare();
 			return;
 		case KoreHudCommand.Pause:

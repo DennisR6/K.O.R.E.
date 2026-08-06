@@ -164,8 +164,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 			canPause: false,
 			onUseItem: (actorId, itemId, target) => { emitter.sendItemUse(actorId, itemId, target); return false; },
 			onRematch: () => { socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false; },
-			onReplay: () => { replayShareAction = "view"; emitter.requestReplayShare(); return false; },
-			onShare: () => { replayShareAction = "share"; emitter.requestReplayShare(); return false; },
+			onReplayShare: () => { replayShareAction = "view"; emitter.requestReplayShare(); return false; },
 			onReturnToMenu: () => { window.location.assign(window.location.pathname); return false; },
 		});
 		installTurnReceiver(socket, handler)

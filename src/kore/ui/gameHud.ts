@@ -42,8 +42,7 @@ function buildUi(language: LanguageCatalog): UiMenuSettings {
 		ui.text({ id: KoreHudElement.Result, text: "", rect: rect(230, 120, 360, 50), style: KoreHudStyle.ResultTitle, visible: false }),
 		ui.button({ id: KoreHudElement.Rematch, text: translate(language, KoreHudText.Rematch), rect: rect(245, 300, 145, 48), style: KoreHudStyle.ResultAction, action: ui.action.emit(KoreHudCommand.Rematch), visible: false }),
 		ui.button({ id: KoreHudElement.Menu, text: translate(language, KoreHudText.Menu), rect: rect(410, 300, 145, 48), style: KoreHudStyle.ResultAction, action: ui.action.emit(KoreHudCommand.ReturnToMenu), visible: false }),
-		ui.button({ id: KoreHudElement.Replay, text: translate(language, KoreHudText.Replay), rect: rect(245, 355, 145, 32), style: KoreHudStyle.ResultSecondary, action: ui.action.emit(KoreHudCommand.Replay), visible: false }),
-		ui.button({ id: KoreHudElement.Share, text: translate(language, KoreHudText.Share), rect: rect(410, 355, 145, 32), style: KoreHudStyle.ResultSecondary, action: ui.action.emit(KoreHudCommand.Share), visible: false }),
+		ui.button({ id: KoreHudElement.ReplayShare, text: translate(language, KoreHudText.ReplayShare), rect: rect(300, 355, 200, 32), style: KoreHudStyle.ResultSecondary, action: ui.action.emit(KoreHudCommand.ReplayShare), visible: false }),
 		ui.text({ id: KoreHudElement.Paused, text: translate(language, KoreHudText.Paused), rect: rect(330, 180, 160, 40), style: KoreHudStyle.ResultTitle, visible: false }),
 		ui.button({ id: KoreHudElement.Resume, text: translate(language, KoreHudText.Resume), rect: rect(330, 240, 140, 42), style: KoreHudStyle.ResultAction, action: ui.action.emit(KoreHudCommand.Resume), visible: false }),
 	] })); return builder.build();

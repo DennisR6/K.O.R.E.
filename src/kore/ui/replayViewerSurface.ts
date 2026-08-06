@@ -12,6 +12,7 @@ export type ReplayViewerSurfaceCallbacks = {
 export class KoreReplayViewerSurface implements IMouse, IDrawer {
 	private readonly runtime: UiRuntime;
 	private mouse = { x: 0, y: 0 };
+	public readonly acceptsUiInputWhileLocked = true;
 
 	public constructor(private readonly callbacks: ReplayViewerSurfaceCallbacks, language: LanguageCatalog = createEnglishLanguage(), initialToken = "") {
 		this.runtime = UiRuntime.fromSettings(createReplayViewerComposition(language).ui);

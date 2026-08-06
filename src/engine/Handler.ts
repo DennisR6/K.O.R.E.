@@ -380,6 +380,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (this.disposed) return
 		this.mouseHandler?.handleMouseWheel(event);
 	}
+	public handleKeyPressed(event: KeyboardEvent): void {
+		if (this.disposed) return
+		const handler = this.mouseHandler as (IMouse & { handleKeyPressed?: (event: KeyboardEvent) => void }) | undefined
+		handler?.handleKeyPressed?.(event)
+	}
 
 	// --- LOGIK & UPDATES (Ticker) ---
 	// Diese Module laufen in jedem Frame ab, um Daten zu berechnen.

@@ -142,6 +142,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			onReturnToMenu: () => this.handleResultAction("menu"),
 			onReplay: () => this.handleResultAction("replay"),
 			onShare: () => this.handleResultAction("share"),
+			onReplayShare: () => this.handleResultAction("replay"),
 		});
 	}
 

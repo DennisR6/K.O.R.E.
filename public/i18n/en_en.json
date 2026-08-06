@@ -21,6 +21,7 @@
     "kore.ui.hud.menu": "Menu",
     "kore.ui.hud.replay": "Replay",
     "kore.ui.hud.share": "Share",
+    "kore.ui.hud.replayShare": "Replay / Share",
     "kore.ui.hud.paused": "Paused",
     "kore.ui.hud.resume": "Resume",
     "kore.ui.hud.none": "None",

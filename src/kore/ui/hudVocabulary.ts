@@ -29,6 +29,7 @@ export enum KoreHudElement {
 	Menu = "hud-menu",
 	Replay = "hud-replay",
 	Share = "hud-share",
+	ReplayShare = "hud-replay-share",
 	Paused = "hud-paused",
 	Resume = "hud-resume",
 }
@@ -67,6 +68,7 @@ export const KoreHudText = {
 	Menu: LANGUAGE_KEYS.HudMenu,
 	Replay: LANGUAGE_KEYS.HudReplay,
 	Share: LANGUAGE_KEYS.HudShare,
+	ReplayShare: LANGUAGE_KEYS.HudReplayShare,
 	Paused: LANGUAGE_KEYS.HudPaused,
 	Resume: LANGUAGE_KEYS.HudResume,
 	None: LANGUAGE_KEYS.HudNone,

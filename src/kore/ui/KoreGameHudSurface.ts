@@ -41,7 +41,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		}
 		const resultVisible = !!projection.match.result;
 		this.paused = projection.match.paused;
-		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.Replay, KoreHudElement.Share]) this.runtime.setElementVisible(id, resultVisible);
+		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.ReplayShare]) this.runtime.setElementVisible(id, resultVisible);
 		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || this.paused);
 		this.setText(KoreHudElement.Result, hudResultText(projection.match.result, this.language));
 		this.rejection = projection.rejection; this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? formatLanguage(this.language, LANGUAGE_KEYS.HudActionRejected, { reason: this.rejection }) : "");
@@ -66,7 +66,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			case KoreHudCommand.SkipItemPhase: this.dispatch(command); return;
 			case KoreHudCommand.Pause: this.dispatch(command); this.setPauseControls(true); return;
 			case KoreHudCommand.Resume: this.dispatch(command); this.setPauseControls(false); return;
-			case KoreHudCommand.Rematch: case KoreHudCommand.Replay: case KoreHudCommand.Share: case KoreHudCommand.ReturnToMenu: this.dispatch(command); return;
+			case KoreHudCommand.Rematch: case KoreHudCommand.Replay: case KoreHudCommand.Share: case KoreHudCommand.ReplayShare: case KoreHudCommand.ReturnToMenu: this.dispatch(command); return;
 			default: return assertNeverHudCommand(command);
 		}
 	}
