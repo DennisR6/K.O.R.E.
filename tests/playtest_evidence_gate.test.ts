@@ -45,6 +45,7 @@ describe("Section 15.10 human playtest evidence", () => {
 
 	test("delivery and release records report the pending human-evidence status", () => {
 		const checklist = read("step-by-step.md");
+		expect(checklist).toContain("| 15 |");
 		expect(checklist).toContain("playtest_evidence_gate.test.ts");
 		expect(checklist).toContain("BLOCKED / PENDING");
 		expect(checklist.toLowerCase()).toContain("no external tester session");
