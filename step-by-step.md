@@ -1,176 +1,113 @@
-# Slipstrike Completed Delivery Record
+# KORE Delivery Roadmap
 
-This is a compact, curated record of completed work. Current source and
-verified tests are authoritative; `git log --oneline` is the full chronological
-history. `[x]` means the milestone was completed and committed. Release and
-human-evidence blockers remain explicit rather than being treated as unfinished
-engineering work.
+This file is the compact, append-only milestone index for completed and planned
+KORE work. Current source, verified tests, and `git log --oneline` remain
+authoritative.
 
-## 1. Baseline And Architecture
-- **status**: `[x]`
-- **hash**: `e89cfaf`
-- **file**: [`steps/01-baseline_and_architecture.md`](steps/01-baseline_and_architecture.md)
-- **note**: Established the hybrid ECS/OOP lifecycle, deterministic settings snapshots, and the data-defined rules boundary.
+The table replaces the previous repeated milestone sections so that an agent can
+update one row instead of rewriting the document. Detailed implementation
+checklists belong in the linked `steps/*.md` files.
 
-## 2. Deterministic Physics And Arena Safety
-- **status**: `[x]`
-- **hash**: `3acd06e`
-- **file**: [`steps/02-deterministic_physics_and_arena_safety.md`](steps/02-deterministic_physics_and_arena_safety.md)
-- **note**: Delivered deterministic movement/collision safety, containment elimination, and fixed-frame regression coverage.
+## Status Convention
 
-## 3. Match Rules And Round Lifecycle
-- **status**: `[x]`
-- **hash**: `3acd06e`
-- **file**: [`steps/03-match_rules_and_round_lifecycle.md`](steps/03-match_rules_and_round_lifecycle.md)
-- **note**: Added serialized rule phases, item turns, active-team progression, match results, and rematches.
+| Marker | Meaning |
+|---|---|
+| `[ ]` | Planned; implementation has not started. |
+| `[-]` | In progress; completion evidence is not yet sufficient. |
+| `[x]` | Completed, verified, and committed. |
+| `BLOCKED` | Engineering is complete or ready, but an external dependency or human-evidence gate remains. |
 
-## 4. Data Contracts, Mods, And Maps
-- **status**: `[x]`
-- **hash**: `0f9afbe`
-- **file**: [`steps/04-data_contracts_mods_and_maps.md`](steps/04-data_contracts_mods_and_maps.md)
-- **note**: Added versioned validators for game/map/item documents, canonical maps, hazards, and safe editor conversion.
+## Milestones
 
-## 5. Item Framework And Official Items
-- **status**: `[x]`
-- **hash**: `32f0175`
-- **file**: [`steps/05-item_framework_and_official_items.md`](steps/05-item_framework_and_official_items.md)
-- **note**: Delivered declarative item validation, inventories, deterministic draws/pickups, targets, and official-item coverage.
+| # | Status | Commit | Step file | Milestone | Scope / completion evidence |
+|---:|:---:|---|---|---|---|
+| 1 | `[x]` | `e89cfaf` | [`steps/01-baseline_and_architecture.md`](steps/01-baseline_and_architecture.md) | Baseline And Architecture | Hybrid ECS/OOP lifecycle, deterministic settings snapshots, and the data-defined rules boundary. |
+| 2 | `[x]` | `3acd06e` | [`steps/02-deterministic_physics_and_arena_safety.md`](steps/02-deterministic_physics_and_arena_safety.md) | Deterministic Physics And Arena Safety | Deterministic movement/collision safety, containment elimination, and fixed-frame regression coverage. |
+| 3 | `[x]` | `3acd06e` | [`steps/03-match_rules_and_round_lifecycle.md`](steps/03-match_rules_and_round_lifecycle.md) | Match Rules And Round Lifecycle | Serialized rule phases, item turns, active-team progression, match results, and rematches. |
+| 4 | `[x]` | `0f9afbe` | [`steps/04-data_contracts_mods_and_maps.md`](steps/04-data_contracts_mods_and_maps.md) | Data Contracts, Mods, And Maps | Versioned validators for game/map/item documents, canonical maps, hazards, and safe editor conversion. |
+| 5 | `[x]` | `32f0175` | [`steps/05-item_framework_and_official_items.md`](steps/05-item_framework_and_official_items.md) | Item Framework And Official Items | Declarative item validation, inventories, deterministic draws/pickups, targets, and official-item coverage. |
+| 6 | `[x]` | `4734a09` | [`steps/06-input_ui_and_accessibility.md`](steps/06-input_ui_and_accessibility.md) | Input, UI, And Accessibility | Drag-to-shoot input, item controls, gameplay feedback, responsive canvas behavior, and result actions. |
+| 7 | `[x]` | `bd0b630` | [`steps/07-ai_and_play_modes.md`](steps/07-ai_and_play_modes.md) | AI And Play Modes | Deterministic Easy/Medium/Hard KI, KI-vs-KI battles, and human 1-vs-KI difficulty/map flow. |
+| 8 | `[x]` | `2ed9a23` | [`steps/08-persistence_sharing_and_replays.md`](steps/08-persistence_sharing_and_replays.md) | Persistence, Sharing, And Replays | Snapshot persistence, immutable replay shares, public replay viewing, base-path-safe URLs, and animated playback. |
+| 9 | `[x]` | `12d7157` | [`steps/09-desktop_mobile_and_discord.md`](steps/09-desktop_mobile_and_discord.md) | Desktop, Mobile, And Discord | Supported packaging, PWA/offline, and optional Discord integration boundaries with automated contracts. |
+| 10 | `[x]` | `ff31f4a` | [`steps/10-final_hardening_and_release_readiness.md`](steps/10-final_hardening_and_release_readiness.md) | Final Hardening And Release Readiness | Security, cleanup, malformed-input, lifecycle, and documentation hardening coverage. |
+| 11 | `[x]` | `87c7f64` | [`steps/11-cross_system_validation.md`](steps/11-cross_system_validation.md) | Cross-System Validation | Snapshot isolation, simulation parity, replay/persistence continuation, winner composition, item-effect state, and uniform invalid-action rejection. Evidence: `tests/cross_system_validation_smoke.test.ts` and referenced suites. |
+| 12 | `[x]` | `bc4b29a` | [`steps/12-engine_defect_hardening_and_release_candidate_qualification.md`](steps/12-engine_defect_hardening_and_release_candidate_qualification.md) | Engine Defect Hardening And Release Candidate Qualification | Completion/status/effect-factory hardening and deterministic AI fuzz smoke/RC/soak workflows. Evidence: `tests/release_candidate_gate.test.ts`, `tests/ai_match_fuzz.test.ts`, `docs/release-verification.md`. |
+| 13 | `[x]` | `3acd06e` | [`steps/13-physics_solver_hardening_and_continuous_collision_qualification.md`](steps/13-physics_solver_hardening_and_continuous_collision_qualification.md) | Physics Solver Hardening And Continuous Collision Qualification | Depenetration, contact lifecycle continuity, CCD, energy/rest invariants, bounded contacts, and deterministic physics fuzzing. Evidence: `tests/physics_qualification_gate.test.ts`, `docs/physics-contract.md`. |
+| 14 | `[x]` | `a9ad011` | [`steps/14-playable_vertical_slice_and_gameplay_integration.md`](steps/14-playable_vertical_slice_and_gameplay_integration.md) | Playable Vertical Slice And Gameplay Integration | Canonical local gameplay, effects, winner evaluation, result overlay, rematch, and menu return flow. |
+| 15 | `[x]` | `a9ad011` | [`steps/15-gameplay_qualification_and_human_playtest_validation.md`](steps/15-gameplay_qualification_and_human_playtest_validation.md) | Gameplay Qualification And Human Playtest Validation | Automated matrix, fairness, pacing, agency, item, replay, and package evidence complete. Human playtest evidence remains `BLOCKED / PENDING`; no external tester session exists. Guardrail: subjective preference is not a technical invariant. |
+| 16 | `[x]` | `b71a7ba` | [`steps/16-real_browser_gameplay_verification.md`](steps/16-real_browser_gameplay_verification.md) | Real Browser Gameplay Verification | Production-bundle startup, menu, local turn, match flow, diagnostics, map catalog, and console-policy E2E coverage. Evidence: `tests/browser/browser_release_gate.test.ts`. |
+| 17 | `[x]` | `c5a44dc` | [`steps/17-qualified_map_production_and_verification.md`](steps/17-qualified_map_production_and_verification.md) | Qualified Map Production And Verification | Map catalog, qualification matrix, browser verification, and map-design evidence. Technical/browser qualification passes; map-level human qualification remains `PENDING`. |
+| 18 | `[x]` | `233340a` | [`steps/18-online_join_configuration.md`](steps/18-online_join_configuration.md) | Online Join Configuration | Browser online join uses the server-advertised public base URL and preserves deployment subpaths. |
+| 19 | `[x]` | `5c45746` | [`steps/19-ki_vs_ki_battle.md`](steps/19-ki_vs_ki_battle.md) | KI-vs-KI Battle | Seeded autonomous KI-vs-KI menu play with reproducible fresh battle seeds. |
+| 20 | `[x]` | `7738517` | [`steps/20-online_match_operations_sharing_and_player_support.md`](steps/20-online_match_operations_sharing_and_player_support.md) | Online Match Operations, Sharing, And Player Support | Authoritative map selection, pause/report/leave, reconnect-safe lifecycle, replay sharing, and operator dashboard operations. |
+| 21 | `[x]` | `c305b93` | [`steps/21-database_backed_immutable_map_definitions.md`](steps/21-database_backed_immutable_map_definitions.md) | Database-Backed Immutable Map Definitions | Immutable UUID map revisions, canonical hashes, approval/retirement lifecycle, approved-map lookup/cache refresh, and persisted match map references. |
+| 22 | `[x]` | `7a6f75e`, `501a401` | [`steps/22-recent_operations_improvements.md`](steps/22-recent_operations_improvements.md) | Recent Operations Improvements | Durable per-map game metrics and explicit online-leave abandonment with return to fresh matchmaking. |
+| 23 | `[x]` | `57d0112` | [`steps/23-extend_sdk.md`](steps/23-extend_sdk.md) | Extend SDK | Generic Engine SDK, UI SDK, Audio SDK, and KORE SDK architecture with decoupled capability authoring and enum-backed vocabularies. |
+| 24 | `[x]` | `c860f39` | [`steps/24-migration_player.md`](steps/24-migration_player.md) | Migration Player Creation And Configuration | Staged player creation migration with `kore.createPlayer()` and the `createRuntimePlayer()` factory boundary. |
+| 25 | `[x]` | `19ed591` | [`steps/25-migration_effects.md`](steps/25-migration_effects.md) | Migration Effect Creation And Configuration | Staged effect creation migration with `kore.effects.*` and the `createRuntimeEffect()` factory boundary. |
+| 26 | `[x]` | `5912d7c` | [`steps/26-extended_sdk.md`](steps/26-extended_sdk.md) | Extended SDK — Nested UI Containers And KORE Menu Integration | Nested-container UI SDK merged; KORE main menu migrated; focused tests, entry-point documentation, TypeScript, unit, browser-menu, and startup-smoke verification complete. |
+| 27 | `[ ]` | — | [`steps/27-sdk_migration_inventory_and_contract_freeze.md`](steps/27-sdk_migration_inventory_and_contract_freeze.md) | SDK Migration Inventory And Contract Freeze | Inventory every remaining legacy construction/configuration path, classify it as Engine SDK, KORE SDK, runtime factory, adapter, or removal candidate, and freeze the target public authoring contracts before further migration. Completion requires a machine-checkable inventory and no unclassified production path. |
+| 28 | `[ ]` | — | [`steps/28-migration_game_handler_and_match_composition.md`](steps/28-migration_game_handler_and_match_composition.md) | Migration Game Handler And Match Composition | Move canonical handler creation, match composition, systems, rule configuration, teams, and mode setup behind KORE SDK authoring APIs built on Engine SDK primitives. Legacy constructors may remain only inside explicit runtime factories. |
+| 29 | `[ ]` | — | [`steps/29-migration_maps_structures_and_hazards.md`](steps/29-migration_maps_structures_and_hazards.md) | Migration Maps, Structures, And Hazards | Migrate map authoring, boundaries, structures, forces, kill zones, pickups, and hazards to KORE SDK descriptors and Engine SDK factories while preserving canonical hashes and serialized map compatibility. |
+| 30 | `[ ]` | — | [`steps/30-migration_items_loadouts_and_effect_composition.md`](steps/30-migration_items_loadouts_and_effect_composition.md) | Migration Items, Loadouts, And Effect Composition | Complete the migration beyond individual effects: official items, targets, inventories, loadouts, draw rules, pickups, and composed effect graphs must be authored through KORE SDK APIs without direct legacy class construction. |
+| 31 | `[ ]` | — | [`steps/31-migration_ui_scenes_and_gameplay_surfaces.md`](steps/31-migration_ui_scenes_and_gameplay_surfaces.md) | Migration UI Scenes And Gameplay Surfaces | Migrate all remaining menus, overlays, HUD surfaces, dialogs, replay views, operator views, and nested scene composition to the UI SDK/KORE SDK. Remove production dependence on legacy UI element construction and scene-specific wiring. |
+| 32 | `[ ]` | — | [`steps/32-migration_input_commands_and_actions.md`](steps/32-migration_input_commands_and_actions.md) | Migration Input, Commands, And Actions | Route pointer, keyboard, touch, item, menu, and gameplay actions through SDK-defined commands/capabilities. Preserve authoritative validation boundaries and ensure UI adapters do not mutate engine state directly. |
+| 33 | `[ ]` | — | [`steps/33-migration_audio_and_feedback_capabilities.md`](steps/33-migration_audio_and_feedback_capabilities.md) | Migration Audio And Feedback Capabilities | Move music, sound effects, transitions, mixer state, and gameplay feedback declarations to Audio SDK/KORE SDK capabilities with deterministic state boundaries and renderer-independent authoring. |
+| 34 | `[ ]` | — | [`steps/34-migration_ai_and_simulation_entry_points.md`](steps/34-migration_ai_and_simulation_entry_points.md) | Migration AI And Simulation Entry Points | Migrate AI creation, difficulty profiles, seeded decision limits, headless simulation, KI-vs-KI, and turn production to stable KORE SDK entry points without bypassing Engine SDK validation or snapshot lifecycles. |
+| 35 | `[ ]` | — | [`steps/35-migration_persistence_replay_and_network_boundaries.md`](steps/35-migration_persistence_replay_and_network_boundaries.md) | Migration Persistence, Replay, And Network Boundaries | Ensure save/load, replay, online initialization, authoritative server restoration, SDK exports, and network payload construction consume canonical SDK settings/contracts rather than legacy runtime constructors or duplicated composition logic. Existing snapshots and replay documents must remain compatible or receive an explicit versioned migration. |
+| 36 | `[ ]` | — | [`steps/36-migration_application_bootstraps_and_platform_adapters.md`](steps/36-migration_application_bootstraps_and_platform_adapters.md) | Migration Application Bootstraps And Platform Adapters | Replace legacy composition in browser, server, desktop, PWA, test harness, SDK demo, and tooling entry points. Platform adapters may provide IO, but game composition must flow through KORE SDK APIs. |
+| 37 | `[ ]` | — | [`steps/37-legacy_api_removal_and_dependency_enforcement.md`](steps/37-legacy_api_removal_and_dependency_enforcement.md) | Legacy API Removal And Dependency Enforcement | Remove obsolete public constructors, duplicate factories, compatibility helpers, and legacy exports after all callers migrate. Add dependency/AST/import guards that prevent production code from reintroducing forbidden legacy paths. |
+| 38 | `[ ]` | — | [`steps/38-kore_sdk_documentation_examples_and_mod_authoring.md`](steps/38-kore_sdk_documentation_examples_and_mod_authoring.md) | KORE SDK Documentation, Examples, And Mod Authoring | Publish the supported authoring surface, layering rules (Engine SDK → KORE SDK → application), lifecycle examples, migration guide, mod examples, and explicit unsupported internals. Examples must compile and run in CI. |
+| 39 | `[ ]` | — | [`steps/39-sdk_migration_cross_system_qualification.md`](steps/39-sdk_migration_cross_system_qualification.md) | SDK Migration Cross-System Qualification | Prove legacy and SDK-created matches are behaviorally equivalent where compatibility is required: snapshots, replays, AI decisions, physics, items, maps, UI flows, online restoration, browser journeys, and deterministic fingerprints. |
+| 40 | `[ ]` | — | [`steps/40-sdk_only_release_gate.md`](steps/40-sdk_only_release_gate.md) | SDK-Only Release Gate | Final gate: production and supported examples use KORE SDK/Engine SDK authoring exclusively; forbidden legacy imports are zero; all focused, fast, full, browser, replay, persistence, networking, and release qualification suites pass; remaining adapters are documented runtime boundaries rather than authoring APIs. |
 
-## 6. Input, UI, And Accessibility
-- **status**: `[x]`
-- **hash**: `4734a09`
-- **file**: [`steps/06-input_ui_and_accessibility.md`](steps/06-input_ui_and_accessibility.md)
-- **note**: Implemented drag-to-shoot input, item controls, gameplay feedback, responsive canvas behavior, and result actions.
+## SDK Migration Target Architecture
 
-## 7. AI And Play Modes
-- **status**: `[x]`
-- **hash**: `bd0b630`
-- **file**: [`steps/07-ai_and_play_modes.md`](steps/07-ai_and_play_modes.md)
-- **note**: Added deterministic Easy/Medium/Hard KI, KI-vs-KI battles, and the human 1-vs-KI difficulty/map flow.
+```text
+Engine SDK
+  ├─ generic deterministic engine contracts
+  ├─ runtime-neutral settings and capability definitions
+  ├─ generic UI and Audio SDK primitives
+  └─ validated runtime factory boundaries
 
-## 8. Persistence, Sharing, And Replays
-- **status**: `[x]`
-- **hash**: `2ed9a23`
-- **file**: [`steps/08-persistence_sharing_and_replays.md`](steps/08-persistence_sharing_and_replays.md)
-- **note**: Added snapshot persistence, immutable replay shares, public replay viewing, base-path-safe URLs, and animated replay playback.
+KORE SDK
+  ├─ KORE/KORE vocabulary and presets
+  ├─ players, effects, items, maps, matches, AI, UI, and audio authoring
+  ├─ composition helpers built exclusively on Engine SDK contracts
+  └─ stable public API for the application and mods
 
-## 9. Desktop, Mobile, And Discord
-- **status**: `[x]`
-- **hash**: `12d7157`
-- **file**: [`steps/09-desktop_mobile_and_discord.md`](steps/09-desktop_mobile_and_discord.md)
-- **note**: Recorded supported packaging, PWA/offline, and optional Discord integration boundaries with automated contracts.
+Application / Platform Adapters
+  ├─ browser, server, desktop, PWA, tests, and tooling
+  ├─ IO, persistence, transport, rendering, and platform integration
+  └─ no direct legacy gameplay construction
+```
 
-## 10. Final Hardening And Release Readiness
-- **status**: `[x]`
-- **hash**: `ff31f4a`
-- **file**: [`steps/10-final_hardening_and_release_readiness.md`](steps/10-final_hardening_and_release_readiness.md)
-- **note**: Added security, cleanup, malformed-input, lifecycle, and documentation hardening coverage.
+## Migration Guardrails
 
-## 11. Cross-System Validation
-- **status**: `[x]`
-- **hash**: `87c7f64`
-- **file**: [`steps/11-cross_system_validation.md`](steps/11-cross_system_validation.md)
-- **note**: Verified snapshot isolation, simulation parity, replay/persistence continuation, winner composition, item-effect state, and uniform invalid-action rejection.
-- **evidence**: `tests/cross_system_validation_smoke.test.ts` and its referenced focused suites.
+1. **Settings remain canonical.** Runtime objects must continue to round-trip
+   through deterministic, validated settings.
+2. **SDK authoring does not bypass runtime validation.** The KORE SDK composes
+   Engine SDK contracts; it does not create a second engine.
+3. **Legacy migration is incremental.** Each milestone must preserve a green
+   test baseline and remove or formally isolate the migrated legacy path.
+4. **Do not weaken behavioral tests to complete migration.** Public interaction,
+   persistence, replay, online, and deterministic contracts remain authoritative.
+5. **Compatibility is explicit.** Snapshot/replay/map changes require either
+   byte/structural compatibility or a versioned migration with rejection tests.
+6. **Runtime factories are allowed boundaries.** Direct class construction may
+   remain inside designated factories, deserializers, and adapters, but not in
+   supported authoring code.
+7. **No hidden dual architecture at completion.** Step 40 cannot pass while
+   production composition can choose between legacy and SDK paths.
 
-## 12. Engine Defect Hardening And Release Candidate Qualification
-- **status**: `[x]`
-- **hash**: `bc4b29a`
-- **file**: [`steps/12-engine_defect_hardening_and_release_candidate_qualification.md`](steps/12-engine_defect_hardening_and_release_candidate_qualification.md)
-- **note**: Qualified completion/status/effect-factory hardening and deterministic AI fuzz smoke/RC/soak workflows.
-- **evidence**: `tests/release_candidate_gate.test.ts`, `tests/ai_match_fuzz.test.ts`, and `docs/release-verification.md`.
+## Row Update Rule
 
-## 13. Physics Solver Hardening And Continuous Collision Qualification
-- **status**: `[x]`
-- **hash**: `3acd06e`
-- **file**: [`steps/13-physics_solver_hardening_and_continuous_collision_qualification.md`](steps/13-physics_solver_hardening_and_continuous_collision_qualification.md)
-- **note**: Qualified depenetration, contact lifecycle continuity, CCD, energy/rest invariants, bounded contacts, and deterministic physics fuzzing.
-- **evidence**: `tests/physics_qualification_gate.test.ts` and `docs/physics-contract.md`.
+When completing a milestone, update only its row:
 
-## 14. Playable Vertical Slice And Gameplay Integration
-- **status**: `[x]`
-- **hash**: `a9ad011`
-- **file**: [`steps/14-playable_vertical_slice_and_gameplay_integration.md`](steps/14-playable_vertical_slice_and_gameplay_integration.md)
-- **note**: Integrated canonical local gameplay, effects, winner evaluation, result overlay, rematch, and menu return flow.
-
-## 15. Gameplay Qualification And Human Playtest Validation
-- **status**: `[x]`
-- **hash**: `a9ad011`
-- **file**: [`steps/15-gameplay_qualification_and_human_playtest_validation.md`](steps/15-gameplay_qualification_and_human_playtest_validation.md)
-- **note**: Automated matrix, fairness, pacing, agency, item, replay, and package evidence is complete.
-- **evidence**: `docs/gameplay-qualification.md`, `docs/playtest-protocol.md`, `tests/gameplay_qualification_contract.test.ts`, `tests/human_playtest_readiness.test.ts`, `tests/playtest_evidence_gate.test.ts`, and `tests/playtest_regressions.test.ts`.
-- **status**: Human playtest evidence remains **BLOCKED / PENDING**; no external tester session exists. No confirmed technical or deterministic playtest defects exist. The human playtest evidence remains BLOCKED / PENDING until that session is recorded.
-- **guardrail**: Do not encode subjective preference as a technical invariant.
-
-## 16. Real Browser Gameplay Verification
-- **status**: `[x]`
-- **hash**: `b71a7ba`
-- **file**: [`steps/16-real_browser_gameplay_verification.md`](steps/16-real_browser_gameplay_verification.md)
-- **note**: Production-bundle startup, menu, local turn, match flow, diagnostics, map catalog, and console-policy E2E coverage pass.
-- **evidence**: `tests/browser/browser_release_gate.test.ts`; smoke test and complete gameplay E2E both pass for the browser-playable release record.
-
-## 17. Qualified Map Production And Verification
-- **status**: `[x]`
-- **hash**: `c5a44dc`
-- **file**: [`steps/17-qualified_map_production_and_verification.md`](steps/17-qualified_map_production_and_verification.md)
-- **note**: Added the map catalog, map qualification matrix, browser map verification, and map-design evidence record.
-- **status**: Technical/browser qualification passes; map-level human qualification remains `PENDING`.
-- **evidence**: `tests/map_release_gate.test.ts` and `docs/map-qualification-report.md`.
-
-## 18. Online Join Configuration
-- **status**: `[x]`
-- **hash**: `233340a`
-- **file**: [`steps/18-online_join_configuration.md`](steps/18-online_join_configuration.md)
-- **note**: Browser online join uses the server-advertised public base URL and preserves deployment subpaths.
-
-## 19. KI-vs-KI Battle
-- **status**: `[x]`
-- **hash**: `5c45746`
-- **file**: [`steps/19-ki_vs_ki_battle.md`](steps/19-ki_vs_ki_battle.md)
-- **note**: Added seeded autonomous KI-vs-KI menu play with reproducible fresh battle seeds.
-
-## 20. Online Match Operations, Sharing, And Player Support
-- **status**: `[x]`
-- **hash**: `7738517`
-- **file**: [`steps/20-online_match_operations_sharing_and_player_support.md`](steps/20-online_match_operations_sharing_and_player_support.md)
-- **note**: Added authoritative online map selection, pause/report/leave flows, reconnect-safe lifecycle handling, replay sharing, and operator dashboard operations.
-- **evidence**: `tests/online_operations_gate.test.ts`, `tests/server_dashboard.test.ts`, `tests/browser/online_operations_journey.e2e.test.ts`, and `tests/browser/shared_replay_viewer.e2e.test.ts`.
-
-## 21. Database-Backed Immutable Map Definitions Checklist
-- **status**: `[x]`
-- **hash**: `c305b93`
-- **file**: [`steps/21-database_backed_immutable_map_definitions.md`](steps/21-database_backed_immutable_map_definitions.md)
-- **note**: Added immutable UUID map revisions, canonical hashes, approval/retirement lifecycle, approved-map lookup/cache refresh, and persisted match map references.
-- **evidence**: `tests/map_store.test.ts`, `tests/map_repository.test.ts`, `tests/online_map_preference.test.ts`, and `tests/database_map_match_persistence.test.ts`.
-
-## 22. Recent Operations Improvements
-- **status**: `[x]`
-- **hash**: `7a6f75e`
-- **file**: [`steps/22-recent_operations_improvements.md`](steps/22-recent_operations_improvements.md)
-- **note**: Operator dashboard reports durable per-map game counts, percentages, and the most-played map.
-- **hash**: `501a401`
-- **note**: Explicit online leave ends an abandoned match and returns the player to fresh matchmaking.
-
-## 23. Extend SDK
-- **status**: `[x]`
-- **hash**: `57d0112`
-- **file**: [`steps/23-extend_sdk.md`](steps/23-extend_sdk.md)
-- **note**: Extended generic Engine SDK, UI SDK, Audio SDK, and KORE SDK architecture with decoupled capability authoring and enum-backed vocabularies.
-
-## 24. Migration Player Creation And Configuration
-- **status**: `[x]`
-- **hash**: `c860f39`
-- **file**: [`steps/24-migration_player.md`](steps/24-migration_player.md)
-- **note**: Implemented staged player creation SDK migration with `kore.createPlayer()` authoring API and `createRuntimePlayer()` factory boundary.
-
-## 25. Migration Effect Creation And Configuration
-- **status**: `[x]`
-- **hash**: `19ed591`
-- **file**: [`steps/25-migration_effects.md`](steps/25-migration_effects.md)
-- **note**: Implemented staged effect creation SDK migration with `kore.effects.*` authoring helpers and `createRuntimeEffect()` factory boundary.
-
-## 26. Extended SDK — Nested UI Containers And KORE Menu Integration
-- **status**: `[x]`
-- **hash**: `5912d7c`
-- **file**: [`steps/26-extended_sdk.md`](steps/26-extended_sdk.md)
-- **note**: Merged the nested-container UI SDK implementation with staging, migrated the KORE main menu, added focused tests and entry-point documentation, and verified TypeScript, unit, menu-browser, and startup-smoke coverage.
+- change `[ ]` or `[-]` to `[x]`;
+- replace `—` with the verified short commit hash;
+- keep the linked step file;
+- replace the planned scope text with a concise delivery note and primary
+  evidence files;
+- append a new row only for genuinely new scope that is not already represented.
