@@ -6,6 +6,7 @@ import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
 import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
+import type { EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
@@ -559,6 +560,8 @@ export const kore = {
 	validate(settings: unknown): asserts settings is GameSettings { validateGameSettings(settings); },
 	/** Builds a runtime handler from a validated SDK map snapshot. */
 	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return createRuntimeHandler(settings); },
+	/** Restores a persisted engine snapshot through the same runtime boundary. */
+	restoreHandler(settings: EngineSettings): GameHandler { validateGameSettings(settings); return createRuntimeHandler(settings); },
 	/** Returns KORE's default deterministic runtime system profile as serializable framework metadata. */
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
 	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
