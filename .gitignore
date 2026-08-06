@@ -44,6 +44,6 @@ src-tauri/Cargo.lock
 data
 # CocoIndex Code (ccc)
 /.cocoindex_code/
-**/*.shm
-**/*.wal
+**/*.*shm
+**/*.*wal
 
