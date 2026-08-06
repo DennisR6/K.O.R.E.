@@ -4,6 +4,7 @@ import path from "node:path";
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const OUTPUT_DIR = path.resolve(__dirname, '../dist/assetManager/assets/json/');
+const OUTPUT_KEYS = path.resolve(__dirname, '../src/assetManager/assets');
 
 if (!statSync(OUTPUT_DIR, { throwIfNoEntry: false })) {
 	mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -74,7 +75,7 @@ ${registryEntries}
 export type AssetKey = AssetList;
 `;
 
-	writeFileSync(path.join(OUTPUT_DIR, 'assetRegistry.ts'), typeContent);
+	writeFileSync(path.join(OUTPUT_KEYS, 'assetRegistry.ts'), typeContent);
 	console.log(`Assets generiert! ${assetRegistry.length} Assets in Registry erstellt.`);
 }
 

@@ -1,8 +1,11 @@
+import type { UUID } from "node:crypto";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 import type { IDrawer, ITicker } from "../engine/RenderContext.js";
-import type { IItem } from "../item/Items.js";
-import type { IPhysicsCircle, Vector2D } from "../physics/physics.js";
-import type { IKillable } from "./types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
+import type { IKillable, PlayerSettings } from "./types.js";
+import type { Effect } from "../effects/types.js";
+import type { InventoryItem, ItemDocument } from "../item/types.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -14,8 +17,7 @@ import type { IKillable } from "./types.js";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable, IInventory {
-
+export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<PlayerSettings> {
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
 	 * @returns {Vector2D} Ein Vektor mit den aktuellen x- und y-Koordinaten in Welt-Einheiten.
@@ -25,9 +27,9 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable, II
 	/**
 	 * Die eindeutige Identifikationsnummer oder der Name der Entity.
 	 * Wichtig für die Synchronisation zwischen Client, Server und Simulator.
-	 * @returns {number | string} Die ID der Entity.
+	 * @returns {string} Die ID der Entity.
 	 */
-	getId(): number | string;
+	getId(): UUID;
 
 	/**
 	 * @returns {Vector2D} Gibt die größe (Radius) des Players.
@@ -38,11 +40,15 @@ export interface IEntity extends IDrawer, ITicker, IPhysicsCircle, IKillable, II
 	setPlayerIcon(icon: AssetList): void;
 	setSize(size: number): void;
 	getColor(): string;
-	getTeam(): string[];
-	isActive(): boolean
+	getTeam(): number[];
+	setTeam(team: number[]): void
+	setRotation(rotation: number): void
+	getEffects(): Effect[]
 }
 export interface IInventory {
-	AddItem(item: IItem): void
-	use(item: IItem): void
-	getInventory(): IItem[]
+	AddItem(item: InventoryItem): void
+	setInventory(items: InventoryItem[]): void
+	use(item: ItemDocument): void
+	resetItemUses(): void
+	getInventory(): InventoryItem[]
 }

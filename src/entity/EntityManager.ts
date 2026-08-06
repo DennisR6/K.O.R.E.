@@ -1,17 +1,8 @@
 import { type IEntity } from "./Entity.js";
-import type { SettingsEntity } from "../settings/settings.js";
 import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
 import { Player } from "./Player.js";
-
-type SerializedPlayerStats = {
-	id: number | string
-	x: number
-	y: number
-	vx: number
-	vy: number
-	size: number
-	color: string
-}
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { PlayerSettings } from "./types.js";
 
 /**
  * Der EntityManager ist die zentrale Verwaltung für alle dynamischen Spielobjekte (Entities).
@@ -20,15 +11,15 @@ type SerializedPlayerStats = {
  * @implements {IDrawer} Ermöglicht das Zeichnen aller verwalteten Entities.
  * @implements {ITicker} Ermöglicht das physikalische Update aller verwalteten Entities.
  */
-export class EntityManager implements IDrawer, ITicker {
+export class EntityManager implements IDrawer, ITicker, ISettingsSerialize<PlayerSettings[]> {
 	/** Die Liste aller aktuell im Spiel befindlichen Objekte. */
 	private entities: IEntity[] = [];
 
 	/**
 	 * @param entities - Initiale Liste von Entities (z.B. Spieler oder Pucks).
 	 */
-	constructor(entities: IEntity[]) {
-		this.entities = entities
+	constructor(entities: PlayerSettings[] = []) {
+		this.entities = entities.map(entity => new Player(entity))
 	}
 
 	/**
@@ -51,7 +42,7 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Sucht eine Entity anhand ihrer eindeutigen ID.
 		 * @param id - Die ID der gesuchten Entity.
 		 */
-	public getEntityById(id: string | number): IEntity | undefined {
+	public getEntityById(id: string): IEntity | undefined {
 		return this.entities.find(e => e.getId() === id);
 	}
 
@@ -64,6 +55,7 @@ export class EntityManager implements IDrawer, ITicker {
 	 */
 	public getEntityAt(x: number, y: number, padding: number = 0): IEntity | undefined {
 		return this.entities.find(e => {
+			if (e.isDead()) return false
 			const dist = Math.hypot(e.getPos().x - x, e.getPos().y - y);
 			return dist < (e.getBounds().x + padding);
 		});
@@ -74,33 +66,14 @@ export class EntityManager implements IDrawer, ITicker {
 		this.entities.forEach(entity => entity.setVel({ x: 0, y: 0 }))
 	}
 
-	public serialize(): SerializedPlayerStats[] {
-		return this.entities.map(e => ({
-			id: e.getId(),
-			x: e.getPos().x,
-			y: e.getPos().y,
-			vx: e.getVel()?.x ?? 0,
-			vy: e.getVel()?.y ?? 0,
-			size: e.getBounds().x,
-			color: e.getColor()
-		}));
-	}
 
 	/**
 		 * Verwandelt den aktuellen Zustand aller Entities in ein flaches Daten-Array.
 		 * Wichtig für Netzwerk-Übertragung oder Snapshots für den Simulator.
 		 * @returns Ein Array mit IDs, Positionen und Geschwindigkeiten.
 		 */
-	public applySerializedState(state: SerializedPlayerStats[]) {
-		state.forEach(data => {
-			let existing = this.getEntityById(data.id);
-			if (!existing) {
-				existing = new Player().new({ id: data.id, x: data.x, y: data.y, color: data.color, size: data.size });
-				this.addEntity(existing);
-			}
-			// DEBUG: Vergleiche das Original (falls vorhanden) mit dem Klon
-			// console.log(`Entity ${data.id} - Mass: ${existing.getMass()}, Size: ${existing.getBounds().x}`);
-		});
+	public serialize(): PlayerSettings[] {
+		return this.entities.map(player => player.toSettings())
 	}
 
 	/**
@@ -108,9 +81,25 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Dies wird vom Simulator genutzt, um Spielzüge in einer "Parallelwelt" 
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
-	addPlayer(data: SettingsEntity) {
-		const p = new Player().new({ x: data.x, y: data.y, size: data.size ?? 12, color: data.color, id: data.id, team: data.team, playericon: data.playericon });
-		this.entities.push(p);
+	public applySerializedState(state: PlayerSettings[]) {
+		this.applySettings(state)
+	}
+
+	/** Applies an authoritative complete state while preserving existing entity references. */
+	public applySettings(state: PlayerSettings[]): void {
+		const existing = new Map(this.entities.map(entity => [entity.getId(), entity]))
+		this.entities = state.map(settings => {
+			const entity = existing.get(settings.id)
+			if (entity instanceof Player) {
+				entity.applySettings(settings)
+				return entity
+			}
+			return new Player(settings)
+		})
+	}
+
+	public addPlayer(data: PlayerSettings) {
+		this.entities.push(new Player(data));
 	}
 
 	/**
@@ -118,7 +107,7 @@ export class EntityManager implements IDrawer, ITicker {
 		 * @param dt - Delta Time (Zeit seit dem letzten Frame).
 		 * @param friction - Der Reibungswert der aktuellen Welt.
 		 */
-	tick(dt: number, friction: number) {
+	public tick(dt: number, friction: number) {
 		this.entities.forEach(e => e.tick(dt, friction));
 	}
 
@@ -126,7 +115,7 @@ export class EntityManager implements IDrawer, ITicker {
 		 * Zeichnet alle Entities auf den übergebenen RenderContext.
 		 * @param ctx - Der P5- oder alternative Renderer.
 		 */
-	draw(ctx: RenderContext): void {
+	public draw(ctx: RenderContext): void {
 		this.entities.forEach(entity => entity.draw(ctx))
 	}
 
@@ -136,9 +125,11 @@ export class EntityManager implements IDrawer, ITicker {
 		 * vorauszuberechnen, ohne die echte Anzeige zu stören.
 		 */
 	public clone(): EntityManager {
-		const newManager = new EntityManager([]);
-		const data = this.serialize();
-		newManager.applySerializedState(data);
-		return newManager;
+		const settings = this.toSettings()
+		// const newManager = new EntityManager([]);
+		// const data = this.serialize();
+		// newManager.applySerializedState(data);
+		return new EntityManager(settings);
 	}
+	public toSettings(): PlayerSettings[] { return this.entities.map(player => player.toSettings()) }
 }

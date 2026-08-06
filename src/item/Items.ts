@@ -14,26 +14,14 @@ export interface ItemSettings {
 }
 
 export interface IItem extends IDrawer, ITicker, ISystem {
-	setId(id: string): void
-	getId(): string
-
-	setName(name: string): void
-	getName(): string
-
-	setTrigger(trigger: string): void
-	getTrigger(): string;
-
-	setFrequency(freq: Frequency): void
-	getFrequency(): Frequency;
-
-	setProbability(prob: number): void
-	getProbability(): number;
-
-	setSpawn(spawn: Spawn): void
-	getSpawn(): Spawn;
-
-	setEffectParams(effectParams: EffectParams[]): void
-	getEffectParams(): EffectParams[];
+	id?: string;
+	name?: string;
+	effectType?: string;
+	trigger?: string;
+	frequency?: Frequency;
+	probability?: number;
+	spawn?: Spawn;
+	effectParams?: EffectParams[];
 }
 
 export interface EffectParams { }
@@ -61,4 +49,5 @@ export interface Area {
 	width?: number;
 	height?: number;
 }
+
 

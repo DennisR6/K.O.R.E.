@@ -1,6 +1,6 @@
+import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { GameLogger } from "../utils/log.js";
-import type { IPhysics, IPhysicsCircle, IPhysicsRectangle, PhysicsStrategy, Vector2D } from "./physics.js";
+import { forwardVectorFromRotation, getShapeName, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -93,28 +93,32 @@ export class defaultPhysics implements PhysicsStrategy {
 		return Math.max(min, Math.min(max, val))
 	}
 
-	public checkCollision(entityA: IPhysics, entityB: IPhysics): boolean {
+	public checkCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): boolean {
 		switch (true) {
-			case entityA.getShape() == "circle" && entityB.getShape() == "circle":
-				return this.checkCollisionCircles(entityA as IPhysicsCircle, entityB as IPhysicsCircle)
-			case entityA.getShape() == "rectangle" && entityB.getShape() == "circle":
-				return this.checkCollisionCircleRect(entityB as IPhysicsCircle, entityA as IPhysicsRectangle);
-			case entityA.getShape() == "circle" && entityB.getShape() == "rectangle":
-				return this.checkCollisionCircleRect(entityA as IPhysicsCircle, entityB as IPhysicsRectangle)
-			case entityA.getShape() == "rectangle" && entityB.getShape() == "rectangle":
-				return this.checkCollisionRects(entityA as IPhysicsRectangle, entityB as IPhysicsRectangle)
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.CIRCLE:
+				return this.checkCollisionCircles(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.CIRCLE>)
+			case entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE:
+				return this.checkCollisionRects(entityA as IPhysics<SHAPE.RECTANGLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE:
+				return this.checkCollisionCircleRect(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.RECTANGLE>)
+			case entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.LINE:
+				return this.checkCollisionCircleLine(entityA as IPhysics<SHAPE.CIRCLE>, entityB as IPhysics<SHAPE.LINE>)
+			case entityA.getShape() == SHAPE.LINE && entityB.getShape() == SHAPE.CIRCLE:
+				return this.checkCollisionCircleLine(entityB as IPhysics<SHAPE.CIRCLE>, entityA as IPhysics<SHAPE.LINE>)
+			default:
+				console.log(`Collision not implemented for ${getShapeName(entityA.getShape())} ${getShapeName(entityB.getShape())}`)
 		}
 		return false
 	}
 
-	public checkCollisionCircles(entityA: IPhysicsCircle, entityB: IPhysicsCircle): boolean {
+	public checkCollisionCircles(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.CIRCLE>): boolean {
 		const d2 = this.distSq(entityA.getPos(), entityB.getPos());
 		const rSum = entityA.getBounds().x + entityB.getBounds().x;
 
 		return d2 <= (rSum * rSum);
 	}
 
-	public checkCollisionRects(entityA: IPhysicsRectangle, entityB: IPhysicsRectangle): boolean {
+	public checkCollisionRects(entityA: IPhysics<SHAPE.RECTANGLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
 		return Ax <= Bx + entityB.getBounds().x &&
@@ -123,7 +127,7 @@ export class defaultPhysics implements PhysicsStrategy {
 			Ay + entityA.getBounds().y >= By;
 	}
 
-	public checkCollisionCircleRect(entityA: IPhysicsCircle, entityB: IPhysicsRectangle): boolean {
+	public checkCollisionCircleRect(entityA: IPhysics<SHAPE.CIRCLE>, entityB: IPhysics<SHAPE.RECTANGLE>): boolean {
 		const { x: Ax, y: Ay } = entityA.getPos()
 		const { x: Bx, y: By } = entityB.getPos()
 		const closest = {
@@ -134,80 +138,162 @@ export class defaultPhysics implements PhysicsStrategy {
 		return d2 <= (entityA.getBounds().x * entityA.getBounds().x);
 	}
 
-	public handleCollision(entityA: IPhysics, entityB: IPhysics): void {
+	public checkCollisionCircleLine(circle: IPhysics<SHAPE.CIRCLE>, line: IPhysics<SHAPE.LINE>): boolean {
+		return this.distSq(circle.getPos(), this.closestPointOnLine(circle, line)) <= circle.getBounds().x ** 2;
+	}
+
+	public handleCollision(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): void {
 		const posA = { ...entityA.getPos() };
 		const posB = { ...entityB.getPos() };
+
+		// Validity contract (Section 13, docs/physics-contract.md): a response
+		// never mutates state from non-finite input and never produces NaN or
+		// Infinity. Invalid bodies are rejected earlier at validation
+		// boundaries; this guard keeps the solver safe defensively.
+		if (!Number.isFinite(posA.x) || !Number.isFinite(posA.y) || !Number.isFinite(posB.x) || !Number.isFinite(posB.y)) {
+			return;
+		}
 		const dist = this.dist(posA, posB);
 
-		if (dist === 0) return;
-
-		// if (entityA.getShape() === "circle") entityA as IPhysicsCircle
 		switch (true) {
-			case (entityA.getShape() === "circle" && entityB.getShape() === "circle"): {
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.CIRCLE): {
 				const radiusA = entityA.getBounds().x;
 				const radiusB = entityB.getBounds().x;
 				const combinedRadius = radiusA + radiusB;
 
-				if (dist < combinedRadius) {
-					const overlap = combinedRadius - dist;
-					// 1. Vektor normalisieren
-					const nx = (posB.x - posA.x) / dist;
-					const ny = (posB.y - posA.y) / dist;
+				// Zero-distance contacts (coincident centers, Task 13.3) use the
+				// canonical fallback axis (1, 0): the first body is corrected
+				// toward -X, the second toward +X. The no-op early return is
+				// gone, so coincident circles are always separated and the
+				// contact events always fire. Every other contact derives the
+				// normal from the center difference.
+				let nx: number;
+				let ny: number;
+				let overlap: number;
+				if (dist === 0) {
+					nx = 1;
+					ny = 0;
+					overlap = combinedRadius;
+				} else {
+					nx = (posB.x - posA.x) / dist;
+					ny = (posB.y - posA.y) / dist;
+					overlap = combinedRadius - dist;
+				}
 
-					const invMassA = 1 / entityA.getMass();
-					const invMassB = 1 / entityB.getMass();
+				if (overlap > 0) {
+					// Inverse masses; an immovable body (mass === Infinity) never
+					// moves and never contributes to the split.
+					const invMassA = entityA.getMass() === Infinity ? 0 : 1 / entityA.getMass();
+					const invMassB = entityB.getMass() === Infinity ? 0 : 1 / entityB.getMass();
 					const totalInvMass = invMassA + invMassB;
 
-					// --- POSITIONSKORREKTUR (Depenetration) ---
-					const slop = 0.05;
-					const percent = 0.2;
-					const moveMagnitude = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
+					// Both bodies immovable: nothing can move, and the correction
+					// and impulse formulas would divide by zero - skip both so no
+					// NaN/Infinity is ever produced.
+					if (totalInvMass > 0) {
+						// --- POSITIONSKORREKTUR (Depenetration) ---
+						const slop = PHYSICS_CONTACT_SLOP;
+						const percent = PHYSICS_CONTACT_PERCENT;
+						const moveMagnitude = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
 
-					const moveA = moveMagnitude * invMassA;
-					const moveB = moveMagnitude * invMassB;
+						const moveA = moveMagnitude * invMassA;
+						const moveB = moveMagnitude * invMassB;
 
-					// Wende Korrektur an
-					entityA.setPos({ x: posA.x - nx * moveA, y: posA.y - ny * moveA });
-					entityB.setPos({ x: posB.x + nx * moveB, y: posB.y + ny * moveB });
+						// Wende Korrektur an
+						entityA.setPos({ x: posA.x - nx * moveA, y: posA.y - ny * moveA });
+						entityB.setPos({ x: posB.x + nx * moveB, y: posB.y + ny * moveB });
 
-					// --- IMPULS-ANTWORT (Auf Basis der URSPRÜNGLICHEN Positionen!) ---
-					// WICHTIG: Nutze die ursprünglichen Variablen velA/velB, 
-					// aber berechne den Impuls basierend auf den Vektoren, 
-					// OHNE die veränderten Positionen erneut abzurufen.
-					const velA = entityA.getVel();
-					const velB = entityB.getVel();
+						// --- IMPULS-ANTWORT (Auf Basis der URSPRÜNGLICHEN Positionen!) ---
+						// WICHTIG: Nutze die ursprünglichen Variablen velA/velB,
+						// aber berechne den Impuls basierend auf den Vektoren,
+						// OHNE die veränderten Positionen erneut abzurufen.
+						const velA = entityA.getVel();
+						const velB = entityB.getVel();
 
-					const relVelX = velB.x - velA.x;
-					const relVelY = velB.y - velA.y;
-					const dotProduct = relVelX * nx + relVelY * ny;
+						const relVelX = velB.x - velA.x;
+						const relVelY = velB.y - velA.y;
+						const dotProduct = relVelX * nx + relVelY * ny;
 
-					if (dotProduct < 0) {
-						const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
-						const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
+						// Only approaching bodies (relative normal velocity < 0)
+						// receive an impulse; stationary, separating, or
+						// identically-moving bodies never gain collision energy.
+						if (dotProduct < 0) {
+							const restitution = Math.min(entityA.getBounceFactor(), entityB.getBounceFactor());
+							const impulseMag = (-(1 + restitution) * dotProduct) / totalInvMass;
 
-						entityA.setVel({
-							x: velA.x - (impulseMag * nx * invMassA),
-							y: velA.y - (impulseMag * ny * invMassA)
-						});
-						entityB.setVel({
-							x: velB.x + (impulseMag * nx * invMassB),
-							y: velB.y + (impulseMag * ny * invMassB)
-						});
+							entityA.setVel({
+								x: velA.x - (impulseMag * nx * invMassA),
+								y: velA.y - (impulseMag * ny * invMassA)
+							});
+							entityB.setVel({
+								x: velB.x + (impulseMag * nx * invMassB),
+								y: velB.y + (impulseMag * ny * invMassB)
+							});
+						}
 					}
 				}
 
-				entityA.onCollision({ entity: entityB });
-				entityB.onCollision({ entity: entityA });
+				entityA.onCollision({ entity: entityB as IPhysics<SHAPE.CIRCLE> });
+				entityB.onCollision({ entity: entityA as IPhysics<SHAPE.CIRCLE> });
 				break;
 			}
-			case (entityA.getShape() === "rectangle" && entityB.getShape() === "rectangle"): {
-				GameLogger.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.LINE):
+			case (entityA.getShape() === SHAPE.LINE && entityB.getShape() === SHAPE.CIRCLE): {
+				const circle = (entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB) as IPhysics<SHAPE.CIRCLE>;
+				const line = (entityA.getShape() === SHAPE.LINE ? entityA : entityB) as IPhysics<SHAPE.LINE>;
+				const closest = this.closestPointOnLine(circle, line);
+				const position = circle.getPos();
+				const normal = this.sub(position, closest);
+				const distance = this.mag(normal);
+				const radius = circle.getBounds().x;
+				// Separated contacts (distance > radius) are a no-op; an exactly
+				// touching contact (distance === radius) is stable and receives
+				// no correction, no impulse, and no event. Only strict
+				// penetration (distance < radius, including distance === 0)
+				// enters the resolution path.
+				if (distance >= radius) break;
+
+				let unitNormal: Vector2D;
+				if (distance === 0) {
+					// Zero-distance contact: the circle center lies exactly on the
+					// segment or on an endpoint. The canonical fallback normal is
+					// the normalized left-hand perpendicular of the stored
+					// start-to-end direction: (-dy, dx) / length. Swapping the
+					// line direction mirrors the fallback. Zero-length lines are
+					// rejected at construction, so length is always positive.
+					const start = line.getPos();
+					const end = line.getBounds();
+					const dx = end.x - start.x;
+					const dy = end.y - start.y;
+					const length = Math.hypot(dx, dy);
+					unitNormal = { x: -dy / length, y: dx / length };
+				} else {
+					unitNormal = this.mult(normal, 1 / distance);
+				}
+
+				// Full deterministic depenetration (existing line contract):
+				// the circle is repositioned to exactly touch the segment.
+				circle.setPos(this.add(closest, this.mult(unitNormal, radius)));
+
+				// Impulse only when the circle approaches along the normal.
+				const velocity = circle.getVel();
+				const normalVelocity = this.dot(velocity, unitNormal);
+				if (normalVelocity < 0) {
+					const restitution = Math.min(circle.getBounceFactor(), line.getBounceFactor());
+					circle.setVel(this.sub(velocity, this.mult(unitNormal, (1 + restitution) * normalVelocity)));
+				}
+				circle.onCollision({ entity: line });
+				line.onCollision({ entity: circle });
+				break;
+			}
+			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
+				console.error("TODO! /src/phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape())
 				break
 			}
-			case (entityA.getShape() === "circle" && entityB.getShape() === "rectangle"):
-			case (entityA.getShape() === "rectangle" && entityB.getShape() === "circle"): {
-				const circle = (entityA.getShape() === "circle" ? entityA : entityB) as IPhysicsCircle;
-				const rectangle = (entityA.getShape() === "rectangle" ? entityA : entityB) as IPhysicsRectangle;
+			case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):
+			case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.CIRCLE): {
+				const circle = (entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB) as IPhysics<SHAPE.CIRCLE>;
+				const rectangle = (entityA.getShape() === SHAPE.RECTANGLE ? entityA : entityB) as IPhysics<SHAPE.RECTANGLE>;
 
 				const cPos = circle.getPos();
 				const rPos = rectangle.getPos();
@@ -225,11 +311,28 @@ export class defaultPhysics implements PhysicsStrategy {
 				if (distanceSq < radius * radius) {
 					const distance = Math.sqrt(distanceSq);
 
-					// Normale berechnen (Richtung der Kollision)
-					const nx = distance > 0 ? dx / distance : 0;
-					const ny = distance > 0 ? dy / distance : -1;
-
-					const overlap = radius - distance;
+					// Normale und Überlappung bestimmen.
+					let nx: number;
+					let ny: number;
+					let overlap: number;
+					if (distance > 0) {
+						// Exterior: Normalen-Richtung vom nächsten Kantenpunkt zum Zentrum.
+						nx = dx / distance;
+						ny = dy / distance;
+						overlap = radius - distance;
+					} else {
+						// Interior (Zentrum innerhalb des Rechtecks): deterministischer
+						// Austritt über die nächstgelegene Kante. Bei Gleichstand gilt
+						// die dokumentierte Reihenfolge links, rechts, oben, unten.
+						const left = cPos.x - rPos.x;
+						const right = rPos.x + rBounds.x - cPos.x;
+						const top = cPos.y - rPos.y;
+						const bottom = rPos.y + rBounds.y - cPos.y;
+						if (left <= right && left <= top && left <= bottom) { nx = -1; ny = 0; overlap = left + radius; }
+						else if (right <= top && right <= bottom) { nx = 1; ny = 0; overlap = right + radius; }
+						else if (top <= bottom) { nx = 0; ny = -1; overlap = top + radius; }
+						else { nx = 0; ny = 1; overlap = bottom + radius; }
+					}
 
 					// Massen abrufen
 					const m1 = circle.getMass();    // z.B. 1
@@ -239,23 +342,17 @@ export class defaultPhysics implements PhysicsStrategy {
 					const invM1 = 1 / m1;
 					const invM2 = 1 / m2;
 					const invMassSum = invM1 + invM2;
-					// 1. Positionskorrektur (Depenetration)
-					// Verhindert das Ineinandersteckenbleiben proportional zur Masse
-					const totalMove = Math.min(overlap + 0.01, 2.0); // Sicherheits-Clamp
 
-					const EPSILON = 0.05;
-					const correction = totalMove + EPSILON;
-
-					// circle.setPos({
-					// 	x: cPos.x + nx * totalMove * (invM1 / invMassSum),
-					// 	y: cPos.y + ny * totalMove * (invM1 / invMassSum)
-					// });
-					circle.setPos({
-						x: cPos.x + nx * correction,
-						y: cPos.y + ny * correction
-					});
-
-
+					// 1. Positionskorrektur (Depenetration) - genau EINE gewichtete
+					// Anwendung entlang der Kollisionsnormalen. Die frühere doppelte
+					// Anwendung (Korrektur + Gesamtverschiebung) ist entfernt.
+					//
+					// Dokumentierter vollständiger Löser (physics contract 13.2):
+					// Eine einzelne Auflösung schiebt den Kreis um den minimalen
+					// Translationsbetrag (overlap + 0.01) vollständig aus dem
+					// Rechteck heraus - der Kreis ist danach nie mehr überlappend,
+					// und der nächste Tick ist eine No-Op.
+					const totalMove = overlap + 0.01; // complete minimum-translation resolution
 
 					if (m2 === Infinity) {
 						// Wenn Rechteck unendlich schwer: Schiebe NUR den Kreis aus der Wand
@@ -265,10 +362,6 @@ export class defaultPhysics implements PhysicsStrategy {
 						});
 					} else {
 						// Wenn Rechteck beweglich: Teile den Impuls wie gehabt
-						const invM1 = 1 / m1;
-						const invM2 = 1 / m2;
-						const invMassSum = invM1 + invM2;
-
 						circle.setPos({
 							x: cPos.x + nx * totalMove * (invM1 / invMassSum),
 							y: cPos.y + ny * totalMove * (invM1 / invMassSum)
@@ -279,36 +372,41 @@ export class defaultPhysics implements PhysicsStrategy {
 						});
 					}
 
-					// 2. Impuls-Antwort (Geschwindigkeit)
-					const v1 = circle.getVel();
-					const v2 = rectangle.getVel();
+					// 2. Impuls-Antwort (Geschwindigkeit) - nur beim Exterior-Fall.
+					// Eingebettete Kreise werden rein positionell depenetriert, damit
+					// der Austritt nicht durch eine Reflexion auf der Austrittsachse
+					// wieder rückgängig gemacht wird.
+					if (distance > 0) {
+						const v1 = circle.getVel();
+						const v2 = rectangle.getVel();
 
-					// Relative Geschwindigkeit in Richtung der Normalen
-					const relativeVelX = v1.x - v2.x;
-					const relativeVelY = v1.y - v2.y;
-					const dot = relativeVelX * nx + relativeVelY * ny;
+						// Relative Geschwindigkeit in Richtung der Normalen
+						const relativeVelX = v1.x - v2.x;
+						const relativeVelY = v1.y - v2.y;
+						const dot = relativeVelX * nx + relativeVelY * ny;
 
-					// Nur berechnen, wenn die Objekte sich aufeinander zubewegen
-					if (dot < 0) {
-						// Kombinierter Bounce-Faktor (Durchschnitt oder Minimum beider Partner)
-						const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
+						// Nur berechnen, wenn die Objekte sich aufeinander zubewegen
+						if (dot < 0) {
+							// Kombinierter Bounce-Faktor (Durchschnitt oder Minimum beider Partner)
+							const bounce = Math.min(circle.getBounceFactor(), rectangle.getBounceFactor());
 
-						// Der Impuls-Skalar (J)
-						// Setze ein hartes Limit für den Impuls
-						const maxImpulse = 50;
-						const j = Math.max(Math.min(-(1 + bounce) * dot / invMassSum, maxImpulse), -maxImpulse);
+							// Der Impuls-Skalar (J)
+							// Setze ein hartes Limit für den Impuls
+							const maxImpulse = 50;
+							const j = Math.max(Math.min(-(1 + bounce) * dot / invMassSum, maxImpulse), -maxImpulse);
 
-						// Neue Geschwindigkeiten anwenden
-						circle.setVel({
-							x: v1.x + (j * nx) * invM1,
-							y: v1.y + (j * ny) * invM1
-						});
-
-						if (m2 !== Infinity) {
-							rectangle.setVel({
-								x: v2.x - (j * nx) * invM2,
-								y: v2.y - (j * ny) * invM2
+							// Neue Geschwindigkeiten anwenden
+							circle.setVel({
+								x: v1.x + (j * nx) * invM1,
+								y: v1.y + (j * ny) * invM1
 							});
+
+							if (m2 !== Infinity) {
+								rectangle.setVel({
+									x: v2.x - (j * nx) * invM2,
+									y: v2.y - (j * ny) * invM2
+								});
+							}
 						}
 					}
 
@@ -326,19 +424,14 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 	}
 
-	public applyImpulse(entity: IPhysics, angle: number, power: number): void {
+	public applyImpulse(entity: IPhysics<SHAPE>, angle: number, power: number): void {
 		const mass = entity.getMass();
 		if (mass === Infinity) return;
 
-		const radians = (angle * Math.PI) / 180;
-
-		const force = {
-			x: Math.cos(radians) * power,
-			y: Math.sin(radians) * power
-		};
+		const direction = forwardVectorFromRotation(angle);
+		const force = this.mult(direction, power);
 
 		const currentVel = entity.getVel();
-
 		entity.setVel({
 			x: currentVel.x + (force.x / mass),
 			y: currentVel.y + (force.y / mass)
@@ -348,8 +441,9 @@ export class defaultPhysics implements PhysicsStrategy {
 	public getFriction(): number {
 		return this.friction
 	}
+	public getStopThreshold(): number { return this.stopThreshold }
 
-	public applyFriction(entity: IPhysics, dt: number): void {
+	public applyFriction(entity: IPhysics<SHAPE>, dt: number): void {
 		let { x: vx, y: vy } = entity.getVel();
 
 		const f = Math.pow(this.friction, dt);
@@ -368,12 +462,11 @@ export class defaultPhysics implements PhysicsStrategy {
 			vx = 0;
 			vy = 0;
 		}
-
 		entity.setVel({ x: vx, y: vy });
 	}
 
 	public printSettings(who?: string) {
-		GameLogger.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
+		console.info(who, "Set Physics to: ", { friction: this.friction, linearDrag: this.linearDrag, stopThreshold: this.stopThreshold })
 	}
 
 	/**
@@ -390,12 +483,8 @@ export class defaultPhysics implements PhysicsStrategy {
 		angle: number,
 		power: number
 	): Vector2D {
-		const radians = (angle * Math.PI) / 180;
-
-		let vx = Math.cos(radians) * power;
-		let vy = Math.sin(radians) * power;
-
-		return this.calculateStop(startPos, { x: vx, y: vy });
+		const direction = forwardVectorFromRotation(angle);
+		return this.calculateStop(startPos, this.mult(direction, power));
 	}
 
 	/**
@@ -433,4 +522,33 @@ export class defaultPhysics implements PhysicsStrategy {
 		}
 		return { x, y };
 	}
+	toSettings(): FrictionSettings {
+		return {
+			friction: this.friction,
+			linearDrag: this.linearDrag,
+			stopThreshold: this.stopThreshold
+		}
+	}
+
+
+	public isStatic(entities: EntityManager): boolean {
+		// Epsilon ist unser Toleranzwert. 
+		// Alles unter 0.1 Pixel/Sekunde gilt als "stehend".
+		const epsilon = 0.1;
+
+		return entities.getEntities().every(e => {
+			const vel = e.getVel();
+			return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
+		});
+	}
+
+	private closestPointOnLine(circle: IPhysics<SHAPE.CIRCLE>, line: IPhysics<SHAPE.LINE>): Vector2D {
+		const start = line.getPos();
+		const end = line.getBounds();
+		const segment = { x: end.x - start.x, y: end.y - start.y };
+		const lengthSq = this.magSq(segment);
+		const factor = lengthSq === 0 ? 0 : this.clamp(this.dot(this.sub(circle.getPos(), start), segment) / lengthSq, 0, 1);
+		return this.add(start, this.mult(segment, factor));
+	}
+
 }

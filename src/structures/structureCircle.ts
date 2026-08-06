@@ -1,7 +1,10 @@
+import { MetaEffect } from "../effects/effects.js";
+import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
-import type { IPhysics, IPhysicsCircle, Vector2D } from "../physics/physics.js"
-import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
+import { type MapBoundarySettingsCircle } from "../settings/settings.js";
+import { type Structure } from "./types.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -12,12 +15,12 @@ import type { IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsCircle} Notwendig für die Kreis-Kreis-Kollisionslogik.
  */
-export class StructureCircle implements IStructure, IPhysicsCircle {
+export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.CIRCLE>, ISettingsSerialize<MapBoundarySettingsCircle> {
 	private position: Vector2D
 	/** Radius des Kreises. */
 	private r: number;
 	/** Kennung der Form für das Physik-System. */
-	private shape: "circle";
+	private shape: SHAPE.CIRCLE;
 	/** 
 	 * Die Masse ist extrem hoch gesetzt (9000), damit das Hindernis 
 	 * bei Kollisionen als unbeweglich ("immovable") fungiert. 
@@ -33,13 +36,28 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
 	private friction: number | undefined
-	constructor(x: number, y: number, r: number, color?: string) {
+	private collisionEffects: Effect[] = []
+	private alwaysEffects: Effect[] = []
+	private roundEffects: Effect[] = []
+	private collisionRole: StructureCollisionRole | undefined
+
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole) {
 		this.position = { x, y }
 		this.r = r
-		this.shape = "circle"
+		this.shape = SHAPE.CIRCLE
 		this.color = color
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
+		this.collisionRole = role
+		for (const eff of effects) {
+			switch (eff.trigger) {
+				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Round: this.roundEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Always: this.alwaysEffects.push(new MetaEffect(eff)); continue
+				default: console.trace("this is not implemted yet"); continue
+			}
+		}
+		this.toSettings()
 	}
 	/**
 	 * Zeichnet die Struktur. 
@@ -50,7 +68,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 		ctx.push()
 		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
-		ctx.drawCircle(x + this.r, y + this.r, this.r * 2);
+		ctx.drawCircle(x, y, this.r);
 		ctx.pop()
 	}
 
@@ -61,8 +79,7 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 		if (
 			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
 			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
-		)
-			GameLogger.error("STRUCTURE: Position weicht massiv ab!");
+		) { console.error("STRUCTURE: Position weicht massiv ab!"); }
 
 		this.position.x = pos.x
 		this.position.y = pos.y
@@ -78,16 +95,38 @@ export class StructureCircle implements IStructure, IPhysicsCircle {
 	public setFriction(_friction: number): void { }
 	public getFriction(): number { return 0 }
 
-	public getShape(): "circle" { return this.shape }
+	public getShape(): SHAPE.CIRCLE { return this.shape }
 	public getBounds(): Vector2D { return { x: this.r, y: this.r } }
 
 	public setBounceFactor(bounce: number): void { this.bounce = bounce }
 	public getBounceFactor(): number { return this.bounce }
 
-	public onCollision({ entity }: { entity: IPhysics }): void { GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`) }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
+		this.collisionEffects.forEach(effect => effect.apply(entity))
+	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
+	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
+	public toSettings(): MapBoundarySettingsCircle {
+		const effects: FullEffectSettings[] = []
+		this.alwaysEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Always, triggerValue: [], ...eff.toSettings() }))
+		this.roundEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Round, triggerValue: [], ...eff.toSettings() }))
+		this.collisionEffects.forEach(eff => effects.push({ trigger: EffectTrigger.Collision, triggerValue: [], ...eff.toSettings() }))
+		const out: MapBoundarySettingsCircle = {
+			type: this.shape,
+			x: this.position.x,
+			y: this.position.y,
+			r: this.r,
+			color: this.color,
+			effects,
+		}
+		if (this.collisionRole !== undefined) out.role = this.collisionRole
+		return out
+	}
+	public getType(): SHAPE.CIRCLE { return this.shape }
+	public getX(): number { return this.position.x }
+	public getY(): number { return this.position.y }
 }
-

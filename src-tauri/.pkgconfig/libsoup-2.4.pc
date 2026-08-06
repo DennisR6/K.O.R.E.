@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=/home/eugen/projekte/kore/src-tauri/.libs
+includedir=${prefix}/include
+
+Name: libsoup
+Description: a HTTP library implementation in C
+Version: 2.4.0
+Libs: -L${libdir} -L/usr/lib/x86_64-linux-gnu -lsoup-2.4
+Cflags: -I${includedir}

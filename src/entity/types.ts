@@ -1,3 +1,9 @@
+import type { UUID } from "node:crypto";
+import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import { SHAPE, type Vector2D } from "../physics/physics.js";
+import type { FullEffectSettings } from "../effects/types.js";
+import type { InventoryItem } from "../item/types.js";
+
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
  * 
@@ -8,7 +14,7 @@
  */
 export interface EntitySnapshot {
 	/** Die eindeutige ID der Entity, um sie im EntityManager wiederzufinden. */
-	id: string | number;
+	id: string;
 
 	/** Die X-Position in Welt-Einheiten zum Zeitpunkt des Snapshots. */
 	x: number;
@@ -35,5 +41,63 @@ export interface EntitySnapshot {
 export interface IKillable {
 	setHP(hp: number): void;
 	getHP(): number;
-	isActive(): boolean
+	addHP(hp: number): void
+	setIsDead(dead: boolean): void
+	isDead(): boolean
+}
+/**
+ * Complete serializable state for a Player. This is the single creation and
+ * snapshot contract: `new Player(settings).toSettings()` must round-trip it.
+ */
+export interface PlayerSettings {
+	id: UUID;
+	position: Vector2D;
+	velocity: Vector2D;
+	rotation: number;
+	angularVelocity: number;
+	hp: number;
+	bouncyness: number;
+	mass: number;
+	size: number;
+	friction: number | undefined;
+	team: number[];
+	color: string;
+	playericon: AssetList;
+	shape: SHAPE.CIRCLE
+	hoop: AssetList
+	isPhysicsEnabled: boolean
+	isDead: boolean
+	effects: FullEffectSettings[]
+	inventory: InventoryItem[]
+}
+
+export function validatePlayerMass(mass: number): void {
+	if (!Number.isFinite(mass) || mass <= 0) throw new Error("Player mass must be a finite positive number");
+}
+
+/** Creates an independent, complete player snapshot with sensible defaults. */
+export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): PlayerSettings {
+	const mass = overrides.mass ?? 1;
+	validatePlayerMass(mass);
+	return {
+		id: overrides.id ?? crypto.randomUUID() as UUID,
+		position: { x: overrides.position?.x ?? 0, y: overrides.position?.y ?? 0 },
+		velocity: { x: overrides.velocity?.x ?? 0, y: overrides.velocity?.y ?? 0 },
+		rotation: overrides.rotation ?? 0,
+		angularVelocity: overrides.angularVelocity ?? 0,
+		hp: overrides.hp ?? 30,
+		bouncyness: overrides.bouncyness ?? 1,
+		mass,
+		size: overrides.size ?? 20,
+		friction: overrides.friction,
+		team: [...(overrides.team ?? [])],
+		color: overrides.color ?? "red",
+		playericon: overrides.playericon ?? AssetList.picturePenguinPenguinIdleFrame1PNG,
+		shape: SHAPE.CIRCLE,
+		hoop: overrides.hoop ?? AssetList.pictureReifenPNG,
+		isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
+		isDead: overrides.isDead ?? false,
+		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
+		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
+	};
 }

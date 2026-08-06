@@ -1,3 +1,5 @@
+import { mapData } from "./state.js";
+
 export function initModesEditor() {
 
     const select = document.getElementById("mode-select");
@@ -52,4 +54,3 @@ export function initModesEditor() {
         console.log("Modus gespeichert:", mapData.mode);
     });
 }
-

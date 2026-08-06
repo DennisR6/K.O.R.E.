@@ -1,4 +1,5 @@
 import type { AssetList } from "../assetManager/assets/assetRegistry";
+import type { IGameContext } from "../systems/types";
 
 /**
  * Der RenderContext stellt alle Zeichenbefehle bereit.
@@ -13,12 +14,14 @@ export interface RenderContext {
 	drawRect(x: number, y: number, width: number, height: number): void;
 	drawText(text: string, x: number, y: number, fontSize?: number): void;
 	setFillColor(color: string): void;
+	setNoFill(): void;
 	setStrokeColor(color: string): void;
 	setStroke(weight: number): void;
+	noStroke(): void;
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
-	drawImage(key: AssetList, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
+	drawImage(key: AssetList | string, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
 	getScreenSize(): { width: number, height: number };
 	clear(color?: string): void;
 	// --- Zustandsspeicher (Wichtig für Junior!) ---
@@ -37,6 +40,7 @@ export interface RenderContext {
 	beginClip(): void;
 	endClip(): void;
 	mouseWheel(func: (e: WheelEvent) => void): void;
+	getTextWidth(text: string, size: number): number;
 }
 
 /** 
@@ -49,10 +53,17 @@ export interface ITicker {
 	 * @param deltatime - Die Zeitdifferenz seit dem letzten Takt (wichtig für flüssige Bewegung).
 	 * @param globalfriction - Die Reibung, die aktuell auf alle Objekte im Takt wirkt.
 	 */
-	tick(deltatime: number, globalfriction: number): void;
+	tick(deltatime: number, globalfriction: number, drift?: number, stopThreshold?: number): void;
 }
 
-/** 
+export interface IExtendedTicker {
+	preTick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+	tick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+	postTick(ctx: IGameContext, deltatime: number, globalfriction: number): void
+}
+
+
+/* 
  * Die Leinwand der Engine.
  * Alles, was für den Spieler sichtbar sein soll, nutzt dieses Interface.
  */
@@ -63,5 +74,3 @@ export interface IDrawer {
 	 */
 	draw(ctx: RenderContext): void;
 }
-
-

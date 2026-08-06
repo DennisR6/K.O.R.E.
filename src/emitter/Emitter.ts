@@ -20,6 +20,7 @@ export { CombiEmitter, LogEmitter } from "./InputEmitter.js"
 export { ObjectEmitter } from "./ObjectEmitter.js"
 export { GameEmitter } from "./EngineEmitter.js"
 export { NetworkEmitter } from "./NetworkEmitter.js"
+export { AiTurnEmitter } from "../ai/aiEmitter.js"
 /**
  * Hilfsfunktion: Berechnet einen Zielpunkt basierend auf Startpunkt, Winkel und Kraft.
  * 

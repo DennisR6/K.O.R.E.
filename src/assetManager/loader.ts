@@ -1,15 +1,16 @@
-import { GameLogger } from '../utils/log.js';
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
 
-class EngineAssetManager {
-	private cache: Map<AssetKey, HTMLImageElement> = new Map();
-	private errorCount: Map<AssetKey, number> = new Map();
-	private MAX_RETRIES = 2;
-	private isLoading: Set<AssetKey> = new Set();
+type ImageKey = AssetKey | string;
 
-	get(key: AssetList): HTMLImageElement | null {
+class EngineAssetManager {
+	private cache: Map<ImageKey, HTMLImageElement> = new Map();
+	private errorCount: Map<ImageKey, number> = new Map();
+	private MAX_RETRIES = 2;
+	private isLoading: Set<ImageKey> = new Set();
+
+	get(key: ImageKey): HTMLImageElement | null {
 		if (key === undefined) {
-			console.log(`${key}:${AssetPaths[key]} is undefined`, key)
+			console.log(`${key}:${typeof key === "number" ? AssetPaths[key] : key} is undefined`, key)
 			return null
 		}
 		if (this.cache.has(key)) return this.cache.get(key)!;
@@ -22,41 +23,41 @@ class EngineAssetManager {
 		return null;
 	}
 
-	private async startAsyncLoad(key: AssetKey) {
+	private async startAsyncLoad(key: ImageKey) {
 		if (this.isLoading.has(key)) return
 		this.isLoading.add(key)
-		console.log("downloading picture", AssetPaths[key])
 
 		const currentRetries = this.errorCount.get(key) || 0;
 		this.errorCount.set(key, currentRetries + 1);
 
 		try {
-			const path = AssetPaths[key];
-			const response = await fetch(`./public/${path}?t=${Date.now()}`);
+			const fetchUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
+			const response = await fetch(fetchUrl);
 			if (!response.ok) throw new Error("Netzwerkfehler");
 
 			const blob = await response.blob();
-			const url = URL.createObjectURL(blob);
+			const objectUrl = URL.createObjectURL(blob);
 			const img = new Image();
-			img.src = url;
+			img.src = objectUrl;
 			await img.decode();
 
 			this.cache.set(key, img);
 			this.errorCount.delete(key);
 			this.isLoading.delete(key)
 		} catch (e) {
-			GameLogger.debug(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
+			console.debug(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
 			this.isLoading.delete(key)
 
 			// Wenn Limit erreicht: JSON Fallback
 			if (currentRetries >= this.MAX_RETRIES) {
-				GameLogger.error(`Fallback auf JSON für: ${key}`);
+				console.error(`Fallback auf JSON für: ${key}`);
 				await this.loadJsonFallback(key);
 			}
 		}
 	}
 
-	private async loadJsonFallback(key: AssetKey) {
+	private async loadJsonFallback(key: ImageKey) {
+		if (typeof key === "string") return;
 		try {
 			const response = await fetch(`./src/assetManager/assets/json/${AssetList[key]}.json`);
 			if (!response.ok) throw new Error("JSON Fallback fehlgeschlagen");
@@ -68,9 +69,9 @@ class EngineAssetManager {
 
 			await img.decode();
 			this.cache.set(key, img);
-			GameLogger.info(`Erfolgreich aus JSON-Fallback geladen: ${key}`);
+			console.info(`Erfolgreich aus JSON-Fallback geladen: ${key}`);
 		} catch (e) {
-			GameLogger.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
+			console.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
 		}
 	}
 }

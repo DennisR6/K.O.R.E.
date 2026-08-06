@@ -1,7 +1,10 @@
+import { MetaEffect } from "../effects/effects.js";
+import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
-import type { IPhysics, IPhysicsRectangle, Vector2D } from "../physics/physics.js"
-import { GameLogger } from "../utils/log.js"
-import type { IStructure } from "./types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
+import type { MapBoundarySettingsRect } from "../settings/settings.js";
+import { type IStructure } from "./types.js";
 
 /**
  * Repräsentiert ein massives, rechteckiges Hindernis (Block).
@@ -13,7 +16,7 @@ import type { IStructure } from "./types.js";
  * @implements {IStructure} Basis-Interface für Hindernisse.
  * @implements {IPhysicsRectangle} Notwendig für die Kreis-Rechteck-Kollisionslogik.
  */
-export class StructureRectangle implements IStructure, IPhysicsRectangle {
+export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>, ISettingsSerialize<MapBoundarySettingsRect> {
 	/** X-Koordinate der oberen linken Ecke. */
 	private x: number;
 	/** Y-Koordinate der oberen linken Ecke. */
@@ -22,9 +25,11 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	private w: number;
 	/** Höhe (Height) des Rechtecks. */
 	private h: number;
-
+	private collisionEffects: Effect[] = []
+	private roundEffects: Effect[] = []
+	private alwaysEffects: Effect[] = []
 	/** Kennung der Form für das Physik-System. */
-	private shape: "rectangle";
+	private shape: SHAPE.RECTANGLE;
 	/** Extrem hohe Masse (Infinity), damit das Objekt bei Kollisionen unbeweglich bleibt. */
 	private mass: number = Infinity;
 	/** Bestimmt das Abprall-Verhalten (Standard 0: absorbiert Energie). */
@@ -33,6 +38,7 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	private color: string | undefined
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true
+	private collisionRole: StructureCollisionRole | undefined
 
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
@@ -44,16 +50,27 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	 * @param w - Breite des Blocks.
 	 * @param h - Höhe des Blocks.
 	 * @param color - Füllfarbe des Rechtecks.
+	 * @param effects - Serialisierte Kollisions-/Runden-/Dauer-Effekte.
+	 * @param role - Explizite Strukturrolle ("solid", "containment", "both").
 	 */
-	constructor(x: number, y: number, w: number, h: number, color?: string) {
+	constructor(x: number, y: number, w: number, h: number, color?: string, effects: FullEffectSettings[] = [], role?: StructureCollisionRole) {
 		this.x = x
 		this.y = y
 		this.w = w
 		this.h = h
 		this.color = color
-		this.shape = "rectangle"
+		this.shape = SHAPE.RECTANGLE
 		this.vel = { x: 0, y: 0 }
 		this.bounce = Infinity
+		this.collisionRole = role
+		for (const eff of effects) {
+			switch (eff.trigger) {
+				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Round: this.roundEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Always: this.alwaysEffects.push(new MetaEffect(eff)); continue
+				default: console.log("this is not implemted yet"); continue
+			}
+		}
 	}
 
 	/**
@@ -77,16 +94,15 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 
 	public getVel(): Vector2D { return this.vel }
 
-	public onCollision({ entity }: { entity: IPhysics }): void {
-		GameLogger.info(`Collision: ${this.getShape()} + ${entity.getShape()}`)
+	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
+		this.collisionEffects.forEach(effect => effect.apply(entity))
 	}
-
 	public setVel(vel: Vector2D): void { this.vel = vel }
 
 	public setMass(mass: number): void { this.mass = mass }
 
 	public getMass(): number { return this.mass }
-	public setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y }
+	public setPos(pos: Vector2D): void { this.x = pos.x; this.y = pos.y; }
 	public getFriction(): number { return this.friction ?? 1 }
 
 	public setFriction(friction: number): void { this.friction = friction }
@@ -99,8 +115,32 @@ export class StructureRectangle implements IStructure, IPhysicsRectangle {
 	public tick(_deltatime: number, _globalfriction: number): void { }
 
 	/** @returns Immer "rectangle" für den Physics-Dispatcher. */
-	public getShape(): "rectangle" { return this.shape }
+	public getShape(): SHAPE.RECTANGLE { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean) { this.isPhysicsEnabled = physicsEnabled }
 	public setColor(color: string | undefined) { this.color = color }
+	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
+	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
+	public toSettings(): MapBoundarySettingsRect {
+		const effects: FullEffectSettings[] = []
+		this.alwaysEffects.forEach(effect => effects.push({ trigger: EffectTrigger.Always, triggerValue: [], ...effect.toSettings() }))
+		this.collisionEffects.forEach(effect => effects.push({ trigger: EffectTrigger.Collision, triggerValue: [], ...effect.toSettings() }))
+		this.roundEffects.forEach(effect => effects.push({ trigger: EffectTrigger.Round, triggerValue: [], ...effect.toSettings() }))
+		const out: MapBoundarySettingsRect = {
+			type: SHAPE.RECTANGLE,
+			x: this.x,
+			y: this.y,
+			w: this.w,
+			h: this.h,
+			color: this.color,
+			effects,
+		}
+		if (this.collisionRole !== undefined) out.role = this.collisionRole
+		return out
+	}
+	//
+	// public getEffects(): SettingsEffect<EffectType, EffectTrigger>[] { return this.effects }
+	public getType(): SHAPE.RECTANGLE { return this.shape }
+	public getX(): number { return this.x }
+	public getY(): number { return this.y }
 }

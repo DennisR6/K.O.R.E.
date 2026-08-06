@@ -1,5 +1,6 @@
 // Zentrales Datenmodell für die Map
 export const mapData = {
+    schemaVersion: 1,
     name: "",
     background: null,
 
@@ -9,7 +10,7 @@ export const mapData = {
     holes: [],
     players: [],
 
-    friction: 1.0,
+    friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
     drift: 0.0,
 
     items: [],
@@ -45,7 +46,7 @@ export function resetMapData() {
     mapData.holes = [];
     mapData.players = [];
 
-    mapData.friction = 1.0;
+    mapData.friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
     mapData.drift = 0.0;
 
     mapData.items = [];
@@ -71,4 +72,3 @@ export function resetMapData() {
         errorRate: 20
     };
 }
-

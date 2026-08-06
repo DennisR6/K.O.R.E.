@@ -1,4 +1,5 @@
 import { mapData } from "./state.js";
+import { createElement } from "./dom.js";
 
 export function restoreMapFields() {
 
@@ -6,8 +7,9 @@ export function restoreMapFields() {
     document.getElementById("map-name").value = mapData.name || "";
 
     // FRICTION
-    document.getElementById("map-friction").value = mapData.friction ?? 1.0;
-    document.getElementById("friction-value").textContent = Number(mapData.friction).toFixed(2);
+    document.getElementById("map-friction").value = mapData.friction?.friction ?? 0.995;
+    document.getElementById("map-linear-drag").value = mapData.friction?.linearDrag ?? 0.01;
+    document.getElementById("map-stop-threshold").value = mapData.friction?.stopThreshold ?? 0.1;
 
     // DRIFT
     document.getElementById("map-drift").value = mapData.drift ?? 0.0;
@@ -65,14 +67,17 @@ export function initMapEditor() {
         mapData.background = { type: "image", url: file.name };
     });
 
-    // FRICTION SLIDER
-    const frictionSlider = document.getElementById("map-friction");
-    const frictionValue = document.getElementById("friction-value");
-
-    frictionSlider.addEventListener("input", () => {
-        const val = Math.max(0, Number(frictionSlider.value));
-        frictionValue.textContent = val.toFixed(2);
-        mapData.friction = val;
+    // ENGINE FRICTION SETTINGS
+    const frictionInputs = [
+        ["map-friction", "friction"],
+        ["map-linear-drag", "linearDrag"],
+        ["map-stop-threshold", "stopThreshold"],
+    ];
+    frictionInputs.forEach(([id, key]) => {
+        const input = document.getElementById(id);
+        input.addEventListener("input", () => {
+            mapData.friction[key] = Math.max(0, Number(input.value));
+        });
     });
 
     // DRIFT SLIDER
@@ -133,57 +138,21 @@ export function initMapEditor() {
 // --------------------------------------------------
 export function renderWalls() {
     const container = document.getElementById("wall-list");
-    container.innerHTML = "";
+    container.replaceChildren();
 
     const grid = document.createElement("div");
     grid.className = "editor-grid";
 
     mapData.mapBoundarys.forEach((wall, index) => {
-        const field = document.createElement("div");
-        field.className = "field";
-
-        field.innerHTML = `
-            <h4>Wand ${index + 1}</h4>
-
-            <div class="editor-row">
-                <label>X: <span class="val-x">${wall.x}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${wall.x}" class="wall-x-slider">
-                    <input type="number" value="${wall.x}" class="wall-x-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Y: <span class="val-y">${wall.y}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${wall.y}" class="wall-y-slider">
-                    <input type="number" value="${wall.y}" class="wall-y-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Breite: <span class="val-w">${wall.w}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="1" max="2000" value="${wall.w}" class="wall-w-slider">
-                    <input type="number" value="${wall.w}" class="wall-w-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Höhe: <span class="val-h">${wall.h}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="1" max="2000" value="${wall.h}" class="wall-h-slider">
-                    <input type="number" value="${wall.h}" class="wall-h-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Farbe</label>
-                <input type="color" value="${wall.color}" class="wall-color">
-            </div>
-
-            <button class="delete-wall">Löschen</button>
-        `;
+        const field = createElement("div", { className: "field" });
+        field.appendChild(createElement("h4", { text: `Wand ${index + 1}` }));
+        const x = createNumberRow("X", wall.x, "wall-x-slider", "wall-x-num", 0, 2000);
+        const y = createNumberRow("Y", wall.y, "wall-y-slider", "wall-y-num", 0, 2000);
+        const w = createNumberRow("Breite", wall.w, "wall-w-slider", "wall-w-num", 1, 2000);
+        const h = createNumberRow("Höhe", wall.h, "wall-h-slider", "wall-h-num", 1, 2000);
+        const color = createColorRow("wall-color", wall.color);
+        const remove = createElement("button", { className: "delete-wall", text: "Löschen" });
+        field.append(x.row, y.row, w.row, h.row, color.row, remove);
 
         const bind = (slider, num, label, key) => {
             slider.addEventListener("input", () => {
@@ -198,16 +167,16 @@ export function renderWalls() {
             });
         };
 
-        bind(field.querySelector(".wall-x-slider"), field.querySelector(".wall-x-num"), field.querySelector(".val-x"), "x");
-        bind(field.querySelector(".wall-y-slider"), field.querySelector(".wall-y-num"), field.querySelector(".val-y"), "y");
-        bind(field.querySelector(".wall-w-slider"), field.querySelector(".wall-w-num"), field.querySelector(".val-w"), "w");
-        bind(field.querySelector(".wall-h-slider"), field.querySelector(".wall-h-num"), field.querySelector(".val-h"), "h");
+        bind(x.slider, x.number, x.label, "x");
+        bind(y.slider, y.number, y.label, "y");
+        bind(w.slider, w.number, w.label, "w");
+        bind(h.slider, h.number, h.label, "h");
 
-        field.querySelector(".wall-color").addEventListener("input", e => {
+        color.input.addEventListener("input", e => {
             wall.color = e.target.value;
         });
 
-        field.querySelector(".delete-wall").addEventListener("click", () => {
+        remove.addEventListener("click", () => {
             mapData.mapBoundarys.splice(index, 1);
             renderWalls();
         });
@@ -223,49 +192,20 @@ export function renderWalls() {
 // --------------------------------------------------
 export function renderHoles() {
     const container = document.getElementById("hole-list");
-    container.innerHTML = "";
+    container.replaceChildren();
 
     const grid = document.createElement("div");
     grid.className = "editor-grid";
 
     mapData.holes.forEach((hole, index) => {
-        const field = document.createElement("div");
-        field.className = "field";
-
-        field.innerHTML = `
-            <h4>Loch ${index + 1}</h4>
-
-            <div class="editor-row">
-                <label>X: <span class="val-x">${hole.x}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${hole.x}" class="hole-x-slider">
-                    <input type="number" value="${hole.x}" class="hole-x-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Y: <span class="val-y">${hole.y}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${hole.y}" class="hole-y-slider">
-                    <input type="number" value="${hole.y}" class="hole-y-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Radius: <span class="val-r">${hole.r}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="1" max="500" value="${hole.r}" class="hole-r-slider">
-                    <input type="number" value="${hole.r}" class="hole-r-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Farbe</label>
-                <input type="color" value="${hole.color}" class="hole-color">
-            </div>
-
-            <button class="delete-hole">Löschen</button>
-        `;
+        const field = createElement("div", { className: "field" });
+        field.appendChild(createElement("h4", { text: `Loch ${index + 1}` }));
+        const x = createNumberRow("X", hole.x, "hole-x-slider", "hole-x-num", 0, 2000);
+        const y = createNumberRow("Y", hole.y, "hole-y-slider", "hole-y-num", 0, 2000);
+        const radius = createNumberRow("Radius", hole.r, "hole-r-slider", "hole-r-num", 1, 500);
+        const color = createColorRow("hole-color", hole.color);
+        const remove = createElement("button", { className: "delete-hole", text: "Löschen" });
+        field.append(x.row, y.row, radius.row, color.row, remove);
 
         const bind = (slider, num, label, key) => {
             slider.addEventListener("input", () => {
@@ -280,15 +220,15 @@ export function renderHoles() {
             });
         };
 
-        bind(field.querySelector(".hole-x-slider"), field.querySelector(".hole-x-num"), field.querySelector(".val-x"), "x");
-        bind(field.querySelector(".hole-y-slider"), field.querySelector(".hole-y-num"), field.querySelector(".val-y"), "y");
-        bind(field.querySelector(".hole-r-slider"), field.querySelector(".hole-r-num"), field.querySelector(".val-r"), "r");
+        bind(x.slider, x.number, x.label, "x");
+        bind(y.slider, y.number, y.label, "y");
+        bind(radius.slider, radius.number, radius.label, "r");
 
-        field.querySelector(".hole-color").addEventListener("input", e => {
+        color.input.addEventListener("input", e => {
             hole.color = e.target.value;
         });
 
-        field.querySelector(".delete-hole").addEventListener("click", () => {
+        remove.addEventListener("click", () => {
             mapData.holes.splice(index, 1);
             renderHoles();
         });
@@ -301,51 +241,20 @@ export function renderHoles() {
 
 export function renderPlayers() {
     const container = document.getElementById("player-list");
-    container.innerHTML = "";
+    container.replaceChildren();
 
     const grid = document.createElement("div");
     grid.className = "editor-grid";
 
     mapData.players.forEach((player, index) => {
-        const field = document.createElement("div");
-        field.className = "field";
-
-        field.innerHTML = `
-            <h4>Spieler ${index + 1}</h4>
-
-            <div class="editor-row">
-                <label>X: <span class="val-x">${player.x}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${player.x}" class="player-x-slider">
-                    <input type="number" value="${player.x}" class="player-x-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Y: <span class="val-y">${player.y}</span></label>
-                <div class="editor-inputs">
-                    <input type="range" min="0" max="2000" value="${player.y}" class="player-y-slider">
-                    <input type="number" value="${player.y}" class="player-y-num">
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <label>Farbe</label>
-                <input type="color" value="${player.color}" class="player-color">
-            </div>
-
-            <div class="editor-row">
-                <label>Team</label>
-                <select class="player-team">
-                    <option value="1" ${player.team == 1 ? "selected" : ""}>Team 1</option>
-                    <option value="2" ${player.team == 2 ? "selected" : ""}>Team 2</option>
-                    <option value="3" ${player.team == 3 ? "selected" : ""}>Team 3</option>
-                    <option value="4" ${player.team == 4 ? "selected" : ""}>Team 4</option>
-                </select>
-            </div>
-
-            <button class="delete-player">Löschen</button>
-        `;
+        const field = createElement("div", { className: "field" });
+        field.appendChild(createElement("h4", { text: `Spieler ${index + 1}` }));
+        const x = createNumberRow("X", player.x, "player-x-slider", "player-x-num", 0, 2000);
+        const y = createNumberRow("Y", player.y, "player-y-slider", "player-y-num", 0, 2000);
+        const color = createColorRow("player-color", player.color);
+        const team = createTeamRow(player.team);
+        const remove = createElement("button", { className: "delete-player", text: "Löschen" });
+        field.append(x.row, y.row, color.row, team.row, remove);
 
         const bind = (slider, num, label, key) => {
             slider.addEventListener("input", () => {
@@ -360,18 +269,18 @@ export function renderPlayers() {
             });
         };
 
-        bind(field.querySelector(".player-x-slider"), field.querySelector(".player-x-num"), field.querySelector(".val-x"), "x");
-        bind(field.querySelector(".player-y-slider"), field.querySelector(".player-y-num"), field.querySelector(".val-y"), "y");
+        bind(x.slider, x.number, x.label, "x");
+        bind(y.slider, y.number, y.label, "y");
 
-        field.querySelector(".player-color").addEventListener("input", e => {
+        color.input.addEventListener("input", e => {
             player.color = e.target.value;
         });
 
-        field.querySelector(".player-team").addEventListener("change", e => {
+        team.select.addEventListener("change", e => {
             player.team = Number(e.target.value);
         });
 
-        field.querySelector(".delete-player").addEventListener("click", () => {
+        remove.addEventListener("click", () => {
             mapData.players.splice(index, 1);
             renderPlayers();
         });
@@ -382,7 +291,36 @@ export function renderPlayers() {
     container.appendChild(grid);
 }
 
+function createNumberRow(labelText, value, sliderClass, numberClass, min, max) {
+    const row = createElement("div", { className: "editor-row" });
+    const label = createElement("label", { text: `${labelText}: ` });
+    const displayedValue = createElement("span", { className: "val", text: value });
+    label.appendChild(displayedValue);
+    const inputs = createElement("div", { className: "editor-inputs" });
+    const slider = createElement("input", { className: sliderClass, type: "range", min, max, value });
+    const number = createElement("input", { className: numberClass, type: "number", value });
+    inputs.append(slider, number);
+    row.append(label, inputs);
+    return { row, slider, number, label: displayedValue };
+}
 
+function createColorRow(className, value) {
+    const row = createElement("div", { className: "editor-row" });
+    const input = createElement("input", { className, type: "color", value });
+    row.append(createElement("label", { text: "Farbe" }), input);
+    return { row, input };
+}
+
+function createTeamRow(value) {
+    const row = createElement("div", { className: "editor-row" });
+    const select = createElement("select", { className: "player-team", value });
+    for (let team = 1; team <= 4; team++) {
+        select.appendChild(createElement("option", { value: team, text: `Team ${team}` }));
+    }
+    select.value = String(value);
+    row.append(createElement("label", { text: "Team" }), select);
+    return { row, select };
+}
 
 
 

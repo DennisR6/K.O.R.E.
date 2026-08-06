@@ -1,7 +1,8 @@
 import type { IEntity } from "../entity/Entity.js";
-import type { PhysicsStrategy } from "../physics/physics.js";
+import { getOuterContainmentBoundaries } from "../structures/containment.js";
+import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
-import type { IGameContext, ISystem } from "./types.js";
+import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /**
  * Das Herzstück der Bewegungs-Logik.
@@ -16,7 +17,8 @@ import type { IGameContext, ISystem } from "./types.js";
  * 3. Update der Positionen
  * 4. Stoppen von Mikrobewegungen via `STOP_THRESHOLD`
  */
-export class PhysicsSystem implements ISystem {
+export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
+	public readonly systemId = "core.physics";
 	/** 
 	 * Geschwindigkeit, unter der eine Entity als "stehend" betrachtet wird.
 	 * Verhindert unendliches "Zittern" durch Gleitkomma-Berechnungen.
@@ -26,6 +28,14 @@ export class PhysicsSystem implements ISystem {
 	strategy: PhysicsStrategy
 
 	DEFAULTFPS: number;
+	/**
+	 * Pairs that still touch after the previous completed physics tick. Collision
+	 * effects are edge-triggered: persistent contacts continue to resolve but do
+	 * not invoke callbacks until a later separation and re-entry.
+	 */
+	private activeContactPairs = new Set<string>();
+	private readonly objectIdentities = new WeakMap<object, string>();
+	private nextObjectIdentity = 1;
 
 	/**
 	 * @param strategy - Die zu verwendende Physik-Logik.
@@ -34,8 +44,9 @@ export class PhysicsSystem implements ISystem {
 	constructor(strategy: PhysicsStrategy, fps: number = 1) {
 		this.strategy = strategy
 		this.DEFAULTFPS = fps
-		strategy.printSettings("Physics")
+		// strategy.printSettings("Physics")
 	}
+	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { fps: this.DEFAULTFPS, contacts: [...this.activeContactPairs].sort() } }; }
 
 	/**
 	 * Orchestriert die Physik-Berechnung pro Tick.
@@ -47,17 +58,57 @@ export class PhysicsSystem implements ISystem {
 	 * 
 	 * @see PhysicsStrategy für die mathematischen Details der Berechnung.
 	 */
-	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, friction: number): void {
+	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, _friction: number): void {
+		this.registerContactIdentities(ctx);
+		const activeEntities = ctx.entities.getEntities().filter(e => !e.isDead() && e.physicsEnabled());
+
+		let maxDisplacement = 0;
+		for (const e of activeEntities) {
+			const vel = e.getVel();
+			const disp = Math.hypot(vel.x, vel.y) * dt;
+			if (disp > maxDisplacement) {
+				maxDisplacement = disp;
+			}
+		}
+
+		const stepSize = CCD_MAX_STEP_SIZE;
+		const substeps = maxDisplacement > stepSize
+			? Math.min(Math.ceil(maxDisplacement / stepSize), MAX_CCD_SUBSTEPS)
+			: 1;
+
+		const contactedPairsThisTick = new Set<string>();
+		if (substeps <= 1) {
+			this.resolveAllCollisions(ctx, contactedPairsThisTick);
+		} else {
+			// Substep CCD: rewind entities to start-of-tick position
+			for (const e of activeEntities) {
+				const vel = e.getVel();
+				const pos = e.getPos();
+				e.setPos({
+					x: pos.x - vel.x * dt,
+					y: pos.y - vel.y * dt,
+				});
+			}
+
+			const subDt = dt / substeps;
+
+			for (let step = 0; step < substeps; step++) {
+				for (const e of activeEntities) {
+					if (e.isDead() || !e.physicsEnabled()) continue;
+					const vel = e.getVel();
+					const pos = e.getPos();
+					e.setPos({
+						x: pos.x + vel.x * subDt,
+						y: pos.y + vel.y * subDt,
+					});
+				}
+				this.resolveAllCollisions(ctx, contactedPairsThisTick);
+			}
+		}
+
 		let totalMovement = 0;
-
-		this.resolveAllCollisions(ctx);
-
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
-			this.strategy.applyFriction(entity, dt)
-
-			entity.tick(dt, friction);
-			this.constrainToMap(entity, ctx);
-
+			if (entity.isDead() || !entity.physicsEnabled()) return;
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
 				entity.setVel({ x: 0, y: 0 });
@@ -65,6 +116,11 @@ export class PhysicsSystem implements ISystem {
 				totalMovement += speed;
 			}
 		});
+
+		// Only contacts that remain at the end of this complete tick are carried
+		// forward. A one-call rectangle/line depenetration must not suppress a
+		// later genuine entry merely because it was touched earlier this tick.
+		this.activeContactPairs = this.collectCurrentContactPairs(ctx);
 	}
 
 	/**
@@ -72,42 +128,235 @@ export class PhysicsSystem implements ISystem {
 	 * Wendet Kollisionen und Reibung an und stoppt Objekte, die die 
 	 * Mindestgeschwindigkeit unterschreiten.
 	 */
-	private resolveAllCollisions(ctx: IGameContext) {
+	private resolveAllCollisions(ctx: IGameContext, contactedPairsThisTick: Set<string> = new Set<string>()) {
 		const { entities, structures } = ctx;
-		const enitityArr = entities.getEntities()
+		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
+		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
+			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
+		);
 
-		for (let i = 0; i < enitityArr.length; i++) {
-			const entityA = enitityArr[i];
+		let prevTotalOverlap = Infinity;
+		for (let iter = 0; iter < MAX_CONTACT_SOLVER_ITERATIONS; iter++) {
+			for (let i = 0; i < enitityArr.length; i++) {
+				const entityA = enitityArr[i];
 
-			for (let j = i + 1; j < enitityArr.length; j++) {
-				const entityB = enitityArr[j];
-				if (this.strategy.checkCollision(entityA, entityB)) {
-					this.strategy.handleCollision(entityA, entityB);
-
-					// JETZT prüfen: Sind sie nach der Korrektur immer noch überlappend?
+				for (let j = i + 1; j < enitityArr.length; j++) {
+					const entityB = enitityArr[j];
 					if (this.strategy.checkCollision(entityA, entityB)) {
-						// throw new Error("PHYSIK-PANIC: Depenetration fehlgeschlagen (Entity-Entity)");
+						this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
 					}
 				}
-			}
 
-			// Entity-Structure Kollisionen
-			for (let j = 0; j < structures.length; j++) {
-				const structureB = structures[j] as Structure;
-				if (this.strategy.checkCollision(entityA, structureB)) {
-					this.strategy.handleCollision(entityA, structureB);
-
-					// JETZT prüfen
+				for (let j = 0; j < structures.length; j++) {
+					const structureB = structures[j] as Structure<SHAPE>;
+					if (!structureB.physicsEnabled()) continue
+					// Containment-only boundaries must never resolve as filled obstacles.
+					if (this.isContainmentOnly(structureB, containmentBoundaries)) continue
 					if (this.strategy.checkCollision(entityA, structureB)) {
-						// console.log(`PANIC-DEBUG: Entity Pos: ${JSON.stringify(entityA.getPos())}`);
-						// console.log(`PANIC-DEBUG: Structure Bounds: ${JSON.stringify(structureB.getBounds())}`);
-						// throw new Error("PHYSIK-PANIC: Depenetration fehlgeschlagen (Entity-Structure)");
+						this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
 					}
 				}
 			}
+
+			let totalOverlap = 0;
+			for (let i = 0; i < enitityArr.length; i++) {
+				const entityA = enitityArr[i];
+				for (let j = i + 1; j < enitityArr.length; j++) {
+					const entityB = enitityArr[j];
+					totalOverlap += this.getOverlapDistance(entityA, entityB);
+				}
+				for (let j = 0; j < structures.length; j++) {
+					const structureB = structures[j] as Structure<SHAPE>;
+					if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries)) continue;
+					totalOverlap += this.getOverlapDistance(entityA, structureB);
+				}
+			}
+
+			if (totalOverlap <= 1e-4) {
+				break;
+			}
+
+			const progress = prevTotalOverlap - totalOverlap;
+			// Circle/circle resolution intentionally leaves the contact slop. Do
+			// not label the final sub-slop convergence tail as an unresolved trap.
+			if (iter === MAX_CONTACT_SOLVER_ITERATIONS - 1 && totalOverlap > PHYSICS_CONTACT_SLOP && progress < 1e-4) {
+				throw new Error("Unresolved penetration after max solver iterations");
+			}
+			prevTotalOverlap = totalOverlap;
 		}
 	}
 
+	/** Exports lifecycle state only at completed outer-tick boundaries. */
+	public toSnapshotState(): PhysicsContactState {
+		return { activePairs: [...this.activeContactPairs].sort() };
+	}
+
+	/** Restores validated contact entries after entities and structures exist. */
+	public restoreSnapshotState(state: PhysicsContactState | undefined, ctx: IGameContext): void {
+		this.registerContactIdentities(ctx);
+		if (!state) {
+			this.activeContactPairs.clear();
+			return;
+		}
+		if (!Array.isArray(state.activePairs) || !state.activePairs.every(pair => typeof pair === "string")) {
+			throw new Error("Invalid physics contact snapshot");
+		}
+		const available = this.collectCurrentContactPairs(ctx);
+		const restored = new Set<string>();
+		let previous = "";
+		for (const pair of state.activePairs) {
+			if (pair <= previous || restored.has(pair) || !available.has(pair)) throw new Error("Invalid physics contact snapshot pair");
+			restored.add(pair);
+			previous = pair;
+		}
+		this.activeContactPairs = restored;
+	}
+
+	private registerContactIdentities(ctx: IGameContext): void {
+		for (const entity of ctx.entities.getEntities()) {
+			const id = typeof (entity as any).getId === "function" ? entity.getId() : this.nextObjectIdentity++;
+			this.objectIdentities.set(entity, `entity:${id}`);
+		}
+		ctx.structures.forEach((structure, index) => {
+			this.objectIdentities.set(structure, `structure:${index}`);
+		});
+	}
+
+	private getObjectIdentity(obj: object): string {
+		let id = this.objectIdentities.get(obj);
+		if (id === undefined) {
+			id = `runtime:${this.nextObjectIdentity++}`;
+			this.objectIdentities.set(obj, id);
+		}
+		return id;
+	}
+
+	private getPairKey(a: object, b: object): string {
+		const idA = this.getObjectIdentity(a);
+		const idB = this.getObjectIdentity(b);
+		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+	}
+
+	private handlePairCollision(
+		entityA: IPhysics<SHAPE>,
+		entityB: IPhysics<SHAPE>,
+		contactedPairs: Set<string>,
+	) {
+		const pairKey = this.getPairKey(entityA, entityB);
+		if (contactedPairs.has(pairKey) || this.activeContactPairs.has(pairKey)) {
+			const origA = entityA.onCollision;
+			const origB = entityB.onCollision;
+			entityA.onCollision = () => {};
+			entityB.onCollision = () => {};
+			try {
+				this.strategy.handleCollision(entityA, entityB);
+			} finally {
+				entityA.onCollision = origA;
+				entityB.onCollision = origB;
+			}
+		} else {
+			contactedPairs.add(pairKey);
+			this.strategy.handleCollision(entityA, entityB);
+		}
+	}
+
+	/**
+	 * Returns the eligible contacts after all solver/CCD passes. This is kept
+	 * separate from the per-tick dispatch set so an entry followed by immediate
+	 * separation does not become a stale persistent contact.
+	 */
+	private collectCurrentContactPairs(ctx: IGameContext): Set<string> {
+		const contacts = new Set<string>();
+		const entities = ctx.entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled());
+		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
+			getOuterContainmentBoundaries(ctx.structures as unknown as IPhysics<SHAPE>[]),
+		);
+
+		for (let i = 0; i < entities.length; i++) {
+			const entity = entities[i];
+			for (let j = i + 1; j < entities.length; j++) {
+				const other = entities[j];
+				if (this.strategy.checkCollision(entity, other)) contacts.add(this.getPairKey(entity, other));
+			}
+			for (const structure of ctx.structures as Structure<SHAPE>[]) {
+				if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries)) continue;
+				if (this.strategy.checkCollision(entity, structure)) contacts.add(this.getPairKey(entity, structure));
+			}
+		}
+		return contacts;
+	}
+
+
+	private getOverlapDistance(entityA: IPhysics<SHAPE>, entityB: IPhysics<SHAPE>): number {
+		const shapeA = entityA.getShape();
+		const shapeB = entityB.getShape();
+		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.CIRCLE) {
+			const cA = entityA as IPhysics<SHAPE.CIRCLE>;
+			const cB = entityB as IPhysics<SHAPE.CIRCLE>;
+			const dx = cB.getPos().x - cA.getPos().x;
+			const dy = cB.getPos().y - cA.getPos().y;
+			const dist = Math.hypot(dx, dy);
+			const rSum = cA.getBounds().x + cB.getBounds().x;
+			const overlap = rSum - dist;
+			return Math.max(overlap - PHYSICS_CONTACT_SLOP, 0);
+		}
+		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.RECTANGLE) {
+			const c = entityA as IPhysics<SHAPE.CIRCLE>;
+			const r = entityB as IPhysics<SHAPE.RECTANGLE>;
+			const cPos = c.getPos();
+			const rPos = r.getPos();
+			const rBounds = r.getBounds();
+			const radius = c.getBounds().x;
+			const closestX = Math.max(rPos.x, Math.min(cPos.x, rPos.x + rBounds.x));
+			const closestY = Math.max(rPos.y, Math.min(cPos.y, rPos.y + rBounds.y));
+			const dx = cPos.x - closestX;
+			const dy = cPos.y - closestY;
+			const distance = Math.hypot(dx, dy);
+			const overlap = radius - distance;
+			return Math.max(overlap - 0.01, 0);
+		}
+		if (shapeA === SHAPE.RECTANGLE && shapeB === SHAPE.CIRCLE) {
+			return this.getOverlapDistance(entityB, entityA);
+		}
+		if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.LINE) {
+			const c = entityA as IPhysics<SHAPE.CIRCLE>;
+			const l = entityB as IPhysics<SHAPE.LINE>;
+			const start = l.getPos();
+			const end = l.getBounds();
+			const segmentX = end.x - start.x;
+			const segmentY = end.y - start.y;
+			const lengthSq = segmentX * segmentX + segmentY * segmentY;
+			const cPos = c.getPos();
+			const factor = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((cPos.x - start.x) * segmentX + (cPos.y - start.y) * segmentY) / lengthSq));
+			const closestX = start.x + segmentX * factor;
+			const closestY = start.y + segmentY * factor;
+			const dx = cPos.x - closestX;
+			const dy = cPos.y - closestY;
+			const distance = Math.hypot(dx, dy);
+			const radius = c.getBounds().x;
+			const overlap = radius - distance;
+			return Math.max(overlap - 0.01, 0);
+		}
+		if (shapeA === SHAPE.LINE && shapeB === SHAPE.CIRCLE) {
+			return this.getOverlapDistance(entityB, entityA);
+		}
+		return 0;
+	}
+
+	/**
+	 * Returns whether a structure serves containment only and must be skipped
+	 * by solid-collision resolution. Explicit `"both"` and `"solid"` roles are
+	 * always resolved as filled; an explicit `"containment"` role or a
+	 * recognized outer containment boundary (default role) is never filled.
+	 */
+	private isContainmentOnly(structureB: Structure<SHAPE>, containmentBoundaries: Set<IPhysics<SHAPE>>): boolean {
+		const role = structureB.getCollisionRole();
+		if (role === "both" || role === "solid") return false;
+		if (role === "containment") return true;
+		return containmentBoundaries.has(structureB);
+	}
+
+	//@ts-ignore
 	private constrainToMap(entity: IEntity, _ctx: IGameContext) {
 		const pos = entity.getPos();
 		const radius = entity.getBounds().x; // Angenommen Kreis-Radius

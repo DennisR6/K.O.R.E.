@@ -1,7 +1,22 @@
-import type { GameStateType, TurnPacket } from "../engine/types.js";
+import type { GameState, IInput, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { Vector2D } from "../physics/physics.js";
+import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
+import type { MatchResult } from "../rules/types.js";
 import type { IStructure } from "../structures/types.js";
+import type { ISettingsSerialize } from "../engine/types.js";
+import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
+export type { SystemSettings } from "../engine/contracts/systemSettings.js";
+
+/** Versioned, data-only identity of a registered engine system. */
+type SystemSettings = CanonicalSystemSettings;
+
+/**
+ * Serializable system contract. IDs are explicit protocol constants; runtime
+ * constructor names are intentionally not part of persistence.
+ */
+export interface ISerializableSystem<T extends SystemSettings = SystemSettings> extends ISystem, ISettingsSerialize<T> {
+	readonly systemId: string;
+}
 
 /**
  * Der IGameContext ist das "Gedächtnis" eines Frames.
@@ -15,12 +30,25 @@ export interface IGameContext {
 	/** Liste aller statischen Hindernisse auf der Map. */
 	structures: IStructure[];
 	/** Der aktuelle globale Spielzustand (z.B. "WAITING", "RUNNING", "GOAL"). */
-	state: GameStateType;
+	state: GameState;
 	/** Die globalen Konfigurationen (Physik-Werte, Timer-Limits, etc.). */
 	// settings: GameSettings;
 	dt: number;
-
+	mouse: { turn: IInput | null }
 	worldSize: Vector2D;
+	physics: PhysicsStrategy
+	currTurn: number
+	activeTeam: number
+	myTeamNumber: number
+	/**
+	 * Atomically completes the match with the given result.
+	 *
+	 * Transitions the game state to `GameState.Game_over` and stores the
+	 * `MatchResult` in a single operation owned by the handler. The invariant
+	 * `Game_over always implies a valid MatchResult` is enforced here: systems
+	 * must never set `state` or the result independently.
+	 */
+	finishMatch(result: MatchResult): void;
 }
 
 /**
@@ -37,6 +65,16 @@ export interface ISystem {
 	 * @param friction - Die aktuell wirkende globale Reibung.
 	 */
 	ticker(ctx: IGameContext, dt: number, friction: number): void;
+
+	/**
+	 * Optionaler letzter Mutations-Schritt eines Ticks.
+	 *
+	 * Wird vom `GameHandler` NACH Systems, Map-Pickups, Struktur-Ticks und
+	 * Post-Tickern aufgerufen. Systeme, die einen autoritativen Endzustand
+	 * (z.B. Playback-Snapshots) anwenden, müssen dies hier tun, damit keine
+	 * andere Gameplay-Mutation den finalen Zustand danach noch verändern kann.
+	 */
+	flush?(ctx: IGameContext): void;
 }
 
 /**
@@ -57,6 +95,6 @@ export interface IPlayback extends ISystem {
  * Der ISimulator ist die "Rechen-Instanz" der Engine.
  * Er berechnet physikalische Zustände in der Zukunft, ohne sie grafisch anzuzeigen.
  */
-export interface ISimulator extends ISystem {
+export interface ISimulator {
 	isStatic(entities: EntityManager): boolean;
 }

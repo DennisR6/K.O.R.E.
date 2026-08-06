@@ -21,5 +21,37 @@ jobs:
     - name: Install dependencies
       run: bun install --frozen-lockfile
 
-    - name: Test
-      run: bun test
+    - name: Fast deterministic test suite
+      run: bun run test:fast
+
+    - name: Map matrix verification
+      run: bun run test:maps
+
+    - name: Map matrix fresh runs comparison
+      run: bun run test:maps:matrix
+
+  # Section 16: real-browser verification is part of the release gate. Runs
+  # headless Chromium (BROWSER_HEADED is only for local reproduction) against
+  # the generated dist bundle and the isolated Bun test server lifecycle.
+  browser:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Install Playwright Chromium
+      run: bunx playwright install chromium --with-deps
+
+    - name: Browser smoke test (startup/menu)
+      run: bun run test:browser:smoke
+
+    - name: Full browser gameplay verification
+      run: bun run test:browser:full

@@ -1,59 +1,14 @@
-import { AssetList } from "../assetManager/assets/assetRegistry.js";
+import type { UUID } from "crypto";
 import type { RenderContext } from "../engine/RenderContext.js";
-import type { IItem } from "../item/Items.js";
-import { ItemWall } from "../item/ItemWall.js";
-import type { IPhysics, Vector2D } from "../physics/physics.js";
-import { GameLogger } from "../utils/log.js";
+import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
+import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
+import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
+import { MetaEffect } from "../effects/effects.js";
+import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
+import type { InventoryItem, ItemDocument } from "../item/types.js";
+import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 
-
-/**
- * Das Konfigurations-Interface für einen Spieler.
- * 
- * Es dient als Vorlage (Data Transfer Object), um einen Spieler mit 
- * individuellen Eigenschaften wie Teamzugehörigkeit, Farbe oder Icons zu erstellen.
- * Alle Eigenschaften außer den Koordinaten sind optional, um maximale Flexibilität
- * beim Erstellen von Gast-Accounts oder Standard-Entities zu bieten.
- */
-export interface IPlayerType {
-	/** 
-	 * Eindeutige ID des Spielers. 
-	 * Wenn nicht angegeben, generiert die Engine meist eine temporäre ID. 
-	 */
-	id?: number | string;
-
-	/** Startposition auf der X-Achse (Welt-Einheiten). */
-	x: number;
-
-	/** Startposition auf der Y-Achse (Welt-Einheiten). */
-	y: number;
-
-	/** 
-	 * Team-Zugehörigkeit. 
-	 * Kann genutzt werden, um Kollisionen im selben Team zu ignorieren 
-	 * oder für die Punkteberechnung.
-	 */
-	team?: string[];
-
-	/** 
-	 * Die Primärfarbe des Spielers.
-	 * Wird vom Renderer genutzt, um den Kreis oder Effekte einzufärben.
-	 */
-	color?: string;
-
-	/** 
-	 * Pfad oder Schlüssel für das Icon/Avatar.
-	 * Der P5Renderer nutzt dies, um die entsprechende Textur aus dem Cache zu laden.
-	 */
-	playericon?: AssetList;
-
-	/** 
-	 * Der physikalische Radius (Größe) des Spielers.
-	 * Standardwert ist meist 12, falls hier nichts definiert wird.
-	 */
-	size?: number;
-	hoop?: AssetList;
-}
 
 /**
  * Die Player-Klasse ist die konkrete Umsetzung einer IEntity.
@@ -66,11 +21,13 @@ export interface IPlayerType {
 export class Player implements IEntity {
 	private hp: number = 30;
 	/** Eindeutige ID (wird via crypto.randomUUID() generiert, falls nicht vorhanden). */
-	private id: number | string;
+	private id: UUID;
 	/** Die aktuelle Position auf dem Spielfeld (Top-Left des Begrenzungsrahmens). */
 	private position: Vector2D;
 	/** Aktuelle Bewegungsrichtung und Geschwindigkeit. */
 	private velocity: Vector2D;
+	private rotation: number = 0;
+	private angularVelocity: number = 0;
 	/** Bestimmt, wie stark das Objekt bei Kollisionen abprallt (0 bis 1). */
 	private bouncyness: number;
 	/** Trägheit des Objekts bei Kollisionen. */
@@ -79,46 +36,55 @@ export class Player implements IEntity {
 	private size: number = 1;
 	/** Individuelle Reibung (überschreibt bei Bedarf die globale Reibung). */
 	private friction: number | undefined;
-
-	private team: string[];
+	private team: number[] = [];
 	private color: string;
 	private playericon: AssetList;
-	private shape: "circle"
+	private shape: SHAPE.CIRCLE = SHAPE.CIRCLE
 	private hoop: AssetList
 	private isPhysicsEnabled: boolean = true
+	private dead: boolean = false
+	private items: InventoryItem[] = []
 
-	constructor() {
-		// Standardwerte für ein leeres Objekt
-		this.id = 0
+	private effectAlways: Effect[] = []
+	private effectCollision: Effect[] = []
+	private effectRound: Effect[] = []
+
+	constructor(settings: PlayerSettings) {
+		const normalized = createPlayerSettings(settings)
+		this.id = normalized.id
 		this.position = { x: 0, y: 0 }
-		this.team = []
-		this.color = "red"
-		this.playericon = AssetList.picturePenguinPenguinIdleFrame1PNG
-		this.shape = "circle"
-		this.velocity = { x: 0, y: 0 } as Vector2D
+		this.velocity = { x: 0, y: 0 }
 		this.bouncyness = 1
-		this.friction = undefined;
-		this.size = 20;
-		this.mass = 1
-		this.hoop = AssetList.pictureReifenWEBP
+		this.color = "red"
+		this.playericon = normalized.playericon
+		this.hoop = normalized.hoop
+		this.applySettings(normalized)
 	}
 
-	/**
-		 * Initialisiert den Spieler mit echten Daten.
-		 * Berechnet die Position so, dass der Ankerpunkt in der Mitte liegt.
-		 * @param player - Die Konfigurationsdaten (IPlayer).
-		 */
-	public new(player: IPlayerType) {
-		this.setId(player.id || crypto.randomUUID())
-		this.setPos({ x: player.x, y: player.y })
-		this.setVel({ x: 0, y: 0 })
-		this.team = player.team ?? this.team;
-		this.setColor(player.color ?? "red")
-		this.setPlayerIcon(player.playericon ?? this.playericon)
-		this.setSize(player.size ?? 20)
-		this.shape = "circle";
-		this.hoop = player.hoop ?? AssetList.pictureReifenPNG
-		return this;
+	/** Reconciles this live entity with a complete authoritative snapshot. */
+	public applySettings(settings: PlayerSettings): void {
+		this.id = settings.id
+		this.position = { ...settings.position }
+		this.velocity = { ...settings.velocity }
+		this.rotation = settings.rotation
+		this.angularVelocity = settings.angularVelocity
+		this.hp = settings.hp
+		this.bouncyness = settings.bouncyness
+		this.setMass(settings.mass)
+		this.size = settings.size
+		this.friction = settings.friction
+		this.team = [...settings.team]
+		this.color = settings.color
+		this.playericon = settings.playericon
+		this.shape = settings.shape
+		this.hoop = settings.hoop
+		this.isPhysicsEnabled = settings.isPhysicsEnabled
+		this.dead = settings.isDead
+		this.items = settings.inventory.map(item => ({ ...item }))
+		this.effectAlways = []
+		this.effectCollision = []
+		this.effectRound = []
+		for (const effect of settings.effects) this.addEffect(effect.trigger, new MetaEffect(effect))
 	}
 
 	/**
@@ -126,7 +92,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		if (this.hp <= 0) return
+		if (this.dead) return
 		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
@@ -135,51 +101,165 @@ export class Player implements IEntity {
 		 * Integriert die Geschwindigkeit in die Position basierend auf der vergangenen Zeit.
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
-	public tick(deltaTime: number, _globalFriction: number) {
-		if (this.hp <= 0) {
-			this.position.x = 1_000_000;
-			this.position.y = 1_000_000;
-			this.velocity.x = 0
-			this.velocity.y = 0
-			return
-		}
-		this.position.x += this.velocity.x * deltaTime;
-		this.position.y += this.velocity.y * deltaTime;
+	public tick(deltaTime: number, _globalFriction: number, drift: number = 0, stopThreshold: number = 0) {
+		if (this.dead || !this.isPhysicsEnabled) return
+		this.effectAlways.forEach(effect => {
+			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime, drift, rotation: this.rotation, stopThreshold })
+			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
+		})
 	}
 
-	public setId(id: string | number): void { this.id = id }
-	public getId(): number | string { return this.id }
-	public setMass(inertia: number): void { this.mass = Math.min(inertia, 1) }
+	public setId(id: UUID): void { this.id = id }
+	public getId(): UUID { return this.id }
+	public setMass(inertia: number): void {
+		validatePlayerMass(inertia)
+		this.mass = Math.min(inertia, 1)
+	}
 	public getMass(): number { return this.mass }
 	public setVel(v: { x: number, y: number }) { this.velocity.x = v.x; this.velocity.y = v.y; }
 	public getVel() { return { x: this.velocity.x, y: this.velocity.y }; }
+	public setRotation(rotation: number): void { this.rotation = rotation }
+	public getRotation(): number { return this.rotation }
+	public setAngularVelocity(angularVelocity: number): void { this.angularVelocity = angularVelocity }
+	public getAngularVelocity(): number { return this.angularVelocity }
 	public setBounceFactor(bounce: number): void { this.bouncyness = bounce }
 	public getBounds(): Vector2D { return { x: this.size, y: this.size } }
 	public getBounceFactor(): number { return this.bouncyness }
 	public setPos(pos: Vector2D): void { this.position = { x: pos.x, y: pos.y }; }
 	public getPos(): Vector2D { return { x: this.position.x, y: this.position.y } }
 
-	public setFriction(friction: number): void { this.friction = friction }
+	public setFriction(friction: number | undefined): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public addHP(hp: number): void { this.hp += hp; GameLogger.info(this.hp) }
+	public addHP(hp: number): void {
+		this.hp += hp;
+		if (this.hp <= 0) this.setIsDead(true);
+	}
 	public getHP(): number { return this.hp }
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
 	public setPlayerIcon(icon: AssetList): void { this.playericon = icon; }
 	public setSize(size: number): void { this.size = size; }
-	public getShape(): "circle" { return this.shape }
+	public getShape(): SHAPE.CIRCLE { return this.shape }
 
-	public onCollision({ entity: _ }: { entity: IPhysics; }): void { }
-	public getTeam(): string[] { return this.team }
-	public isActive(): boolean { return this.isActive() }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE>; }): void { this.effectCollision.forEach(effect => effect.apply(entity)) }
+	public getTeam(): number[] { return this.team }
+	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
-	//@ts-ignore
-	public AddItem(item: IItem): void { this.itemlist.push(item) }
-	//@ts-ignore
-	public getInventory(): IItem[] { return new ItemWall({}) }
-	public use(_item: IItem): void { }
+	public use(item: ItemDocument): void { consumeInventoryItem(this.items, item) }
+
+	/** Applies an allowlisted setting exactly, including serializable state changes. */
+	public setSetting(key: PlayerSettingKey, value: SettingValue): void {
+		switch (key) {
+			case "hp": if (typeof value === "number") this.setHPAndDeath(value); break
+			case "mass": if (typeof value === "number") this.setMass(value); break
+			case "size": if (typeof value === "number") this.setSize(value); break
+			case "friction": if (typeof value === "number" || value === undefined) this.setFriction(value); break
+			case "position": if (isVector(value)) this.setPos(value); break
+			case "velocity": if (isVector(value)) this.setVel(value); break
+			case "team": if (Array.isArray(value) && value.every(Number.isFinite)) this.setTeam([...value]); break
+			case "dead": if (typeof value === "boolean") this.setIsDead(value); break
+			case "physicsEnabled": if (typeof value === "boolean") this.setPhysicsEnabled(value); break
+		}
+	}
+
+	/** Adds a numeric/vector setting or appends team IDs. */
+	public addSetting(key: PlayerSettingKey, value: SettingValue): void {
+		if (typeof value === "number") {
+			switch (key) {
+				case "hp": this.setHPAndDeath(this.hp + value); return
+				case "mass": this.setMass(this.mass + value); return
+				case "size": this.setSize(this.size + value); return
+				case "friction": this.setFriction((this.friction ?? 0) + value); return
+			}
+		}
+		if (isVector(value)) {
+			if (key === "position") this.setPos({ x: this.position.x + value.x, y: this.position.y + value.y })
+			if (key === "velocity") this.setVel({ x: this.velocity.x + value.x, y: this.velocity.y + value.y })
+		}
+		if (key === "team" && Array.isArray(value) && value.every(Number.isFinite)) this.team = [...new Set([...this.team, ...value])]
+	}
+
+	/** Removes numeric/vector values, team IDs, or clears boolean settings. */
+	public removeSetting(key: PlayerSettingKey, value: SettingValue): void {
+		if (typeof value === "number") {
+			switch (key) {
+				case "hp": this.setHPAndDeath(this.hp - value); return
+				case "mass": this.setMass(this.mass - value); return
+				case "size": this.setSize(this.size - value); return
+				case "friction": this.setFriction((this.friction ?? 0) - value); return
+			}
+		}
+		if (isVector(value)) {
+			if (key === "position") this.setPos({ x: this.position.x - value.x, y: this.position.y - value.y })
+			if (key === "velocity") this.setVel({ x: this.velocity.x - value.x, y: this.velocity.y - value.y })
+		}
+		if (key === "team" && Array.isArray(value) && value.every(Number.isFinite)) this.team = this.team.filter(team => !value.includes(team))
+		if (key === "dead") this.setIsDead(false)
+		if (key === "physicsEnabled") this.setPhysicsEnabled(false)
+	}
+
+	public toSettings(): PlayerSettings {
+		const sett0 = this.effectAlways.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Always, triggerValue: [] } as FullEffectSettings })
+		const sett1 = this.effectCollision.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Collision, triggerValue: [] } as FullEffectSettings })
+		const sett2 = this.effectRound.map(x => { return { ...x.toSettings(), trigger: EffectTrigger.Round, triggerValue: [] } as FullEffectSettings })
+		return {
+			id: this.getId(),
+			position: { ...this.position },
+			velocity: { ...this.velocity },
+			rotation: this.rotation,
+			angularVelocity: this.angularVelocity,
+			playericon: this.playericon,
+			team: this.team,
+			hoop: this.hoop,
+			color: this.color,
+			size: this.size,
+			hp: this.hp,
+			bouncyness: this.bouncyness,
+			mass: this.mass,
+			friction: this.friction,
+			shape: this.shape,
+			isPhysicsEnabled: this.isPhysicsEnabled,
+			isDead: this.dead,
+			effects: [
+				...sett0,
+				...sett1,
+				...sett2,
+			],
+			inventory: this.items.map(item => ({ ...item })),
+		}
+	}
+	public setTeam(team: number[]) { this.team = team }
+	public setHoop(asset: AssetList) { this.hoop = asset }
+	public setBouncyness(bouncyness: number) { this.bouncyness = bouncyness }
+	public setIsDead(dead: boolean) {
+		this.dead = dead
+		if (dead) this.setVel({ x: 0, y: 0 })
+	}
+	public AddItem(item: InventoryItem): void { this.items.push({ ...item }) }
+	public setInventory(items: InventoryItem[]): void { this.items = items.map(item => ({ ...item })) }
+	public resetItemUses(): void { resetInventoryTurnUses(this.items) }
+	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
+	public isDead(): boolean { return this.dead }
+	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
+	public addEffect(trigger: EffectTrigger, effect: Effect): void {
+		switch (trigger) {
+			case EffectTrigger.Always: this.effectAlways.push(effect); break
+			case EffectTrigger.Collision: this.effectCollision.push(effect); break
+			case EffectTrigger.Round: this.effectRound.push(effect); break
+			default: console.error("TODO", trigger)
+		}
+	}
+
+	private setHPAndDeath(hp: number): void {
+		this.hp = hp
+		if (hp <= 0) this.setIsDead(true)
+	}
 }
 
+function isVector(value: SettingValue): value is Vector2D {
+	return typeof value === "object" && value !== null && "x" in value && "y" in value &&
+		typeof value.x === "number" && typeof value.y === "number"
+}

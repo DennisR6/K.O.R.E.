@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=/home/eugen/projekte/kore/src-tauri/.libs
+includedir=${prefix}/include
+
+Name: JavaScriptCoreGTK
+Description: GTK version of JavaScriptCore engine
+Version: 4.0.0
+Libs: -L${libdir} -L/usr/lib/x86_64-linux-gnu -ljavascriptcoregtk-4.1
+Cflags: -I${includedir}

@@ -8,6 +8,7 @@
 
 // --- Typ-Definitionen ---
 export type { IPlayback, ISystem, IGameContext } from "./types.js";
+export { createSystemFromSettings, validateSystemSettings, validateSystemSettingsList } from "./systemSettings.js";
 export type { IUiSystem } from "./UiSystem.js"
 // --- Kern-Systeme ---
 
@@ -15,7 +16,6 @@ export type { IUiSystem } from "./UiSystem.js"
  * Das PhysicsSystem kümmert sich um die Berechnung von Bewegungen und Kollisionen.
  * Es ist der "Motor" unter der Haube.
  */
-export { PhysicsSystem } from "../systems/PhysicsSystem.js";
 
 /** 
  * Das PlaybackSystem ermöglicht das Abspielen von aufgezeichneten Spielzügen.
@@ -26,11 +26,12 @@ export { PlaybackSystem } from "./PlayBackSystem.js";
 /** 
  * Das BoundarySystem ist für die visuelle Darstellung der Spielfeldbegrenzungen zuständig.
  */
-export { BoundarySystem } from "./BoundarySystem.js";
+// export { BoundarySystem } from "./BoundarySystem.js";
 
 /** 
  * Das Round2PlayerSystem steuert die Spiellogik: 
  * Wer ist dran? Wann beginnt eine neue Runde? Wer hat gewonnen?
  */
-export { Round2PlayerSystem } from "./RoundSystem.js";
+export { RoundPlayerSystem } from "./RoundSystem.js";
+export { TurnSystem } from "./TurnSystem.js";
 export { Simulator } from "./Simulator.js"

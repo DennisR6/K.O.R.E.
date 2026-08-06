@@ -1,8 +1,9 @@
 import type p5Types from "p5";
 import type { RenderContext } from "./RenderContext.js";
-import { GameLogger } from "../utils/log.js";
 import { assetManager } from "../assetManager/loader.js";
 import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
+import { calculateDesktopLayout } from "../ui/layout.js";
+import { FitWorldCamera } from "../ui/FitWorldCamera.js";
 /**
  * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
  * 
@@ -20,6 +21,7 @@ export class P5Renderer implements RenderContext {
 	public WORLD_SIZE_X: number = 16
 	public WORLD_SIZE_Y: number = 9
 	private renderScale = 1;
+	private camera: FitWorldCamera;
 
 	/** 
 	 * @param p - Die p5Types.-Instanz.
@@ -34,10 +36,12 @@ export class P5Renderer implements RenderContext {
 		this.WORLD_SCALE_Y = scale * 9
 		this.WORLD_SIZE_X = worldWidth
 		this.WORLD_SIZE_Y = worldWidth / 16 * 9
+		this.camera = new FitWorldCamera({ x: this.WORLD_SIZE_X, y: this.WORLD_SIZE_Y });
 	}
 	setWorldSize(x: number, y: number) {
 		this.WORLD_SIZE_X = x
 		this.WORLD_SIZE_Y = y
+		this.camera.setWorldSize({ x, y })
 	}
 	setScaleFactor(x: number) {
 		this.p5ctx.resetMatrix()
@@ -49,12 +53,15 @@ export class P5Renderer implements RenderContext {
 	setFillColor(color: string): void {
 		this.p5ctx.fill(color)
 	}
+	setNoFill(): void {
+		this.p5ctx.noFill()
+	}
 	setStrokeColor(color: string): void {
 		this.p5ctx.stroke(color)
 	}
 	drawCircle(x: number, y: number, radius: number) {
 		if (isNaN(x) || isNaN(y) || isNaN(radius)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.circle(this.toPixel(x), this.toPixel(y), this.toPixel(radius * 2))
@@ -64,7 +71,7 @@ export class P5Renderer implements RenderContext {
 	}
 	drawText(text: string, x: number, y: number, fontSize?: number) {
 		if (isNaN(x) || isNaN(y)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.textSize(fontSize || 12)
@@ -86,7 +93,7 @@ export class P5Renderer implements RenderContext {
 			this.p5ctx.pop();
 		}
 	}
-	drawImage(key: AssetKey, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
+	drawImage(key: AssetKey | string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
 		const img = assetManager.get(key);
 		if (!img) return;
 
@@ -127,21 +134,21 @@ export class P5Renderer implements RenderContext {
 	}
 	rotate(x: number): void {
 		if (Number.isNaN(x)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.rotate(x)
 	}
 	scale(x: number): void {
 		if (isNaN(x)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.scale(x)
 	}
 	translate(x: number, y: number): void {
 		if (Number.isNaN(x) || Number.isNaN(y)) {
-			GameLogger.error("Variable not Specified")
+			console.error("Variable not Specified")
 			return
 		}
 		this.p5ctx.translate(x, y)
@@ -157,15 +164,9 @@ export class P5Renderer implements RenderContext {
 		this.p5ctx.mouseWheel = func
 	}
 	resizeCanvas(x: number, y: number): void {
-		const maxWidth = x * 0.9;
-		const maxHeight = y * 0.9;
-
-		// Berechne die Skalierungsfaktoren für beide Dimensionen
-		const scaleX = maxWidth / this.WORLD_SIZE_X;
-		const scaleY = maxHeight / this.WORLD_SIZE_Y;
-
-		// Wähle den kleineren Faktor, damit alles in das Fenster passt (Contain-Prinzip)
-		const finalScale = Math.min(scaleX, scaleY);
+		const layout = calculateDesktopLayout(x, y, this.WORLD_SIZE_X, this.WORLD_SIZE_Y);
+		this.camera.resize(this.WORLD_SIZE_X * layout.scaleFactor, this.WORLD_SIZE_Y * layout.scaleFactor);
+		const finalScale = this.camera.getScaleFactor();
 
 		// Setze die Skalierung
 		this.setScaleFactor(finalScale);
@@ -190,4 +191,12 @@ export class P5Renderer implements RenderContext {
 	toWorld(val: number) { return val / this.renderScale; }
 
 	windowScale = () => (window.window.innerWidth * 0.9) / 16
+
+	public noStroke(): void {
+  	this.p5ctx.noStroke();
+	}
+	public getTextWidth(text: string, size: number): number {
+  		this.p5ctx.textSize(size);
+  		return this.p5ctx.textWidth(text);
+	}
 }
