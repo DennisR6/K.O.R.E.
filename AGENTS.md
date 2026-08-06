@@ -180,9 +180,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range
   and deterministic vector behavior.
   The declarative official-item path is active for
-  validation and inventory tests, and `GameHandler.useItem()` resolves and
-  grants the mystery-box reward; other item effects are not yet installed by
-  `GameHandler.useItem()`.
+  validation and inventory tests, and `GameHandler.useItem()` resolves ordinary
+  effects through the public KORE item-runtime boundary, persisting installed
+  effect state in player snapshots; the mystery-box reward remains the special
+  inventory-grant path.
 
 ### AI drivers
 
@@ -879,9 +880,9 @@ not desired design:
 - Mouse tracking depends on a browser-created `defaultCanvas0` global.
 - Gameplay release qualification is blocked pending an external two-match
   human session. Automated evidence retains blocked matrix configurations,
-  hard-AI safety-limit/agency limitations, and item effects that disappear after
-  `GameHandler.useItem()` consumes them (the mystery-box reward grant is the
-  one installed item effect).
+  hard-AI safety-limit/agency limitations, and some item lifecycle integrations
+  (for example, persistent effect expiration and temporary-wall cleanup) still
+  require gameplay qualification.
 - The editor stores one validated temporary draft in browser `localStorage` and
   restores it on startup; its embedded and popup previews use the current
   browser origin.

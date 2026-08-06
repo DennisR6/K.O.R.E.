@@ -3,7 +3,7 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
-import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
+import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
@@ -45,6 +45,7 @@ export class Player implements IEntity {
 	private isPhysicsEnabled: boolean = true
 	private dead: boolean = false
 	private items: InventoryItem[] = []
+	private itemEffects: ItemEffectSettings[] = []
 
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
@@ -82,6 +83,7 @@ export class Player implements IEntity {
 		this.isPhysicsEnabled = settings.isPhysicsEnabled
 		this.dead = settings.isDead
 		this.items = settings.inventory.map(item => ({ ...item }))
+		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) }))
 		this.effectAlways = []
 		this.effectCollision = []
 		this.effectRound = []
@@ -230,6 +232,7 @@ export class Player implements IEntity {
 				...sett2,
 			],
 			inventory: this.items.map(item => ({ ...item })),
+			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) })) } : {}),
 		}
 	}
 	public setTeam(team: number[]) { this.team = team }
@@ -245,6 +248,8 @@ export class Player implements IEntity {
 	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
+	public addItemEffect(effect: ItemEffectSettings): void { this.itemEffects.push({ type: effect.type, typeValue: structuredClone(effect.typeValue) }) }
+	public getItemEffects(): ItemEffectSettings[] { return this.itemEffects.map(effect => ({ type: effect.type, typeValue: structuredClone(effect.typeValue) })) }
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
 		switch (trigger) {
 			case EffectTrigger.Always: this.effectAlways.push(effect); break

@@ -4,7 +4,7 @@ import type { IDrawer, ITicker } from "../engine/RenderContext.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
 import type { IKillable, PlayerSettings } from "./types.js";
-import type { Effect } from "../effects/types.js";
+import type { Effect, ItemEffectSettings } from "../effects/types.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 
 /**
@@ -44,6 +44,8 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	setTeam(team: number[]): void
 	setRotation(rotation: number): void
 	getEffects(): Effect[]
+	addItemEffect(effect: ItemEffectSettings): void
+	getItemEffects(): ItemEffectSettings[]
 }
 export interface IInventory {
 	AddItem(item: InventoryItem): void

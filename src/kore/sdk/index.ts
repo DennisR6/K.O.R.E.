@@ -9,6 +9,7 @@ import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
+import { applyRuntimeForceEffects, createRuntimeItemEffect, resolveRuntimeItemEffects } from "./itemRuntime.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
@@ -32,6 +33,7 @@ import {
 	type KoreMatchHeader,
 	type KoreMatchOptions,
 } from "./match.js";
+export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
 
 
 type SerializableEffect = { toSettings(): EffectSettings };
@@ -551,6 +553,8 @@ export const kore = {
 	createItem(input: KoreItemInput): ItemDocument { return createItem(input); },
 	/** Composes validated declarative item effects in declaration order. */
 	composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> { return composeItemEffects(...effects); },
+	/** Resolves JSON item effects through the authoritative KORE runtime boundary. */
+	itemRuntime: { create: createRuntimeItemEffect, resolve: resolveRuntimeItemEffects, applyForce: applyRuntimeForceEffects },
 	/** Creates an empty two-team map builder with an 800×450 containment boundary. */
 	createDefaultMap(options: KoreMapOptions = {}): KoreMapBuilder {
 		const worldSize = options.worldSize ?? { x: 800, y: 450 };
