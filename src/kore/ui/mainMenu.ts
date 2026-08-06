@@ -6,6 +6,7 @@ import { MAP_CATALOG } from "../../content/mapCatalog.js";
 import { koreAudio, createKoreAudioSettings } from "../audio.js";
 import { KoreMenuCommand, KoreMenuElement, KoreMenuScreen, KoreMenuStyle, KoreMenuText } from "./menuVocabulary.js";
 import { createEnglishLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
+import { getSelectableGameModes } from "../../rules/modeCatalog.js";
 
 export type KoreMenuMapIntent = "local" | "online" | "battle" | "ai";
 export type KoreMainMenuSettings = {
@@ -189,19 +190,19 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "h
     ...(intent === "online"
       ? [ui.text({ id: "map-online-note", text: translate(language, KoreMenuText.OnlineMapNote), rect: rect(155, 54, 560, 20), style: "kore.menu.map-note" })]
       : []),
-    ...eligible.map((entry, index) =>
+    ...eligible.flatMap((entry) => (intent === "local" || intent === "online" ? getSelectableGameModes() : [undefined]).map((mode, index) =>
       ui.button({
-        id: `map-${intent}-${difficulty ?? "root"}-${entry.id}`,
-        text: `${entry.name} (${entry.id})`,
-        rect: rect(150, 80 + index * rowHeight, 500, 32),
+        id: `map-${intent}-${difficulty ?? "root"}-${entry.id}${mode ? `-${mode.id}` : ""}`,
+        text: `${entry.name}${mode ? ` - ${mode.name}` : ""} (${entry.id})`,
+        rect: rect(150, 80 + (eligible.indexOf(entry) * (intent === "local" || intent === "online" ? getSelectableGameModes().length : 1) + index) * rowHeight, 500, 32),
         style: "kore.menu.map-row",
-        action: ui.action.emit(MAIN_ACTIONS.selectMap, { intent, mapId: entry.id, ...(difficulty ? { difficulty } : {}) }),
+        action: ui.action.emit(MAIN_ACTIONS.selectMap, { intent, mapId: entry.id, ...(mode ? { modeId: mode.id } : {}), ...(difficulty ? { difficulty } : {}) }),
       })
-    ),
+    )),
     ui.button({
       id: `map-${intent}-${difficulty ?? "root"}-back`,
       text: translate(language, KoreMenuText.Back),
-      rect: rect(150, 80 + eligible.length * rowHeight + 8, 120, 34),
+      rect: rect(150, 80 + eligible.length * ((intent === "local" || intent === "online") ? getSelectableGameModes().length : 1) * rowHeight + 8, 120, 34),
       style: "kore.button.blue-back",
       action: ui.action.back(),
     }),

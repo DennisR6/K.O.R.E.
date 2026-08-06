@@ -37,6 +37,7 @@ const usersettings = {
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
 	replayToken: uri.searchParams.get("replay") ?? "",
 	mapPreference: uri.searchParams.get("map") ?? undefined,
+	modePreference: uri.searchParams.get("mode") ?? undefined,
 }
 
 const requestedLanguage = uri.searchParams.get("lang");
@@ -67,8 +68,8 @@ if (isUiDebugSandboxUrl(uri)) {
 	const viewer = startReplayViewer(usersettings.replayToken, activeLanguage!)
 	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
-	 router = new LocalMatchSceneRouter(undefined, undefined, mapId => {
-		void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
+	 router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
+		 void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}), ...(modeId ? { modePreference: modeId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
 	}, activeLanguage!)
 	handler = router.getHandler()
 	startGame(handler, () => router?.getHandler() ?? handler)
@@ -113,7 +114,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	}
 	socket.addEventListener("open", () => {
 		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingFindingOpponent])
-		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference }))
+		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference, modePreference: usersettings.modePreference }))
 	})
 	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
 	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))

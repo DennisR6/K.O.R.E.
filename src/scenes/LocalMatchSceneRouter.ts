@@ -3,7 +3,6 @@ import { GameState } from "../engine/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
-import { CANONICAL_PLAYABLE_MATCH } from "../settings/canonicalPlayableMatch.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
 import { koreAudio } from "../kore/audio.js";
@@ -13,7 +12,7 @@ import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 
-export type LocalHandlerFactory = (mapId: string) => GameHandler;
+export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
@@ -32,7 +31,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public constructor(
 		private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler,
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
-		private readonly onPlayOnline?: (mapId?: string) => void,
+		private readonly onPlayOnline?: (mapId?: string, modeId?: string) => void,
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
 	) {
 		this.handler = new GameHandler();
@@ -45,7 +44,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public getHandler(): GameHandler { return this.handler; }
 	public getError(): string | undefined { return this.error; }
 	public getMapId(): string | null { return this.mapId; }
-	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode?.id === CANONICAL_PLAYABLE_MATCH.id; }
+	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode !== undefined; }
 	public isResultVisible(): boolean {
 		if (this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined) this.hud?.applyProjection(createKoreHudProjection(this.handler, this.handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined));
 		return this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined;
@@ -56,10 +55,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
 	/** Starts exactly one canonical hotseat match on the given map; failures leave the menu handler usable. */
-	public startLocalMatch(mapId: string = "ice-map-v1"): boolean {
+	public startLocalMatch(mapId: string = "ice-map-v1", modeId?: string): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		this.mode = "hotseat";
-		return this.startScene(() => this.createLocalHandler(mapId), mapId);
+		return this.startScene(() => this.createLocalHandler(mapId, modeId), mapId);
 	}
 
 	/**
@@ -167,13 +166,13 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuSurface() {
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) }, createMainMenuComposition(this.language).build());
+		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) }, createMainMenuComposition(this.language).build());
 	}
 }
 
 /** Builds a local hotseat match handler on any browser-available catalog map. */
-export function createLocalGameplayHandler(mapId: string = "ice-map-v1"): GameHandler {
-	return createMatchHandler({ mode: "hotseat", mapId });
+export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameModeId?: string): GameHandler {
+	return createMatchHandler({ mode: "hotseat", mapId, gameModeId });
 }
 
 /**

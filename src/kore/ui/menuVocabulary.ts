@@ -1,6 +1,7 @@
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import type { AiDifficulty } from "../../ai/types.js";
 import { LANGUAGE_KEYS } from "../../i18n/language.js";
+import { getSelectableGameModes } from "../../rules/modeCatalog.js";
 
 /** KORE-owned menu vocabulary. These values serialize as strings for generic UI. */
 export enum KoreMenuId {
@@ -107,7 +108,7 @@ export type KoreMenuCommandMessage =
 	| { type: KoreMenuCommand.StartLocal; payload: undefined }
 	| { type: KoreMenuCommand.OpenLocalMaps; payload: undefined }
 	| { type: KoreMenuCommand.OpenAiMaps; payload: { difficulty: KoreMenuDifficulty } }
-	| { type: KoreMenuCommand.SelectMap; payload: { intent: KoreMenuMapIntent; mapId: string; difficulty?: KoreMenuDifficulty } };
+	| { type: KoreMenuCommand.SelectMap; payload: { intent: KoreMenuMapIntent; mapId: string; difficulty?: KoreMenuDifficulty; modeId?: string } };
 
 export function isKoreMenuCommand(value: string): value is KoreMenuCommand { return COMMANDS.has(value); }
 export function isKoreMenuMapIntent(value: unknown): value is KoreMenuMapIntent { return typeof value === "string" && INTENTS.has(value); }
@@ -121,8 +122,8 @@ export function parseKoreMenuCommand(command: string, payload: JsonValue | undef
 		return { type: command, payload: { difficulty: payload.difficulty } };
 	}
 	if (command === KoreMenuCommand.SelectMap) {
-		if (!isRecord(payload) || !isKoreMenuMapIntent(payload.intent) || typeof payload.mapId !== "string" || (payload.difficulty !== undefined && !isKoreMenuDifficulty(payload.difficulty))) return undefined;
-		return { type: command, payload: { intent: payload.intent, mapId: payload.mapId, ...(payload.difficulty === undefined ? {} : { difficulty: payload.difficulty }) } };
+		if (!isRecord(payload) || !isKoreMenuMapIntent(payload.intent) || typeof payload.mapId !== "string" || (payload.difficulty !== undefined && !isKoreMenuDifficulty(payload.difficulty)) || (payload.modeId !== undefined && (typeof payload.modeId !== "string" || !getSelectableGameModes().some(mode => mode.id === payload.modeId)))) return undefined;
+		return { type: command, payload: { intent: payload.intent, mapId: payload.mapId, ...(payload.difficulty === undefined ? {} : { difficulty: payload.difficulty }), ...(payload.modeId === undefined ? {} : { modeId: payload.modeId }) } };
 	}
 	if (payload !== undefined) return undefined;
 	return { type: command, payload: undefined } as KoreMenuCommandMessage;

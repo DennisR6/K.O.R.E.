@@ -133,6 +133,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
 	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
 	if (settings.gameMode !== undefined) {
+		if (settings.gameMode.schemaVersion !== undefined && settings.gameMode.schemaVersion !== 1) throw new Error("Unsupported game mode schema version")
 		validateItemEconomySettings(settings.gameMode.itemEconomy)
 		const draw = settings.gameMode.itemEconomy.randomDraw
 		if (draw && !draw.itemIds.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {

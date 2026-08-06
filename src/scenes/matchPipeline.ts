@@ -9,6 +9,7 @@ import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "
 import { buildMapSettings } from "../content/mapCatalog.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
+import { applyGameMode } from "../rules/modeCatalog.js";
 
 /** Bounded hard-AI search for browser-responsible KI-vs-KI decisions. */
 export const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
@@ -22,6 +23,7 @@ export type MatchPipelineConfig = {
 	mapId: string;
 	difficulty?: AiDifficulty;
 	seed?: number;
+	gameModeId?: string;
 };
 
 /**
@@ -34,6 +36,7 @@ export type MatchPipelineConfig = {
 export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const seed = config.seed ?? (config.mode === "hotseat" ? 12345 : Math.floor(Math.random() * 0x7fffffff));
 	const settings = buildMapSettings(config.mapId, createCanonicalPlayableMatchSettings());
+	if (config.gameModeId) applyGameMode(settings, config.gameModeId);
 	const difficulty = config.difficulty ?? "medium";
 	const header = config.mode === "human-vs-ai"
 		? { myTeam: [0] as number[], allTeams: ["Human", `${difficulty} KI`], ai: kore.ai.createSettings({ difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) }) }

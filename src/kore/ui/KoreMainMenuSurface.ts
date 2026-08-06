@@ -11,9 +11,9 @@ import { Canvas2DUiRenderer, type UiElementState } from "./koreUiTheme.js";
 
 export interface KoreMainMenuCallbacks {
     onPlayLocal?: () => void;
-    onSelectMap?: (mapId: string) => void;
+    onSelectMap?: (mapId: string, modeId?: string) => void;
     getStartError?: () => string | undefined;
-    onPlayOnline?: (mapId?: string) => void;
+    onPlayOnline?: (mapId?: string, modeId?: string) => void;
     onPlayAiBattle?: (mapId: string) => void;
     onPlayAiOpponent?: (difficulty: AiDifficulty, mapId: string) => void;
 }
@@ -82,12 +82,12 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 
     private selectMap(payload: UiCommand["payload"]): void {
         if (!payload || typeof payload !== "object") return;
-        const value = payload as { intent?: KoreMenuMapIntent; mapId?: string; difficulty?: AiDifficulty };
+        const value = payload as { intent?: KoreMenuMapIntent; mapId?: string; difficulty?: AiDifficulty; modeId?: string };
         if (typeof value.mapId !== "string") return;
         if (value.intent === "battle") this.callbacks.onPlayAiBattle?.(value.mapId);
-        else if (value.intent === "online") this.callbacks.onPlayOnline?.(value.mapId);
+        else if (value.intent === "online") this.callbacks.onPlayOnline?.(value.mapId, value.modeId);
         else if (value.intent === "ai" && value.difficulty) this.callbacks.onPlayAiOpponent?.(value.difficulty, value.mapId);
-        else if (value.intent === "local") this.callbacks.onSelectMap?.(value.mapId);
+        else if (value.intent === "local") this.callbacks.onSelectMap?.(value.mapId, value.modeId);
     }
 
     private confirm(command: string): void { if (this.initialSettings.metadata.confirmationCommands.includes(command)) this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId, this.initialSettings.metadata.confirmationSoundId)); }

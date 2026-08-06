@@ -105,7 +105,7 @@ export type UnTypedNetworkMessage =
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
-export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, mapId?: string }
+export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, mapId?: string, modeId?: string }
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
 }
@@ -113,6 +113,7 @@ export interface NetworkLogin {
 	type: NetworkMessageType.LOGIN,
 	userid: UUID | undefined,
 	mapPreference?: string,
+	modePreference?: string,
 }
 export interface NetworkGame {
 	type: NetworkMessageType.GAME,

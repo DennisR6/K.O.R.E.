@@ -19,6 +19,7 @@ export interface KoreGameModeInput {
 	maxItemsPerTurn?: number;
 	winCondition?: WinCondition;
 	itemEconomy?: ItemEconomySettings;
+	schemaVersion?: 1;
 }
 
 /** Mode-specific header applied to a match definition. */
@@ -64,6 +65,7 @@ export interface KoreMatchDefinition {
 export function createGameMode(input: KoreGameModeInput): GameModeSettings {
 	if (!input || typeof input.id !== "string" || input.id.trim() === "") throw new Error("A game mode requires a non-empty id");
 	const mode: GameModeSettings = {
+		schemaVersion: input.schemaVersion ?? 1,
 		id: input.id,
 		phases: [...input.phases],
 		maxItemsPerTurn: input.maxItemsPerTurn ?? 0,
@@ -77,6 +79,7 @@ export function createGameMode(input: KoreGameModeInput): GameModeSettings {
 }
 
 function validateGameMode(mode: GameModeSettings): void {
+	if (mode.schemaVersion !== undefined && mode.schemaVersion !== 1) throw new Error("Unsupported game mode schema version");
 	// The interpreter constructor is the data-only rule boundary: it rejects
 	// empty phases, misplaced item phases, inconsistent allowances, and
 	// malformed item economies without touching any simulation state.

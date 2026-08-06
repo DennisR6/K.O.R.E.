@@ -34,6 +34,7 @@ import {
 	type KoreMatchHeader,
 	type KoreMatchOptions,
 } from "./match.js";
+import { GAME_MODE_CATALOG_SCHEMA_VERSION, getGameModeCatalogEntry, getSelectableGameModes } from "../../rules/modeCatalog.js";
 export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
 
 
@@ -436,7 +437,7 @@ export class KoreMapBuilder {
 			...(this.hasItemEconomy() ? {
 				gameMode: {
 					id: `${this.options.id}-mode`,
-					phases: [RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics, RulePhase.Complete],
+					phases: [RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics],
 					maxItemsPerTurn: 1,
 					winCondition: WinCondition.LastTeamStanding,
 					itemEconomy: clone(this.itemEconomy),
@@ -644,6 +645,8 @@ export const kore = {
 	 * inside the engine handler runtime factory.
 	 */
 	createGameMode,
+	/** Versioned selectable mode metadata authored at the public KORE boundary. */
+	gameModes: { schemaVersion: GAME_MODE_CATALOG_SCHEMA_VERSION, list: getSelectableGameModes, get: getGameModeCatalogEntry },
 	createMatchSystemProfile,
 	authorMatchSettings,
 	createMatchDefinition,

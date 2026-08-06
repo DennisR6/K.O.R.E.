@@ -96,6 +96,8 @@ export function validateItemEconomySettings(settings: unknown): asserts settings
 
 /** Data-defined gameplay rules, independent from the simulation handler. */
 export interface GameModeSettings {
+	/** Version of the serialized mode contract; legacy snapshots may omit it. */
+	schemaVersion?: 1;
 	id: string;
 	phases: RulePhase[];
 	maxItemsPerTurn: number;

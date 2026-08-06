@@ -68,11 +68,13 @@ export async function buildOnlineJoinUrl(
 		location?: { protocol: string; host: string };
 		configPath?: string;
 		mapPreference?: string;
+		modePreference?: string;
 	} = {},
 ): Promise<string> {
 	const url = new URL(pageUrl);
 	url.searchParams.set("skipmenu", "1");
 	url.searchParams.set("url", await resolveOnlineServerUrl(options));
 	if (options.mapPreference) url.searchParams.set("map", options.mapPreference);
+	if (options.modePreference) url.searchParams.set("mode", options.modePreference);
 	return url.toString();
 }

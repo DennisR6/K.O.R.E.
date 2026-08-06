@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Implemented
 
 ## Objective
 
@@ -43,3 +43,15 @@ Depends on Milestone 40 and supplies mode content to Milestone 48 and Milestone 
 - No direct `RuleInterpreter` or concrete system construction in mode content.
 - No mode-specific bypass of input, server, or replay validation.
 - No subjective mode-balance claim without human-playtest evidence.
+
+## Implementation Record
+
+- Added versioned public mode metadata and two selectable SDK-authored modes:
+  `quick-slip-v1` and `power-rush-v1`.
+- Shared the catalog across deterministic rules, local/AI match construction,
+  SQLite-backed authoritative initialization, replay-origin snapshots, and
+  SDK-authored browser menu selection.
+- Online login now negotiates a validated mode preference; the authoritative
+  `INIT` packet also reports the selected mode ID.
+- `RulePhase.Complete` remains a runtime sentinel and is no longer emitted by
+  `KoreMapBuilder` as a configured phase.
