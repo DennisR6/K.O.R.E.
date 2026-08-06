@@ -269,15 +269,19 @@ After every change, check whether this guide still reflects the implementation a
   adds `AiOpponentSystem`; the battle adds `AiBattleSystem` as the passive mouse
   handler only.
 - `src/scenes/gameplayHud.ts`: shared `installGameplayHud(handler, actions)`
-  installer around the SDK-authored `KoreGameHudSurface` used by every gameplay
-  scene (local, online, standalone). It wires `ItemPhaseUI` from the
+  installer around the SDK-authored `KoreGameHudSurface` used by player-facing
+  gameplay scenes (local, online, standalone). It wires `ItemPhaseUI` from the
   `EmitterSystem`, default offline Pause/Resume/Rematch actions, and refreshes
   the result overlay projection on both the ticker and draw paths; the local
-  pause command freezes transient handler ticks.
+  pause command freezes transient handler ticks. Autonomous KI-vs-KI battles
+  intentionally keep the HUD disabled during simulation and retain their
+  passive AI input handler; the result controls are installed only after the
+  battle reaches `Game_over`.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
   without retaining stale handlers. `createLocalGameplayHandler`,
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
-  `createMatchHandler`; `startScene` installs `installGameplayHud` and the
+  `createMatchHandler`; `startScene` installs `installGameplayHud` for player
+  matches and leaves the KI-vs-KI engine HUD-free, while installing the
   offline match report; battle rematches re-draw the battle seed through a fresh
   scene (injectable `battleSeedSource`, exposed as `getBattleSeed()`), and the
   menu exit releases the local audio source before creating the fresh menu.
