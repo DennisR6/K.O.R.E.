@@ -36,6 +36,7 @@ const PUBLISHED_EXAMPLES = [
 	"05-kore-ui-menu.ts",
 	"06-kore-audio.ts",
 	"07-engine-presentation.ts",
+	"08-kore-content-package.ts",
 ] as const;
 const ALLOWED_EXAMPLE_IMPORTS = new Set([
 	"../src/engine/sdk/index.js",

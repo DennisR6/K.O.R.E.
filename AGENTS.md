@@ -253,6 +253,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
   validated engine-importable `GameSettings` JSON maps, serializable teams,
   spawns, KORE effects/defaults, and KORE handler composition.
+- `src/content/package.ts`: version-one JSON content package schema, canonical
+  hashing, detached loading, dependency/reference validation, and security
+  rejection for maps, items, modes, UI, audio, and presentation declarations.
 - `src/kore/audio.ts`: KORE semantic sound IDs, bus presets, and the optional
   browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
   output-port adapter; `src/menu/AudioManager.ts` owns media resources and

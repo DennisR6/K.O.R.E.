@@ -35,6 +35,7 @@ import {
 	type KoreMatchOptions,
 } from "./match.js";
 import { GAME_MODE_CATALOG_SCHEMA_VERSION, getGameModeCatalogEntry, getSelectableGameModes } from "../../rules/modeCatalog.js";
+import { canonicalizeContentPackage, hashContentPackage, loadContentPackage, validateContentPackage } from "../../content/package.js";
 export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
 
 
@@ -638,6 +639,8 @@ export const kore = {
 	audio: koreAudio,
 	/** KORE AI profiles and the shared validated decision-to-input boundary. */
 	ai: koreAi,
+	/** Safe, detached, versioned SDK content packages. */
+	contentPackage: { validate: validateContentPackage, load: loadContentPackage, canonicalize: canonicalizeContentPackage, hash: hashContentPackage },
 	/**
 	 * Match authoring: canonical handler creation, match composition, systems,
 	 * rule configuration, teams, and mode setup (milestone 28). Definitions
@@ -757,3 +760,4 @@ export const kore = {
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };
 export type { GameSettings } from "../../settings/settings.js";
+export type { ContentPackage, LoadedContentPackage } from "../../content/package.js";

@@ -110,6 +110,15 @@ and enforce the same declarative rules, but published mods must not import
 `src/item/*` directly. A mod cannot introduce a runtime effect by putting a
 function or module path in an item document.
 
+### Versioned content packages
+
+`kore.contentPackage.load()` accepts the version-one JSON package described in
+[`content-package-format.md`](content-package-format.md). It validates maps,
+items, modes, UI, audio, and presentation declarations, checks bounded metadata
+dependencies and cross-document references, and returns detached data plus a
+canonical hash. It never fetches dependencies, imports modules, or executes
+author code.
+
 ## Migration
 
 | Old pattern | Supported replacement |
@@ -161,7 +170,7 @@ Supported authoring entry points are:
 - `src/engine/presentation-sdk/index.ts` for deterministic visual timelines and
   semantic presentation events;
 - `src/kore/sdk/index.ts` for KORE maps, items, matches, AI, audio, and runtime
-  restoration through the `kore` object.
+  restoration through the `kore` object, including versioned content packages.
 
 Supported runtime boundaries are `kore.createHandler()`,
 `kore.createRuntimeMatch()`, `kore.restoreHandler()`, replay reconstruction,

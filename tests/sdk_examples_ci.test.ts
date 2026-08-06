@@ -9,6 +9,7 @@ import { run as runLifecycle } from "../examples/04-kore-match-lifecycle.ts";
 import { run as runMapMod } from "../examples/02-kore-map-mod.ts";
 import { run as runUi } from "../examples/05-kore-ui-menu.ts";
 import { run as runPresentation } from "../examples/07-engine-presentation.ts";
+import { run as runPackage } from "../examples/08-kore-content-package.ts";
 
 const root = resolve(import.meta.dir, "..");
 const allowedExampleImports = new Set([
@@ -70,6 +71,7 @@ test("SDK examples execute deterministically with semantic results", () => {
 		["UI menu", runUi],
 		["audio", runAudio],
 		["presentation", runPresentation],
+		["content package", runPackage],
 	] as const;
 	for (const [name, run] of examples) {
 		const first = run();
