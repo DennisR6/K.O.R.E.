@@ -1,31 +1,12 @@
-export const enum GameAction {
-	Aim = "aim",
-	Charge = "charge",
-	Push = "push",
-	ItemUse = "itemUse",
-}
+import { createDefaultKoreInputBindings, KoreInputAction, type KoreInputBindingDetail, type KoreInputBindings } from "../kore/sdk/input.js";
 
-export interface ActionBindingDetail {
-	keys: string[];
-	mouseButtons?: number[];
-	gamepadButtons?: number[];
-}
-
-export interface GameActionBindings {
-	schemaVersion: number;
-	bindings: Record<GameAction, ActionBindingDetail>;
-}
+export { KoreInputAction as GameAction } from "../kore/sdk/input.js";
+type GameAction = KoreInputAction;
+export type ActionBindingDetail = KoreInputBindingDetail;
+export type GameActionBindings = KoreInputBindings;
 
 export function createDefaultActionBindings(): GameActionBindings {
-	return {
-		schemaVersion: 1,
-		bindings: {
-			[GameAction.Aim]: { keys: ["ArrowLeft", "ArrowRight", "KeyA", "KeyD"], mouseButtons: [0], gamepadButtons: [14, 15] },
-			[GameAction.Charge]: { keys: ["Space", "ArrowUp", "KeyW"], gamepadButtons: [0] },
-			[GameAction.Push]: { keys: ["Enter", "KeyP"], gamepadButtons: [1] },
-			[GameAction.ItemUse]: { keys: ["KeyI", "Digit1"], gamepadButtons: [2] },
-		},
-	};
+	return createDefaultKoreInputBindings();
 }
 
 export class ActionManager {
@@ -36,10 +17,10 @@ export class ActionManager {
 		this.config = {
 			schemaVersion: config?.schemaVersion ?? defaults.schemaVersion,
 			bindings: {
-				[GameAction.Aim]: { ...(config?.bindings?.[GameAction.Aim] ?? defaults.bindings[GameAction.Aim]) },
-				[GameAction.Charge]: { ...(config?.bindings?.[GameAction.Charge] ?? defaults.bindings[GameAction.Charge]) },
-				[GameAction.Push]: { ...(config?.bindings?.[GameAction.Push] ?? defaults.bindings[GameAction.Push]) },
-				[GameAction.ItemUse]: { ...(config?.bindings?.[GameAction.ItemUse] ?? defaults.bindings[GameAction.ItemUse]) },
+				[KoreInputAction.Aim]: { ...(config?.bindings?.[KoreInputAction.Aim] ?? defaults.bindings[KoreInputAction.Aim]) },
+				[KoreInputAction.Charge]: { ...(config?.bindings?.[KoreInputAction.Charge] ?? defaults.bindings[KoreInputAction.Charge]) },
+				[KoreInputAction.Push]: { ...(config?.bindings?.[KoreInputAction.Push] ?? defaults.bindings[KoreInputAction.Push]) },
+				[KoreInputAction.ItemUse]: { ...(config?.bindings?.[KoreInputAction.ItemUse] ?? defaults.bindings[KoreInputAction.ItemUse]) },
 			},
 		};
 	}
