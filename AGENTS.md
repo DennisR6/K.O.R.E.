@@ -315,10 +315,11 @@ After every change, check whether this guide still reflects the implementation a
   gameplay scenes.
 - `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- The SDK main menu offers "1 vs KI" (world rect `(270..530, 112..170)`),
-  "KI vs KI" `(270..530, 176..234)`, "Play Online" `(270..530, 240..298)`,
-  "Play Local Game" `(270..530, 304..362)`, and "Choose Map"
-  `(270..530, 368..426)`. Its KORE composition generates browser-available
+- The SDK main menu offers "1 vs KI" (world rect `(33..165, 114..172)`),
+  "KI vs KI" `(183..315, 114..172)`, "Play Online" `(334..466, 114..172)`,
+  "Play Local Game" `(485..617, 114..172)`, and "Choose Map"
+  `(635..767, 114..172)` (flow layout; a real click on "Play Local Game"
+  lands at world `(551, 143)`). Its KORE composition generates browser-available
   catalog-map screens and filters battle screens to `battleAvailable` maps.
 - `src/menu/AudioManager.ts`: single browser media owner. It resolves KORE
   sound IDs, manages media elements/volume/unlock/disposal, buffers persistent
