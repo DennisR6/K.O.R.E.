@@ -3,6 +3,7 @@ import { GameState, type IMouse } from "../engine/types.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { isValidInput } from "../input/validate.js";
+import { KoreInputCommand, type KoreInputMessage, validateKoreInputMessage } from "../kore/sdk/input.js";
 
 export interface IUiSystem extends ISerializableSystem, IDrawer, IMouse { }
 
@@ -58,6 +59,20 @@ export class UiSystem implements IUiSystem {
 	public setChargePower(power: number): void {
 		if (!Number.isFinite(power) || power < 0) throw new Error("Power must be a non-negative finite number");
 		this.chargePower = Math.min(power, 10);
+	}
+
+	/** Consumes validated semantic pointer commands from browser/touch adapters. */
+	public dispatchInput(message: KoreInputMessage): void {
+		validateKoreInputMessage(message);
+		if (message.command === KoreInputCommand.PointerDown) {
+			this.updateMouse(message.payload.x, message.payload.y);
+			this.handleMousePressed();
+		} else if (message.command === KoreInputCommand.PointerMove) {
+			this.updateMouse(message.payload.x, message.payload.y);
+		} else if (message.command === KoreInputCommand.PointerUp) {
+			this.updateMouse(message.payload.x, message.payload.y);
+			this.handleMouseReleased();
+		}
 	}
 
 	ticker(ctx: IGameContext, _dt: number, _friction: number): void {

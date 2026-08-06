@@ -1,5 +1,6 @@
 import type { ActionManager } from "./actions.js";
 import type { UiSystem } from "../systems/UiSystem.js";
+import { KoreInputCommand } from "../kore/sdk/input.js";
 
 export class TouchInputHandler {
 	private uiSystem: UiSystem;
@@ -23,8 +24,7 @@ export class TouchInputHandler {
 		this.isHolding = true;
 		this.holdStartTime = Date.now();
 
-		this.uiSystem.updateMouse(x, y);
-		this.uiSystem.handleMousePressed();
+		this.uiSystem.dispatchInput({ command: KoreInputCommand.PointerDown, payload: { x, y } });
 	}
 
 	public handleTouchMove(touchEvent: { changedTouches: Array<{ identifier: number; clientX: number; clientY: number }> }, canvasRect?: { left: number; top: number }): void {
@@ -34,7 +34,7 @@ export class TouchInputHandler {
 			if (touch && touch.identifier === this.activeTouchId) {
 				const x = canvasRect ? touch.clientX - canvasRect.left : touch.clientX;
 				const y = canvasRect ? touch.clientY - canvasRect.top : touch.clientY;
-				this.uiSystem.updateMouse(x, y);
+				this.uiSystem.dispatchInput({ command: KoreInputCommand.PointerMove, payload: { x, y } });
 				break;
 			}
 		}
@@ -47,8 +47,7 @@ export class TouchInputHandler {
 			if (touch && touch.identifier === this.activeTouchId) {
 				const x = canvasRect ? touch.clientX - canvasRect.left : touch.clientX;
 				const y = canvasRect ? touch.clientY - canvasRect.top : touch.clientY;
-				this.uiSystem.updateMouse(x, y);
-				this.uiSystem.handleMouseReleased();
+				this.uiSystem.dispatchInput({ command: KoreInputCommand.PointerUp, payload: { x, y } });
 
 				this.activeTouchId = null;
 				this.isHolding = false;
