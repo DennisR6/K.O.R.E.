@@ -1,7 +1,8 @@
-import { GameState, getEngineStateName } from "../../engine/types.js";
+import { GameState } from "../../engine/types.js";
 import type { GameHandler } from "../../engine/Handler.js";
 import { MatchStatus, RulePhase, type MatchResult } from "../../rules/types.js";
 import type { UiSystem } from "../../systems/UiSystem.js";
+import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 
 export interface KoreHudItemProjection { itemId: string; remainingUses: number; enabled: boolean }
 export interface KoreHudWorldPoint { x: number; y: number }
@@ -62,5 +63,27 @@ function rotate(vector: KoreHudWorldPoint, angle: number): KoreHudWorldPoint {
 	return { x: vector.x * Math.cos(angle) - vector.y * Math.sin(angle), y: vector.x * Math.sin(angle) + vector.y * Math.cos(angle) };
 }
 
-export function hudResultText(result: MatchResult | undefined): string { if (!result) return ""; return result.status === MatchStatus.Draw ? "Draw" : `Team ${(result.winnerTeam ?? 0) + 1} wins`; }
-export function hudStateText(state: GameState): string { return getEngineStateName(state); }
+export function hudResultText(result: MatchResult | undefined, language: LanguageCatalog = createEnglishLanguage()): string {
+	if (!result) return "";
+	return result.status === MatchStatus.Draw ? formatLanguage(language, LANGUAGE_KEYS.HudDraw, {}) : formatLanguage(language, LANGUAGE_KEYS.HudTeamWins, { team: (result.winnerTeam ?? 0) + 1 });
+}
+
+export function hudStateText(state: GameState, language: LanguageCatalog = createEnglishLanguage()): string {
+	const key = state === GameState.Starting ? LANGUAGE_KEYS.HudStateStarting
+		: state === GameState.Waiting_for_Players ? LANGUAGE_KEYS.HudStateWaitingPlayers
+		: state === GameState.ChooseTeam ? LANGUAGE_KEYS.HudStateChooseTeam
+		: state === GameState.Your_turn ? LANGUAGE_KEYS.HudStateYourTurn
+		: state === GameState.Opponents_turn ? LANGUAGE_KEYS.HudStateOpponentTurn
+		: state === GameState.Turn_done ? LANGUAGE_KEYS.HudStateTurnDone
+		: state === GameState.Round_done ? LANGUAGE_KEYS.HudStateRoundDone
+		: state === GameState.Simulating ? LANGUAGE_KEYS.HudStateSimulating
+		: state === GameState.Simulating_done ? LANGUAGE_KEYS.HudStateSimulatingDone
+		: state === GameState.Playing ? LANGUAGE_KEYS.HudStatePlaying
+		: state === GameState.Playing_done ? LANGUAGE_KEYS.HudStatePlayingDone
+		: state === GameState.Waiting_for_server ? LANGUAGE_KEYS.HudStateWaiting
+		: state === GameState.Game_over ? LANGUAGE_KEYS.HudStateGameOver
+		: state === GameState.Goal_scored ? LANGUAGE_KEYS.HudStateGoalScored
+		: state === GameState.Error ? LANGUAGE_KEYS.HudStateError
+		: LANGUAGE_KEYS.HudStateUnknown;
+	return formatLanguage(language, key, {});
+}

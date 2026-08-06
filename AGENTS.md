@@ -398,6 +398,13 @@ After every change, check whether this guide still reflects the implementation a
 - `src/utils/ErrorHandling.ts`: error utility.
 - `src/utils/log.ts`: commented logger prototype.
 - `src/types/global.d.ts`: browser globals including `window.game`.
+- `src/i18n/language.ts`: typed JSON language loader. It always loads the
+  complete `en_en` catalog first and overlays the selected language, so
+  missing translations fall back to English. Production UI language is
+  selected with `?lang=en_en` or `?lang=de_de`.
+- `src/kore/ui/statusSurface.ts`, `replayViewerSurface.ts`, and
+  `shareSurface.ts`: engine-rendered production status, replay, and share
+  overlays. They do not create HTML UI elements.
 
 ## Toolchain And Setup
 
@@ -507,6 +514,10 @@ http://localhost:4001/?skipmenu=1
 `?debug=ui` opens the standalone generic UI SDK sandbox instead of normal
 menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
 is intentionally outside `src/engine/ui-sdk/`.
+`?lang=en_en` or `?lang=de_de` selects the production UI language; English is
+the default and the fallback for missing selected-language entries. Production
+loading, replay, share, menu, HUD, and gameplay labels are rendered through
+the engine/UI surfaces rather than HTML overlays.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed
 but currently unused. The main menu's "Play Online" button fetches the
 server's `/config` advertisement (base URL from `KORE_BASE_URL`) and navigates

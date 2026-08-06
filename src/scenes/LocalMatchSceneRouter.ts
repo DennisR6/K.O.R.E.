@@ -2,6 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState } from "../engine/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
+import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
 import { CANONICAL_PLAYABLE_MATCH } from "../settings/canonicalPlayableMatch.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
@@ -10,6 +11,7 @@ import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import { installGameplayHud } from "./gameplayHud.js";
 import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
+import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 
 export type LocalHandlerFactory = (mapId: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -31,8 +33,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly createLocalHandler: LocalHandlerFactory = createLocalGameplayHandler,
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
 		private readonly onPlayOnline?: (mapId?: string) => void,
+		private readonly language: LanguageCatalog = createEnglishLanguage(),
 	) {
 		this.handler = new GameHandler();
+		this.handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTickAndDraw(menu);
@@ -95,6 +99,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.starting = true;
 		try {
 			const next = factory();
+			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
 			this.handler.dispose();
 			this.handler = next;
@@ -117,6 +122,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 
 	private installResultOverlay(handler: GameHandler): void {
 		this.hud = installGameplayHud(handler, {
+			language: this.language,
 			onRematch: () => this.handleResultAction("rematch"),
 			onReturnToMenu: () => this.handleResultAction("menu"),
 			onReplay: () => this.handleResultAction("replay"),
@@ -153,6 +159,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 
 	private createMenuHandler(): GameHandler {
 		const handler = new GameHandler();
+		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		handler.setMouseHandler(menu);
 		handler.addPreTickAndDraw(menu);
@@ -160,7 +167,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuSurface() {
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) });
+		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId: string) => this.startLocalMatch(mapId), getStartError: () => this.error, onPlayOnline: mapId => this.onPlayOnline?.(mapId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId) }, createMainMenuComposition(this.language).build());
 	}
 }
 

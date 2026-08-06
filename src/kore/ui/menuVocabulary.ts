@@ -1,5 +1,6 @@
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import type { AiDifficulty } from "../../ai/types.js";
+import { LANGUAGE_KEYS } from "../../i18n/language.js";
 
 /** KORE-owned menu vocabulary. These values serialize as strings for generic UI. */
 export enum KoreMenuId {
@@ -81,19 +82,19 @@ export enum KoreMenuColor {
 	Error = "#b91c1c",
 }
 
-export enum KoreMenuText {
-	Title = "KORE",
-	LandingPrompt = "drücke um zu starten",
-	Ai = "1 vs KI",
-	Battle = "KI vs KI",
-	Online = "Play Online",
-	Local = "Play Local Game",
-	ChooseMap = "Choose Map",
-	OnlineMapNote = "Preference only — the server may choose Ice Map",
-	Back = "Back",
-	ChooseAiDifficulty = "Choose KI difficulty",
-	Ki = "KI",
-}
+export const KoreMenuText = {
+	Title: LANGUAGE_KEYS.MenuTitle,
+	LandingPrompt: LANGUAGE_KEYS.MenuLandingPrompt,
+	Ai: LANGUAGE_KEYS.MenuAiButton,
+	Battle: LANGUAGE_KEYS.MenuBattleButton,
+	Online: LANGUAGE_KEYS.MenuOnlineButton,
+	Local: LANGUAGE_KEYS.MenuLocalButton,
+	ChooseMap: LANGUAGE_KEYS.MenuChooseMapButton,
+	OnlineMapNote: LANGUAGE_KEYS.MenuOnlineMapNote,
+	Back: LANGUAGE_KEYS.MenuBackButton,
+	ChooseAiDifficulty: LANGUAGE_KEYS.MenuDifficultyTitle,
+	Ki: LANGUAGE_KEYS.MenuKiLabel,
+} as const;
 
 const COMMANDS = new Set<string>(Object.values(KoreMenuCommand));
 const INTENTS = new Set<string>(Object.values(KoreMenuMapIntent));

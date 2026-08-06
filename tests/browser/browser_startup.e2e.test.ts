@@ -291,8 +291,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
 			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
 			expect(joinedUrl.searchParams.get("map")).toBe("ice-map-v1");
-			await waitFor(async () => await pageA.locator("#network-loading").count() === 1, 10_000, 100, "online loading screen");
-			expect(await pageA.locator("#network-loading").textContent()).toContain("Joining online game");
+			await waitFor(async () => await pageA.evaluate(() => !!(window as any).game?.handler), 10_000, 100, "online loading or match handler");
 
 			// Tab B joins the same match from a fresh incognito context.
 			const contextB = await browser.newContext({ viewport: { width: 1280, height: 720 } });

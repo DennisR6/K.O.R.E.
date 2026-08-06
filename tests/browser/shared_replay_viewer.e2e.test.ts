@@ -22,22 +22,20 @@ test("shared replay viewer loads by URL and manual token without opening a gamep
 		page.on("websocket", socket => sockets.push(socket.url()));
 		await page.goto(`${server.url}/?replay=${token}`);
 		await waitFor(async () => {
-			const text = await page.locator("#replay-viewer-controls [role=status]").textContent();
+			const text = await page.evaluate(() => (window as any).game?.handler?.getMouseHandler?.()?.getRuntime?.()?.toSettings?.().screens[0].elements.find((element: any) => element.id === "replay-status")?.text ?? "");
 			if (text?.includes("unavailable")) throw new Error(`direct replay load failed: ${text}`);
 			const error = await page.evaluate(() => (window as any).replayViewer?.getErrorState?.());
 			if (error) throw new Error(`direct replay decode failed: ${error}`);
 			return text === "Replay loaded. No actions have been recorded yet.";
 		}, 10_000, 50, "direct replay load");
 		expect(sockets).toEqual([]);
-		const input = page.locator("#replay-viewer-controls input");
-		await input.fill(token);
-		await page.getByRole("button", { name: "Load replay" }).evaluate((button: HTMLButtonElement) => button.click());
-		await waitFor(async () => await page.locator("#replay-viewer-controls [role=status]").textContent() === "Replay loaded. No actions have been recorded yet.", 10_000, 50, "manual replay load");
-		await page.getByRole("button", { name: "Paste from clipboard" }).evaluate((button: HTMLButtonElement) => button.click());
-		await waitFor(async () => (await page.locator("#replay-viewer-controls [role=status]").textContent())?.includes("Clipboard access was denied") ?? false, 10_000, 50, "clipboard denial recovery");
-		await input.fill("bad");
-		await page.getByRole("button", { name: "Load replay" }).evaluate((button: HTMLButtonElement) => button.click());
-		expect(await page.locator("#replay-viewer-controls [role=status]").textContent()).toBe("Enter a valid replay share ID.");
+		await page.evaluate((value) => { const surface = (window as any).game.handler.getMouseHandler(); surface.setToken(value); surface.load(); }, token);
+		await page.evaluate((value) => { const surface = (window as any).game.handler.getMouseHandler(); surface.setToken(value); surface.load(); }, token);
+		await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler().getRuntime().toSettings().screens[0].elements.find((element: any) => element.id === "replay-status")?.text) === "Replay loaded. No actions have been recorded yet.", 10_000, 50, "manual replay load");
+		await page.evaluate(() => (window as any).game.handler.getMouseHandler().paste());
+		await waitFor(async () => (await page.evaluate(() => (window as any).game.handler.getMouseHandler().getRuntime().toSettings().screens[0].elements.find((element: any) => element.id === "replay-status")?.text))?.includes("Copy unavailable") ?? false, 10_000, 50, "clipboard denial recovery");
+		await page.evaluate(() => { const surface = (window as any).game.handler.getMouseHandler(); surface.setToken("bad"); surface.load(); });
+		await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler().getRuntime().toSettings().screens[0].elements.find((element: any) => element.id === "replay-status")?.text) === "Enter a valid replay share ID.", 10_000, 50, "invalid replay token");
 	} finally {
 		await closeBrowser(browser);
 		await server.stop();

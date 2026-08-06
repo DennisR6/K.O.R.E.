@@ -5,6 +5,7 @@ import { ui, validateUiSettings, type UiMenuSettings } from "../../engine/ui-sdk
 import { MAP_CATALOG } from "../../content/mapCatalog.js";
 import { koreAudio, createKoreAudioSettings } from "../audio.js";
 import { KoreMenuCommand, KoreMenuElement, KoreMenuScreen, KoreMenuStyle, KoreMenuText } from "./menuVocabulary.js";
+import { createEnglishLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
 
 export type KoreMenuMapIntent = "local" | "online" | "battle" | "ai";
 export type KoreMainMenuSettings = {
@@ -40,7 +41,7 @@ export const MAIN_ACTIONS = {
   startLocal: KoreMenuCommand.StartLocal,
 } as const;
 
-function buildUiSettings(): UiMenuSettings {
+function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
   const builder = ui.createMenu({ id: "kore.main-menu.ui", size: SIZE });
 
   // 0. LANDING SCREEN
@@ -51,7 +52,7 @@ function buildUiSettings(): UiMenuSettings {
       elements: [
         ui.text({
           id: "landing-prompt",
-          text: "drücke um zu starten",
+          text: translate(language, KoreMenuText.LandingPrompt),
           rect: rect(200, 180, 480, 58),
           style: "kore.menu.landing-prompt",
           visible: false,
@@ -74,18 +75,18 @@ function buildUiSettings(): UiMenuSettings {
       id: "main",
       layout: ui.layout.vertical({ gap: 28, justify: "space-between", align: "center", padding: { top: 35, right: 30, bottom: 50, left: 30 } }),
       elements: [
-        ui.text({ id: KoreMenuElement.MainTitle, text: KoreMenuText.Title, rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
+        ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
         ui.container({
           id: KoreMenuElement.MainActions,
           rect: rect(0, 0, 740, BTN_H),
           layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
           style: KoreMenuStyle.MainActions,
           elements: [
-            ui.button({ id: KoreMenuElement.MainAi, text: KoreMenuText.Ai, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
-            ui.button({ id: KoreMenuElement.MainBattle, text: KoreMenuText.Battle, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
-            ui.button({ id: KoreMenuElement.MainOnline, text: KoreMenuText.Online, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
-            ui.button({ id: KoreMenuElement.MainLocal, text: KoreMenuText.Local, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
-            ui.button({ id: KoreMenuElement.MainMaps, text: KoreMenuText.ChooseMap, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openLocalMaps) }),
+            ui.button({ id: KoreMenuElement.MainAi, text: translate(language, KoreMenuText.Ai), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
+            ui.button({ id: KoreMenuElement.MainBattle, text: translate(language, KoreMenuText.Battle), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
+            ui.button({ id: KoreMenuElement.MainOnline, text: translate(language, KoreMenuText.Online), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
+            ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
+            ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openLocalMaps) }),
           ],
         }),
       ],
@@ -94,25 +95,26 @@ function buildUiSettings(): UiMenuSettings {
 
   // 2. Map and difficulty screens are all declared in the same SDK menu.
   for (const intent of ["local", "online", "battle"] as const) {
-    builder.addScreen(mapScreen(intent));
+    builder.addScreen(mapScreen(intent, undefined, language));
   }
-  builder.addScreen(difficultyScreen());
+  builder.addScreen(difficultyScreen(language));
   for (const difficulty of ["easy", "medium", "hard"] as const) {
-    builder.addScreen(mapScreen("ai", difficulty));
+    builder.addScreen(mapScreen("ai", difficulty, language));
   }
 
   return builder.build();
 }
 
 export class KoreMainMenuComposition {
-  public build(): KoreMainMenuSettings {
+	public constructor(private readonly language: LanguageCatalog = createEnglishLanguage()) {}
+	public build(): KoreMainMenuSettings {
     const menuMusic = koreAudio.command.menuMusic("kore.menu");
     const audioSettings = createKoreAudioSettings("kore.menu.runtime");
 
     const settings: KoreMainMenuSettings = {
       schemaVersion: 1,
       id: "kore.main-menu",
-      ui: buildUiSettings(),
+      ui: buildUiSettings(this.language),
       audio: {
         ...audioSettings,
         framework: audio.createDefaultFramework(),
@@ -144,8 +146,8 @@ export class KoreMainMenuComposition {
   }
 }
 
-export function createMainMenuComposition(): KoreMainMenuComposition {
-  return new KoreMainMenuComposition();
+export function createMainMenuComposition(language?: LanguageCatalog): KoreMainMenuComposition {
+  return new KoreMainMenuComposition(language);
 }
 
 export function validateKoreMainMenuSettings(value: unknown): asserts value is KoreMainMenuSettings {
@@ -179,13 +181,12 @@ export function validateKoreMainMenuSettings(value: unknown): asserts value is K
 
 export const koreMenuCommands = MAIN_ACTIONS;
 
-function mapScreen(intent: KoreMenuMapIntent, difficulty?: "easy" | "medium" | "hard") {
+function mapScreen(intent: KoreMenuMapIntent, difficulty: "easy" | "medium" | "hard" | undefined, language: LanguageCatalog) {
   const eligible = MAP_CATALOG.filter((entry) => entry.browserAvailable && (intent !== "battle" || entry.battleAvailable));
-  const title = intent === "ai" ? `Choose Map for ${difficulty} KI` : "Choose Map";
   const elements = [
-    ui.text({ id: `map-${intent}-${difficulty ?? "root"}-title`, text: title, rect: rect(155, 25, 580, 42), style: "kore.menu.map-title" }),
+    ui.text({ id: `map-${intent}-${difficulty ?? "root"}-title`, text: translate(language, KoreMenuText.ChooseMap), rect: rect(155, 25, 580, 42), style: "kore.menu.map-title" }),
     ...(intent === "online"
-      ? [ui.text({ id: "map-online-note", text: "Preference only — the server may choose Ice Map", rect: rect(155, 54, 560, 20), style: "kore.menu.map-note" })]
+      ? [ui.text({ id: "map-online-note", text: translate(language, KoreMenuText.OnlineMapNote), rect: rect(155, 54, 560, 20), style: "kore.menu.map-note" })]
       : []),
     ...eligible.map((entry, index) =>
       ui.button({
@@ -198,7 +199,7 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty?: "easy" | "medium" | "
     ),
     ui.button({
       id: `map-${intent}-${difficulty ?? "root"}-back`,
-      text: "Back",
+      text: translate(language, KoreMenuText.Back),
       rect: rect(150, 80 + eligible.length * 50 + 8, 120, 34),
       style: "kore.button.blue-back",
       action: ui.action.back(),
@@ -207,12 +208,12 @@ function mapScreen(intent: KoreMenuMapIntent, difficulty?: "easy" | "medium" | "
   return ui.screen({ id: mapScreenId(intent, difficulty), layout: ui.layout.absolute(), elements });
 }
 
-function difficultyScreen() {
+function difficultyScreen(language: LanguageCatalog) {
   return ui.screen({
     id: "difficulty",
     layout: ui.layout.absolute(),
     elements: [
-      ui.text({ id: "difficulty-title", text: "Choose KI difficulty", rect: rect(265, 64, 300, 32), style: "kore.menu.difficulty-title" }),
+      ui.text({ id: "difficulty-title", text: translate(language, KoreMenuText.ChooseAiDifficulty), rect: rect(265, 64, 300, 32), style: "kore.menu.difficulty-title" }),
       ...(["easy", "medium", "hard"] as const).map((difficulty, index) =>
         ui.button({
           id: `difficulty-${difficulty}`,

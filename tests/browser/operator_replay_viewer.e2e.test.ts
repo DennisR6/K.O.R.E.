@@ -24,7 +24,7 @@ test("operator View replay starts playback for an unfinished persisted match", a
 		expect(location).toMatch(new RegExp(`^${server.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/\\?replay=[a-f0-9]{32}$`));
 		const page = await browser.newPage();
 		await page.goto(location);
-		await waitFor(async () => await page.locator("#replay-viewer-controls [role=status]").textContent() === "Replay loaded. Playback is read-only.", 10_000, 50, "operator replay load");
+		await waitFor(async () => await page.evaluate(() => (window as any).game?.handler?.getMouseHandler?.()?.getRuntime?.()?.toSettings?.().screens[0].elements.find((element: any) => element.id === "replay-status")?.text) === "Replay loaded. Playback is read-only.", 10_000, 50, "operator replay load");
 		await waitFor(async () => await page.evaluate(() => (window as any).replayViewer?.getPlayer?.()?.getHandler?.().getState?.() === "GameState.Playing"), 10_000, 25, "operator replay playback start");
 	} finally {
 		await closeBrowser(browser);

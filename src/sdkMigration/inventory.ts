@@ -65,6 +65,7 @@ export const sourceClassificationRules: readonly SdkMigrationEntry[] = [
 	{ path: "src/systems/", classification: "removal-candidate", owner: "Legacy system composition", targetMilestone: 28, note: "Systems are directly composed outside the KORE match SDK." },
 	{ path: "src/ui/", classification: "removal-candidate", owner: "Legacy UI adapters", targetMilestone: 31, note: "Remaining gameplay/replay UI wiring is not fully SDK-authored." },
 	{ path: "src/utils/", classification: "adapter", owner: "Application utility adapters", targetMilestone: null, note: "IO-neutral helpers are retained unless a later milestone reclassifies them." },
+	{ path: "src/i18n/", classification: "adapter", owner: "Language catalog loader", targetMilestone: null, note: "JSON language loading and English fallback are application boundary concerns." },
 ];
 
 /** Direct legacy authoring paths found during the milestone 27 audit. */

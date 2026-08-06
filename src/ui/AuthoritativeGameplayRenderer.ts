@@ -5,6 +5,7 @@ import { type MatchResult, type RuleState } from "../rules/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { SHAPE } from "../physics/physics.js";
 import type { PlayerSettings } from "../entity/types.js";
+import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 
 /**
  * Read-only boundary used by the gameplay renderer. It deliberately has no
@@ -26,7 +27,9 @@ export interface AuthoritativeGameplayState {
 
 /** Draws the complete live match from the authoritative handler on every frame. */
 export class AuthoritativeGameplayRenderer {
+	private language: LanguageCatalog = createEnglishLanguage();
 	public constructor(private readonly state: AuthoritativeGameplayState) { }
+	public setLanguage(language: LanguageCatalog): void { this.language = language; }
 
 	public draw(renderer: RenderContext): void {
 		const snapshot = this.state.getAuthoritativeRenderState();
@@ -88,7 +91,7 @@ export class AuthoritativeGameplayRenderer {
 			renderer.drawCircle(position.x, position.y, player.size);
 			renderer.line(position.x - player.size / 2, position.y - player.size / 2, position.x + player.size / 2, position.y + player.size / 2);
 			renderer.line(position.x - player.size / 2, position.y + player.size / 2, position.x + player.size / 2, position.y - player.size / 2);
-			renderer.drawText("OUT", position.x - player.size, position.y + player.size + 12, 12);
+			renderer.drawText(this.language.strings["kore.ui.world.out"], position.x - player.size, position.y + player.size + 12, 12);
 			renderer.pop();
 			return;
 		}

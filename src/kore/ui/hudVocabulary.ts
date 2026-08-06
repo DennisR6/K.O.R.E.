@@ -1,4 +1,5 @@
 /** KORE-owned serialized HUD identifiers. Generic UI continues to accept strings. */
+import { LANGUAGE_KEYS } from "../../i18n/language.js";
 export enum KoreHudId {
 	Composition = "kore.game-hud",
 	Runtime = "kore.game-hud.ui",
@@ -58,19 +59,19 @@ export enum KoreHudColor {
 	TeamTwo = "#fb7185",
 }
 
-export enum KoreHudText {
-	Pause = "Pause",
-	Items = "Items",
-	SkipItemPhase = "Skip phase",
-	Rematch = "Rematch",
-	Menu = "Menu",
-	Replay = "Replay",
-	Share = "Share",
-	Paused = "Paused",
-	Resume = "Resume",
-	None = "None",
-	Waiting = "Waiting for opponent/server",
-}
+export const KoreHudText = {
+	Pause: LANGUAGE_KEYS.HudPause,
+	Items: LANGUAGE_KEYS.HudItems,
+	SkipItemPhase: LANGUAGE_KEYS.HudSkipPhase,
+	Rematch: LANGUAGE_KEYS.HudRematch,
+	Menu: LANGUAGE_KEYS.HudMenu,
+	Replay: LANGUAGE_KEYS.HudReplay,
+	Share: LANGUAGE_KEYS.HudShare,
+	Paused: LANGUAGE_KEYS.HudPaused,
+	Resume: LANGUAGE_KEYS.HudResume,
+	None: LANGUAGE_KEYS.HudNone,
+	Waiting: LANGUAGE_KEYS.HudWaiting,
+} as const;
 
 export enum KoreHudItemSlot {
 	First = 0,

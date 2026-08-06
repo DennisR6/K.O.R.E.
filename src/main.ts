@@ -2,7 +2,7 @@ import type p5Types from "p5";
 import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
-import type { GameHandler } from "./engine/Handler.js";
+import { GameHandler } from "./engine/Handler.js";
 import { AudioManager } from "./menu/AudioManager.js";
 import { EmitterSystem } from "./systems/Emitter.js";
 import { UiSystem } from "./systems/UiSystem.js";
@@ -22,8 +22,12 @@ import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
 import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
-import { createReplayViewerControls } from "./menu/replayViewerControls.js";
+import { createKoreReplayViewerSurface } from "./kore/ui/replayViewerSurface.js";
+import { createKoreShareSurface } from "./kore/ui/shareSurface.js";
+import type { IMouse } from "./engine/types.js";
 import { kore } from "./kore/sdk/index.js";
+import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
+import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -34,6 +38,11 @@ const usersettings = {
 	replayToken: uri.searchParams.get("replay") ?? "",
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 }
+
+const requestedLanguage = uri.searchParams.get("lang");
+const activeLanguage: LanguageCatalog | undefined = !isUiDebugSandboxUrl(uri)
+	? await loadLanguage(isLanguageCode(requestedLanguage) ? requestedLanguage : "en_en")
+	: undefined;
 
 const ui = new UiSystem()
 // One browser media owner receives batches from any active game/menu runtime.
@@ -54,16 +63,17 @@ if (isUiDebugSandboxUrl(uri)) {
 	// browser console (`[replay]` prefix) instead of only in the status line.
 	console.log(`[replay] replay mode with token ${usersettings.replayToken}`)
 	handler = kore.createHandler(GameSettings)
-	const viewer = startReplayViewer(usersettings.replayToken)
+	handler.setLanguage(activeLanguage!)
+	const viewer = startReplayViewer(usersettings.replayToken, activeLanguage!)
 	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
-	router = new LocalMatchSceneRouter(undefined, undefined, mapId => {
+	 router = new LocalMatchSceneRouter(undefined, undefined, mapId => {
 		void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
-	})
+	}, activeLanguage!)
 	handler = router.getHandler()
 	startGame(handler, () => router?.getHandler() ?? handler)
 	} else if (usersettings.url && usersettings.url !== "local") {
-	startNetworkGame(usersettings.url)
+	startNetworkGame(usersettings.url, activeLanguage!)
 } else {
 	const em = new CombiEmitter()
 	const ems = new EmitterSystem(em);
@@ -73,36 +83,41 @@ if (isUiDebugSandboxUrl(uri)) {
 	handler.setMouseHandler(ui)
 	handler.addSystem(ems)
 	em.addEmitter(new GameEmitter(handler))
-	installGameplayHud(handler, { onReturnToMenu: () => window.location.assign(window.location.pathname) })
+	installGameplayHud(handler, { language: activeLanguage!, onReturnToMenu: () => window.location.assign(window.location.pathname) })
 	startGame(handler)
 }
 
-function startNetworkGame(serverUrl: string) {
-	const loading = showNetworkLoading("Connecting to the match server…")
-	const socket = new WebSocket(serverUrl)
+function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
+	let socket: WebSocket;
+	const loading = createKoreStatusSurface(language, () => { socket.close(); window.location.reload(); }, () => {
+		socket.close();
+		const url = new URL(window.location.href);
+		url.searchParams.delete("skipmenu");
+		url.searchParams.delete("url");
+		window.location.assign(url.toString());
+	});
+	const loadingHandler = new (GameHandler)();
+	loadingHandler.setLanguage(language);
+	loadingHandler.setMouseHandler(loading);
+	loadingHandler.addPreDrawer(loading);
+	handler = loadingHandler;
+	startGame(loadingHandler, () => handler);
+	loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingConnecting]);
+	socket = new WebSocket(serverUrl)
 	let started = false
 	let failed = false
 	const fail = (message: string) => {
 		if (started || failed) return
 		failed = true
-		loading.fail(message, () => {
-			socket.close()
-			window.location.reload()
-		}, () => {
-			socket.close()
-			const url = new URL(window.location.href)
-			url.searchParams.delete("skipmenu")
-			url.searchParams.delete("url")
-			window.location.assign(url.toString())
-		})
+		loading.fail(message)
 	}
 	socket.addEventListener("open", () => {
-		loading.setMessage("Finding an opponent…")
+		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingFindingOpponent])
 		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference }))
 	})
-	socket.addEventListener("error", () => fail("Could not connect to the match server."))
-	socket.addEventListener("close", () => fail("The match connection closed before setup completed."))
-	const timeout = window.setTimeout(() => fail("Matchmaking timed out. Please retry."), 20_000)
+	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
+	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))
+	const timeout = window.setTimeout(() => fail(language.strings[LANGUAGE_KEYS.LoadingTimedOut]), 20_000)
 	socket.addEventListener("message", event => {
 		let message: UnTypedNetworkMessage
 		try {
@@ -116,25 +131,26 @@ function startNetworkGame(serverUrl: string) {
 			return
 		}
 		if (message.type === NetworkMessageType.WAITINGROOM) {
-			loading.setMessage("Waiting for an opponent…")
+		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingWaitingOpponent])
 			return
 		}
 		if (message.type === NetworkMessageType.ERROR) {
-			fail("The server could not start your match.")
+			fail(language.strings[LANGUAGE_KEYS.LoadingServerFailed])
 			return
 		}
 		if (message.type !== NetworkMessageType.INIT || started) return
 		started = true
 		window.clearTimeout(timeout)
-		loading.dispose()
+		loadingHandler.dispose()
 		const init = message as NetworkInit
-		if (init.mapId) loading.setMessage(`Starting ${init.mapId}…`)
+		if (init.mapId) loading.setMessage(formatLanguage(language, LANGUAGE_KEYS.LoadingStarting, { map: init.mapId }))
 		const settings = init.settings
 		const ui = new UiSystem()
 
 		const emitter = new NetworkEmitter(socket)
 		let replayShareAction: "view" | "share" | undefined
 		handler = kore.restoreHandler(settings)
+		handler.setLanguage(language)
 		handler.addSystem(ui)
 		handler.setMouseHandler(ui)
 		handler.addSystem(new EmitterSystem(emitter))
@@ -142,6 +158,7 @@ function startNetworkGame(serverUrl: string) {
 		// The online branch installs the same gameplay HUD as every offline mode;
 		// only the semantic actions and capability limits differ.
 		installGameplayHud(handler, {
+			language,
 			canSkipItemPhase: false,
 			canPause: false,
 			onUseItem: (actorId, itemId, target) => { emitter.sendItemUse(actorId, itemId, target); return false; },
@@ -151,7 +168,7 @@ function startNetworkGame(serverUrl: string) {
 			onReturnToMenu: () => { window.location.assign(window.location.pathname); return false; },
 		});
 		installTurnReceiver(socket, handler)
-		installReplayShareControls(socket, url => {
+		installReplayShareControls(socket, language, handler, url => {
 			if (replayShareAction !== "view") return false
 			replayShareAction = undefined
 			window.location.assign(url)
@@ -162,105 +179,72 @@ function startNetworkGame(serverUrl: string) {
 }
 
 /** A no-socket, read-only replay entry surface. Clipboard reads require a click. */
-function startReplayViewer(initialToken: string): ReplayViewer {
-	const viewer = new ReplayViewer();
+function startReplayViewer(initialToken: string, language: LanguageCatalog): ReplayViewer {
+	const viewer = new ReplayViewer(language);
 	(window as unknown as { replayViewer: ReplayViewer }).replayViewer = viewer;
 	const loadToken = async (rawToken: string) => {
 		const token = rawToken.trim();
-		if (!REPLAY_TOKEN.test(token)) { controls.setStatus("Enter a valid replay share ID."); console.error(`[replay] invalid replay share ID: ${JSON.stringify(token)}`); return; }
-		controls.setStatus("Loading replay…");
+		if (!REPLAY_TOKEN.test(token)) { surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayValidId]); console.error(`[replay] invalid replay share ID: ${JSON.stringify(token)}`); return; }
+		surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayLoading]);
 		const endpoint = buildReplayShareEndpoint(window.location.href, token);
 		console.log(`[replay] requesting replay from ${endpoint}`);
 		try {
 			const response = await fetch(endpoint, { cache: "no-store" });
 			console.log(`[replay] ${endpoint} responded HTTP ${response.status}`);
-			if (!response.ok) throw new Error(`Replay unavailable (HTTP ${response.status})`);
+			if (!response.ok) throw new Error(`${language.strings[LANGUAGE_KEYS.ReplayUnavailable]} (HTTP ${response.status})`);
 			const body = await response.json() as { replay?: unknown };
 			console.log(`[replay] response payload keys: ${Object.keys(body).join(", ") || "(empty)"}${body.replay === undefined ? " — replay field MISSING" : ""}`);
-			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? "Replay unavailable");
+			if (!viewer.loadReplay(body.replay)) throw new Error(viewer.getErrorState() ?? language.strings[LANGUAGE_KEYS.ReplayUnavailable]);
 			handler = viewer.getPlayer()!.getHandler();
+			handler.setLanguage(language);
+			handler.setMouseHandler(surface);
+			handler.addPreDrawer(surface);
 			const loadedPlayer = viewer.getPlayer()!;
 			const world = handler.getSettings()?.worldSize;
 			console.log(`[replay] loaded: state=${handler.getState()} entities=${handler.getEntityManager().getEntities().length} actions=${loadedPlayer.getActionCount()} world=${JSON.stringify(world)} rendererWorldWidth=${GameSettings.screenResolution.x}`);
-			controls.setStatus(loadedPlayer.getActionCount() > 0
-				? "Replay loaded. Playback is read-only."
-				: "Replay loaded. No actions have been recorded yet.");
+			surface.setStatus(loadedPlayer.getActionCount() > 0
+				? language.strings[LANGUAGE_KEYS.ReplayLoaded]
+				: language.strings[LANGUAGE_KEYS.ReplayLoadedEmpty]);
 		} catch (error) {
 			console.error("[replay] replay load failed:", error);
-			controls.setStatus("Replay unavailable. Check the share ID and try again.");
+			surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayUnavailable]);
 		}
 	};
-	const controls = createReplayViewerControls(initialToken, {
+	const surface = createKoreReplayViewerSurface({
 		onLoad: loadToken,
 		onPaste: async () => {
-			try { const value = await navigator.clipboard.readText(); controls.setStatus("Pasted replay ID. Press Load replay."); return value; }
-			catch { controls.setStatus("Clipboard access was denied. Paste the replay ID into the field manually."); return undefined; }
+			try { const value = await navigator.clipboard.readText(); surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayPasted]); return value; }
+			catch { surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayCopyUnavailable]); return undefined; }
 		},
-	});
-	document.body.append(controls.element);
+	}, language, initialToken);
+	handler.setMouseHandler(surface);
+	handler.addPreDrawer(surface);
 	if (initialToken) void loadToken(initialToken);
 	return viewer;
 }
 
 /** Share URLs are displayed first; clipboard access is an explicit second click. */
-function installReplayShareControls(socket: WebSocket, onReplayLink?: (url: string) => boolean): void {
-	const panel = document.createElement("aside")
-	panel.id = "replay-share-controls"
-	panel.hidden = true
-	const status = document.createElement("p")
-	const url = document.createElement("input")
-	url.readOnly = true
-	url.setAttribute("aria-label", "Replay share URL")
-	const copy = document.createElement("button")
-	copy.type = "button"
-	copy.textContent = "Copy replay URL"
-	copy.addEventListener("click", async () => {
-		try { await navigator.clipboard.writeText(url.value); status.textContent = "Replay URL copied" }
-		catch { status.textContent = "Copy unavailable. Select and copy the URL manually."; url.focus(); url.select() }
-	})
-	panel.append(status, url, copy)
-	document.body.append(panel)
+function installReplayShareControls(socket: WebSocket, language: LanguageCatalog, activeHandler: GameHandler, onReplayLink?: (url: string) => boolean): void {
+	const share = createKoreShareSurface(language);
+	activeHandler.addPostDrawer(share);
+	const gameplayInput = activeHandler.getMouseHandler();
+	const composite: IMouse = {
+		updateMouse(x, y) { share.updateMouse(x, y); gameplayInput?.updateMouse(x, y); },
+		handleMousePressed() { if (!share.handlesMousePress()) gameplayInput?.handleMousePressed(); else share.handleMousePressed(); },
+		handleMouseReleased() { gameplayInput?.handleMouseReleased(); },
+		handleMouseWheel(event) { gameplayInput?.handleMouseWheel(event); },
+	};
+	activeHandler.setMouseHandler(composite);
 	socket.addEventListener("message", event => {
 		try {
 			const message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
 			if (message.type !== NetworkMessageType.REPLAY_SHARE_CREATED) return
 			const token = (message as { token: string }).token
-			url.value = buildReplayViewerUrl(window.location.href, token)
-			if (onReplayLink?.(url.value)) return
-			status.textContent = "Replay link ready. Copy it or select it manually."
-			panel.hidden = false
+			const url = buildReplayViewerUrl(window.location.href, token)
+			if (onReplayLink?.(url)) return
+			share.setUrl(url)
 		} catch { /* ignore malformed protocol input */ }
 	})
-}
-
-function showNetworkLoading(initialMessage: string) {
-	const root = document.createElement("section")
-	root.id = "network-loading"
-	root.setAttribute("role", "status")
-	root.setAttribute("aria-live", "polite")
-	const heading = document.createElement("h1")
-	heading.textContent = "Joining online game"
-	const message = document.createElement("p")
-	message.textContent = initialMessage
-	root.append(heading, message)
-	document.body.append(root)
-	return {
-		setMessage(value: string) { message.textContent = value },
-		fail(value: string, retry: () => void, back: () => void) {
-			root.setAttribute("role", "alert")
-			message.textContent = value
-			const retryButton = document.createElement("button")
-			retryButton.type = "button"
-			retryButton.textContent = "Retry"
-			retryButton.addEventListener("click", retry, { once: true })
-			const backButton = document.createElement("button")
-			backButton.type = "button"
-			backButton.textContent = "Back to menu"
-			backButton.addEventListener("click", back, { once: true })
-			root.append(retryButton, backButton)
-		},
-		dispose() { root.remove() },
-	}
 }
 
 /** Throttled per-frame error surfacing for the read-only replay page. */
@@ -336,6 +320,10 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 			active.handleMouseReleased()
 		})
+		window.addEventListener("keydown", (e) => {
+			const active = getActiveHandler() as GameHandler & { handleKeyPressed?: (event: KeyboardEvent) => void };
+			active.handleKeyPressed?.(e);
+		});
 
 		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 	};

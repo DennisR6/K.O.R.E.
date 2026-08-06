@@ -38,6 +38,7 @@ import { EasyAi } from "../ai/easyAi.js";
 import { MediumAi } from "../ai/mediumAi.js";
 import { HardAi } from "../ai/hardAi.js";
 import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../ui/AuthoritativeGameplayRenderer.js";
+import type { LanguageCatalog } from "../i18n/language.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -149,6 +150,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
 	}
+	public setLanguage(language: LanguageCatalog): void { this.gameplayRenderer.setLanguage(language); }
 
 	/**
 	 * Tauscht die Physik-Regeln im laufenden Betrieb aus.

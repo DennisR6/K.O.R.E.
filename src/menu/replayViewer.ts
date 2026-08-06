@@ -2,8 +2,10 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import type { ReplayDocument } from "../replay/types.js";
 import { validateReplayDocument } from "../replay/types.js";
 import { ReplayPlayer } from "../replay/player.js";
+import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../i18n/language.js";
 
 export class ReplayViewer {
+	public constructor(private readonly language: LanguageCatalog = createEnglishLanguage()) { }
 	private player: ReplayPlayer | undefined;
 	private errorState: string | null = null;
 
@@ -12,6 +14,7 @@ export class ReplayViewer {
 		try {
 			validateReplayDocument(rawReplay);
 			this.player = new ReplayPlayer(rawReplay as ReplayDocument);
+			this.player.getHandler().setLanguage(this.language);
 			this.player.advance();
 			console.log(`[replay] ReplayPlayer ready: actions=${this.player.getActionCount()} state=${this.player.getHandler().getState()}`);
 			return true;
@@ -38,12 +41,12 @@ export class ReplayViewer {
 		ctx.push();
 		if (this.errorState) {
 			ctx.setFillColor("red");
-			ctx.drawText(`Replay Error: ${this.errorState}`, 100, 100, 20);
+			ctx.drawText(formatLanguage(this.language, LANGUAGE_KEYS.ReplayError, { error: this.errorState }), 100, 100, 20);
 		} else if (this.player) {
 			this.player.getHandler().drawWorld(ctx);
 		} else {
 			ctx.setFillColor("white");
-			ctx.drawText("No replay loaded", 100, 100, 20);
+			ctx.drawText(this.language.strings[LANGUAGE_KEYS.ReplayNoneLoaded], 100, 100, 20);
 		}
 		ctx.pop();
 	}

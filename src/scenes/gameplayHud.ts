@@ -6,6 +6,7 @@ import { createKoreGameHudSurface, type KoreGameHudSurface } from "../kore/ui/Ko
 import { KoreHudCommand, type KoreHudCommandMessage } from "../kore/ui/hudCommands.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import type { ItemTarget } from "../item/target.js";
+import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 
 /**
  * Semantic HUD actions. Callbacks that return `false` signal external handling
@@ -23,6 +24,7 @@ export type GameplayHudActions = {
 	onShare?: () => boolean | void;
 	onPause?: () => boolean | void;
 	onResume?: () => boolean | void;
+	language?: LanguageCatalog;
 };
 
 /**
@@ -42,7 +44,7 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 	emitter?.setErrorHandler(error => { rejection = hudRejection(error); });
 	const hud = createKoreGameHudSurface({
 		handle: command => handleHudCommand(command, handler, { ...actions, itemUi }),
-	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true });
+	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true }, actions.language ?? createEnglishLanguage());
 	handler.setMouseHandler(hud);
 	const sync = () => createKoreHudProjection(handler, uiSystem, rejection);
 	hud.applyProjection(sync());
