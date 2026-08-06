@@ -480,8 +480,9 @@ export class KoreMapBuilder {
 		const players: PlayerSettings[] = [];
 		for (const team of teams) {
 			const teamTemplate = templates.find(player => player.team.includes(team))!;
+			let playerIndex = 0;
 			for (const spawn of this.spawns.filter(candidate => candidate.teamNr === team)) {
-				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayer({ ...teamTemplate, id: crypto.randomUUID(), teamNr: team, color: this.teams.get(team)?.color ?? teamTemplate.color }));
+				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayer({ ...teamTemplate, id: deterministicUuid(`${this.options.id}:team:${team}:player:${playerIndex++}`), teamNr: team, color: this.teams.get(team)?.color ?? teamTemplate.color }));
 				arrangePlayers(spawned, spawn);
 				players.push(...spawned);
 			}
@@ -518,6 +519,39 @@ function validateImageUrl(value: string): void {
 
 function clone<T>(value: T): T { return structuredClone(value); }
 function toJson(value: unknown): JsonValue { return JSON.parse(JSON.stringify(value)) as JsonValue; }
+
+function deterministicUuid(value: string): string {
+	let hash = 2166136261;
+	for (let index = 0; index < value.length; index++) {
+		hash ^= value.charCodeAt(index);
+		hash = Math.imul(hash, 16777619);
+	}
+	const hex = (offset: number) => {
+		let result = "";
+		for (let index = 0; index < 8; index++) {
+			hash ^= (offset + index) * 0x9e3779b9;
+			hash = Math.imul(hash, 16777619);
+			result += (hash >>> 0).toString(16).padStart(8, "0").slice(-2);
+		}
+		return result.slice(0, 8);
+	};
+	const raw = `${hex(0)}${hex(8)}${hex(16)}${hex(24)}${hex(32)}${hex(40)}`.slice(0, 32).split("");
+	raw[12] = "4";
+	raw[16] = (parseInt(raw[16]!, 16) & 0x3 | 0x8).toString(16);
+	return `${raw.slice(0, 8).join("")}-${raw.slice(8, 12).join("")}-${raw.slice(12, 16).join("")}-${raw.slice(16, 20).join("")}-${raw.slice(20).join("")}`;
+}
+
+function stableAuthoringHash(value: unknown): string {
+	const serialized = JSON.stringify(value, (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry)
+		? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a.localeCompare(b)))
+		: entry);
+	let hash = 2166136261;
+	for (const character of serialized) {
+		hash ^= character.charCodeAt(0);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash >>> 0).toString(16).padStart(8, "0");
+}
 
 /** KORE's deterministic default runtime profile expressed through the generic framework selector. */
 export function createDefaultKoreFramework(): EngineFrameworkSettings {
@@ -559,7 +593,11 @@ export const kore = {
 	/** Creates an empty two-team map builder with an 800×450 containment boundary. */
 	createDefaultMap(options: KoreMapOptions = {}): KoreMapBuilder {
 		const worldSize = options.worldSize ?? { x: 800, y: 450 };
-		return new KoreMapBuilder({ id: options.id ?? crypto.randomUUID(), name: options.name ?? "Untitled KORE Map", description: options.description ?? "", worldSize: clone(worldSize), friction: clone(options.friction ?? FRICTION_TABLE.ice), drift: options.drift ?? 0 });
+		const name = options.name ?? "Untitled KORE Map";
+		const description = options.description ?? "";
+		const friction = clone(options.friction ?? FRICTION_TABLE.ice);
+		const id = options.id ?? `kore-map-${stableAuthoringHash({ name, description, worldSize, friction, drift: options.drift ?? 0 })}`;
+		return new KoreMapBuilder({ id, name, description, worldSize: clone(worldSize), friction, drift: options.drift ?? 0 });
 	},
 	/** Revalidates a JSON-safe engine settings object before runtime import. */
 	validate(settings: unknown): asserts settings is GameSettings { validateGameSettings(settings); },

@@ -130,6 +130,9 @@ const STRUCTURE_PROBES: Record<string, { probe: { x: number; y: number }; ref: {
 	"structure-control": { probe: { x: 308, y: 110 }, ref: { x: 308, y: 170 }, color: [0x31, 0x5b, 0x7d] },
 	// west kill zone circle (300,225,r28); reference above it on floor
 	"hazard-control": { probe: { x: 300, y: 225 }, ref: { x: 300, y: 180 }, color: [0xd9, 0x4b, 0x28] },
+	"aurora-basin": { probe: { x: 330, y: 225 }, ref: { x: 330, y: 180 }, color: [0x31, 0x5b, 0x7d] },
+	"lantern-gates": { probe: { x: 400, y: 90 }, ref: { x: 400, y: 130 }, color: [0x31, 0x5b, 0x7d] },
+	"ember-crossing": { probe: { x: 310, y: 225 }, ref: { x: 310, y: 180 }, color: [0xd9, 0x4b, 0x28] },
 };
 
 /** Opens the visible menu and navigates to the map-selection page. */

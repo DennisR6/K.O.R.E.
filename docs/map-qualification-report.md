@@ -20,6 +20,9 @@ Classification values are defined by the map design contract:
 | symmetric-duel | Symmetric Duel | `src/settings/symmetricDuelMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 2 (1 containment rect + 1 central wall, Task 17.4) | none | ice | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | kill-ring duel: the arena walls are the containment boundary, so any puck whose full circle leaves the world rect is eliminated; the central wall blocks every straight first-turn line, keeping early elimination reachable only through banked or flanking shots; weak openings (power <= 2) are the safe lane |
 | structure-control | Structure Control | `src/settings/structureControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 6 (1 containment rect + 4 mirrored columns + 1 central blocker, Task 17.5) | none | billiards | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | blocker seals the direct spawn corridor so first-turn contact is impossible; arena walls remain the containment kill boundary; the central corridor and top/bottom lanes are the safe advance routes |
 | hazard-control | Hazard Control | `src/settings/hazardControlMap.ts` | 1 | scalable (800x450) | symmetric | 2 | 1 (containment rect only) | 2 kill-zone (mirrored center-corridor guards, Task 17.6) | tiles | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | two mirrored kill zones guard the center corridor between the spawns: every straight crossing is self-eliminating and the opponent is protected behind its own zone; elimination requires driving an opponent into a hazard or its own misplay; the arena walls remain the containment kill boundary |
+| aurora-basin | Aurora Basin | `src/content/maps/aurora-basin.ts` | 1 | 800x450 | symmetric | 2 | 3 (containment rect + 2 islands) | none | ice | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | two central islands shape rebounds; broad north and south lanes preserve alternate approaches |
+| lantern-gates | Lantern Gates | `src/content/maps/lantern-gates.ts` | 1 | 800x450 | symmetric | 2 | 4 (containment rect + 3 gates) | none | billiards | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | the center gate blocks a straight shot but leaves three symmetric lanes |
+| ember-crossing | Ember Crossing | `src/content/maps/ember-crossing.ts` | 1 | 800x450 | symmetric | 2 | 1 (containment rect) | 2 kill-zone | tiles | 0 | 2 teams, 1 figure | yes (menu selectable) | browser-qualified | center hazards punish straight crossings; outer lanes remain safe recovery routes |
 
 No map receives `technically-qualified` or higher before the Task 17.3
 qualification harness and the Task 17.7 matrix evidence are recorded here,
@@ -221,3 +224,14 @@ content-registry status by inventory work alone.
   without manufacturing human ratings. Human evidence remains `PENDING`
   until a real external session is completed; map-level human qualification
   stays separate from the Section 15 gameplay release blockers and does not change the Section 15 release record.
+- 45: the production SDK-authored competitive pack adds `aurora-basin`,
+  `lantern-gates`, and `ember-crossing` under `src/content/maps/`. Each uses
+  only public `kore.createDefaultMap()` geometry/spawn/hazard APIs, has a stable
+  catalog identity, mirrored two-team spawns, and is reachable through the
+  approved repository loader. The SDK authoring boundary now derives omitted
+  map IDs and generated player IDs deterministically rather than using random
+  UUIDs. Focused evidence is in `tests/competitive_map_pack.test.ts`, covering
+  document/settings fingerprints, approved repository revisions, and schema,
+  spawn, snapshot/restore, replay, and deterministic qualification checks.
+  Browser availability is catalog-integrated and browser probes cover all three
+  new map geometries; no human fairness or playtest qualification is inferred.
