@@ -25,7 +25,7 @@ const SIZE = { width: 800, height: 450 };
 
 // The production menu is authored in world coordinates and consumed by the
 // generic UI SDK. Keep these bounds aligned with the browser/world contract.
-const BTN_W = 132;
+const BTN_W = 144;
 const BTN_H = 58;
 const BTN_STYLE = "kore.button.blue";
 
@@ -78,7 +78,7 @@ function buildUiSettings(): UiMenuSettings {
          ui.container({
            id: KoreMenuElement.MainActions,
            rect: rect(0, 0, 740, 64),
-           layout: ui.layout.horizontal({ gap: 16, justify: "space-evenly", align: "center" }),
+            layout: ui.layout.horizontal({ gap: 4, justify: "space-evenly", align: "center" }),
            style: KoreMenuStyle.MainActions,
            elements: [
              ui.button({ id: KoreMenuElement.MainAi, text: KoreMenuText.Ai, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),

@@ -63,3 +63,15 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
 	expect(states["main-local"]).toEqual({ hovered: true, focused: true });
 });
+
+test("main menu keeps the long local-play label inside its action row", () => {
+	const menu = createKoreMainMenuSurface();
+	menu.updateMouse(400, 100);
+	menu.handleMousePressed();
+	let localRect: { x: number; y: number; width: number; height: number } | undefined;
+	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { if (element.id === "main-local") localRect = element.rect; } });
+	expect(localRect).toBeDefined();
+	expect(localRect!.x).toBeGreaterThanOrEqual(0);
+	expect(localRect!.x + localRect!.width).toBeLessThanOrEqual(800);
+	expect(localRect!.width).toBeGreaterThanOrEqual(144);
+});
