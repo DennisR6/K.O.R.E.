@@ -138,3 +138,38 @@ Do not:
 
 The source code and focused tests remain authoritative when this guide and a
 generated API page disagree.
+
+## Final SDK-Only Release Status
+
+The final release gate applies the SDK-only rule to supported authoring,
+application composition, mods, examples, and non-allowlisted adapters. It does
+not require internal engine implementation files to import only SDK modules.
+
+Supported authoring entry points are:
+
+- `src/engine/sdk/index.ts` for generic worlds and system metadata;
+- `src/engine/ui-sdk/index.ts` for JSON UI menus and explicit input ticks;
+- `src/engine/audio-sdk/index.ts` for semantic audio commands and runtimes;
+- `src/kore/sdk/index.ts` for KORE maps, items, matches, AI, audio, and runtime
+  restoration through the `kore` object.
+
+Supported runtime boundaries are `kore.createHandler()`,
+`kore.createRuntimeMatch()`, `kore.restoreHandler()`, replay reconstruction,
+approved map loading, authoritative server persistence/restoration, and the
+browser/Tauri platform adapters. `ItemLoader` and `ItemValidator` remain
+internal server/built-in integration boundaries; published mods use
+`kore.createItem()` instead.
+
+The release command is:
+
+```sh
+bun run sdk:release-gate
+```
+
+It runs the SDK-only source guard, example typecheck/execution, Milestone-39
+qualification, TypeScript, production build, fast suite, browser smoke, and
+desktop packaging checks. A new example must be added to
+`tests/sdk_examples_ci.test.ts`; a new map, item, or mode must cross its public
+KORE authoring and serialization boundary; an application adapter must be
+classified as a documented runtime/platform boundary and covered by its
+focused gate.

@@ -152,3 +152,20 @@ const map = kore.createDefaultMap({ name: "Ice Arena" })
   .addRectangle({ x: 300, y: 120, w: 40, h: 180, effects: [kore.effects.damage(10)] })
   .build();
 ```
+
+## 13. Final SDK-only release gate
+
+Supported authoring is limited to the Engine SDK entry points, the KORE SDK
+entry point, and the documented generic UI/audio sub-entry points. Runtime
+factories, snapshot restoration, replay reconstruction, approved map loading,
+server persistence, browser bootstrap, and Tauri packaging are explicit
+application/platform boundaries. `ItemLoader` and `ItemValidator` are internal
+runtime/mod-loading boundaries, not published mod imports.
+
+Internal engine implementation may continue to import internal systems,
+effects, settings, rules, and entity modules. The restriction is on supported
+authoring, examples, application composition, mods, and non-allowlisted
+adapters. `tests/sdk_only_release_gate.test.ts` enforces removed-file,
+constructor, example-import, application-boundary, documentation, and roadmap
+checks. Run `bun run sdk:release-gate` for the aggregate source, qualification,
+browser, build, and desktop release verification.

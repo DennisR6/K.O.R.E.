@@ -11,6 +11,7 @@
     "build": "tsc && cp index.html dist/ && cp -r public dist/",
     "examples:typecheck": "tsc -p examples/tsconfig.json --noEmit",
     "examples:verify": "bun test tests/sdk_examples_ci.test.ts",
+    "sdk:release-gate": "bun test tests/sdk_only_release_gate.test.ts && bun run examples:typecheck && bun run examples:verify && bun test tests/sdk_migration_cross_system_qualification.test.ts && npx tsc --noEmit && bun run build && bun run test:fast && bun run test:browser:smoke && bun run desktop:build",
     "playtest:build": "bun run build && bun run desktop:build",
     "test": "bun run test:fast",
     "test:fast": "bun run scripts/testFast.ts",

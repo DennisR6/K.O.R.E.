@@ -143,5 +143,6 @@ For full architecture details, API specifications, and release guides:
 - [General Documentation & Architecture Guide](docs/README.md)
 - [Desktop Packaging & Build Guide](docs/desktop-release.md)
 - [Release Verification Ledger](docs/release-verification.md)
+- [SDK Authoring and Final Release Gate](docs/sdk-authoring-guide.md) (`bun run sdk:release-gate`)
 - [Game Design Document (German)](gdd.md)
 - [Agent & Contributor Rules](AGENTS.md)

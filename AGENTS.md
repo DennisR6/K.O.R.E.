@@ -429,6 +429,7 @@ bun run test:browser:menu-sdk # SDK-authored production main-menu browser E2E
 bun run test:browser:hud # SDK-authored gameplay HUD browser E2E
 bun run test:browser:full   # Section 16/17.8 browser gameplay verification (playwright runner, all tests/browser specs)
 bun run test:browser        # alias for test:browser:full
+bun run sdk:release-gate    # final SDK-only source, example, qualification, browser, and desktop gate
 npx playwright test         # direct node-based runner; E2E_WORKERS overrides the default worker count
 bun run test:maps           # Section 17 dev smoke map matrix run
 bun run test:maps:matrix    # Section 17 full release map matrix comparison

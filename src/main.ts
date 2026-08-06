@@ -2,7 +2,7 @@ import type p5Types from "p5";
 import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
-import { GameHandler } from "./engine/Handler.js";
+import type { GameHandler } from "./engine/Handler.js";
 import { AudioManager } from "./menu/AudioManager.js";
 import { EmitterSystem } from "./systems/Emitter.js";
 import { UiSystem } from "./systems/UiSystem.js";
@@ -53,7 +53,7 @@ if (isUiDebugSandboxUrl(uri)) {
 	// every step of the load sequence is logged so failures are visible in the
 	// browser console (`[replay]` prefix) instead of only in the status line.
 	console.log(`[replay] replay mode with token ${usersettings.replayToken}`)
-	handler = new GameHandler()
+	handler = kore.createHandler(GameSettings)
 	const viewer = startReplayViewer(usersettings.replayToken)
 	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
