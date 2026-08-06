@@ -5,9 +5,11 @@ import { SHAPE } from "../physics/physics.js";
 import { FitWorldCamera } from "../ui/FitWorldCamera.js";
 import {
 	powerDashItem,
-	vodkaZeroItem
-
+	vodkaZeroItem,
+	mysteryBoxItem,
+	generateRandomMapPickupPosition,
 } from "../item/officialItems.js";
+import { createItemPickup } from "../item/types.js";
 import { kore } from "../kore/sdk/index.js";
 
 
@@ -44,13 +46,23 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 		myTeam: [0, 1],
 		allTeams: ["Local team 0", "Local team 1"],
 		playerIds: canonicalPlayerIds(base.players.length),
-		items: [powerDashItem, vodkaZeroItem],
+		items: [powerDashItem, vodkaZeroItem, mysteryBoxItem],
 		gameMode: kore.createGameMode({
 			id: CANONICAL_PLAYABLE_MATCH.id,
 			phases: [RulePhase.Item, RulePhase.Physics],
 			maxItemsPerTurn: 1,
 			winCondition: WinCondition.LastTeamStanding,
-			itemEconomy: { fixedLoadouts: [{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }] }, { team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }] }], mapPickups: [] },
+			itemEconomy: {
+				fixedLoadouts: [
+					{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }, { itemId: mysteryBoxItem.id, uses: 1 }] },
+					{ team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }, { itemId: mysteryBoxItem.id, uses: 1 }] },
+				],
+				mapPickups: [createItemPickup({
+					itemId: mysteryBoxItem.id,
+					spawnRegion: generateRandomMapPickupPosition(base.worldSize, 40, 12345),
+					activationType: "collision",
+				})],
+			},
 		}),
 	});
 	validateGameSettings(settings);
