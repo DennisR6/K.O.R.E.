@@ -1,6 +1,6 @@
 # Milestone 50 SDK-Authored Content Release Verification
 
-Status: **TECHNICAL EVIDENCE RECORDED; CURRENT AGGREGATE RUN BLOCKED BY BROWSER FAILURES**
+Status: **TECHNICAL GATE PASSED; HUMAN AND PLATFORM EVIDENCE REMAIN BLOCKED/PENDING**
 
 This is the aggregate release record for Milestones 41-49. It does not replace
 the subsystem tests and does not claim that automation qualifies balance, feel,
@@ -22,7 +22,7 @@ The aggregate gate is `tests/sdk_content_release_gate.test.ts`.
 | Environmental mechanics | PASS | `tests/environmental_mechanics.test.ts` |
 | Game modes | PASS | `tests/milestone47_game_modes.test.ts` |
 | SDK imports and authoring inventory | PASS | `tests/sdk_only_release_gate.test.ts`, `tests/sdk_migration_inventory.test.ts` |
-| Browser | BLOCKED for this run: 33/36 browser tests passed; 3 failed | `tests/browser/browser_release_gate.test.ts`, `bun run test:browser:full` |
+| Browser | PASS: 36/36 browser tests passed with the release runner's serialized worker configuration | `tests/browser/browser_release_gate.test.ts`, `bun run test:browser:full` |
 | Production build | PASS | `bun run build` |
 | Desktop package | PASS | `tests/desktop_packaging.test.ts`, `bun run desktop:build` |
 | Package execution as a runtime | SKIP | Packages are validated declarations, not an alternate runtime. |
@@ -56,17 +56,10 @@ recorded protocol session.
 
 ## Current Run Blockers
 
-`bun run content:release-gate` stopped at `bun run test:browser:full`. The
-browser run had 33 passing and 3 failing tests:
-
-- `tests/browser/browser_ai_battle.e2e.test.ts`: human-vs-KI selection timed out.
-- `tests/browser/map_catalog.e2e.test.ts`: the test expected 6 maps but found 9.
-- `tests/browser/map_catalog.e2e.test.ts`: hazard-control selection timed out.
-
-The aggregate runner stopped before its later steps on this invocation. The
-independent `npx tsc --noEmit`, `bun run build`, and `bun run desktop:build`
-checks passed. These browser failures are not reclassified as skips or human
-evidence.
+The current aggregate command completes all technical stages, including the
+serialized 36-test browser suite and desktop package build. Remaining blockers
+are external human gameplay/content evidence and unverified platform-specific
+packaging, both of which remain classified separately below.
 
 ## Linked Evidence
 
