@@ -4,7 +4,6 @@ import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
-import { MetaEffect } from "../effects/effects.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";

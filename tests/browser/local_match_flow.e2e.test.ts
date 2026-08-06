@@ -76,7 +76,7 @@ async function readMatchResult(page: import("playwright").Page): Promise<{
 
 async function enterLocalMatch(page: import("playwright").Page): Promise<void> {
 	await clickWorld(page, 400, 100); // landing page
-	await clickWorld(page, 400, 325); // "Play Local Game"
+	await clickWorld(page, 551, 143); // "Play Local Game"
 	await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 	const state = await readMatchState(page);
 	expect(state.state).toBe("GameState.Your_turn");

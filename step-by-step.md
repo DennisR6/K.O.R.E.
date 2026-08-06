@@ -168,3 +168,9 @@ engineering work.
 - **hash**: `19ed591`
 - **file**: [`steps/25-migration_effects.md`](steps/25-migration_effects.md)
 - **note**: Implemented staged effect creation SDK migration with `kore.effects.*` authoring helpers and `createRuntimeEffect()` factory boundary.
+
+## 26. Extended SDK — Nested UI Containers And KORE Menu Integration
+- **status**: `[x]`
+- **hash**: `5912d7c`
+- **file**: [`steps/26-extended_sdk.md`](steps/26-extended_sdk.md)
+- **note**: Merged the nested-container UI SDK implementation with staging, migrated the KORE main menu, added focused tests and entry-point documentation, and verified TypeScript, unit, menu-browser, and startup-smoke coverage.

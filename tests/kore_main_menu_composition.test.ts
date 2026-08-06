@@ -22,7 +22,7 @@ test("SDK menu surface uses explicit ticks, pure draws, semantic transitions, an
 	expect(menu.toSettings()).toEqual(before);
 	menu.updateMouse(400, 100); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
-	menu.updateMouse(400, 205); menu.handleMousePressed();
+	menu.updateMouse(249, 143); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.MapBattle);
 	menu.updateMouse(210, 355); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
@@ -47,7 +47,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	const menu = createKoreMainMenuSurface();
 	menu.updateMouse(400, 100);
 	menu.handleMousePressed();
-	menu.updateMouse(400, 140);
+	menu.updateMouse(99, 140);
 	menu.tick(16, 0);
 	let states: Record<string, { hovered?: boolean; focused?: boolean }> = {};
 	menu.getRuntime().draw({
@@ -57,7 +57,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	});
 	expect(states["main-ai"]?.hovered).toBe(true);
 
-	menu.updateMouse(400, 325);
+	menu.updateMouse(551, 143);
 	menu.handleMousePressed();
 	states = {};
 	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });

@@ -47,6 +47,8 @@ export enum KoreMenuScreen {
 export enum KoreMenuElement {
 	LandingPrompt = "landing-prompt",
 	LandingStart = "landing-start",
+	MainTitle = "main-title",
+	MainActions = "main-actions",
 	MainAi = "main-ai",
 	MainBattle = "main-battle",
 	MainOnline = "main-online",
@@ -61,6 +63,7 @@ export enum KoreMenuStyle {
 	LandingPrompt = "kore.menu.landing-prompt",
 	LandingHitbox = "kore.menu.landing-hitbox",
 	MainButton = "kore.menu.main-button",
+	MainActions = "kore.menu.main-actions",
 	MapTitle = "kore.menu.map-title",
 	MapNote = "kore.menu.map-note",
 	MapRow = "kore.menu.map-row",

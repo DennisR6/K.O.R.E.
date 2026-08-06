@@ -11,13 +11,11 @@ import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, vali
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
-import { Player } from "../entity/Player.js";
 import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
-import { MetaEffect } from "../effects/effects.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
@@ -28,11 +26,12 @@ import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } f
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import type { MatchResult } from "../rules/types.js";
-import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
+import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { validateItemTarget } from "../item/target.js";
+import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
 import type { AiSettings } from "../ai/types.js";
 import type { IAiTurnProducer } from "../ai/aiEmitter.js";
 import { EasyAi } from "../ai/easyAi.js";
@@ -648,14 +647,45 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
-	/** Consumes a declared item without applying its effects or validating targets. */
+	/**
+	 * Consumes a declared item and validates its target through the gameplay
+	 * authority. A used mystery box additionally resolves and grants exactly
+	 * one deterministic reward; every validation runs before any mutation.
+	 */
 	public useItem(actorId: string, itemId: string, target: unknown = { type: "self" }): void {
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
+		if (item.id === MYSTERY_BOX_ITEM_ID) {
+			this.resolveMysteryBoxUse(actor, item)
+			return
+		}
 		actor.use(item)
+	}
+
+	private mysteryBoxRewardOptions(actorId: string): MysteryBoxRewardOptions {
+		const economy = this.settings?.gameMode?.itemEconomy
+		const baseSeed = economy?.randomDraw?.seed ?? hashString(this.id)
+		return {
+			candidatePool: economy?.mysteryBox?.candidatePool,
+			seed: deriveMysteryBoxSeed({ actorId, turnNumber: this.ruleState.turnNumber, activeTeam: this.ruleState.activeTeam, baseSeed }),
+			allowMysteryBoxReward: economy?.mysteryBox?.allowMysteryBoxReward,
+			knownItemIds: this.items.map(candidate => candidate.id),
+		}
+	}
+
+	/** Removes exactly one mystery box and adds exactly one reward use, atomically. */
+	private resolveMysteryBoxUse(actor: IEntity, item: ItemDocument): void {
+		const options = this.mysteryBoxRewardOptions(actor.getId())
+		// Resolve and validate the reward before mutating anything so a rejected
+		// pool or unknown reward never consumes the mystery box.
+		const rewardId = resolveMysteryBoxReward(options)
+		const inventory = actor.getInventory()
+		consumeInventoryItem(inventory, item)
+		grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId })
+		actor.setInventory(inventory)
 	}
 	public loadEffects(effects: FullEffectSettings[]): void {
 		this.effectAlways = []

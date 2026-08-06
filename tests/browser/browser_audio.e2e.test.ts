@@ -9,7 +9,7 @@ test.describe("browser audio aggregation pilots", () => {
 			const page = await openPage(browser, server.url); const capture = captureConsole(page);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await waitFor(async () => await page.evaluate(() => (window as any).game.audio.getAppliedCommands().some((command: any) => command.soundId === "kore.music.menu")), 10_000, 100, "menu music request");
-			await clickWorld(page, 400, 100); await clickWorld(page, 400, 325);
+			await clickWorld(page, 400, 100); await clickWorld(page, 551, 143);
 			await waitFor(async () => (await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id)) === "local-ice-duel-v1", 10_000, 100, "local game");
 			await waitFor(async () => await page.evaluate(() => (window as any).game.audio.getAppliedCommands().some((command: any) => command.soundId === "kore.music.match")), 10_000, 100, "match music request");
 			const soundIds = await page.evaluate(() => (window as any).game.audio.getAppliedCommands().map((command: any) => command.soundId));

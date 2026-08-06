@@ -22,7 +22,7 @@ export function validateKoreGameHudSettings(value: unknown): asserts value is Ko
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Malformed KORE HUD settings"); const settings = value as Partial<KoreGameHudSettings>;
 	if (settings.schemaVersion !== 1 || settings.id !== KoreHudId.Composition || !settings.ui || !settings.audio || !settings.metadata || settings.metadata.schemaVersion !== 1 || settings.metadata.itemSlots !== ITEM_SLOTS || !Array.isArray(settings.metadata.commandValues) || settings.metadata.commandValues.some(command => typeof command !== "string" || !isKoreHudCommand(command))) throw new Error("Malformed KORE HUD settings");
 	validateUiSettings(settings.ui); validateAudioSettings(settings.audio); engine.createEntity(JSON.parse(JSON.stringify(settings)) as JsonValue);
-	for (const element of settings.ui.screens.flatMap(screen => screen.elements)) if (element.action?.type === "emit" && element.action.command.startsWith(KoreHudNamespace.Command) && !isKoreHudCommand(element.action.command)) throw new Error(`Unknown KORE HUD command '${element.action.command}'`);
+	for (const element of settings.ui.screens.flatMap(screen => screen.elements)) if ((element.kind === "button" || element.kind === "textInput") && element.action?.type === "emit" && element.action.command.startsWith(KoreHudNamespace.Command) && !isKoreHudCommand(element.action.command)) throw new Error(`Unknown KORE HUD command '${element.action.command}'`);
 }
 
 function buildUi(): UiMenuSettings {
