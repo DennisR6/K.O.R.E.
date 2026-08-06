@@ -1,5 +1,6 @@
-import { DOCUMENT_SCHEMA_VERSION, type MapDocument } from "../contracts/documents.js";
-import { SHAPE, type Vector2D } from "../physics/physics.js";
+import type { MapDocument } from "../contracts/documents.js";
+import type { Vector2D } from "../physics/physics.js";
+import { kore } from "../kore/sdk/index.js";
 import { FRICTION_TABLE } from "./settings.js";
 
 const blueprint = { x: 800, y: 450 };
@@ -20,18 +21,8 @@ export function createHazardControlMap(worldSize: Vector2D): MapDocument {
 	const scaleX = worldSize.x / blueprint.x;
 	const scaleY = worldSize.y / blueprint.y;
 	const scale = Math.min(scaleX, scaleY);
-	const zone = (x: number, y: number, r: number) => ({ x: x * scaleX, y: y * scaleY, r: r * scale });
-	return {
-		schemaVersion: DOCUMENT_SCHEMA_VERSION,
-		metadata: { id: "hazard-control", name: "Hazard Control", description: "A mirrored arena whose center corridor is guarded by two lethal kill zones; flank and drive opponents backward into the hazard." },
-		worldSize: { ...worldSize },
-		friction: { ...FRICTION_TABLE.tiles },
-		drift: 0,
-		arenaGeometry: [{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: worldSize.x, h: worldSize.y, role: "containment", effects: [] }],
-		spawnRegions: [{ team: 0, x: 138 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY }, { team: 1, x: 638 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY }],
-		hazards: [
-			{ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: "west-kill", type: "kill-zone", trigger: { type: "collision" }, config: zone(300, 225, 28) },
-			{ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: "east-kill", type: "kill-zone", trigger: { type: "collision" }, config: zone(500, 225, 28) },
-		],
-	};
+	const map = kore.createDefaultMap({ id: "hazard-control", name: "Hazard Control", description: "A mirrored arena whose center corridor is guarded by two lethal kill zones; flank and drive opponents backward into the hazard.", worldSize, friction: FRICTION_TABLE.tiles });
+	map.addPlayerSpawn({ teamNr: 0, x: 138 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
+	map.addPlayerSpawn({ teamNr: 1, x: 638 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
+	return map.addKillZone({ id: "west-kill", x: 300 * scaleX, y: 225 * scaleY, r: 28 * scale }).addKillZone({ id: "east-kill", x: 500 * scaleX, y: 225 * scaleY, r: 28 * scale }).buildMapDocument();
 }
