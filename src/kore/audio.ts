@@ -8,6 +8,14 @@ export const KORE_AUDIO_ASSETS = {
 	// IDs deliberately resolve through that pack until dedicated SFX are added.
 	"kore.ui.confirm": "/public/audio/CM_03_Ritualis.mp3",
 	"kore.game.shot": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.collision": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.damage": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.shield": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.item": "/public/audio/CM_03_Ritualis.mp3",
+	"kore.game.hazard": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.elimination": "/public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.turn": "/public/audio/CM_03_Ritualis.mp3",
+	"kore.game.result": "/public/audio/CM_03_Ritualis.mp3",
 } as const;
 
 export const KORE_AUDIO_BUSES: AudioBusSettings[] = [
@@ -25,7 +33,7 @@ export const koreAudio = {
 	assets: KORE_AUDIO_ASSETS,
 	buses: KORE_AUDIO_BUSES,
 	createSettings: createKoreAudioSettings,
-	sounds: { uiConfirm: "kore.ui.confirm", shot: "kore.game.shot" },
+	sounds: { uiConfirm: "kore.ui.confirm", shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield", item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result" },
 	music: { menu: "kore.music.menu", match: "kore.music.match" },
 	command: {
 		uiConfirm(sourceId: string, soundId: string = "kore.ui.confirm"): PlaySoundCommand { return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" }); },

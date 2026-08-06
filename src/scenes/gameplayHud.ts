@@ -7,6 +7,7 @@ import { KoreHudCommand, type KoreHudCommandMessage } from "../kore/ui/hudComman
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import type { ItemTarget } from "../item/target.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
+import { KoreGameplayFeedbackSurface } from "../kore/gameplayFeedback.js";
 
 /**
  * Semantic HUD actions. Callbacks that return `false` signal external handling
@@ -45,11 +46,18 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 	const hud = createKoreGameHudSurface({
 		handle: command => handleHudCommand(command, handler, { ...actions, itemUi }),
 	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true }, actions.language ?? createEnglishLanguage());
+	const feedback = new KoreGameplayFeedbackSurface();
+	let feedbackCursor = 0;
 	handler.setMouseHandler(hud);
 	const sync = () => createKoreHudProjection(handler, uiSystem, rejection);
 	hud.applyProjection(sync());
-	handler.addPostTicker({ tick: (_ctx, dt) => { hud.applyProjection(sync()); hud.tick(dt); } });
-	handler.addPostDrawer({ draw: renderer => { hud.applyProjection(sync()); hud.draw(renderer); } });
+	handler.addPostTicker({ tick: (_ctx, dt) => {
+		const events = handler.getFeedbackTrace(feedbackCursor);
+		for (const event of events) feedback.accept(event);
+		feedbackCursor += events.length;
+		hud.applyProjection(sync()); hud.tick(dt); feedback.tick(dt);
+	} });
+	handler.addPostDrawer({ draw: renderer => { hud.applyProjection(sync()); hud.draw(renderer); feedback.draw(renderer); } });
 	return hud;
 }
 

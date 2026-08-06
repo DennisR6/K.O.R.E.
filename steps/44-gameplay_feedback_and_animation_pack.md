@@ -2,7 +2,15 @@
 
 ## Status
 
-Planned
+Implemented
+
+The KORE feedback pack is implemented in `src/kore/gameplayFeedback.ts`.
+Authoritative handlers emit deterministic shot, collision, damage, shield, item,
+hazard, elimination, turn, and result events outside `EngineSettings`. The
+presentation surface is explicit-tick and renderer-independent; audio remains
+semantic and optional. Muted, unavailable, or throwing output ports are ignored
+without changing gameplay or match results, and feedback labels are exposed
+through the existing HUD render path rather than DOM controls.
 
 ## Objective
 

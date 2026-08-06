@@ -257,6 +257,9 @@ After every change, check whether this guide still reflects the implementation a
   browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
   output-port adapter; `src/menu/AudioManager.ts` owns media resources and
   autoplay unlocking, never game entities.
+- `src/kore/gameplayFeedback.ts`: authoritative semantic gameplay feedback trace
+  plus renderer-independent presentation and audio adapters; its history is
+  visual/output state and is intentionally outside `EngineSettings`.
 - `src/settings/iceMap.ts`: active map geometry, background, spawn regions, and
   structure effects.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
