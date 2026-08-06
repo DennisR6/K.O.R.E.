@@ -148,6 +148,34 @@ describe("playback match finalization", () => {
 		expect(handler.getMatchResult()?.turnNumber).toBe(0);
 	});
 
+	test("finalizes when the authoritative final snapshot contains the elimination", () => {
+		const settings = createDefaultGameSettings(2, 1);
+		const handler = new GameHandlerBuilder()
+			.defaultSystems()
+			.addSystem(new WinningSystem(2))
+			.fromSettings(settings)
+			.build();
+		const finalState = handler.getEntityManager().toSettings();
+		finalState[1]!.isDead = true;
+		finalState[1]!.hp = 0;
+
+		handler.playTurn({
+			actorId: finalState[0]!.id,
+			input: { angle: 0, power: 0 },
+			durationFrames: 1,
+			finalState,
+		});
+		handler.tick();
+
+		expect(handler.getState()).toBe(GameState.Game_over);
+		expect(handler.getMatchResult()).toEqual({
+			status: MatchStatus.Winner,
+			winnerTeam: 0,
+			reason: MatchEndReason.LastTeamStanding,
+			turnNumber: 0,
+		});
+	});
+
 	test("a non-winning accepted turn still advances the rule state normally", () => {
 		const settings = killCircleArena();
 		// No kill at spawn: both players stay alive for this shot.

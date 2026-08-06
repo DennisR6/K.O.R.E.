@@ -17,7 +17,8 @@ test("Section 20 operational evidence and privacy boundaries are present", () =>
 		"tests/browser/online_operations_journey.e2e.test.ts",
 	]) expect(existsSync(resolve(root, file))).toBe(true);
 	const checklist = read("step-by-step.md");
-	expect(checklist).toContain("## 20. Online Match Operations, Sharing, And Player Support");
+	expect(checklist).toContain("| 20 |");
+	expect(checklist).toContain("Online Match Operations, Sharing, And Player Support");
 	expect(checklist).toContain("replay sharing");
 	const replayRoute = read("src/server/replayShares.ts");
 	const replayStore = read("src/server/db.ts");

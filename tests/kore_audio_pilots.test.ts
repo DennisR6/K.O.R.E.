@@ -9,7 +9,7 @@ test("KORE menu pilot emits semantic menu music and a UI confirmation without br
 	const menu = createKoreMainMenuSurface({ onPlayLocal: () => { started++; } });
 	expect(menu.drainSoundCommands()).toMatchObject([{ type: "playMusic", soundId: "kore.music.menu", bus: "music" }]);
 	menu.updateMouse(400, 100); menu.handleMousePressed(); // landing -> main menu
-	menu.updateMouse(400, 325); menu.handleMousePressed(); // local-play button
+	menu.updateMouse(551, 368); menu.handleMousePressed(); // local-play button
 	expect(started).toBe(1);
 	expect(menu.drainSoundCommands()).toMatchObject([{ type: "playSound", soundId: "kore.ui.confirm", bus: "ui" }]);
 });

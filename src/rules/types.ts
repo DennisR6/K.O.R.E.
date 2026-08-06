@@ -27,11 +27,20 @@ export interface SeededItemDrawSettings {
 	drawsPerTurn: number;
 }
 
+/** Optional mystery-box reward configuration for one game mode. */
+export interface MysteryBoxSettings {
+	/** Item IDs the mystery box may grant; must all be declared by the game. */
+	candidatePool: string[];
+	/** Allows a mystery-box reward to resolve to another mystery box. Defaults to false. */
+	allowMysteryBoxReward?: boolean;
+}
+
 /** Declarative item sources available to one game mode. */
 export interface ItemEconomySettings {
 	fixedLoadouts: FixedItemLoadout[];
 	mapPickups: ItemPickup[];
 	randomDraw?: SeededItemDrawSettings;
+	mysteryBox?: MysteryBoxSettings;
 }
 
 export const DEFAULT_ITEM_ECONOMY: ItemEconomySettings = {
@@ -74,10 +83,21 @@ export function validateItemEconomySettings(settings: unknown): asserts settings
 			throw new Error("Seeded item draws require a safe seed, non-empty item pool, and positive draws per turn");
 		}
 	}
+	if (settings.mysteryBox !== undefined) {
+		const box = settings.mysteryBox;
+		if (!isRecord(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every(itemId => typeof itemId === "string" && itemId)) {
+			throw new Error("Mystery box rewards require a non-empty candidate pool");
+		}
+		if (box.allowMysteryBoxReward !== undefined && typeof box.allowMysteryBoxReward !== "boolean") {
+			throw new Error("Mystery box recursion flag must be a boolean");
+		}
+	}
 }
 
 /** Data-defined gameplay rules, independent from the simulation handler. */
 export interface GameModeSettings {
+	/** Version of the serialized mode contract; legacy snapshots may omit it. */
+	schemaVersion?: 1;
 	id: string;
 	phases: RulePhase[];
 	maxItemsPerTurn: number;

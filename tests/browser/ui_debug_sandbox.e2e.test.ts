@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "@playwright/test";
 import {
 	activeBrowserServers,
 	assertCleanConsole,
@@ -7,12 +7,13 @@ import {
 	clickWorld,
 	ensureBrowserBuild,
 	launchBrowser,
+	closeBrowser,
 	startTestServer,
 	waitFor,
 } from "./browserHarness.ts";
 
-describe("generic UI SDK browser debug sandbox", () => {
-	afterAll(() => expect(activeBrowserServers()).toBe(0));
+test.describe("generic UI SDK browser debug sandbox", () => {
+	test.afterAll(() => expect(activeBrowserServers()).toBe(0));
 
 	test("debug=ui runs the standalone SDK sandbox and preserves state through reconstruction", async () => {
 		await ensureBrowserBuild();
@@ -48,9 +49,9 @@ describe("generic UI SDK browser debug sandbox", () => {
 			expect(state.screens.find((screen: any) => screen.id === "state").elements.find((element: any) => element.id === "state-value").text).toContain("persisted");
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

@@ -1,12 +1,10 @@
-import { AiTurnEmitter, type IAiTurnProducer } from "./aiEmitter.js";
-import { EasyAi } from "./easyAi.js";
-import { HardAi } from "./hardAi.js";
-import { MediumAi } from "./mediumAi.js";
+import { AiTurnEmitter } from "./aiEmitter.js";
 import type { AiSettings } from "./types.js";
 import type { GameHandler } from "../engine/Handler.js";
 import { GameState, type IMouse, type IInputEmitter } from "../engine/types.js";
 import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "../systems/types.js";
+import { koreAi } from "../kore/ai.js";
 
 /**
  * Autonomous KI-vs-KI battle driver.
@@ -36,8 +34,8 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		aiTeam0: AiSettings,
 		aiTeam1: AiSettings,
 	) {
-		this.emitter0 = new AiTurnEmitter(new (producerFor(aiTeam0))());
-		this.emitter1 = new AiTurnEmitter(new (producerFor(aiTeam1))());
+		this.emitter0 = koreAi.createTurnEmitter(aiTeam0);
+		this.emitter1 = koreAi.createTurnEmitter(aiTeam1);
 		this.settings0 = aiTeam0;
 		this.settings1 = aiTeam1;
 	}
@@ -82,6 +80,9 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		}
 	}
 
+	/** Exposes the authoritative shot emitter for recorder/analysis introspection. */
+	public getEmitter(): IInputEmitter | undefined { return this.targetEmitter; }
+
 	// Passive mouse contract: a battle never accepts pointer input, but the
 	// result overlay wraps this handler as its gameplay pass-through.
 	public handleMousePressed(): void { }
@@ -89,13 +90,4 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 	public handleMouseWheel(_event: WheelEvent): void { }
 	public updateMouse(_x: number, _y: number): void { }
 	public reset(): void { }
-}
-
-/** Maps an AI difficulty to its producer class without a settings round trip. */
-function producerFor(settings: AiSettings): new () => IAiTurnProducer {
-	switch (settings.difficulty) {
-		case "easy": return EasyAi;
-		case "medium": return MediumAi;
-		case "hard": return HardAi;
-	}
 }

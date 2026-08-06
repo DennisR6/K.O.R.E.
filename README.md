@@ -88,12 +88,14 @@ bun run docs
 
 ## Map SDK
 
-`src/kore_sdk.ts` exports one `kore` entry point for authoring validated,
-engine-importable JSON settings. `bun run build` emits `dist/kore_sdk.js`
-alongside the browser bundle.
+`src/kore/sdk/index.ts` exports one `kore` entry point for authoring validated,
+engine-importable JSON settings. `bun run build` emits the browser bundle.
+The complete authoring surface, layer boundaries, migration notes, and runnable
+examples are documented in [`docs/sdk-authoring-guide.md`](docs/sdk-authoring-guide.md)
+and [`examples/`](examples/).
 
 ```ts
-import { kore } from "./src/kore_sdk.ts";
+import { kore } from "./src/kore/sdk/index.ts";
 
 const penguins = kore.createTeam({ teamNr: 0, name: "Penguins", playerCount: 2 });
 const map = kore.createDefaultMap({ name: "Training Arena" })
@@ -141,5 +143,7 @@ For full architecture details, API specifications, and release guides:
 - [General Documentation & Architecture Guide](docs/README.md)
 - [Desktop Packaging & Build Guide](docs/desktop-release.md)
 - [Release Verification Ledger](docs/release-verification.md)
+- [SDK Authoring and Final Release Gate](docs/sdk-authoring-guide.md) (`bun run sdk:release-gate`)
+- [SDK-Authored Content Release Verification](docs/sdk-content-release-verification.md) (`bun run content:release-gate`)
 - [Game Design Document (German)](gdd.md)
 - [Agent & Contributor Rules](AGENTS.md)

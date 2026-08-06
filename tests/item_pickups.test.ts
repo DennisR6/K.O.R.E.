@@ -49,3 +49,38 @@ test("map pickups collect deterministically for live entities on the active team
 	const restoredEnemy = restored.getEntityManager().getEntityById(enemy.getId())!;
 	expect(restoredEnemy.getInventory()).toEqual([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);
 });
+
+test("map pickups serialize and honor a round-based respawn countdown", () => {
+	const item = createItemDocument({ id: "respawning-dash", useLimit: { perTurn: 1, perGame: 5 } });
+	const settings = {
+		...createDefaultGameSettings(2, 1),
+		items: [item],
+		gameMode: {
+			id: "respawn-test",
+			phases: [RulePhase.Physics],
+			maxItemsPerTurn: 0,
+			winCondition: WinCondition.LastTeamStanding,
+			itemEconomy: {
+				fixedLoadouts: [],
+				mapPickups: [{ itemId: item.id, spawnRegion: { x: 100, y: 100, w: 20, h: 20 }, activationType: "collision", respawnConfig: { intervalRounds: 2 } }],
+			},
+		},
+	};
+	settings.players.forEach(player => { player.position = { x: 0, y: 0 }; });
+	settings.players[0].position = { x: 110, y: 110 };
+
+	const handler = new GameHandlerBuilder().fromSettings(settings).build();
+	const player = handler.getEntityManager().getEntities()[0];
+	handler.tick();
+	expect(handler.toSettings().itemPickupState?.pickups[0]).toEqual({ collected: 1, occupants: [player.getId()], respawnCountdown: 2 });
+
+	handler.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 1, itemUses: 0 });
+	handler.tick();
+	expect(handler.toSettings().itemPickupState?.pickups[0].respawnCountdown).toBe(1);
+	expect(player.getInventory()).toHaveLength(1);
+
+	handler.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 2, itemUses: 0 });
+	handler.tick();
+	expect(handler.toSettings().itemPickupState?.pickups[0]).toEqual({ collected: 1, occupants: [player.getId()], respawnCountdown: 2 });
+	expect(player.getInventory()).toEqual([{ itemId: item.id, remainingUses: 2, usesThisTurn: 0 }]);
+});

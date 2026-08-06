@@ -18,7 +18,7 @@ import { createDefaultGameSettings, validateGameSettings } from "../src/settings
 const ROOT = process.cwd();
 const read = (file: string) => readFileSync(resolve(ROOT, file), "utf8");
 
-const shippedMapIds = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel", "structure-control", "hazard-control"];
+const shippedMapIds = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel", "structure-control", "hazard-control", "aurora-basin", "lantern-gates", "ember-crossing"];
 const plannedMapIds: string[] = [];
 const allMapIds = [...shippedMapIds, ...plannedMapIds];
 

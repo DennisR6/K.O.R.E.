@@ -20,10 +20,14 @@ class Socket implements ServerSocket {
 }
 
 test("either completed-match participant exports the same replay token and both receive it", () => {
-	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings()).build();
+	const pristine = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings()).build();
+	const origin = pristine.toSettings();
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(origin).build();
 	handler.finishMatch({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 0 });
 	const database = new GameDatabase(":memory:");
-	database.createGame({ id: "replay-participant-game", settings: handler.toSettings(), users: [FIRST_USER, SECOND_USER], currentTeam: 0, turnNumber: 0, updatedAt: 1, lifecycle: { version: 1, status: "completed", createdAt: 1, statusChangedAt: 1, completedAt: 1 } });
+	// A real server row always carries the immutable origin recorded at match
+	// creation, so the completed snapshot never masquerades as a replay origin.
+	database.createGame({ id: "replay-participant-game", settings: handler.toSettings(), initialSettings: origin, users: [FIRST_USER, SECOND_USER], currentTeam: 0, turnNumber: 0, updatedAt: 1, lifecycle: { version: 1, status: "completed", createdAt: 1, statusChangedAt: 1, completedAt: 1 } });
 	const runtime = new ServerRuntime(new GameRegistry(database));
 	const first = new Socket({ connectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
 	const second = new Socket({ connectionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" });
@@ -44,10 +48,12 @@ test("either completed-match participant exports the same replay token and both 
 
 test("completion automatically stores a private replay token before any player shares it", () => {
 	const settings = createDefaultGameSettings(2, 1);
-	settings.players.find(player => player.team.includes(1))!.isDead = true;
 	const database = new GameDatabase(":memory:");
 	const registry = new GameRegistry(database);
 	const record = registry.create(settings, [FIRST_USER, SECOND_USER]);
+	// The roster starts fully alive; team 1 is eliminated only during play so
+	// the recorded origin remains a pristine, playable match start.
+	record.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(1))!.setIsDead(true);
 	const actorId = record.handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!.getId();
 	expect(registry.submitTurn(FIRST_USER, { actorId, angle: 0, power: 1 }).ok).toBe(true);
 	const summary = database.listOperatorReplays(record.id)[0]!;

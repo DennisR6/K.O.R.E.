@@ -60,8 +60,9 @@ describe("Section 15.12 gameplay release candidate gate", () => {
 	test("the qualification boundary is explicit in every release document", () => {
 		expect(read("docs/gameplay-balance-report.md")).toContain("Section 15.12 Final Gameplay Release Decision");
 		expect(read("docs/gameplay-balance-report.md")).toContain("BLOCKED / NOT QUALIFIED");
-		expect(read("step-by-step.md")).toContain("## 15. Gameplay Qualification And Human Playtest Validation");
-		expect(read("step-by-step.md")).toContain("human playtest evidence remains BLOCKED / PENDING");
+		expect(read("step-by-step.md")).toContain("| 15 |");
+		expect(read("step-by-step.md")).toContain("Gameplay Qualification And Human Playtest Validation");
+		expect(read("step-by-step.md").toLowerCase()).toContain("human playtest evidence remains `blocked / pending`");
 		expect(read("requirements.md")).toContain("R-17");
 		expect(read("requirements.md")).toContain("gameplay_release_gate.test.ts");
 	});

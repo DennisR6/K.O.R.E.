@@ -2,6 +2,8 @@ import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
 import { isStructureCollisionRole, SHAPE, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
+
+
 import IceMap from "./iceMap.js";
 import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
@@ -10,6 +12,7 @@ import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/types.js";
+import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -39,6 +42,8 @@ export interface GameSettings {
 	turn?: number
 	/** Immutable database-map identity retained with expanded runtime settings. */
 	mapReference?: { mapId: string; contentHash: string }
+	/** Deterministic map mechanics; omitted by legacy maps. */
+	environmentalMechanics?: EnvironmentalMechanic[]
 }
 
 export interface SettingsScreenResolution {
@@ -128,13 +133,19 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
 	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
 	if (settings.gameMode !== undefined) {
+		if (settings.gameMode.schemaVersion !== undefined && settings.gameMode.schemaVersion !== 1) throw new Error("Unsupported game mode schema version")
 		validateItemEconomySettings(settings.gameMode.itemEconomy)
 		const draw = settings.gameMode.itemEconomy.randomDraw
 		if (draw && !draw.itemIds.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {
 			throw new Error("Seeded item draw references an unknown item")
 		}
+		const mysteryBox = settings.gameMode.itemEconomy.mysteryBox
+		if (mysteryBox && !mysteryBox.candidatePool.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {
+			throw new Error("Mystery Box pool references an unknown item")
+		}
 	}
 	if (settings.ai !== undefined) validateAiSettings(settings.ai)
+	if (settings.environmentalMechanics !== undefined) validateEnvironmentalMechanics(settings.environmentalMechanics)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }

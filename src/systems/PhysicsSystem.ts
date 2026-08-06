@@ -19,6 +19,8 @@ import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.
  */
 export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	public readonly systemId = "core.physics";
+	/** Optional semantic observer; it never participates in collision resolution. */
+	public onCollision?: (a: IPhysics<SHAPE>, b: IPhysics<SHAPE>) => void;
 	/** 
 	 * Geschwindigkeit, unter der eine Entity als "stehend" betrachtet wird.
 	 * Verhindert unendliches "Zittern" durch Gleitkomma-Berechnungen.
@@ -256,6 +258,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			}
 		} else {
 			contactedPairs.add(pairKey);
+			this.onCollision?.(entityA, entityB);
 			this.strategy.handleCollision(entityA, entityB);
 		}
 	}

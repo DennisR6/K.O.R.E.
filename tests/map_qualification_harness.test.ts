@@ -18,7 +18,7 @@ import { MAP_QUALIFICATION_SEEDS, MAP_PLAYBACK_BOUND, inspectMapSettings, mirror
  * failure - never an artificial draw.
  */
 
-const shippedMaps = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel", "structure-control", "hazard-control"];
+const shippedMaps = ["ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle", "symmetric-duel", "structure-control", "hazard-control", "aurora-basin", "lantern-gates", "ember-crossing"];
 // Technical qualification passes for the maps whose legal play satisfies the
 // Section 13 physics contract. frostbite-arena violates it deterministically
 // (see the dedicated blocked-classification test below).

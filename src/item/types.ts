@@ -17,6 +17,17 @@ export interface ItemUseLimit {
 	perGame: number;
 }
 
+export type ItemInteractionMode = "stack" | "replace" | "reject";
+
+/** Declarative composition policy for effects already installed on a target. */
+export interface ItemInteractionPolicy {
+	mode: ItemInteractionMode;
+	/** Per-item overrides; the other item's policy may define the reverse pair. */
+	with?: Record<string, ItemInteractionMode>;
+	/** Lower orders are applied first when effects are composed. */
+	order?: number;
+}
+
 export interface ItemTargetValidation {
 	allowSelf: boolean;
 	allowAlly: boolean;
@@ -36,6 +47,7 @@ export interface ItemDocument {
 	useLimit: ItemUseLimit;
 	targetValidation?: ItemTargetValidation;
 	cooldown?: number;
+	interaction?: ItemInteractionPolicy;
 }
 
 export interface InventoryItem {
@@ -44,17 +56,23 @@ export interface InventoryItem {
 	usesThisTurn: number;
 }
 
+export interface RespawnConfig {
+	intervalRounds: number;
+}
+
 export interface ItemPickup {
 	itemId: string;
 	spawnRegion: { x: number; y: number; w: number; h: number };
 	activationType: ActivationType;
 	maxPickupsPerTurn?: number;
+	respawnerCountdown?: number;
+	respawnConfig?: RespawnConfig;
 }
 
 /** Serializable progress for configured map pickups in the current turn. */
 export interface ItemPickupState {
 	turnNumber: number;
-	pickups: { collected: number; occupants: string[] }[];
+	pickups: { collected: number; occupants: string[]; respawnCountdown?: number }[];
 }
 
 export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemDocument {
@@ -67,6 +85,7 @@ export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemD
 		targetType: overrides.targetType ?? "self",
 		duration: overrides.duration ?? { type: "instant", value: 0 },
 		useLimit: overrides.useLimit ?? { perTurn: 1, perGame: 1 },
+		interaction: overrides.interaction ?? { mode: "stack", order: 0 },
 		...overrides,
 	};
 }
@@ -91,6 +110,7 @@ export function createItemPickup(overrides: Partial<ItemPickup> = {}): ItemPicku
 const VALID_DURATION_TYPES: string[] = ["instant", "turns", "rounds"];
 const VALID_TARGET_TYPES: string[] = ["self", "entity", "position", "zone"];
 const VALID_ACTIVATION_TYPES: string[] = ["collision", "proximity"];
+const VALID_INTERACTION_MODES: string[] = ["stack", "replace", "reject"];
 
 export function validateItemDocument(document: unknown): asserts document is ItemDocument {
 	if (typeof document !== "object" || document === null) throw new Error("Item document must be a non-null object");
@@ -123,6 +143,18 @@ export function validateItemDocument(document: unknown): asserts document is Ite
 		if (tv.maxRange !== undefined && (typeof tv.maxRange !== "number" || !Number.isFinite(tv.maxRange) || tv.maxRange < 0)) throw new Error("Item targetValidation maxRange must be a non-negative finite number");
 	}
 	if (doc.cooldown !== undefined && (typeof doc.cooldown !== "number" || !Number.isSafeInteger(doc.cooldown) || doc.cooldown < 0)) throw new Error("Item cooldown must be a non-negative integer");
+	if (doc.interaction !== undefined) {
+		if (typeof doc.interaction !== "object" || doc.interaction === null) throw new Error("Item interaction must be an object");
+		const interaction = doc.interaction as Record<string, unknown>;
+		if (!VALID_INTERACTION_MODES.includes(interaction.mode as string)) throw new Error("Item interaction must have a valid mode");
+		if (interaction.order !== undefined && (!Number.isSafeInteger(interaction.order) || (interaction.order as number) < 0)) throw new Error("Item interaction order must be a non-negative integer");
+		if (interaction.with !== undefined) {
+			if (typeof interaction.with !== "object" || interaction.with === null || Array.isArray(interaction.with)) throw new Error("Item interaction overrides must be an object");
+			for (const [itemId, mode] of Object.entries(interaction.with as Record<string, unknown>)) {
+				if (!itemId || !VALID_INTERACTION_MODES.includes(mode as string)) throw new Error("Item interaction overrides must contain valid item IDs and modes");
+			}
+		}
+	}
 }
 
 export function validateInventoryItem(item: unknown): asserts item is InventoryItem {
@@ -139,10 +171,16 @@ export function validateItemPickup(pickup: unknown): asserts pickup is ItemPicku
 	if (typeof p.itemId !== "string" || !p.itemId) throw new Error("Item pickup must have a non-empty string itemId");
 	if (typeof p.spawnRegion !== "object" || p.spawnRegion === null) throw new Error("Item pickup must have a spawnRegion object");
 	const region = p.spawnRegion as Record<string, unknown>;
-	if (typeof region.x !== "number" || typeof region.y !== "number" || typeof region.w !== "number" || typeof region.h !== "number") throw new Error("Item pickup spawnRegion must have numeric x, y, w, h");
+	if (typeof region.x !== "number" || !Number.isFinite(region.x) || typeof region.y !== "number" || !Number.isFinite(region.y) || typeof region.w !== "number" || !Number.isFinite(region.w) || typeof region.h !== "number" || !Number.isFinite(region.h)) throw new Error("Item pickup spawnRegion must have finite numeric x, y, w, h");
 	if (region.w <= 0 || region.h <= 0) throw new Error("Item pickup spawnRegion w and h must be positive");
 	if (!VALID_ACTIVATION_TYPES.includes(p.activationType as string)) throw new Error("Item pickup must have a valid activation type");
 	if (p.maxPickupsPerTurn !== undefined && (typeof p.maxPickupsPerTurn !== "number" || !Number.isSafeInteger(p.maxPickupsPerTurn) || p.maxPickupsPerTurn < 0)) throw new Error("Item pickup maxPickupsPerTurn must be a non-negative integer");
+	if (p.respawnerCountdown !== undefined && (typeof p.respawnerCountdown !== "number" || !Number.isSafeInteger(p.respawnerCountdown) || p.respawnerCountdown < 0)) throw new Error("Item pickup respawnerCountdown must be a non-negative integer");
+	if (p.respawnConfig !== undefined) {
+		if (typeof p.respawnConfig !== "object" || p.respawnConfig === null) throw new Error("Item pickup respawnConfig must be an object");
+		const config = p.respawnConfig as Record<string, unknown>;
+		if (typeof config.intervalRounds !== "number" || !Number.isSafeInteger(config.intervalRounds) || config.intervalRounds < 1) throw new Error("Item pickup respawnConfig intervalRounds must be a positive integer");
+	}
 }
 
 export function validateItemPickupState(state: unknown, pickupCount: number): asserts state is ItemPickupState {
@@ -155,5 +193,6 @@ export function validateItemPickupState(state: unknown, pickupCount: number): as
 		const entry = pickup as Record<string, unknown>;
 		if (typeof entry.collected !== "number" || !Number.isSafeInteger(entry.collected) || entry.collected < 0) throw new Error("Item pickup state must have non-negative collection counts");
 		if (!Array.isArray(entry.occupants) || !entry.occupants.every(id => typeof id === "string") || new Set(entry.occupants).size !== entry.occupants.length) throw new Error("Item pickup state must have unique occupant IDs");
+		if (entry.respawnCountdown !== undefined && (typeof entry.respawnCountdown !== "number" || !Number.isSafeInteger(entry.respawnCountdown) || entry.respawnCountdown < 0)) throw new Error("Item pickup state must have a non-negative respawn countdown");
 	}
 }

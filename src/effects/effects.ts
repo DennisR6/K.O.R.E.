@@ -9,6 +9,7 @@ import { EffectModifySetting } from "./modifySetting.js";
 import { EffectMove } from "./movement.js";
 import { EffectPhysics } from "./physics.js";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
+import { createRuntimeEffect } from "./runtimeFactory.js";
 
 /**
  * Applies a list of child effects in order and round-trips their settings.
@@ -21,7 +22,7 @@ export class MultiEffect implements Effect {
 	constructor(effect: EffectSettings) {
 		const children = effect.typeValue
 		if (!Array.isArray(children)) throw new Error("EffectType.Multi requires a typeValue array of effect settings")
-		this.children = children.map(child => new MetaEffect(child))
+		this.children = children.map(child => createRuntimeEffect(child))
 	}
 	apply(entity: IPhysics<SHAPE>, override?: Object): void { for (const child of this.children) child.apply(entity, override) }
 	getType(): EffectType { return EffectType.Multi }

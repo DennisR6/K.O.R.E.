@@ -20,7 +20,7 @@ describe("Section 15.11 playtest regression contract", () => {
 
 		expect(evidence).toContain("Preferences: not assessed");
 		expect(evidence).toContain("Subjective preferences are excluded from regression\n  coverage");
-		expect(task).toContain("Do not encode subjective preference as a technical invariant");
+		expect(task).toContain("subjective preference is not a technical invariant");
 	});
 
 	test("links the empty contract to this focused test", () => {

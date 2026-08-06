@@ -6,6 +6,9 @@ import { createHazardControlMap } from "../settings/hazardControlMap.js";
 import { createMagmaCradleMap } from "../settings/magmaCradleMap.js";
 import { createStructureControlMap } from "../settings/structureControlMap.js";
 import { createSymmetricDuelMap } from "../settings/symmetricDuelMap.js";
+import { createAuroraBasinMap } from "./maps/aurora-basin.js";
+import { createEmberCrossingMap } from "./maps/ember-crossing.js";
+import { createLanternGatesMap } from "./maps/lantern-gates.js";
 
 /**
  * Authoritative inventory of every shipped and Section 17 candidate map
@@ -78,6 +81,9 @@ function countArenaGeometry(map: MapDocument): number { return map.arenaGeometry
 const cueClash = createCueClashMap(WORLD);
 const frostbite = createFrostbiteArenaMap(WORLD);
 const magma = createMagmaCradleMap(WORLD);
+const aurora = createAuroraBasinMap(WORLD);
+const lantern = createLanternGatesMap(WORLD);
+const ember = createEmberCrossingMap(WORLD);
 
 export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 	{
@@ -241,6 +247,66 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 			"Stock easy AI plays a random walk and terminates matches via wall contact; hazard terminal-path evidence comes from the deterministic fixtures (17.6)",
 		],
 	},
+	{
+		id: "aurora-basin",
+		name: "Aurora Basin",
+		source: "src/content/maps/aurora-basin.ts",
+		schemaVersion: DOCUMENT_SCHEMA_VERSION,
+		worldSize: { x: 800, y: 450 },
+		symmetry: "symmetric",
+		spawnRegionCount: aurora.spawnRegions.length,
+		structureCount: aurora.arenaGeometry.length,
+		hazardCount: aurora.hazards.length,
+		hazardTypes: [],
+		friction: "ice",
+		drift: 0,
+		teamLayouts: [2],
+		figuresPerTeam: [1],
+		browserAvailable: true,
+		battleAvailable: true,
+		status: "browser-qualified",
+		knownLimitations: ["Two central islands shape rebounds; broad north and south lanes preserve alternate approaches."],
+	},
+	{
+		id: "lantern-gates",
+		name: "Lantern Gates",
+		source: "src/content/maps/lantern-gates.ts",
+		schemaVersion: DOCUMENT_SCHEMA_VERSION,
+		worldSize: { x: 800, y: 450 },
+		symmetry: "symmetric",
+		spawnRegionCount: lantern.spawnRegions.length,
+		structureCount: lantern.arenaGeometry.length,
+		hazardCount: lantern.hazards.length,
+		hazardTypes: [],
+		friction: "billiards",
+		drift: 0,
+		teamLayouts: [2],
+		figuresPerTeam: [1],
+		browserAvailable: true,
+		battleAvailable: true,
+		status: "browser-qualified",
+		knownLimitations: ["The center gate blocks a straight shot but leaves three symmetric lanes."],
+	},
+	{
+		id: "ember-crossing",
+		name: "Ember Crossing",
+		source: "src/content/maps/ember-crossing.ts",
+		schemaVersion: DOCUMENT_SCHEMA_VERSION,
+		worldSize: { x: 800, y: 450 },
+		symmetry: "symmetric",
+		spawnRegionCount: ember.spawnRegions.length,
+		structureCount: ember.arenaGeometry.length,
+		hazardCount: ember.hazards.length,
+		hazardTypes: ["kill-zone"],
+		friction: "tiles",
+		drift: 0,
+		teamLayouts: [2],
+		figuresPerTeam: [1],
+		browserAvailable: true,
+		battleAvailable: true,
+		status: "browser-qualified",
+		knownLimitations: ["Center hazards punish straight crossings; the outer lanes remain safe recovery routes."],
+	},
 ];
 
 /** Looks up a catalog entry by stable map ID; unknown IDs are rejected. */
@@ -263,6 +329,9 @@ const mapFactories: Record<string, (worldSize: { x: number; y: number }) => MapD
 	"magma-cradle": createMagmaCradleMap,
 	"structure-control": createStructureControlMap,
 	"symmetric-duel": createSymmetricDuelMap,
+	"aurora-basin": createAuroraBasinMap,
+	"lantern-gates": createLanternGatesMap,
+	"ember-crossing": createEmberCrossingMap,
 };
 
 /** Loads a catalog map into validated engine settings through the shared loader. */

@@ -53,8 +53,7 @@ test("HUD result controls render the authoritative winner or draw and consume ga
 	overlay.handleMousePressed();
 	expect(actions).toEqual([
 		{ type: KoreHudCommand.Rematch, payload: undefined },
-		{ type: KoreHudCommand.Replay, payload: undefined },
-		{ type: KoreHudCommand.Share, payload: undefined },
+		{ type: KoreHudCommand.ReplayShare, payload: undefined },
 	]);
 	expect(gameplayPresses).toBe(0);
 });

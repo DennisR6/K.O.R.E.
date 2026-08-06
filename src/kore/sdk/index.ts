@@ -4,15 +4,40 @@ import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
-import { EffectTrigger, EffectType, type EffectSettings, type FullEffectSettings, type ModifySettingValue } from "../../effects/types.js";
-import { GameHandler, GameHandlerBuilder } from "../../engine/Handler.js";
+import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
+import { GameHandler } from "../../engine/Handler.js";
+import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
+import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
+import { applyRuntimeForceEffects, createRuntimeItemEffect, resolveRuntimeItemEffects } from "./itemRuntime.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
-import { DOCUMENT_SCHEMA_VERSION, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
+import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
+import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
+import { createItemDocument, validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
+import { ItemValidator } from "../../item/validate.js";
+import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
+import { koreAi } from "../ai.js";
+import {
+	authorMatchSettings,
+	createGameMode,
+	createMatchDefinition,
+	createMatchSystemProfile,
+	createRuntimeMatch,
+	validateKoreMatchDefinition,
+	type KoreGameModeInput,
+	type KoreMatchDefinition,
+	type KoreMatchHeader,
+	type KoreMatchOptions,
+} from "./match.js";
+import { GAME_MODE_CATALOG_SCHEMA_VERSION, getGameModeCatalogEntry, getSelectableGameModes } from "../../rules/modeCatalog.js";
+import { canonicalizeContentPackage, hashContentPackage, loadContentPackage, validateContentPackage } from "../../content/package.js";
+export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
+
 
 type SerializableEffect = { toSettings(): EffectSettings };
 type EffectInput = SerializableEffect | EffectSettings | FullEffectSettings;
@@ -61,6 +86,140 @@ export interface KoreWorldEffects {
 	triggerValue?: unknown;
 }
 
+export interface KoreHazardZone {
+	id: string;
+	x: number;
+	y: number;
+	r: number;
+	color?: string;
+}
+
+export interface KoreForceHazardZone extends KoreHazardZone {
+	angle: number;
+	power: number;
+}
+
+export interface KoreItemInput {
+	id: string;
+	name: string;
+	type: string;
+	effects?: Array<{ type: string; value?: Record<string, unknown> }>;
+	targetType?: ItemDocument["targetType"];
+	duration?: ItemDocument["duration"];
+	useLimit?: ItemDocument["useLimit"];
+	targetValidation?: ItemDocument["targetValidation"];
+	description?: string;
+	cooldown?: number;
+	interaction?: ItemDocument["interaction"];
+}
+
+function sdkItemEffectTypes(): readonly string[] {
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+}
+
+/** Creates a validated declarative item document without constructing runtime effects. */
+export function createItem(input: KoreItemInput): ItemDocument {
+	const item = createItemDocument({
+		...input,
+		effects: (input.effects ?? []).map(effect => ({ type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) })),
+	});
+	const validator = new ItemValidator();
+	for (const effectType of sdkItemEffectTypes()) validator.registerEffectType(effectType);
+	for (const effect of item.effects) if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+	return clone(validator.validate(item));
+}
+
+/** Composes multiple declarative item effects while keeping their order stable. */
+export function composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> {
+	return effects.map(effect => {
+		if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
+		return { type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) };
+	});
+}
+
+/** Input contract for authoring a canonical KORE player snapshot via `kore.createPlayer()`. */
+export interface KorePlayerInput {
+	id?: string;
+	teamNr?: number;
+	team?: number[];
+	position?: Vector2D;
+	velocity?: Vector2D;
+	rotation?: number;
+	angularVelocity?: number;
+	hp?: number;
+	bouncyness?: number;
+	mass?: number;
+	radius?: number;
+	size?: number;
+	friction?: number;
+	color?: string;
+	playericon?: AssetList;
+	hoop?: AssetList;
+	isPhysicsEnabled?: boolean;
+	isDead?: boolean;
+	effects?: FullEffectSettings[];
+	inventory?: InventoryItem[];
+}
+
+/** Authors a detached, canonical `PlayerSettings` object with KORE defaults and structural validation. */
+export function createPlayer(input: KorePlayerInput = {}): PlayerSettings {
+	if (input.id !== undefined && (typeof input.id !== "string" || input.id.trim().length === 0)) {
+		throw new Error("Player ID must be a non-empty string");
+	}
+	if (input.teamNr !== undefined) {
+		if (!Number.isSafeInteger(input.teamNr) || input.teamNr < 0) {
+			throw new Error("Player teamNr must be a non-negative integer");
+		}
+	}
+	if (input.position !== undefined) {
+		if (!Number.isFinite(input.position.x) || !Number.isFinite(input.position.y)) {
+			throw new Error("Player position must contain finite numbers");
+		}
+	}
+	if (input.velocity !== undefined) {
+		if (!Number.isFinite(input.velocity.x) || !Number.isFinite(input.velocity.y)) {
+			throw new Error("Player velocity must contain finite numbers");
+		}
+	}
+	const radius = input.radius ?? input.size;
+	if (radius !== undefined) {
+		if (!Number.isFinite(radius) || radius <= 0) {
+			throw new Error("Player radius must be a finite positive number");
+		}
+	}
+	if (input.mass !== undefined) {
+		if (!Number.isFinite(input.mass) || input.mass <= 0) {
+			throw new Error("Player mass must be a finite positive number");
+		}
+	}
+	if (input.hp !== undefined && !Number.isFinite(input.hp)) {
+		throw new Error("Player hp must be a finite number");
+	}
+
+	const team = input.teamNr !== undefined ? [input.teamNr] : (input.team ? [...input.team] : undefined);
+
+	return createPlayerSettings({
+		...(input.id !== undefined ? { id: input.id as PlayerSettings["id"] } : {}),
+		...(team !== undefined ? { team } : {}),
+		...(input.position !== undefined ? { position: { x: input.position.x, y: input.position.y } } : {}),
+		...(input.velocity !== undefined ? { velocity: { x: input.velocity.x, y: input.velocity.y } } : {}),
+		...(input.rotation !== undefined ? { rotation: input.rotation } : {}),
+		...(input.angularVelocity !== undefined ? { angularVelocity: input.angularVelocity } : {}),
+		...(input.hp !== undefined ? { hp: input.hp } : {}),
+		...(input.bouncyness !== undefined ? { bouncyness: input.bouncyness } : {}),
+		...(input.mass !== undefined ? { mass: input.mass } : {}),
+		...(radius !== undefined ? { size: radius } : {}),
+		...(input.friction !== undefined ? { friction: input.friction } : {}),
+		...(input.color !== undefined ? { color: input.color } : {}),
+		...(input.playericon !== undefined ? { playericon: input.playericon } : {}),
+		...(input.hoop !== undefined ? { hoop: input.hoop } : {}),
+		...(input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {}),
+		...(input.isDead !== undefined ? { isDead: input.isDead } : {}),
+		...(input.effects !== undefined ? { effects: input.effects.map(e => ({ ...e })) } : {}),
+		...(input.inventory !== undefined ? { inventory: input.inventory.map(i => ({ ...i })) } : {}),
+	});
+}
+
 class TeamBuilder implements KoreTeam {
 	public constructor(private readonly settings: KoreTeamSettings) {
 		if (!Number.isSafeInteger(settings.teamNr) || settings.teamNr < 0) throw new Error("A team number must be a non-negative integer");
@@ -76,6 +235,11 @@ export class KoreMapBuilder {
 	private readonly spawns: Array<KoreSpawnSettings & { teamNr: number; playerCount: number }> = [];
 	private readonly worldEffects: FullEffectSettings[] = [];
 	private readonly structures: MapBoundarySettings[] = [];
+	private readonly generatedHazardStructureIndexes = new Set<number>();
+	private readonly hazards: HazardDocument[] = [];
+	private readonly environmentalMechanics: EnvironmentalMechanic[] = [];
+	private readonly items: ItemDocument[] = [];
+	private readonly itemEconomy: ItemEconomySettings = { fixedLoadouts: [], mapPickups: [] };
 	private background: SettingsBackground = { type: "color", color: "#dff6ff" };
 	private built: GameSettings | undefined;
 
@@ -156,6 +320,93 @@ export class KoreMapBuilder {
 		return this.addStructure({ type: SHAPE.CIRCLE, ...settings, effects: (settings.effects ?? []).map(effect => toFullEffectSettings(effect, EffectTrigger.Collision, [])) });
 	}
 
+	/** Adds a declarative lethal circular zone to the canonical map and runtime build. */
+	public addKillZone(settings: KoreHazardZone): this {
+		this.assertHazardZone(settings);
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
+		const structureIndex = this.structures.length;
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: SettingOperation.Set, key: "dead", value: true })] });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		return this;
+	}
+
+	/** Adds a declarative directional force zone to the canonical map and runtime build. */
+	public addForceZone(settings: KoreForceHazardZone): this {
+		this.assertHazardZone(settings);
+		if (!Number.isFinite(settings.angle) || settings.angle < 0 || settings.angle >= 360 || !Number.isFinite(settings.power) || settings.power <= 0) throw new Error("Force hazard requires an angle in [0, 360) and positive power");
+		const radians = settings.angle * Math.PI / 180;
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
+		const structureIndex = this.structures.length;
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		return this;
+	}
+
+	/** Adds a tick-driven hazard whose collision structure follows a deterministic schedule. */
+	public addTimedHazard(settings: Omit<TimedHazard, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "timed-hazard" }); }
+	/** Adds a zone activated by entity entry for a fixed number of simulation ticks. */
+	public addTriggeredZone(settings: Omit<TriggeredZone, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "triggered-zone" }); }
+	/** Adds a persistent force-field structure; force/kill behavior is supplied through its declarative effects. */
+	public addForceField(settings: Omit<ForceField, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "force-field" }); }
+	/** Adds a structure that moves along a deterministic linear path. */
+	public addMovingStructure(settings: Omit<MovingStructure, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "moving-structure" }); }
+	/** Adds a repeating enabled/disabled environmental cycle. */
+	public addEnvironmentalCycle(settings: Omit<EnvironmentalCycle, "schemaVersion" | "type">): this { return this.addEnvironmental({ ...settings, schemaVersion: 1, type: "environmental-cycle" }); }
+
+	private addEnvironmental(mechanic: EnvironmentalMechanic): this {
+		validateEnvironmentalMechanics([mechanic]);
+		if (this.environmentalMechanics.some(candidate => candidate.id === mechanic.id)) throw new Error(`Environmental mechanic ${mechanic.id} is already registered`);
+		this.environmentalMechanics.push(clone(mechanic));
+		const structureIndex = this.structures.length;
+		this.addStructure({ ...clone(mechanic.structure), effects: clone(mechanic.effects ?? mechanic.structure.effects) });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		this.built = undefined;
+		return this;
+	}
+
+	/** Registers one validated item document for this map/match composition. */
+	public addItem(item: ItemDocument): this {
+		const validated = createItem(item);
+		if (this.items.some(candidate => candidate.id === validated.id)) throw new Error(`Item ${validated.id} is already registered`);
+		this.items.push(validated);
+		this.built = undefined;
+		return this;
+	}
+
+	/** Adds one team loadout using item IDs and positive use counts. */
+	public addFixedLoadout(loadout: FixedItemLoadout): this {
+		if (!Number.isSafeInteger(loadout.team) || loadout.team < 0 || !Array.isArray(loadout.items) || loadout.items.length === 0) throw new Error("Fixed loadouts require a non-negative team and items");
+		if (this.itemEconomy.fixedLoadouts.some(candidate => candidate.team === loadout.team)) throw new Error(`Team ${loadout.team} already has an item loadout`);
+		if (loadout.items.some(item => !Number.isSafeInteger(item.uses) || item.uses < 1 || typeof item.itemId !== "string" || item.itemId.length === 0)) throw new Error("Fixed loadout items require an ID and positive use count");
+		this.itemEconomy.fixedLoadouts.push(clone(loadout));
+		this.built = undefined;
+		return this;
+	}
+
+	/** Adds a validated map pickup to the item economy. */
+	public addItemPickup(pickup: ItemPickup): this {
+		validateItemPickup(pickup);
+		this.itemEconomy.mapPickups.push(clone(pickup));
+		this.built = undefined;
+		return this;
+	}
+
+	/** Configures deterministic per-turn item draws. */
+	public setSeededItemDraw(draw: SeededItemDrawSettings): this {
+		if (!Number.isSafeInteger(draw.seed) || !Array.isArray(draw.itemIds) || draw.itemIds.length === 0 || draw.itemIds.some(id => typeof id !== "string" || id.length === 0) || !Number.isSafeInteger(draw.drawsPerTurn) || draw.drawsPerTurn < 1) throw new Error("Seeded item draws require a safe seed, item IDs, and positive draws per turn");
+		this.itemEconomy.randomDraw = clone(draw);
+		this.built = undefined;
+		return this;
+	}
+
+	/** Configures the deterministic reward pool for the built-in mystery box. */
+	public setMysteryBox(settings: MysteryBoxSettings): this {
+		if (!Array.isArray(settings.candidatePool) || settings.candidatePool.length === 0 || settings.candidatePool.some(id => typeof id !== "string" || id.length === 0)) throw new Error("Mystery box rewards require a non-empty candidate pool");
+		this.itemEconomy.mysteryBox = clone(settings);
+		this.built = undefined;
+		return this;
+	}
+
 	/** Produces validated `GameSettings`, directly accepted by `GameHandlerBuilder.fromSettings()`. */
 	public build(): GameSettings {
 		if (this.built) return clone(this.built);
@@ -170,6 +421,7 @@ export class KoreMapBuilder {
 		if (figuresPerTeam[0] !== figuresPerTeam[1]) throw new Error("SDK maps require the same figure count for both teams");
 		const template = createDefaultGameSettings(2, 1);
 		const players = this.createPlayers(template.players, teamNumbers);
+		this.validateItemReferences();
 		const settings: GameSettings = {
 			...template,
 			id: this.options.id as GameSettings["id"],
@@ -179,8 +431,19 @@ export class KoreMapBuilder {
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
 			players,
+			environmentalMechanics: clone(this.environmentalMechanics),
+			items: clone(this.items),
 			mapBoundarys: clone(genericWorld.structures as unknown as MapBoundarySettings[]),
 			effects: clone(genericWorld.effects as unknown as FullEffectSettings[]),
+			...(this.hasItemEconomy() ? {
+				gameMode: {
+					id: `${this.options.id}-mode`,
+					phases: [RulePhase.Item, RulePhase.Aim, RulePhase.Charge, RulePhase.Push, RulePhase.Physics],
+					maxItemsPerTurn: 1,
+					winCondition: WinCondition.LastTeamStanding,
+					itemEconomy: clone(this.itemEconomy),
+				},
+			} : {}),
 			allTeams: teamNumbers.map(team => this.teams.get(team)?.name ?? `Team ${team + 1}`),
 			myTeam: [],
 			allTeamSize: teamNumbers.length,
@@ -211,18 +474,43 @@ export class KoreMapBuilder {
 			worldSize: clone(genericWorld.worldSize),
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
-			arenaGeometry: clone(genericWorld.structures as unknown as MapBoundarySettings[]),
+			arenaGeometry: clone((genericWorld.structures as unknown as MapBoundarySettings[]).filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),
 			spawnRegions: spawnRegions.map(clone),
-			hazards: [],
+			hazards: clone(this.hazards),
+			environmentalMechanics: clone(this.environmentalMechanics),
 		};
+	}
+
+	private assertHazardZone(settings: KoreHazardZone): void {
+		if (typeof settings.id !== "string" || settings.id.trim().length === 0) throw new Error("Hazard ID must be a non-empty string");
+		if (![settings.x, settings.y, settings.r].every(Number.isFinite) || settings.r <= 0) throw new Error("Hazard zone requires finite coordinates and a positive radius");
+		if (this.hazards.some(hazard => hazard.id === settings.id)) throw new Error(`Hazard ${settings.id} is already registered`);
+	}
+
+	private hasItemEconomy(): boolean {
+		return this.items.length > 0 || this.itemEconomy.fixedLoadouts.length > 0 || this.itemEconomy.mapPickups.length > 0 || this.itemEconomy.randomDraw !== undefined || this.itemEconomy.mysteryBox !== undefined;
+	}
+
+	private validateItemReferences(): void {
+		if (!this.hasItemEconomy()) return;
+		validateItemEconomySettings(this.itemEconomy);
+		const known = new Set(this.items.map(item => item.id));
+		const references = [
+			...this.itemEconomy.fixedLoadouts.flatMap(loadout => loadout.items.map(item => item.itemId)),
+			...this.itemEconomy.mapPickups.map(pickup => pickup.itemId),
+			...(this.itemEconomy.randomDraw?.itemIds ?? []),
+			...(this.itemEconomy.mysteryBox?.candidatePool ?? []),
+		];
+		if (references.some(itemId => !known.has(itemId))) throw new Error("Item economy references an unknown item");
 	}
 
 	private createPlayers(templates: PlayerSettings[], teams: number[]): PlayerSettings[] {
 		const players: PlayerSettings[] = [];
 		for (const team of teams) {
 			const teamTemplate = templates.find(player => player.team.includes(team))!;
+			let playerIndex = 0;
 			for (const spawn of this.spawns.filter(candidate => candidate.teamNr === team)) {
-				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayerSettings({ ...teamTemplate, id: crypto.randomUUID() as PlayerSettings["id"], team: [team], color: this.teams.get(team)?.color ?? teamTemplate.color }));
+				const spawned = Array.from({ length: spawn.playerCount }, () => createPlayer({ ...teamTemplate, id: deterministicUuid(`${this.options.id}:team:${team}:player:${playerIndex++}`), teamNr: team, color: this.teams.get(team)?.color ?? teamTemplate.color }));
 				arrangePlayers(spawned, spawn);
 				players.push(...spawned);
 			}
@@ -260,6 +548,39 @@ function validateImageUrl(value: string): void {
 function clone<T>(value: T): T { return structuredClone(value); }
 function toJson(value: unknown): JsonValue { return JSON.parse(JSON.stringify(value)) as JsonValue; }
 
+function deterministicUuid(value: string): string {
+	let hash = 2166136261;
+	for (let index = 0; index < value.length; index++) {
+		hash ^= value.charCodeAt(index);
+		hash = Math.imul(hash, 16777619);
+	}
+	const hex = (offset: number) => {
+		let result = "";
+		for (let index = 0; index < 8; index++) {
+			hash ^= (offset + index) * 0x9e3779b9;
+			hash = Math.imul(hash, 16777619);
+			result += (hash >>> 0).toString(16).padStart(8, "0").slice(-2);
+		}
+		return result.slice(0, 8);
+	};
+	const raw = `${hex(0)}${hex(8)}${hex(16)}${hex(24)}${hex(32)}${hex(40)}`.slice(0, 32).split("");
+	raw[12] = "4";
+	raw[16] = (parseInt(raw[16]!, 16) & 0x3 | 0x8).toString(16);
+	return `${raw.slice(0, 8).join("")}-${raw.slice(8, 12).join("")}-${raw.slice(12, 16).join("")}-${raw.slice(16, 20).join("")}-${raw.slice(20).join("")}`;
+}
+
+function stableAuthoringHash(value: unknown): string {
+	const serialized = JSON.stringify(value, (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry)
+		? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a.localeCompare(b)))
+		: entry);
+	let hash = 2166136261;
+	for (const character of serialized) {
+		hash ^= character.charCodeAt(0);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 /** KORE's deterministic default runtime profile expressed through the generic framework selector. */
 export function createDefaultKoreFramework(): EngineFrameworkSettings {
 	const registry = new EngineSystemRegistry()
@@ -282,40 +603,161 @@ export function createDefaultKoreFramework(): EngineFrameworkSettings {
  *   .addPlayerSpawn({ x: 640, y: 150, w: 120, h: 140, teamNr: 1, playerCount: 2 })
  *   .addWorldEffects({ effects: [kore.effects.move({ deltaTime: 0, x: 0, y: 0 })] })
  *   .build();
- * new GameHandlerBuilder().defaultSystems().fromSettings(map).build();
+ * kore.createHandler(map);
  */
 export const kore = {
 	/** Deliberately selected generic primitives for KORE authors who need custom framework metadata. */
 	engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
 	/** Creates a reusable serializable team definition. */
 	createTeam(settings: KoreTeamSettings): KoreTeam { return new TeamBuilder(settings); },
+	/** Authors a detached, canonical `PlayerSettings` snapshot with KORE defaults and structural validation. */
+	createPlayer(input: KorePlayerInput = {}): PlayerSettings { return createPlayer(input); },
+	/** Creates a validated declarative item document. */
+	createItem(input: KoreItemInput): ItemDocument { return createItem(input); },
+	/** Composes validated declarative item effects in declaration order. */
+	composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> { return composeItemEffects(...effects); },
+	/** Resolves JSON item effects through the authoritative KORE runtime boundary. */
+	itemRuntime: { create: createRuntimeItemEffect, resolve: resolveRuntimeItemEffects, applyForce: applyRuntimeForceEffects },
 	/** Creates an empty two-team map builder with an 800×450 containment boundary. */
 	createDefaultMap(options: KoreMapOptions = {}): KoreMapBuilder {
 		const worldSize = options.worldSize ?? { x: 800, y: 450 };
-		return new KoreMapBuilder({ id: options.id ?? crypto.randomUUID(), name: options.name ?? "Untitled KORE Map", description: options.description ?? "", worldSize: clone(worldSize), friction: clone(options.friction ?? FRICTION_TABLE.ice), drift: options.drift ?? 0 });
+		const name = options.name ?? "Untitled KORE Map";
+		const description = options.description ?? "";
+		const friction = clone(options.friction ?? FRICTION_TABLE.ice);
+		const id = options.id ?? `kore-map-${stableAuthoringHash({ name, description, worldSize, friction, drift: options.drift ?? 0 })}`;
+		return new KoreMapBuilder({ id, name, description, worldSize: clone(worldSize), friction, drift: options.drift ?? 0 });
 	},
 	/** Revalidates a JSON-safe engine settings object before runtime import. */
 	validate(settings: unknown): asserts settings is GameSettings { validateGameSettings(settings); },
 	/** Builds a runtime handler from a validated SDK map snapshot. */
-	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return new GameHandlerBuilder().defaultSystems().fromSettings(settings).build(); },
+	createHandler(settings: GameSettings): GameHandler { validateGameSettings(settings); return createRuntimeHandler(settings); },
+	/** Restores a persisted engine snapshot through the same runtime boundary. */
+	restoreHandler(settings: EngineSettings): GameHandler { validateGameSettings(settings); return createRuntimeHandler(settings); },
 	/** Returns KORE's default deterministic runtime system profile as serializable framework metadata. */
 	createDefaultFramework(): EngineFrameworkSettings { return createDefaultKoreFramework(); },
 	/** KORE semantic sound IDs, bus presets, and browser-resolved asset manifest. */
 	audio: koreAudio,
-	/** Runtime effect constructors; pass their results into `addWorldEffects` or structure effect arrays. */
+	/** KORE AI profiles and the shared validated decision-to-input boundary. */
+	ai: koreAi,
+	/** Safe, detached, versioned SDK content packages. */
+	contentPackage: { validate: validateContentPackage, load: loadContentPackage, canonicalize: canonicalizeContentPackage, hash: hashContentPackage },
+	/**
+	 * Match authoring: canonical handler creation, match composition, systems,
+	 * rule configuration, teams, and mode setup (milestone 28). Definitions
+	 * are detached, validated, JSON-safe; runtime construction happens only
+	 * inside the engine handler runtime factory.
+	 */
+	createGameMode,
+	/** Versioned selectable mode metadata authored at the public KORE boundary. */
+	gameModes: { schemaVersion: GAME_MODE_CATALOG_SCHEMA_VERSION, list: getSelectableGameModes, get: getGameModeCatalogEntry },
+	createMatchSystemProfile,
+	authorMatchSettings,
+	createMatchDefinition,
+	validateMatchDefinition: validateKoreMatchDefinition,
+	createRuntimeMatch,
+	/** Declarative effect authoring helpers producing detached, JSON-safe settings. */
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
 		physics(values: FrictionSettings): EffectPhysics { return new EffectPhysics({ typeValue: values }); },
-		damage(damage: number): EffectDamage { return new EffectDamage({ typeValue: { damage } }); },
-		mass(mass: number): EffectModifyMass { return new EffectModifyMass({ typeValue: { mass } }); },
+		damage(damage: number): EffectDamage {
+			if (!Number.isFinite(damage) || damage < 0) throw new Error("Damage must be a non-negative finite number");
+			return new EffectDamage({ typeValue: { damage } });
+		},
+		mass(mass: number): EffectModifyMass {
+			if (!Number.isFinite(mass) || mass <= 0) throw new Error("Mass must be a finite positive number");
+			return new EffectModifyMass({ typeValue: { mass } });
+		},
+		size(size: number): EffectSettings {
+			if (!Number.isFinite(size) || size <= 0) throw new Error("Size must be a finite positive number");
+			return { type: EffectType.ModifySize, typeValue: { size } };
+		},
+		position(position: Vector2D): EffectSettings {
+			if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error("Position coordinates must be finite numbers");
+			return { type: EffectType.Position, typeValue: { ...position } };
+		},
+		velocity(velocity: Vector2D): EffectSettings {
+			if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) throw new Error("Velocity components must be finite numbers");
+			return { type: EffectType.Velocity, typeValue: { ...velocity } };
+		},
+		team(team: number[]): EffectSettings {
+			return { type: EffectType.Team, typeValue: { team: [...team] } };
+		},
 		modifySetting(values: ModifySettingValue): EffectModifySetting { return new EffectModifySetting({ typeValue: values }); },
 		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
+
+		// Item Effect Authoring Helpers
+		itemEffect(type: ItemEffectType, typeValue: Record<string, unknown> = {}): ItemEffectSettings {
+			return { type, typeValue: clone(typeValue) };
+		},
+		shield(capacity: number): ItemEffectSettings {
+			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");
+			return { type: ItemEffectType.Shield, typeValue: { capacity } };
+		},
+		freeze(durationTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
+			return { type: ItemEffectType.Freeze, typeValue: { durationTurns } };
+		},
+		magnet(strength: number, range: number): ItemEffectSettings {
+			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
+			return { type: ItemEffectType.Magnet, typeValue: { strength, range } };
+		},
+		temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary wall lifetimeTurns must be a positive integer");
+			return { type: ItemEffectType.TemporaryWall, typeValue: { lifetimeTurns } };
+		},
+		ghostMode(durationTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Ghost mode durationTurns must be a positive integer");
+			return { type: ItemEffectType.GhostMode, typeValue: { durationTurns } };
+		},
+		modifyForce(multiplier: number): ItemEffectSettings {
+			if (!Number.isFinite(multiplier) || multiplier <= 0) throw new Error("Modify force multiplier must be a positive finite number");
+			return { type: ItemEffectType.ModifyForce, typeValue: { multiplier } };
+		},
+		modifyRotation(angle: number): ItemEffectSettings {
+			if (!Number.isFinite(angle)) throw new Error("Modify rotation angle must be a finite number");
+			return { type: ItemEffectType.ModifyRotation, typeValue: { angle } };
+		},
+		applyTorque(torque: number): ItemEffectSettings {
+			if (!Number.isFinite(torque)) throw new Error("Torque must be a finite number");
+			return { type: ItemEffectType.ApplyTorque, typeValue: { torque } };
+		},
+		delayedEffect(delayTicks: number, effect: ItemEffectSettings): ItemEffectSettings {
+			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
+			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effect: clone(effect) } };
+		},
+		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
+			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
+			return { type: ItemEffectType.SpawnTrigger, typeValue: { delayTicks, triggerType } };
+		},
 	},
 	/** Shared engine enums and friction presets for declarative authoring. */
 	types: {
+		gameState: { yourTurn: GameState.Your_turn, gameOver: GameState.Game_over },
+		rulePhase: { item: RulePhase.Item, aim: RulePhase.Aim, charge: RulePhase.Charge, push: RulePhase.Push, physics: RulePhase.Physics, complete: RulePhase.Complete },
+		winCondition: { lastTeamStanding: WinCondition.LastTeamStanding },
 		shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
 		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, damage: EffectType.Damage, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
+		itemEffectType: {
+			modifyForce: ItemEffectType.ModifyForce,
+			modifyRotation: ItemEffectType.ModifyRotation,
+			lockRotation: ItemEffectType.LockRotation,
+			applyTorque: ItemEffectType.ApplyTorque,
+			spawnTrigger: ItemEffectType.SpawnTrigger,
+			delayedEffect: ItemEffectType.DelayedEffect,
+			shield: ItemEffectType.Shield,
+			freeze: ItemEffectType.Freeze,
+			swapPosition: ItemEffectType.SwapPosition,
+			temporaryWall: ItemEffectType.TemporaryWall,
+			ghostMode: ItemEffectType.GhostMode,
+			magnet: ItemEffectType.Magnet,
+			selectionLock: ItemEffectType.SelectionLock,
+			aimVariance: ItemEffectType.AimVariance,
+		},
 		effectTrigger: { always: EffectTrigger.Always, collision: EffectTrigger.Collision, round: EffectTrigger.Round },
 		friction: FRICTION_TABLE,
 	},
 } as const;
+
+export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };
+export type { GameSettings } from "../../settings/settings.js";
+export type { ContentPackage, LoadedContentPackage } from "../../content/package.js";

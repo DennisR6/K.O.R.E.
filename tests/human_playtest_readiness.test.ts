@@ -79,7 +79,8 @@ describe("Section 15.9 human playtest readiness", () => {
 		]) expect(existsSync(resolve(ROOT, file))).toBe(true);
 
 		const checklist = read("step-by-step.md");
-		expect(checklist).toContain("## 15. Gameplay Qualification And Human Playtest Validation");
+		expect(checklist).toContain("| 15 |");
+		expect(checklist).toContain("Gameplay Qualification And Human Playtest Validation");
 		expect(checklist).toContain("human_playtest_readiness.test.ts");
 	});
 });

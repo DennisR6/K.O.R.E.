@@ -143,21 +143,20 @@ export class Canvas2DUiRenderer {
       style.background
     );
 
-    // 3. TEXT (Korrigiert für Baseline-Verankerung)
+    // 3. TEXT: wrap long labels at word boundaries and center every line.
     if (text) {
-  this.ctx.setFillColor(style.textColor);
-
-  const centerX = rect.x + rect.width / 2;
-  const centerY = rect.y + rect.height / 2;
-
-  // Exakte Messung statt mathematischer Schätzung
-  const textWidth = this.ctx.getTextWidth(text, style.fontSize);
-
-  const textX = Math.round(centerX - textWidth / 2);
-  const textY = Math.round(centerY + style.fontSize * 0.25);
-
-  this.ctx.drawText(text, textX, textY, style.fontSize);
-}
+      this.ctx.setFillColor(style.textColor);
+      const lines = wrapButtonLabel(text, rect.width - 16, value => this.ctx.getTextWidth(value, style.fontSize));
+      const lineHeight = style.fontSize * 1.1;
+      const centerX = rect.x + rect.width / 2;
+      const centerY = rect.y + rect.height / 2;
+      lines.forEach((line, index) => {
+        const textWidth = this.ctx.getTextWidth(line, style.fontSize);
+        const textX = Math.round(centerX - textWidth / 2);
+        const textY = Math.round(centerY + (index - (lines.length - 1) / 2) * lineHeight + style.fontSize * 0.25);
+        this.ctx.drawText(line, textX, textY, style.fontSize);
+      });
+    }
 
     this.ctx.pop();
   }
@@ -183,4 +182,24 @@ export class Canvas2DUiRenderer {
     this.ctx.drawCircle(x + radius, y + h - radius, radius);
     this.ctx.drawCircle(x + w - radius, y + h - radius, radius);
   }
+}
+
+function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string) => number): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && measure(candidate) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length > 1 && lines.some(value => measure(value) > maxWidth)
+    ? [text]
+    : lines;
 }

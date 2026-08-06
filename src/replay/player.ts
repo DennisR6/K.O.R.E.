@@ -1,12 +1,13 @@
-import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import type { GameHandler } from "../engine/Handler.js";
+import { GameState, type EngineSettings } from "../engine/types.js";
 import type { ReplayDocument } from "./types.js";
-import { validateReplayDocument } from "./types.js";
+import { validateReplayDocument, validateReplayOrigin } from "./types.js";
 import type { PlayerSettings } from "../entity/types.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RulePhase } from "../rules/types.js";
+import { kore } from "../kore/sdk/index.js";
 
 /**
  * Plays back a validated replay document through the SAME authoritative
@@ -26,13 +27,13 @@ export class ReplayPlayer {
 
 	public constructor(replay: ReplayDocument) {
 		validateReplayDocument(replay);
+		// The first recorded action must be able to resolve from the restored
+		// origin; a live-state fallback with already-dead actors can never play.
+		validateReplayOrigin(replay);
 		this.replay = JSON.parse(JSON.stringify(replay));
 		const teamCount = this.replay.initialSettings.playerCount ?? 2;
-		this.handler = new GameHandlerBuilder()
-			.defaultSystems()
-			.addSystem(new WinningSystem(teamCount))
-			.fromSettings(this.replay.initialSettings)
-			.build();
+		this.handler = kore.restoreHandler(this.replay.initialSettings as EngineSettings);
+		if (!(this.replay.initialSettings as EngineSettings).systems?.some(system => system.systemId === "core.winning")) this.handler.addSystem(new WinningSystem(teamCount));
 		this.emitter = new GameEmitter(
 			this.handler,
 			this.replay.initialSettings.gameMode ?? currentTurnMode,
@@ -85,4 +86,6 @@ export class ReplayPlayer {
 	public getTickCount(): number {
 		return this.tickCount;
 	}
+	/** Number of recorded actions available for visible playback. */
+	public getActionCount(): number { return this.replay.actions.length; }
 }

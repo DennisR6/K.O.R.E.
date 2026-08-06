@@ -29,13 +29,14 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
 
 | Responsibility | Previous location | Target layer | Reason / migration risk |
 | --- | --- | --- | --- |
-| JSON world, entity, structure, effect records | `src/kore_sdk.ts` | Engine SDK | Generic JSON authoring; low risk. |
+| JSON world, entity, structure, effect records | SDK builder | Engine SDK | Generic JSON authoring; low risk. |
 | System selection, dependency/order validation | new | Engine SDK | Framework metadata is game-agnostic; new API. |
+| Deterministic animation and presentation projection | new | Engine SDK presentation SDK | Visual playback is renderer-neutral and excluded from gameplay snapshots. |
 | JSON serialization/validation | mixed SDK code | Engine SDK | Generic boundary; low risk. |
-| Team numbers, spawn regions, player materialization | `src/kore_sdk.ts` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
-| Default map size/friction, containment, game mode | `src/kore_sdk.ts` | KORE SDK | KORE defaults; medium risk. |
-| KORE effects, assets, map structures | `src/kore_sdk.ts` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
-| `GameHandlerBuilder` runtime construction | `src/kore_sdk.ts` | KORE runtime SDK | Current handler and default systems are KORE-composed; compatibility preserved. |
+| Team numbers, spawn regions, player materialization | `src/kore/sdk/` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
+| Default map size/friction, containment, game mode | `src/kore/sdk/` | KORE SDK | KORE defaults; medium risk. |
+| KORE effects, assets, map structures | `src/kore/sdk/` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
+| `GameHandlerBuilder` runtime construction | `src/engine/runtimeFactory.ts` | Runtime factory | Designated handler construction boundary (milestone 28); match authoring composes via KORE match APIs instead. |
 | `GameSettings`, `MapDocument`, system snapshots | existing contracts | Canonical contracts | Stable serialization boundary; do not duplicate. |
 
 ## 4. Engine SDK responsibilities
@@ -47,6 +48,12 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
   JSON-safe records;
 - `createSystemRegistry()` for deterministic framework selection;
 - `validate()` and `buildJson()` for serialization boundaries.
+
+The sibling presentation SDK (`src/engine/presentation-sdk/index.ts`) authors
+versioned animation tracks and semantic play/cancel events. Its explicit tick
+runtime orders events by priority and submission ordinal, applies declared
+interruption policy, and emits detached projection frames. Runtime restoration
+contains only presentation state and never changes canonical gameplay settings.
 
 The Engine SDK has no KORE team count, spawn, player, item, turn, map, or
 victory assumptions. It does not create the current `GameHandler`: that runtime
@@ -60,10 +67,6 @@ It provides `createDefaultMap`, KORE teams/spawns, KORE player generation,
 KORE effect factories, KORE validation, `createDefaultFramework`, and
 `createHandler`. It deliberately enforces two teams numbered `0` and `1` with
 equal figures because that is a KORE game rule, not an Engine SDK rule.
-
-`src/kore_sdk.ts` remains a deprecated compatibility entry that re-exports the
-same `kore` object. Existing `kore.createTeam`, `createDefaultMap`, `validate`,
-`createHandler`, `effects`, and `types` calls continue to work.
 
 ## 6. Canonical data lifecycle
 
@@ -115,10 +118,9 @@ Do not create parallel manually-maintained schemas.
 ## 10. Stability guarantees
 
 Stable public contracts are canonical `GameSettings`, `MapDocument`, versioned
-system snapshots, `engine`, `kore`, and the compatibility `src/kore_sdk.ts`
-entry. Builder internals, runtime system implementations, and KORE default
-composition details may change provided their documented canonical outputs and
-stable IDs remain compatible.
+system snapshots, `engine`, and `kore`. Builder internals, runtime system
+implementations, and KORE default composition details may change provided their
+documented canonical outputs and stable IDs remain compatible.
 
 ## 11. Forbidden dependency directions
 
@@ -131,6 +133,11 @@ stable IDs remain compatible.
 `tests/engine_sdk_architecture.test.ts` enforces the Engine SDK import boundary.
 
 ## 12. Examples
+
+The supported authoring guide is [`docs/sdk-authoring-guide.md`](docs/sdk-authoring-guide.md).
+Runnable Engine SDK, KORE map/item, match lifecycle, UI, and audio examples are
+in [`examples/`](examples/) and are compiled and executed by
+`tests/sdk_examples_ci.test.ts`.
 
 ```ts
 import { engine } from "./src/engine/sdk/index.js";
@@ -152,3 +159,20 @@ const map = kore.createDefaultMap({ name: "Ice Arena" })
   .addRectangle({ x: 300, y: 120, w: 40, h: 180, effects: [kore.effects.damage(10)] })
   .build();
 ```
+
+## 13. Final SDK-only release gate
+
+Supported authoring is limited to the Engine SDK entry points, the KORE SDK
+entry point, and the documented generic UI/audio sub-entry points. Runtime
+factories, snapshot restoration, replay reconstruction, approved map loading,
+server persistence, browser bootstrap, and Tauri packaging are explicit
+application/platform boundaries. `ItemLoader` and `ItemValidator` are internal
+runtime/mod-loading boundaries, not published mod imports.
+
+Internal engine implementation may continue to import internal systems,
+effects, settings, rules, and entity modules. The restriction is on supported
+authoring, examples, application composition, mods, and non-allowlisted
+adapters. `tests/sdk_only_release_gate.test.ts` enforces removed-file,
+constructor, example-import, application-boundary, documentation, and roadmap
+checks. Run `bun run sdk:release-gate` for the aggregate source, qualification,
+browser, build, and desktop release verification.

@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import {
 	activeBrowserServers,
 	activeGameModeId,
@@ -10,6 +10,7 @@ import {
 	ensureBrowserBuild,
 	finiteEntities,
 	launchBrowser,
+	closeBrowser,
 	openPage,
 	readMatchState,
 	startTestServer,
@@ -51,7 +52,8 @@ const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 const LANDING_WORLD = { x: 400, y: 100 };
-const CHOOSE_MAP_BUTTON_WORLD = { x: 400, y: 409 };
+// SDK main-menu flow layout: Choose Map is the fifth centered bottom action button.
+const CHOOSE_MAP_BUTTON_WORLD = { x: 701, y: 368 };
 
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;
@@ -74,7 +76,7 @@ const QUALIFIED_MAPS = MAP_CATALOG.filter(entry => entry.browserAvailable);
 
 /** World-center of a map-selection row (menu layout: 500x40 rows at y 80+50i). */
 function mapRowWorld(index: number): { x: number; y: number } {
-	return { x: 400, y: 100 + index * 50 };
+	return { x: 400, y: 106 + index * 2 * 18 };
 }
 
 /** Grid-quantized drag start (mirrors the Section 16 killDrag helper). */
@@ -128,6 +130,9 @@ const STRUCTURE_PROBES: Record<string, { probe: { x: number; y: number }; ref: {
 	"structure-control": { probe: { x: 308, y: 110 }, ref: { x: 308, y: 170 }, color: [0x31, 0x5b, 0x7d] },
 	// west kill zone circle (300,225,r28); reference above it on floor
 	"hazard-control": { probe: { x: 300, y: 225 }, ref: { x: 300, y: 180 }, color: [0xd9, 0x4b, 0x28] },
+	"aurora-basin": { probe: { x: 330, y: 225 }, ref: { x: 330, y: 180 }, color: [0x31, 0x5b, 0x7d] },
+	"lantern-gates": { probe: { x: 400, y: 90 }, ref: { x: 400, y: 130 }, color: [0x31, 0x5b, 0x7d] },
+	"ember-crossing": { probe: { x: 310, y: 225 }, ref: { x: 310, y: 180 }, color: [0xd9, 0x4b, 0x28] },
 };
 
 /** Opens the visible menu and navigates to the map-selection page. */
@@ -225,13 +230,13 @@ async function playHazardTerminalMatch(page: import("playwright").Page): Promise
 	}
 }
 
-describe("Section 17.8 browser verification of qualified maps", () => {
-	afterAll(() => {
+test.describe("Section 17.8 browser verification of qualified maps", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
 	test("every browser-available map opens through the UI, renders, and resolves one legal pointer action", async () => {
-		expect(QUALIFIED_MAPS.length).toBe(6);
+		expect(QUALIFIED_MAPS.length).toBe(9);
 		expect(QUALIFIED_MAPS.every(entry => entry.id !== "frostbite-arena")).toBe(true);
 		expect(QUALIFIED_MAPS.every(entry => entry.status === "browser-qualified")).toBe(true);
 
@@ -249,7 +254,7 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 				if (index > 0) await openMapSelection(page);
 				const row = mapRowWorld(index);
 				await clickWorld(page, row.x, row.y);
-				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, `${entry.id} selection`);
+				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, `${entry.id} selection`);
 
 				// Stable map ID, finite visible entities, item phase open.
 				const state = await readMatchState(page);
@@ -302,11 +307,11 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 600_000);
+	});
 
 	test("full journey: hazard-control menu -> map -> terminal result -> rematch -> menu", async () => {
 		const entry = QUALIFIED_MAPS.find(candidate => candidate.id === "hazard-control");
@@ -325,7 +330,7 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 			// Select Hazard Control through the production UI.
 			const row = mapRowWorld(index);
 			await clickWorld(page, row.x, row.y);
-			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "hazard-control selection");
+			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, "hazard-control selection");
 			await waitFor(async () => colorNear(await probePixel(page, 300, 225), [0xd9, 0x4b, 0x28], 60), 8_000, 100, "hazard zone pixel");
 
 			// Turn 1: weak opening, no elimination.
@@ -373,11 +378,11 @@ describe("Section 17.8 browser verification of qualified maps", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 300_000);
+	});
 });
 
 /** Reads the authoritative match result (null while the match is running). */

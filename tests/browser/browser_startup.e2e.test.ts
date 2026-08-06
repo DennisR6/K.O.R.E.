@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import type { Page } from "playwright";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,6 +12,7 @@ import {
 	clickWorld,
 	ensureBrowserBuild,
 	launchBrowser,
+	closeBrowser,
 	nextTestPort,
 	openPage,
 	startTestServer,
@@ -27,8 +28,8 @@ import {
  * (build error, server startup error, readiness timeout, browser launch
  * failure, leaked server process) must fail the harness with a typed error.
  */
-describe("Section 16.1 browser harness", () => {
-	afterAll(() => {
+test.describe("Section 16.1 browser harness", () => {
+	test.afterAll(() => {
 		// Every server started by this worker must be terminated.
 		expect(activeBrowserServers()).toBe(0);
 	});
@@ -55,7 +56,7 @@ describe("Section 16.1 browser harness", () => {
 		expect(existsSync(server.dbPath)).toBe(false);
 		await expect(fetch(server.url)).rejects.toThrow();
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("fails on server startup error before readiness", async () => {
 		// A regular file as the database parent makes GameDatabase throw
@@ -75,7 +76,7 @@ describe("Section 16.1 browser harness", () => {
 		} finally {
 			rmSync(parentDir, { recursive: true, force: true });
 		}
-	}, 30_000);
+	});
 
 	test("fails on readiness timeout and cleans up the child process", async () => {
 		// A command that stays alive but never listens must time out, and the
@@ -90,7 +91,7 @@ describe("Section 16.1 browser harness", () => {
 			}),
 		).rejects.toThrow(/readiness timeout/);
 		expect(activeBrowserServers()).toBe(0);
-	}, 30_000);
+	});
 
 	test("fails on browser launch failure", async () => {
 		await expect(
@@ -99,14 +100,14 @@ describe("Section 16.1 browser harness", () => {
 		await expect(
 			launchBrowser({ executablePath: "/nonexistent/kore-chromium" }),
 		).rejects.toThrow(/browser launch failed/);
-	}, 30_000);
+	});
 
 	test("fails on build errors", async () => {
 		// An unknown tsc option makes `bun run build` exit non-zero.
 		await expect(
 			ensureBrowserBuild({ force: true, command: ["bun", "run", "build", "--", "--definitely-bogus"] }),
 		).rejects.toThrow(/browser build failed/);
-	}, 30_000);
+	});
 
 	test("launches a real browser against the generated bundle served by the harness server", async () => {
 		await ensureBrowserBuild();
@@ -118,12 +119,12 @@ describe("Section 16.1 browser harness", () => {
 			// the startup assertions); here the harness chain itself is proven.
 			expect(await page.title()).toBe("KORE");
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });
 
 /**
@@ -143,8 +144,8 @@ async function activeGameModeId(page: import("playwright").Page): Promise<string
 	});
 }
 
-describe("Section 16.2 browser boot and menu rendering", () => {
-	afterAll(() => {
+test.describe("Section 16.2 browser boot and menu rendering", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -189,12 +190,12 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			// Console policy: no uncaught exceptions, no console errors.
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("menu exposes its local-play action and starts the canonical match through real clicks", async () => {
 		await ensureBrowserBuild();
@@ -212,8 +213,8 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 
 			// Landing page: any press advances to the main menu page.
 			await clickWorld(page, 400, 100);
-			// Main menu page exposes "Play Local Game" at world (270..530, 300..358).
-			await clickWorld(page, 400, 325);
+			// Main menu page exposes "Play Local Game" in the centered bottom action row.
+			await clickWorld(page, 551, 368);
 
 			// The local-play action starts exactly one canonical match.
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
@@ -230,11 +231,11 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 
 			assertCleanConsole(capture);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("console policy catches unexpected page errors and console errors", async () => {
 		await ensureBrowserBuild();
@@ -259,12 +260,12 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(capture.errors).toContain("kore deliberate console error");
 			expect(capture.pageErrors).toContain("kore deliberate page error");
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("menu Play Online joins the configured server and starts a matched game", async () => {
 		await ensureBrowserBuild();
@@ -279,8 +280,8 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			const captureA = captureConsole(pageA);
 			await waitFor(async () => (await canvasGeometry(pageA)).width > 0, 10_000, 100, "menu canvas");
 			await clickWorld(pageA, 400, 100); // landing page -> main menu page
-			// "Play Online" at world (270..530, 220..278).
-			await clickWorld(pageA, 400, 250);
+			// "Play Online" is the third button in the centered bottom action row.
+			await clickWorld(pageA, 400, 368);
 			// The online map page expresses a non-binding preference before join.
 			await clickWorld(pageA, 400, 100);
 
@@ -290,8 +291,7 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
 			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
 			expect(joinedUrl.searchParams.get("map")).toBe("ice-map-v1");
-			await waitFor(async () => await pageA.locator("#network-loading").count() === 1, 10_000, 100, "online loading screen");
-			expect(await pageA.locator("#network-loading").textContent()).toContain("Joining online game");
+			await waitFor(async () => await pageA.evaluate(() => !!(window as any).game?.handler), 10_000, 100, "online loading or match handler");
 
 			// Tab B joins the same match from a fresh incognito context.
 			const contextB = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -309,14 +309,18 @@ describe("Section 16.2 browser boot and menu rendering", () => {
 				() => (window as any).game?.handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
 			);
 			expect(entities).toBeGreaterThan(0);
+			// The loading handler is replaced in the existing p5 loop; online
+			// initialization must not create a second canvas/game instance.
+			expect(await pageA.locator("canvas").count()).toBe(1);
+			expect(await pageB.locator("canvas").count()).toBe(1);
 
 			assertCleanConsole(captureA);
 			assertCleanConsole(captureB);
 		} finally {
-			await browser.close();
+			await closeBrowser(browser);
 			await server.stop();
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

@@ -10,6 +10,7 @@ export enum KoreHudCommand {
 	Rematch = "kore.hud.rematch",
 	Replay = "kore.hud.replay",
 	Share = "kore.hud.share",
+	ReplayShare = "kore.hud.replay-share",
 	ReturnToMenu = "kore.hud.return-to-menu",
 }
 
@@ -21,6 +22,7 @@ export interface KoreHudCommandPayloads {
 	[KoreHudCommand.Rematch]: undefined;
 	[KoreHudCommand.Replay]: undefined;
 	[KoreHudCommand.Share]: undefined;
+	[KoreHudCommand.ReplayShare]: undefined;
 	[KoreHudCommand.ReturnToMenu]: undefined;
 }
 

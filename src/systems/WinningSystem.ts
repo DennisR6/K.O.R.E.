@@ -70,9 +70,17 @@ export class WinningSystem implements ISerializableSystem<SystemSettings> {
 	 * mid-playback and no partial completed-match snapshot is exposed.
 	 */
 	public flush(ctx: IGameContext): void {
-		if (this.pending === undefined) return
-		if (ctx.state === GameState.Playing) return
-		this.finalize(ctx, this.pending.evaluation, this.pending.turn)
+		if (ctx.state === GameState.Playing || ctx.state === GameState.Game_over) return
+		if (this.pending === undefined && ctx.state !== GameState.Playing_done) return
+		// Playback applies the authoritative final entity snapshot before this
+		// hook runs. The deciding elimination can therefore become visible only
+		// here, without having been observed by ticker() beforehand.
+		const evaluation = evaluateLastTeamStanding(ctx.entities.getEntities(), this.teamCount)
+		if (evaluation.status !== MatchStatus.Ongoing) {
+			this.finalize(ctx, evaluation, ctx.currTurn)
+		} else if (this.pending !== undefined) {
+			this.finalize(ctx, this.pending.evaluation, this.pending.turn)
+		}
 		this.pending = undefined
 	}
 

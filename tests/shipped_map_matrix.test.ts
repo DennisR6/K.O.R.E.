@@ -34,9 +34,17 @@ import {
  * map: it deterministically violates the Section 13 physics contract.
  * Metrics and warning signals are computed and recorded; the full-matrix
  * numbers are reproduced in `docs/map-qualification-report.md`.
+ *
+ * The whole suite is OPT-IN: it only runs when `MAP_MATRIX=1` (cached
+ * development smoke, `test:maps`) or `MAP_MATRIX_FRESH=1` (release matrix,
+ * `test:maps:matrix`) is set. A plain `bun test` skips it entirely so the
+ * default suite never builds maps or replays the matrix (the Section 17
+ * release gate runs the explicit commands in CI).
  */
 
 const RELEASE_MODE = process.env.MAP_MATRIX_FRESH === "1";
+// Opt-in gate: the matrix never runs as part of plain test discovery.
+const MATRIX_REQUESTED = process.env.MAP_MATRIX === "1" || RELEASE_MODE;
 // The release command always runs the full seed set; development honors
 // MAP_MATRIX_SEED_COUNT (smoke default) and MAP_MATRIX_CACHE=0 bypass.
 const SEED_COUNT = RELEASE_MODE ? FULL_MATRIX_SEED_COUNT : Math.max(1, Number(process.env.MAP_MATRIX_SEED_COUNT ?? 1));
@@ -57,7 +65,7 @@ function getMatrix(): Promise<LoadedMatrix> {
 	return loadedMatrixPromise;
 }
 
-describe("Section 17.7 shipped map matrix", () => {
+describe.skipIf(!MATRIX_REQUESTED)("Section 17.7 shipped map matrix", () => {
 	test("the matrix covers every documented shipped map", () => {
 		const report = read("docs/map-qualification-report.md");
 		for (const mapId of shippedMaps) {

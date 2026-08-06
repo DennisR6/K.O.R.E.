@@ -3,6 +3,9 @@ import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } 
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
+import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
+
+
 
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -45,6 +48,7 @@ export interface MapDocument extends VersionedDocument {
 	arenaGeometry: MapBoundarySettings[];
 	spawnRegions: MapSpawnRegion[];
 	hazards: HazardDocument[];
+	environmentalMechanics?: EnvironmentalMechanic[];
 }
 
 /** Versioned export produced by the standalone map editor, not an engine map. */
@@ -122,6 +126,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 	if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards)) throw new Error("Invalid map collections")
 	if (!document.spawnRegions.every(isSpawnRegion)) throw new Error("Invalid map spawn region")
 	if (!document.hazards.every(isMapHazard)) throw new Error("Invalid map hazard")
+	if (document.environmentalMechanics !== undefined) validateEnvironmentalMechanics(document.environmentalMechanics)
 }
 
 /** Validates the standalone editor's versioned export without treating it as GameSettings. */
@@ -240,7 +245,9 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 				effects: boundary.effects.map(effect => ({ ...effect })),
 			})),
 			...map.hazards.map(hazardToBoundary),
+			...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary),
 		],
+		environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined,
 	}
 }
 
@@ -377,4 +384,8 @@ function hazardEffect(hazard: HazardDocument): FullEffectSettings {
 		type: EffectType.ModifySetting,
 		typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } },
 	};
+}
+
+function environmentalMechanicToBoundary(mechanic: EnvironmentalMechanic): MapBoundarySettings {
+	return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) }
 }

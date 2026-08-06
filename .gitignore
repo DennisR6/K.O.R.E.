@@ -1,6 +1,9 @@
 # Browser failure diagnostics (Section 16.5)
 .browser-diagnostics
 
+# Cross-worker browser build lock (browserHarness)
+.browser-build.lock
+
 # Logs
 logs
 *.log
@@ -39,3 +42,5 @@ src-tauri/Cargo.lock
 # Section 17.7 resumable shipped-map matrix cell cache
 .matrix-cache
 data
+# CocoIndex Code (ccc)
+/.cocoindex_code/

@@ -11,11 +11,13 @@ import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, vali
 import type { IStructure } from "../structures/types.js";
 import type { IEntity } from "../entity/Entity.js";
 import type { IBackground } from "../ui/types.js";
-import { Player } from "../entity/Player.js";
+import { createRuntimePlayer } from "../entity/runtimeFactory.js";
+
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
-import { MetaEffect } from "../effects/effects.js";
+import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
@@ -24,17 +26,26 @@ import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } f
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import type { MatchResult } from "../rules/types.js";
-import { addDrawnInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
+import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
+import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { validateItemTarget } from "../item/target.js";
+import { itemOrder, validateItemCombination } from "../item/interactions.js";
+import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { EffectMagnet } from "../effects/magnet.js";
+import { EffectSwapPosition } from "../effects/swapPosition.js";
+import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
 import type { AiSettings } from "../ai/types.js";
 import type { IAiTurnProducer } from "../ai/aiEmitter.js";
 import { EasyAi } from "../ai/easyAi.js";
 import { MediumAi } from "../ai/mediumAi.js";
 import { HardAi } from "../ai/hardAi.js";
 import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../ui/AuthoritativeGameplayRenderer.js";
+import type { LanguageCatalog } from "../i18n/language.js";
+import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../kore/gameplayFeedback.js";
+import type { JsonValue } from "../engine/contracts/systemSettings.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -118,6 +129,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private paused = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
+	private readonly feedback = new GameplayFeedbackTrace();
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
 		 * 
@@ -146,6 +158,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
 	}
+	public setLanguage(language: LanguageCatalog): void { this.gameplayRenderer.setLanguage(language); }
 
 	/**
 	 * Tauscht die Physik-Regeln im laufenden Betrieb aus.
@@ -190,6 +203,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`);
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
+		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
 		this.physicsStrategy.applyImpulse(actor, angle, power);
 		// The resolution loop is part of the accepted turn: the completion gate
 		// must not freeze it even if a gameplay system completes the match
@@ -202,6 +217,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			this.resolvingTurn = false;
 		}
 		const finalState = this.entityManager.serialize();
+		for (const player of this.entityManager.toSettings()) {
+			const previous = before.get(player.id);
+			if (!previous) continue;
+			if (player.hp < previous.hp) this.feedback.record(KoreGameplayFeedbackType.Damage, this.getTurnNumber(), { targetIds: [player.id], data: { amount: previous.hp - player.hp } });
+			if (player.isDead && !previous.isDead) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
+		}
+		this.feedback.record(KoreGameplayFeedbackType.Turn, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
 		return {
 			actorId,
 			input: { angle, power },
@@ -335,7 +357,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 */
 	public handleMousePressed() {
 		if (this.disposed) return
-		if (this.context.state !== GameState.Starting && this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over) return
+		if (this.context.state !== GameState.Starting && this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over && !this.mouseHandler?.acceptsUiInputWhileLocked) return
 		this.mouseHandler?.handleMousePressed()
 	}
 	/** Aktualisiert die aktuelle Mausposition für Berechnungen (z.B. die Vorschau-Linie). */
@@ -357,6 +379,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public handleMouseWheel(event: WheelEvent): void {
 		if (this.disposed) return
 		this.mouseHandler?.handleMouseWheel(event);
+	}
+	public handleKeyPressed(event: KeyboardEvent): void {
+		if (this.disposed) return
+		const handler = this.mouseHandler as (IMouse & { handleKeyPressed?: (event: KeyboardEvent) => void }) | undefined
+		handler?.handleKeyPressed?.(event)
 	}
 
 	// --- LOGIK & UPDATES (Ticker) ---
@@ -426,15 +453,23 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		return playback?.getRemainingFrames() ?? 0;
 	}
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
+	public attachFeedbackToPhysics(system: PhysicsSystem): void {
+		system.onCollision = (a, b) => {
+			const ids = [a, b].filter((value): value is IEntity & IPhysics<SHAPE> => typeof (value as IEntity).getId === "function").map(value => value.getId())
+			this.recordFeedback(KoreGameplayFeedbackType.Collision, { ...(ids[0] ? { actorId: ids[0] } : {}), ...(ids.length > 1 ? { targetIds: ids.slice(1) } : {}) })
+			if (ids.length === 1) this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true } })
+		}
+	}
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void {
-		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => entity.resetItemUses())
+		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => { entity.resetItemUses(); entity.advanceItemEffectsTurn() })
 		this.context.currTurn = turnNumber
 		this.ruleState.turnNumber = turnNumber
 	}
 	public getTurnNumber(): number { return this.context.currTurn }
 	public setActiveTeam(team: number): void {
 		if (!Number.isInteger(team) || team < 0) throw new Error("Active team must be a non-negative integer")
+		if (this.context.activeTeam !== team) this.feedback.record(KoreGameplayFeedbackType.Turn, this.getTurnNumber(), { data: { activeTeam: team } });
 		this.context.activeTeam = team
 		this.ruleState.activeTeam = team
 	}
@@ -469,6 +504,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public finishMatch(result: MatchResult): void {
 		this.matchResult = { ...result }
 		this.context.state = GameState.Game_over
+		this.feedback.record(KoreGameplayFeedbackType.Result, this.getTurnNumber(), { data: result as unknown as JsonValue });
 	}
 	public getAiSettings(): AiSettings | undefined {
 		return this.settings?.ai ? JSON.parse(JSON.stringify(this.settings.ai)) : undefined;
@@ -550,6 +586,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getSettings(): GameSettings | EngineSettings | undefined { return this.settings }
 	public exportGame(): { logs: TurnPacket[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
 	public addLog(log: any) { this.logs.push(log) }
+	public recordFeedback(type: KoreGameplayFeedbackType, details: Omit<KoreGameplayFeedbackEvent, "schemaVersion" | "sequence" | "turnNumber" | "type"> = {}): KoreGameplayFeedbackEvent { return this.feedback.record(type, this.getTurnNumber(), details); }
+	public getFeedbackTrace(fromSequence = 0): KoreGameplayFeedbackEvent[] { return this.feedback.list(fromSequence); }
 
 	public serialize(): string { return JSON.stringify(this) }
 	public deserialize(_: string): GameHandler {
@@ -644,14 +682,71 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
-	/** Consumes a declared item without applying its effects or validating targets. */
+	/**
+	 * Consumes a declared item and validates its target through the gameplay
+	 * authority. A used mystery box additionally resolves and grants exactly
+	 * one deterministic reward; every validation runs before any mutation.
+	 */
 	public useItem(actorId: string, itemId: string, target: unknown = { type: "self" }): void {
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
-		actor.use(item)
+		if (item.id === MYSTERY_BOX_ITEM_ID) {
+			this.resolveMysteryBoxUse(actor, item)
+			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
+			return
+		}
+		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
+		if (!targetEntity) throw new Error("Item target entity not found")
+		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) }))
+		const inventory = actor.getInventory()
+		// Validate and reserve the use before applying effects. The live inventory
+		// is committed only after all effect constructors and target checks pass.
+		consumeInventoryItem(inventory, item)
+		const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map(candidate => [candidate.id, candidate])))
+		targetEntity.removeItemEffects(combination.removeItemIds)
+		this.applyItemEffects(actor, target, runtimeEffects, item)
+		actor.setInventory(inventory)
+		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
+		if (item.effects.some(effect => effect.type === "shield")) this.feedback.record(KoreGameplayFeedbackType.Shield, this.getTurnNumber(), { actorId, data: { itemId } });
+	}
+
+	private applyItemEffects(actor: IEntity, target: { type: string; entityId?: string; position?: { x: number; y: number } }, effects: RuntimeItemEffect[], item: ItemDocument): void {
+		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
+		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
+		for (const effect of effects) {
+			if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
+			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
+				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
+			} else {
+				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
+			}
+		}
+	}
+
+	private mysteryBoxRewardOptions(actorId: string): MysteryBoxRewardOptions {
+		const economy = this.settings?.gameMode?.itemEconomy
+		const baseSeed = economy?.randomDraw?.seed ?? hashString(this.id)
+		return {
+			candidatePool: economy?.mysteryBox?.candidatePool,
+			seed: deriveMysteryBoxSeed({ actorId, turnNumber: this.ruleState.turnNumber, activeTeam: this.ruleState.activeTeam, baseSeed }),
+			allowMysteryBoxReward: economy?.mysteryBox?.allowMysteryBoxReward,
+			knownItemIds: this.items.map(candidate => candidate.id),
+		}
+	}
+
+	/** Removes exactly one mystery box and adds exactly one reward use, atomically. */
+	private resolveMysteryBoxUse(actor: IEntity, item: ItemDocument): void {
+		const options = this.mysteryBoxRewardOptions(actor.getId())
+		// Resolve and validate the reward before mutating anything so a rejected
+		// pool or unknown reward never consumes the mystery box.
+		const rewardId = resolveMysteryBoxReward(options)
+		const inventory = actor.getInventory()
+		consumeInventoryItem(inventory, item)
+		grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId })
+		actor.setInventory(inventory)
 	}
 	public loadEffects(effects: FullEffectSettings[]): void {
 		this.effectAlways = []
@@ -659,9 +754,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.effectCollision = []
 		for (const effect of effects) {
 			switch (effect.trigger) {
-				case EffectTrigger.Always: this.effectAlways.push(new MetaEffect(effect)); break
-				case EffectTrigger.Round: this.effectRound.push(new MetaEffect(effect)); break
-				case EffectTrigger.Collision: this.effectCollision.push(new MetaEffect(effect)); break
+				case EffectTrigger.Always: this.effectAlways.push(createRuntimeEffect(effect)); break
+				case EffectTrigger.Round: this.effectRound.push(createRuntimeEffect(effect)); break
+				case EffectTrigger.Collision: this.effectCollision.push(createRuntimeEffect(effect)); break
 			}
 		}
 	}
@@ -744,11 +839,13 @@ export class GameHandlerBuilder {
 	public addPhysics(physics: PhysicsStrategy) { this.engine.setPhysics(physics); return this }
 	public defaultSystems(friction?: FrictionSettings): this {
 		const physics = new defaultPhysics(friction)
+		const physicsSystem = new PhysicsSystem(physics)
+		this.engine.attachFeedbackToPhysics(physicsSystem)
 
 		this
 			.addPhysics(physics)
 			.addSystem(new PlaybackSystem())
-			.addSystem(new PhysicsSystem(physics))
+			.addSystem(physicsSystem)
 			.addSystem(new BoundarySystem())
 			.addSystem(new GameStateManager())
 		return this
@@ -782,6 +879,7 @@ export class GameHandlerBuilder {
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
 			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
 			restoredPhysics.strategy = this.engine.getPhysics()
+			this.engine.attachFeedbackToPhysics(restoredPhysics)
 		}
 
 		// Adding Background
@@ -795,7 +893,7 @@ export class GameHandlerBuilder {
 		this.engine.loadEffects(gameSettings.effects)
 
 		// Player
-		players.forEach((player) => this.addPlayer(new Player(player)))
+		players.forEach((player) => this.addPlayer(createRuntimePlayer(player)))
 		if (!("state" in gameSettings)) {
 			this.engine.initializeFixedLoadouts()
 			this.engine.initializeItemDraws()
@@ -804,6 +902,10 @@ export class GameHandlerBuilder {
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
+		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
+			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
+			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))
+		}
 
 		if ("state" in gameSettings) {
 			this.state = gameSettings.state

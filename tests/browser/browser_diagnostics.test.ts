@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "@playwright/test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import {
 	activeBrowserServers,
@@ -28,8 +28,8 @@ import {
  * failed step) without leaking secrets or unbounded logs.
  */
 
-describe("Section 16.5 browser failure diagnostics", () => {
-	afterAll(() => {
+test.describe("Section 16.5 browser failure diagnostics", () => {
+	test.afterAll(() => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
@@ -129,7 +129,7 @@ describe("Section 16.5 browser failure diagnostics", () => {
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 
 	test("clean browser run stays free of console noise and diagnostics", async () => {
 		await ensureBrowserBuild();
@@ -150,5 +150,5 @@ describe("Section 16.5 browser failure diagnostics", () => {
 			await server.stop();
 		}
 		expect(activeBrowserServers()).toBe(0);
-	}, 120_000);
+	});
 });

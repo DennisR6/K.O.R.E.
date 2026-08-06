@@ -3,6 +3,7 @@ import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import { SHAPE, type Vector2D } from "../physics/physics.js";
 import type { FullEffectSettings } from "../effects/types.js";
 import type { InventoryItem } from "../item/types.js";
+import type { ItemEffectSettings } from "../effects/types.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -69,6 +70,7 @@ export interface PlayerSettings {
 	isDead: boolean
 	effects: FullEffectSettings[]
 	inventory: InventoryItem[]
+	itemEffects?: ItemEffectSettings[]
 }
 
 export function validatePlayerMass(mass: number): void {
@@ -99,5 +101,6 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		isDead: overrides.isDead ?? false,
 		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
+		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 	};
 }

@@ -22,9 +22,9 @@ test("SDK menu surface uses explicit ticks, pure draws, semantic transitions, an
 	expect(menu.toSettings()).toEqual(before);
 	menu.updateMouse(400, 100); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
-	menu.updateMouse(400, 205); menu.handleMousePressed();
+	menu.updateMouse(249, 368); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.MapBattle);
-	menu.updateMouse(210, 355); menu.handleMousePressed();
+	menu.updateMouse(210, 385); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
 	const restored = createKoreMainMenuSurface({}, JSON.parse(JSON.stringify(menu.toSettings())));
 	expect(restored.toSettings().ui).toEqual(menu.toSettings().ui);
@@ -47,7 +47,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	const menu = createKoreMainMenuSurface();
 	menu.updateMouse(400, 100);
 	menu.handleMousePressed();
-	menu.updateMouse(400, 140);
+	menu.updateMouse(99, 368);
 	menu.tick(16, 0);
 	let states: Record<string, { hovered?: boolean; focused?: boolean }> = {};
 	menu.getRuntime().draw({
@@ -57,9 +57,27 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	});
 	expect(states["main-ai"]?.hovered).toBe(true);
 
-	menu.updateMouse(400, 325);
+	menu.updateMouse(551, 368);
 	menu.handleMousePressed();
 	states = {};
 	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
 	expect(states["main-local"]).toEqual({ hovered: true, focused: true });
+});
+
+test("main menu centers its action row at the bottom and wraps long labels", () => {
+	const menu = createKoreMainMenuSurface();
+	menu.updateMouse(400, 100);
+	menu.handleMousePressed();
+	let localRect: { x: number; y: number; width: number; height: number } | undefined;
+	const buttons: Array<{ id: string; rect: { x: number; y: number; width: number; height: number } }> = [];
+	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { if (element.id.startsWith("main-")) buttons.push({ id: element.id, rect: element.rect }); if (element.id === "main-local") localRect = element.rect; } });
+	expect(localRect).toBeDefined();
+	expect(buttons).toHaveLength(5);
+	const left = Math.min(...buttons.map(button => button.rect.x));
+	const right = Math.max(...buttons.map(button => button.rect.x + button.rect.width));
+	expect(left + (right - left) / 2).toBe(400);
+	expect(right).toBeLessThanOrEqual(770);
+	expect(localRect!.y + localRect!.height).toBe(400);
+	expect(buttons.find(button => button.id === "main-local")).toMatchObject({ id: "main-local" });
+	expect(readFileSync("src/kore/ui/koreUiTheme.ts", "utf8")).toContain("wrapButtonLabel");
 });

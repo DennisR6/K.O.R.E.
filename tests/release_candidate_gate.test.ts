@@ -49,7 +49,8 @@ describe("Release Candidate Gate (Section 12.13)", () => {
 	test("completed delivery record summarizes release-candidate qualification", () => {
 		const checklistPath = resolve(ROOT, "step-by-step.md");
 		const content = readFileSync(checklistPath, "utf-8");
-		expect(content).toContain("## 12. Engine Defect Hardening And Release Candidate Qualification");
+		expect(content).toContain("| 12 |");
+		expect(content).toContain("Engine Defect Hardening And Release Candidate Qualification");
 		expect(content).toContain("deterministic AI fuzz smoke/RC/soak workflows");
 	});
 

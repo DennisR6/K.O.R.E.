@@ -1,5 +1,7 @@
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import type { AiDifficulty } from "../../ai/types.js";
+import { LANGUAGE_KEYS } from "../../i18n/language.js";
+import { getSelectableGameModes } from "../../rules/modeCatalog.js";
 
 /** KORE-owned menu vocabulary. These values serialize as strings for generic UI. */
 export enum KoreMenuId {
@@ -47,6 +49,8 @@ export enum KoreMenuScreen {
 export enum KoreMenuElement {
 	LandingPrompt = "landing-prompt",
 	LandingStart = "landing-start",
+	MainTitle = "main-title",
+	MainActions = "main-actions",
 	MainAi = "main-ai",
 	MainBattle = "main-battle",
 	MainOnline = "main-online",
@@ -61,6 +65,7 @@ export enum KoreMenuStyle {
 	LandingPrompt = "kore.menu.landing-prompt",
 	LandingHitbox = "kore.menu.landing-hitbox",
 	MainButton = "kore.menu.main-button",
+	MainActions = "kore.menu.main-actions",
 	MapTitle = "kore.menu.map-title",
 	MapNote = "kore.menu.map-note",
 	MapRow = "kore.menu.map-row",
@@ -78,19 +83,19 @@ export enum KoreMenuColor {
 	Error = "#b91c1c",
 }
 
-export enum KoreMenuText {
-	Title = "KORE",
-	LandingPrompt = "drücke um zu starten",
-	Ai = "1 vs KI",
-	Battle = "KI vs KI",
-	Online = "Play Online",
-	Local = "Play Local Game",
-	ChooseMap = "Choose Map",
-	OnlineMapNote = "Preference only — the server may choose Ice Map",
-	Back = "Back",
-	ChooseAiDifficulty = "Choose KI difficulty",
-	Ki = "KI",
-}
+export const KoreMenuText = {
+	Title: LANGUAGE_KEYS.MenuTitle,
+	LandingPrompt: LANGUAGE_KEYS.MenuLandingPrompt,
+	Ai: LANGUAGE_KEYS.MenuAiButton,
+	Battle: LANGUAGE_KEYS.MenuBattleButton,
+	Online: LANGUAGE_KEYS.MenuOnlineButton,
+	Local: LANGUAGE_KEYS.MenuLocalButton,
+	ChooseMap: LANGUAGE_KEYS.MenuChooseMapButton,
+	OnlineMapNote: LANGUAGE_KEYS.MenuOnlineMapNote,
+	Back: LANGUAGE_KEYS.MenuBackButton,
+	ChooseAiDifficulty: LANGUAGE_KEYS.MenuDifficultyTitle,
+	Ki: LANGUAGE_KEYS.MenuKiLabel,
+} as const;
 
 const COMMANDS = new Set<string>(Object.values(KoreMenuCommand));
 const INTENTS = new Set<string>(Object.values(KoreMenuMapIntent));
@@ -103,7 +108,7 @@ export type KoreMenuCommandMessage =
 	| { type: KoreMenuCommand.StartLocal; payload: undefined }
 	| { type: KoreMenuCommand.OpenLocalMaps; payload: undefined }
 	| { type: KoreMenuCommand.OpenAiMaps; payload: { difficulty: KoreMenuDifficulty } }
-	| { type: KoreMenuCommand.SelectMap; payload: { intent: KoreMenuMapIntent; mapId: string; difficulty?: KoreMenuDifficulty } };
+	| { type: KoreMenuCommand.SelectMap; payload: { intent: KoreMenuMapIntent; mapId: string; difficulty?: KoreMenuDifficulty; modeId?: string } };
 
 export function isKoreMenuCommand(value: string): value is KoreMenuCommand { return COMMANDS.has(value); }
 export function isKoreMenuMapIntent(value: unknown): value is KoreMenuMapIntent { return typeof value === "string" && INTENTS.has(value); }
@@ -117,8 +122,8 @@ export function parseKoreMenuCommand(command: string, payload: JsonValue | undef
 		return { type: command, payload: { difficulty: payload.difficulty } };
 	}
 	if (command === KoreMenuCommand.SelectMap) {
-		if (!isRecord(payload) || !isKoreMenuMapIntent(payload.intent) || typeof payload.mapId !== "string" || (payload.difficulty !== undefined && !isKoreMenuDifficulty(payload.difficulty))) return undefined;
-		return { type: command, payload: { intent: payload.intent, mapId: payload.mapId, ...(payload.difficulty === undefined ? {} : { difficulty: payload.difficulty }) } };
+		if (!isRecord(payload) || !isKoreMenuMapIntent(payload.intent) || typeof payload.mapId !== "string" || (payload.difficulty !== undefined && !isKoreMenuDifficulty(payload.difficulty)) || (payload.modeId !== undefined && (typeof payload.modeId !== "string" || !getSelectableGameModes().some(mode => mode.id === payload.modeId)))) return undefined;
+		return { type: command, payload: { intent: payload.intent, mapId: payload.mapId, ...(payload.difficulty === undefined ? {} : { difficulty: payload.difficulty }), ...(payload.modeId === undefined ? {} : { modeId: payload.modeId }) } };
 	}
 	if (payload !== undefined) return undefined;
 	return { type: command, payload: undefined } as KoreMenuCommandMessage;
