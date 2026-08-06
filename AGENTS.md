@@ -103,8 +103,6 @@ After every change, check whether this guide still reflects the implementation a
 - `src/engine/RenderContext.ts`: renderer abstraction.
 - `src/engine/drawingEngine.ts`: p5 implementation of `RenderContext` and
   world-to-pixel scaling.
-- `src/engine/gameOptions.ts`: older game-option types; not the active settings
-  model.
 
 ### Game rules
 
@@ -181,9 +179,7 @@ After every change, check whether this guide still reflects the implementation a
   expiration and snapshot-safe state.
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range
   and deterministic vector behavior.
-- `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
-- `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
-  commented placeholders; the declarative official-item path is active for
+  The declarative official-item path is active for
   validation and inventory tests, and `GameHandler.useItem()` resolves and
   grants the mystery-box reward; other item effects are not yet installed by
   `GameHandler.useItem()`.
@@ -251,8 +247,7 @@ After every change, check whether this guide still reflects the implementation a
   output port; it must not import KORE, UI, browser, or audio-device APIs.
 - `src/kore/sdk/index.ts`: KORE `kore` SDK composed from the Engine SDK for
   validated engine-importable `GameSettings` JSON maps, serializable teams,
-  spawns, KORE effects/defaults, and KORE handler composition. Root
-  `src/kore_sdk.ts` is the supported deprecated compatibility re-export.
+  spawns, KORE effects/defaults, and KORE handler composition.
 - `src/kore/audio.ts`: KORE semantic sound IDs, bus presets, and the optional
   browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
   output-port adapter; `src/menu/AudioManager.ts` owns media resources and
@@ -263,8 +258,6 @@ After every change, check whether this guide still reflects the implementation a
   `magmaCradleMap.ts`: scalable validated canonical map factories with world
   sizes independent of render dimensions. Magma Cradle uses loaded force and
   kill-zone collision hazards.
-- `src/settings/billiardMap.ts` and `src/settings/test.ts`: commented/archival
-  map content.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
 - `src/scenes/matchPipeline.ts`: the single offline-match pipeline.
   `createMatchHandler` builds the canonical match for every mode (`hotseat`,
@@ -313,7 +306,6 @@ After every change, check whether this guide still reflects the implementation a
   server protocol has no skip action or production pause surface. Do not add
   manual HUD hitboxes or direct `AudioManager` calls to
   gameplay scenes.
-- `src/ui/UiStrategy.ts`: deprecated UI strategy.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
 - The SDK main menu offers "1 vs KI" (world rect `(33..165, 114..172)`),
   "KI vs KI" `(183..315, 114..172)`, "Play Online" `(334..466, 114..172)`,
@@ -389,14 +381,12 @@ After every change, check whether this guide still reflects the implementation a
   matchmaking, input dispatch, and broadcasts. When configured with a
   `MapRepository`, matchmaking accepts only approved database map UUIDs and
   expands them server-side before match construction.
-- `src/server/game.ts`, `shoot.ts`, and `utils.ts`: archival/stubbed code not
-  used by the active server runtime.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
   advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
   authoritative `TURN` playback, `ITEM_USED` inventory snapshots, and active-team updates.
-- `src/emitter/InputEmitter.ts`, `ObjectEmitter.ts`, and `ReplayEmitter.ts`:
-  emitter composition, test capture, and replay-oriented helpers.
+- `src/emitter/InputEmitter.ts` and `ObjectEmitter.ts`:
+  emitter composition and test capture.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
 - `src/utils/onlineConfig.ts`: browser-side online-play config; fetches the
   server's `/config` advertisement, falls back to the page origin and then to

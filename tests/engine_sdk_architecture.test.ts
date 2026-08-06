@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { engine, EngineSystemRegistry } from "../src/engine/sdk/index.ts";
-import { kore as legacyKore } from "../src/kore_sdk.ts";
 import { kore } from "../src/kore/sdk/index.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
@@ -38,8 +37,7 @@ test("generic system registry resolves deterministic capabilities, optional syst
 	expect(replacing.select(["physics.deterministic", "effects"]).systemOrder).toEqual(["physics.deterministic", "effects"]);
 });
 
-test("KORE SDK composes generic framework metadata while preserving the legacy entry point", () => {
-	expect(legacyKore).toBe(kore);
+test("KORE SDK composes generic framework metadata through the canonical entry point", () => {
 	expect(kore.engine.createWorld({ id: "extension", worldSize: { x: 1, y: 1 } }).build().id).toBe("extension");
 	expect(kore.createDefaultFramework().systemOrder).toEqual(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 	const handler = kore.createHandler(createDefaultGameSettings(2, 1));

@@ -29,12 +29,12 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
 
 | Responsibility | Previous location | Target layer | Reason / migration risk |
 | --- | --- | --- | --- |
-| JSON world, entity, structure, effect records | `src/kore_sdk.ts` | Engine SDK | Generic JSON authoring; low risk. |
+| JSON world, entity, structure, effect records | SDK builder | Engine SDK | Generic JSON authoring; low risk. |
 | System selection, dependency/order validation | new | Engine SDK | Framework metadata is game-agnostic; new API. |
 | JSON serialization/validation | mixed SDK code | Engine SDK | Generic boundary; low risk. |
-| Team numbers, spawn regions, player materialization | `src/kore_sdk.ts` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
-| Default map size/friction, containment, game mode | `src/kore_sdk.ts` | KORE SDK | KORE defaults; medium risk. |
-| KORE effects, assets, map structures | `src/kore_sdk.ts` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
+| Team numbers, spawn regions, player materialization | `src/kore/sdk/` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
+| Default map size/friction, containment, game mode | `src/kore/sdk/` | KORE SDK | KORE defaults; medium risk. |
+| KORE effects, assets, map structures | `src/kore/sdk/` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
 | `GameHandlerBuilder` runtime construction | `src/engine/runtimeFactory.ts` | Runtime factory | Designated handler construction boundary (milestone 28); match authoring composes via KORE match APIs instead. |
 | `GameSettings`, `MapDocument`, system snapshots | existing contracts | Canonical contracts | Stable serialization boundary; do not duplicate. |
 
@@ -60,10 +60,6 @@ It provides `createDefaultMap`, KORE teams/spawns, KORE player generation,
 KORE effect factories, KORE validation, `createDefaultFramework`, and
 `createHandler`. It deliberately enforces two teams numbered `0` and `1` with
 equal figures because that is a KORE game rule, not an Engine SDK rule.
-
-`src/kore_sdk.ts` remains a deprecated compatibility entry that re-exports the
-same `kore` object. Existing `kore.createTeam`, `createDefaultMap`, `validate`,
-`createHandler`, `effects`, and `types` calls continue to work.
 
 ## 6. Canonical data lifecycle
 
@@ -115,10 +111,9 @@ Do not create parallel manually-maintained schemas.
 ## 10. Stability guarantees
 
 Stable public contracts are canonical `GameSettings`, `MapDocument`, versioned
-system snapshots, `engine`, `kore`, and the compatibility `src/kore_sdk.ts`
-entry. Builder internals, runtime system implementations, and KORE default
-composition details may change provided their documented canonical outputs and
-stable IDs remain compatible.
+system snapshots, `engine`, and `kore`. Builder internals, runtime system
+implementations, and KORE default composition details may change provided their
+documented canonical outputs and stable IDs remain compatible.
 
 ## 11. Forbidden dependency directions
 

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { validateMapDocument } from "../src/contracts/documents.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { kore } from "../src/kore_sdk.ts";
+import { kore } from "../src/kore/sdk/index.ts";
 import { validateGameSettings } from "../src/settings/settings.ts";
 
 test("single kore SDK export builds JSON-safe settings accepted by the engine", () => {

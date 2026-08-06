@@ -88,12 +88,11 @@ bun run docs
 
 ## Map SDK
 
-`src/kore_sdk.ts` exports one `kore` entry point for authoring validated,
-engine-importable JSON settings. `bun run build` emits `dist/kore_sdk.js`
-alongside the browser bundle.
+`src/kore/sdk/index.ts` exports one `kore` entry point for authoring validated,
+engine-importable JSON settings. `bun run build` emits the browser bundle.
 
 ```ts
-import { kore } from "./src/kore_sdk.ts";
+import { kore } from "./src/kore/sdk/index.ts";
 
 const penguins = kore.createTeam({ teamNr: 0, name: "Penguins", playerCount: 2 });
 const map = kore.createDefaultMap({ name: "Training Arena" })
