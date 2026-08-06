@@ -32,3 +32,6 @@ Completed on branch `milestone-34-ai-simulation-entrypoints`.
 - Focused SDK/fuzz verification passed 5 tests and 157 assertions.
 - AI regression verification passed 25 tests and 240,094 assertions.
 - TypeScript verification: `npx tsc --noEmit` passed.
+- Inventory guardrail: `ead2ca7` classifies the new `src/kore/ai.ts` module in
+  `src/sdkMigration/inventory.ts`; `tests/sdk_migration_inventory.test.ts` and
+  the full fast suite pass with the known baseline failures only.
