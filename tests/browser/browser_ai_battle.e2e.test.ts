@@ -43,10 +43,10 @@ test.describe("browser KI vs KI battle", () => {
 			expect(menuHandler).toBe("KoreMainMenuSurface");
 			expect(await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.gameMode?.id ?? null)).toBeNull();
 
-			// Landing page -> main menu -> "KI vs KI" at world (270..530, 176..234)
+			// Landing page -> main menu -> "KI vs KI" in the centered bottom action row
 			// opens the Choose Map page; the first row (Ice Map) starts the battle.
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 143);
+			await clickWorld(page, 249, 368);
 			await clickWorld(page, 400, 100);
 
 			// The battle handler boots the canonical arena.
@@ -98,7 +98,7 @@ test.describe("browser KI vs KI battle", () => {
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 143);
+			await clickWorld(page, 249, 368);
 			await clickWorld(page, 400, 100);
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");
@@ -132,7 +132,7 @@ test.describe("browser KI vs KI battle", () => {
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 143);
+			await clickWorld(page, 249, 368);
 			await clickWorld(page, 400, 100);
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");

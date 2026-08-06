@@ -307,11 +307,11 @@ After every change, check whether this guide still reflects the implementation a
   manual HUD hitboxes or direct `AudioManager` calls to
   gameplay scenes.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
-- The SDK main menu offers "1 vs KI" (world rect `(33..165, 114..172)`),
-  "KI vs KI" `(183..315, 114..172)`, "Play Online" `(334..466, 114..172)`,
-  "Play Local Game" `(485..617, 114..172)`, and "Choose Map"
-  `(635..767, 114..172)` (flow layout; a real click on "Play Local Game"
-  lands at world `(551, 143)`). Its KORE composition generates browser-available
+- The SDK main menu offers "1 vs KI" (world rect `(38..170, 342..400)`),
+  "KI vs KI" `(186..318, 342..400)`, "Play Online" `(334..466, 342..400)`,
+  "Play Local Game" `(482..614, 342..400)`, and "Choose Map"
+  `(630..762, 342..400)` in a centered bottom row with a 50px bottom margin.
+  Its KORE composition generates browser-available
   catalog-map screens and filters battle screens to `battleAvailable` maps.
 - `src/menu/AudioManager.ts`: single browser media owner. It resolves KORE
   sound IDs, manages media elements/volume/unlock/disposal, buffers persistent

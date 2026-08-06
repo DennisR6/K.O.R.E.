@@ -15,7 +15,7 @@ describe("main menu online join", () => {
 		// Landing page: any press advances to the main menu page.
 		pressAt(menu, 400, 100);
 		// Play Online opens the online map-preference screen.
-		pressAt(menu, 400, 143);
+		pressAt(menu, 400, 368);
 		pressAt(menu, 400, 100);
 		expect(online).toBe(1);
 		expect(local).toBe(0);
@@ -28,12 +28,12 @@ describe("main menu online join", () => {
 		let map = 0;
 		const menu = createKoreMainMenuSurface({ onPlayLocal: () => { local++; }, onSelectMap: (_mapId: string) => { map++; }, onPlayOnline: () => { online++; } });
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		// Play Local Game at world (270..530, 304..362).
-		pressAt(menu, 551, 143);
+		// Play Local Game is the fourth button in the centered bottom action row.
+		pressAt(menu, 551, 368);
 		expect(local).toBe(1);
-		// Choose Map at world (270..530, 368..426) -> map selection page,
+		// Choose Map is the fifth button in the centered bottom action row -> map selection page,
 		// where the first map row sits at world (150..650, 80..120).
-		pressAt(menu, 701, 143);
+		pressAt(menu, 701, 368);
 		pressAt(menu, 400, 100);
 		expect(map).toBe(1);
 		expect(online).toBe(0);

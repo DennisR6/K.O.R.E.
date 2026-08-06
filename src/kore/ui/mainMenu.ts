@@ -25,7 +25,7 @@ const SIZE = { width: 800, height: 450 };
 
 // The production menu is authored in world coordinates and consumed by the
 // generic UI SDK. Keep these bounds aligned with the browser/world contract.
-const BTN_W = 144;
+const BTN_W = 132;
 const BTN_H = 58;
 const BTN_STYLE = "kore.button.blue";
 
@@ -72,23 +72,23 @@ function buildUiSettings(): UiMenuSettings {
   builder.addScreen(
     ui.screen({
       id: "main",
-       layout: ui.layout.vertical({ gap: 28, justify: "start", align: "center", padding: { top: 35, right: 30, bottom: 30, left: 30 } }),
-       elements: [
-         ui.text({ id: KoreMenuElement.MainTitle, text: KoreMenuText.Title, rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
-         ui.container({
-           id: KoreMenuElement.MainActions,
-           rect: rect(0, 0, 740, 64),
-            layout: ui.layout.horizontal({ gap: 4, justify: "space-evenly", align: "center" }),
-           style: KoreMenuStyle.MainActions,
-           elements: [
-             ui.button({ id: KoreMenuElement.MainAi, text: KoreMenuText.Ai, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
-             ui.button({ id: KoreMenuElement.MainBattle, text: KoreMenuText.Battle, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
-             ui.button({ id: KoreMenuElement.MainOnline, text: KoreMenuText.Online, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
-             ui.button({ id: KoreMenuElement.MainLocal, text: KoreMenuText.Local, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
-             ui.button({ id: KoreMenuElement.MainMaps, text: KoreMenuText.ChooseMap, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openLocalMaps) }),
-           ],
-         }),
-       ],
+      layout: ui.layout.vertical({ gap: 28, justify: "space-between", align: "center", padding: { top: 35, right: 30, bottom: 50, left: 30 } }),
+      elements: [
+        ui.text({ id: KoreMenuElement.MainTitle, text: KoreMenuText.Title, rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
+        ui.container({
+          id: KoreMenuElement.MainActions,
+          rect: rect(0, 0, 740, BTN_H),
+          layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
+          style: KoreMenuStyle.MainActions,
+          elements: [
+            ui.button({ id: KoreMenuElement.MainAi, text: KoreMenuText.Ai, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
+            ui.button({ id: KoreMenuElement.MainBattle, text: KoreMenuText.Battle, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
+            ui.button({ id: KoreMenuElement.MainOnline, text: KoreMenuText.Online, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
+            ui.button({ id: KoreMenuElement.MainLocal, text: KoreMenuText.Local, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.startLocal) }),
+            ui.button({ id: KoreMenuElement.MainMaps, text: KoreMenuText.ChooseMap, rect: rect(0, 0, BTN_W, BTN_H), style: BTN_STYLE, action: ui.action.emit(MAIN_ACTIONS.openLocalMaps) }),
+          ],
+        }),
+      ],
     })
   );
 

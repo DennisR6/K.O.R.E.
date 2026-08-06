@@ -46,7 +46,7 @@ test.describe("Section 16.3 local turn through browser input", () => {
 
 			// Enter local play through the visible menu first.
 			await clickWorld(page, 400, 100); // landing page
-			await clickWorld(page, 551, 143); // "Play Local Game"
+			await clickWorld(page, 551, 368); // "Play Local Game"
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 
 			// The canonical match starts in the item phase with twelve live figures.
