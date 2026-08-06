@@ -11,7 +11,8 @@ export const enum EffectType {
 	Position = "EffectType.Position",
 	Velocity = "EffectType.Velocity",
 	Team = "EffectType.Team",
-	ModifySetting = "EffectType.ModifySetting"
+	ModifySetting = "EffectType.ModifySetting",
+	RespawningPosition = "EffectType.RespawningPosition"
 }
 /** Data-addressable effects that modify an item action before it is applied. */
 export const enum ItemEffectType {

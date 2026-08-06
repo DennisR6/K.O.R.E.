@@ -137,3 +137,10 @@ test("createItemPickup returns valid defaults with overrides", () => {
 	expect(pickup.activationType).toBe("proximity");
 	expect(pickup.spawnRegion).toEqual({ x: 0, y: 0, w: 100, h: 100 });
 });
+
+test("item pickup respawn configuration requires a positive round interval", () => {
+	const pickup = createItemPickup({ respawnConfig: { intervalRounds: 2 } });
+	expect(() => validateItemPickup(pickup)).not.toThrow();
+	expect(() => validateItemPickup({ ...pickup, respawnConfig: { intervalRounds: 0 } })).toThrow("positive integer");
+	expect(() => validateItemPickup({ ...pickup, respawnerCountdown: -1 })).toThrow("non-negative integer");
+});

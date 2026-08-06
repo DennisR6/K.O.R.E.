@@ -56,17 +56,23 @@ export interface InventoryItem {
 	usesThisTurn: number;
 }
 
+export interface RespawnConfig {
+	intervalRounds: number;
+}
+
 export interface ItemPickup {
 	itemId: string;
 	spawnRegion: { x: number; y: number; w: number; h: number };
 	activationType: ActivationType;
 	maxPickupsPerTurn?: number;
+	respawnerCountdown?: number;
+	respawnConfig?: RespawnConfig;
 }
 
 /** Serializable progress for configured map pickups in the current turn. */
 export interface ItemPickupState {
 	turnNumber: number;
-	pickups: { collected: number; occupants: string[] }[];
+	pickups: { collected: number; occupants: string[]; respawnCountdown?: number }[];
 }
 
 export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemDocument {
@@ -165,10 +171,16 @@ export function validateItemPickup(pickup: unknown): asserts pickup is ItemPicku
 	if (typeof p.itemId !== "string" || !p.itemId) throw new Error("Item pickup must have a non-empty string itemId");
 	if (typeof p.spawnRegion !== "object" || p.spawnRegion === null) throw new Error("Item pickup must have a spawnRegion object");
 	const region = p.spawnRegion as Record<string, unknown>;
-	if (typeof region.x !== "number" || typeof region.y !== "number" || typeof region.w !== "number" || typeof region.h !== "number") throw new Error("Item pickup spawnRegion must have numeric x, y, w, h");
+	if (typeof region.x !== "number" || !Number.isFinite(region.x) || typeof region.y !== "number" || !Number.isFinite(region.y) || typeof region.w !== "number" || !Number.isFinite(region.w) || typeof region.h !== "number" || !Number.isFinite(region.h)) throw new Error("Item pickup spawnRegion must have finite numeric x, y, w, h");
 	if (region.w <= 0 || region.h <= 0) throw new Error("Item pickup spawnRegion w and h must be positive");
 	if (!VALID_ACTIVATION_TYPES.includes(p.activationType as string)) throw new Error("Item pickup must have a valid activation type");
 	if (p.maxPickupsPerTurn !== undefined && (typeof p.maxPickupsPerTurn !== "number" || !Number.isSafeInteger(p.maxPickupsPerTurn) || p.maxPickupsPerTurn < 0)) throw new Error("Item pickup maxPickupsPerTurn must be a non-negative integer");
+	if (p.respawnerCountdown !== undefined && (typeof p.respawnerCountdown !== "number" || !Number.isSafeInteger(p.respawnerCountdown) || p.respawnerCountdown < 0)) throw new Error("Item pickup respawnerCountdown must be a non-negative integer");
+	if (p.respawnConfig !== undefined) {
+		if (typeof p.respawnConfig !== "object" || p.respawnConfig === null) throw new Error("Item pickup respawnConfig must be an object");
+		const config = p.respawnConfig as Record<string, unknown>;
+		if (typeof config.intervalRounds !== "number" || !Number.isSafeInteger(config.intervalRounds) || config.intervalRounds < 1) throw new Error("Item pickup respawnConfig intervalRounds must be a positive integer");
+	}
 }
 
 export function validateItemPickupState(state: unknown, pickupCount: number): asserts state is ItemPickupState {
@@ -181,5 +193,6 @@ export function validateItemPickupState(state: unknown, pickupCount: number): as
 		const entry = pickup as Record<string, unknown>;
 		if (typeof entry.collected !== "number" || !Number.isSafeInteger(entry.collected) || entry.collected < 0) throw new Error("Item pickup state must have non-negative collection counts");
 		if (!Array.isArray(entry.occupants) || !entry.occupants.every(id => typeof id === "string") || new Set(entry.occupants).size !== entry.occupants.length) throw new Error("Item pickup state must have unique occupant IDs");
+		if (entry.respawnCountdown !== undefined && (typeof entry.respawnCountdown !== "number" || !Number.isSafeInteger(entry.respawnCountdown) || entry.respawnCountdown < 0)) throw new Error("Item pickup state must have a non-negative respawn countdown");
 	}
 }
