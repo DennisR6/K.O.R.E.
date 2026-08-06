@@ -139,6 +139,9 @@ class KoreMenuRenderer implements UiRenderer {
     public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { 
         this.drawButton(element); 
     }
+    public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void {
+        if (element.source) this.ctx.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height);
+    }
 
     /** Mappt die Capability-Eigenschaften des SDK-Elements auf den Theme-Zustand */
     private resolveElementState(element: { enabled?: boolean; pressed?: boolean; focused?: boolean; hovered?: boolean }): UiElementState {

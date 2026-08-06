@@ -38,7 +38,7 @@ export type UiLayout =
 	| { type: "horizontal"; gap?: number; padding?: UiPadding; justify?: UiJustify; align?: UiAlign }
 	| { type: "vertical"; gap?: number; padding?: UiPadding; justify?: UiJustify; align?: UiAlign };
 
-export type UiElementKind = "button" | "text" | "textInput" | "container";
+export type UiElementKind = "button" | "text" | "textInput" | "image" | "container";
 
 export interface UiTextSettings {
 	kind: "text";
@@ -55,6 +55,8 @@ export interface UiButtonSettings {
 	id: string;
 	rect: UiRect;
 	text: string;
+	/** Optional host-defined icon identifier, kept JSON-safe and asset-agnostic. */
+	icon?: string;
 	visible?: boolean;
 	enabled?: boolean;
 	focusable?: boolean;
@@ -73,6 +75,16 @@ export interface UiTextInputSettings {
 	action?: UiAction;
 	value?: string;
 }
+export interface UiImageSettings {
+	kind: "image";
+	id: string;
+	rect: UiRect;
+	/** Host-defined asset key or URL; the generic SDK never loads it. */
+	source: string;
+	visible?: boolean;
+	enabled?: boolean;
+	style?: string;
+}
 /** Canonical container element: owns children and a layout definition. */
 export interface UiContainerSettings {
 	kind: "container";
@@ -84,7 +96,7 @@ export interface UiContainerSettings {
 	enabled?: boolean;
 	style?: string;
 }
-export type UiElementSettings = UiTextSettings | UiButtonSettings | UiTextInputSettings | UiContainerSettings;
+export type UiElementSettings = UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings | UiContainerSettings;
 export interface UiScreenSettings { id: string; layout?: UiLayout; visible?: boolean; elements: UiElementSettings[] }
 export interface UiMenuSettings {
 	schemaVersion: 1;
@@ -105,6 +117,7 @@ export interface UiCommand { command: string; payload?: JsonValue }
 export type UiButtonInput = Omit<UiButtonSettings, "kind">;
 export type UiTextElementInput = Omit<UiTextSettings, "kind">;
 export type UiTextInputElementInput = Omit<UiTextInputSettings, "kind">;
+export type UiImageInput = Omit<UiImageSettings, "kind">;
 export type UiContainerInput = {
 	id: string;
 	rect: UiRect;
@@ -123,12 +136,14 @@ export interface IUiEnabled { enabled: boolean }
 export interface IUiFocusable { focused: boolean }
 export interface IUiHovered { hovered: boolean }
 export interface IUiPressState { pressed: boolean }
+export interface IUiIcon { icon?: string }
+export interface IUiImage { source?: string }
 export interface IUiPointerTarget extends IUiPosition { containsPoint(point: UiPoint): boolean }
 export interface IUiPressable { action?: UiAction }
 export interface IUiTextContent { text: string }
 export interface IUiTextInput extends IUiTextContent, IUiFocusable { value: string; insertText(value: string): void; deleteBackward(): void }
 
-export interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiHovered>, Partial<IUiPressState>, Partial<IUiPressable>, Partial<IUiTextInput> {
+export interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiHovered>, Partial<IUiPressState>, Partial<IUiPressable>, Partial<IUiTextInput>, IUiIcon, IUiImage {
 	id: string;
 	kind: UiElementKind;
 	/** Authored local rectangle, retained separately from resolved world geometry. */
@@ -158,6 +173,7 @@ export interface UiRenderer {
 	drawText(element: Readonly<UiRuntimeElement>): void;
 	drawButton(element: Readonly<UiRuntimeElement>): void;
 	drawTextInput(element: Readonly<UiRuntimeElement>): void;
+	drawImage(element: Readonly<UiRuntimeElement>): void;
 }
 
 type UiSystem = { id: string; tick?(runtime: UiRuntime, input: UiInput, deltaTime: number): void; draw?(runtime: UiRuntime, renderer: UiRenderer): void };
@@ -435,6 +451,7 @@ export class UiRuntime {
 			if (!visible) continue;
 			if (node.kind === "button") renderer.drawButton(node);
 			else if (node.kind === "textInput") renderer.drawTextInput(node);
+			else if (node.kind === "image") renderer.drawImage(node);
 			else renderer.drawText(node);
 		}
 	}
@@ -443,10 +460,12 @@ export class UiRuntime {
 class UiElement implements UiRuntimeElement {
 	public visible: boolean; public enabled: boolean; public focused: boolean; public hovered: boolean; public pressed: boolean; public value: string;
 	public readonly localRect: UiRect;
-	public constructor(private readonly settings: UiTextSettings | UiButtonSettings | UiTextInputSettings) { this.localRect = clone(settings.rect); this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.hovered = false; this.pressed = false; this.value = "value" in settings ? settings.value ?? settings.text : settings.text; }
+	public constructor(private readonly settings: UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings) { this.localRect = clone(settings.rect); this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.hovered = false; this.pressed = false; this.value = "value" in settings ? settings.value ?? settings.text : "text" in settings ? settings.text : ""; }
 	public get id(): string { return this.settings.id; } public get kind(): UiElementKind { return this.settings.kind; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
-	public get text(): string { return this.settings.text; } public set text(value: string) { this.settings.text = value; }
+	public get text(): string { return "text" in this.settings ? this.settings.text : ""; } public set text(value: string) { if ("text" in this.settings) this.settings.text = value; }
+	public get icon(): string | undefined { return this.settings.kind === "button" ? this.settings.icon : undefined; }
+	public get source(): string | undefined { return this.settings.kind === "image" ? this.settings.source : undefined; }
 	public get style(): string | undefined { return this.settings.style; } public get action(): UiAction | undefined { return this.settings.kind === "text" ? undefined : (this.settings as UiButtonSettings | UiTextInputSettings).action; } public set action(value: UiAction | undefined) { if (this.settings.kind !== "text") (this.settings as UiButtonSettings | UiTextInputSettings).action = value; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public insertText(value: string): void { this.value += value; this.text = this.value; }
@@ -455,7 +474,7 @@ class UiElement implements UiRuntimeElement {
 		const base = { ...clone(this.settings), rect: clone(this.localRect), text: this.text, visible: this.visible, enabled: this.enabled };
 		// The leaf union keeps `value` only on text inputs; the runtime spreads
 		// the authored settings back into the same canonical kind.
-		return this.kind === "textInput" ? { ...base, value: this.value } as UiTextInputSettings : base as UiTextSettings | UiButtonSettings;
+		return this.kind === "textInput" ? { ...base, value: this.value } as UiTextInputSettings : base as UiTextSettings | UiButtonSettings | UiImageSettings;
 	}
 }
 
@@ -517,7 +536,7 @@ export class UiMenuBuilder {
 	public explain(): string { return "Builds a JSON-safe explicit-tick UI menu with screens, semantic actions, and registry-selected systems."; }
 }
 
-function createNode(settings: UiElementSettings): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings); }
+function createNode(settings: UiElementSettings): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings); }
 function isContainerNode(node: UiRuntimeNode): node is UiContainerRuntime { return node.kind === "container"; }
 function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return "focused" in value && value.kind !== "text"; }
 function hasPressable(value: UiRuntimeElement): value is UiRuntimeElement & IUiPressable { return value.kind === "button"; }
@@ -583,8 +602,9 @@ function mainAxisOffsets(count: number, gap: number, remaining: number, justify:
 
 const ELEMENT_KEYS: Record<Exclude<UiElementKind, "container">, ReadonlySet<string>> & { container: ReadonlySet<string> } = {
 	text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style"]),
-	button: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "action"]),
+	button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "action"]),
 	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "action", "value"]),
+	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style"]),
 	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style"]),
 };
 const LAYOUT_KEYS = new Set(["type", "gap", "padding", "justify", "align"]);
@@ -633,7 +653,7 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 	try {
 		const kind = value.kind;
 		if (typeof value.id !== "string" || value.id.length === 0) throw invalidElement(path, "missing or invalid id");
-		if (kind !== "button" && kind !== "text" && kind !== "textInput" && kind !== "container") throw invalidElement(path, `unsupported element kind '${String(kind)}'`);
+		if (kind !== "button" && kind !== "text" && kind !== "textInput" && kind !== "image" && kind !== "container") throw invalidElement(path, `unsupported element kind '${String(kind)}'`);
 		const allowed = ELEMENT_KEYS[kind];
 		for (const key of Object.keys(value)) if (!allowed.has(key)) throw invalidElement(path, `unknown field '${key}'`);
 		const id = value.id;
@@ -649,8 +669,11 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 			validateLayout(value.layout, childPath);
 			if (!Array.isArray(value.elements)) throw invalidElement(childPath, "missing elements");
 			for (const child of value.elements) validateElement(child, ids, screenIds, childPath, ancestors, requireScreenTargets);
+		} else if (kind === "image") {
+			if (typeof value.source !== "string" || value.source.length === 0) throw invalidElement(childPath, "invalid image source");
 		} else {
 			if (typeof value.text !== "string") throw invalidElement(childPath, "invalid text");
+			if (value.icon !== undefined && (typeof value.icon !== "string" || value.icon.length === 0)) throw invalidElement(childPath, "invalid icon");
 			if (value.focusable !== undefined && typeof value.focusable !== "boolean") throw invalidElement(childPath, "invalid focusable state");
 			if (kind === "textInput" && value.value !== undefined && typeof value.value !== "string") throw invalidElement(childPath, "invalid value");
 			if (value.action !== undefined) validateAction(value.action as UiAction, screenIds, childPath, requireScreenTargets);
@@ -712,6 +735,7 @@ export const ui = {
 	button(settings: UiButtonInput): UiButtonSettings { return { ...clone(settings), kind: "button", focusable: settings.focusable ?? true }; },
 	text(settings: UiTextElementInput): UiTextSettings { return { ...clone(settings), kind: "text", focusable: false }; },
 	textInput(settings: UiTextInputElementInput): UiTextInputSettings { return { ...clone(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text }; },
+	image(settings: UiImageInput): UiImageSettings { return { ...clone(settings), kind: "image" }; },
 	container(settings: UiContainerInput): UiContainerSettings {
 		let input: UiContainerInput;
 		try {

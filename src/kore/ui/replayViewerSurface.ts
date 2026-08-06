@@ -64,6 +64,9 @@ class ReplayViewerRenderer implements UiRenderer {
 		this.renderer.setFillColor("#0f172a");
 		this.renderer.drawText(element.value ?? "", element.rect.x + 8, element.rect.y + 23, 14);
 	}
+	public drawImage(element: Readonly<UiRuntimeElement>): void {
+		if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height);
+	}
 }
 
 function findElement(nodes: readonly UiRuntimeNode[], id: string): UiRuntimeElement | undefined {
