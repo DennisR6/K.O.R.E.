@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned
+Implemented, with explicit technical skips and human-evidence blockers
 
 ## Objective
 
@@ -21,6 +21,18 @@ desktop, and mod validation.
 - Shared deterministic fingerprints and action-trace comparison helpers.
 - Cross-system qualification matrix with explicit unsupported/blocked cells.
 - Browser and desktop content smoke paths and final issue classification.
+
+## Implementation Record
+
+- Added the source-owned `CONTENT_ARTIFACT_INVENTORY` and complete
+  `CONTENT_QUALIFICATION_MATRIX` in `src/content/qualification.ts`.
+- Added canonical JSON, deterministic fingerprint, and action-trace comparison
+  helpers shared by the focused cross-system qualification tests.
+- Added explicit pass/skip/blocked evidence coverage in
+  `tests/content_cross_system_qualification.test.ts` without changing existing
+  subsystem gates.
+- Recorded the inventory, matrix, evidence, and remaining human/platform
+  blockers in `docs/content-qualification-report.md`.
 
 ## Acceptance Criteria
 

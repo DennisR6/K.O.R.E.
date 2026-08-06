@@ -256,6 +256,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/content/package.ts`: version-one JSON content package schema, canonical
   hashing, detached loading, dependency/reference validation, and security
   rejection for maps, items, modes, UI, audio, and presentation declarations.
+- `src/content/qualification.ts`: Milestones 41-48 content inventory, explicit
+  pass/skip/blocked qualification matrix, and shared deterministic content
+  fingerprint/action-trace helpers.
 - `src/kore/audio.ts`: KORE semantic sound IDs, bus presets, and the optional
   browser asset manifest. `src/audio/BrowserAudioOutput.ts` is the browser-only
   output-port adapter; `src/menu/AudioManager.ts` owns media resources and
@@ -478,6 +481,11 @@ has been completed; automated evidence does not substitute for human evidence.
 Section 17 map release qualification is recorded in
 `docs/map-qualification-report.md` and `docs/release-verification.md`, with
 `tests/map_release_gate.test.ts` as the evidence gate. Map-level human qualification remains pending (`PENDING`) while technical and browser qualifications pass.
+
+Milestone 49 content cross-system qualification is recorded in
+`docs/content-qualification-report.md` and
+`tests/content_cross_system_qualification.test.ts`. It retains explicit
+technical skips and human/platform blockers; Milestone 50 remains separate.
 
 ## Browser Workflow
 
