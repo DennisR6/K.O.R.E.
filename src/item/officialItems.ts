@@ -10,7 +10,8 @@ import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
 import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
-import type { ItemDocument } from "./types.js";
+import { addDrawnInventoryItem } from "./inventory.js";
+import type { InventoryItem, ItemDocument } from "./types.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
 export const GHOST_MODE_DURATION_TURNS = 2;
@@ -29,6 +30,9 @@ export const FREEZE_SHOT_DURATION_TURNS = 2;
 export const SWITCH_RANGE = 300;
 export const JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
 export const VODKA_ZERO_MAX_VARIANCE_DEGREES = 10;
+export const MYSTERY_BOX_ITEM_ID = "mystery-box";
+/** Default reward pool used when a game mode does not configure one. */
+export const DEFAULT_MYSTERY_BOX_POOL = ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = {
@@ -176,7 +180,7 @@ export const vodkaZeroItem: ItemDocument = {
 
 export const mysteryBoxItem: ItemDocument = {
 	schemaVersion: 1,
-	id: "mystery-box",
+	id: MYSTERY_BOX_ITEM_ID,
 	name: "Wunderkiste",
 	description: "Spawns randomly on the map and grants either a specific item or a random item from the pool.",
 	type: "utility",
@@ -191,18 +195,64 @@ export interface MysteryBoxRewardOptions {
 	specificItemId?: string;
 	candidatePool?: string[];
 	seed?: number;
+	/** Allows the reward to resolve to another mystery box. Defaults to false. */
+	allowMysteryBoxReward?: boolean;
+	/** Declared item registry; reward IDs outside it are rejected. */
+	knownItemIds?: readonly string[];
+}
+
+function validateMysteryBoxReward(rewardId: string, options: MysteryBoxRewardOptions): void {
+	if (rewardId === MYSTERY_BOX_ITEM_ID && !options.allowMysteryBoxReward) {
+		throw new Error("Mystery Box rewards must not resolve to another mystery box unless explicitly enabled");
+	}
+	if (options.knownItemIds && !options.knownItemIds.includes(rewardId)) {
+		throw new Error(`Mystery Box reward '${rewardId}' is not a known item`);
+	}
 }
 
 /** Resolves either a specific item ID or a random item ID from the candidate pool using SDK item definitions. */
 export function resolveMysteryBoxReward(options: MysteryBoxRewardOptions = {}): string {
 	if (options.specificItemId) {
+		validateMysteryBoxReward(options.specificItemId, options);
 		return options.specificItemId;
 	}
-	const pool = options.candidatePool ?? ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
+	const pool = options.candidatePool ?? DEFAULT_MYSTERY_BOX_POOL;
 	if (pool.length === 0) throw new Error("Mystery Box pool must not be empty");
+	// The whole pool is validated, not just the drawn entry: an unknown or
+	// recursive entry is rejected even if the current seed never selects it.
+	for (const itemId of pool) validateMysteryBoxReward(itemId, options);
 	const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 100000);
 	const index = Math.abs(seed) % pool.length;
 	return pool[index]!;
+}
+
+/**
+ * Resolves a mystery-box reward and grants exactly one use of it into an
+ * inventory, capped by the reward's per-game limit. Returns the reward ID.
+ */
+export function grantMysteryBoxReward(inventory: InventoryItem[], documents: readonly ItemDocument[], options: MysteryBoxRewardOptions = {}): string {
+	const rewardId = resolveMysteryBoxReward({ ...options, knownItemIds: documents.map(document => document.id) });
+	const document = documents.find(candidate => candidate.id === rewardId);
+	if (!document) throw new Error(`Mystery Box reward '${rewardId}' is not a known item`);
+	addDrawnInventoryItem(inventory, document);
+	return rewardId;
+}
+
+/** Deterministic FNV-1a hash used to seed mystery-box resolution from stable strings. */
+export function hashString(value: string): number {
+	let hash = 2166136261;
+	for (let index = 0; index < value.length; index++) {
+		hash = Math.imul(hash ^ value.charCodeAt(index), 16777619) >>> 0;
+	}
+	return hash >>> 0;
+}
+
+/**
+ * Derives the deterministic reward seed for one mystery-box use from
+ * snapshot-stable state, so restore and replay reproduce the same reward.
+ */
+export function deriveMysteryBoxSeed(options: { actorId: string; turnNumber: number; activeTeam: number; baseSeed: number }): number {
+	return (options.baseSeed + hashString(options.actorId) + options.turnNumber * 7 + options.activeTeam * 13) >>> 0;
 }
 
 /** Generates a random map pickup region bounds within world bounds for random item spawning. */

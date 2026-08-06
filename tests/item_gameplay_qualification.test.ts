@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
-import { createOfficialItemLoader } from "../src/item/officialItems.ts";
+import { createOfficialItemLoader, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
 import type { ItemDocument } from "../src/item/types.ts";
 import type { ItemTarget } from "../src/item/target.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
@@ -57,7 +57,9 @@ function targetFor(item: ItemDocument, valid: boolean): ItemTarget {
 
 function makeHandler(item: ItemDocument, economy: Economy): GameHandler {
 	const settings = createDefaultGameSettings(2, 2);
-	settings.items = [item];
+	// The mystery box resolves its reward from the declared item registry, so
+	// its qualification match must declare the whole official catalog.
+	settings.items = item.id === MYSTERY_BOX_ITEM_ID ? createOfficialItemLoader().getAll() : [item];
 	settings.players[0] = { ...settings.players[0]!, id: ACTOR_ID, team: [0], position: { x: 180, y: 225 } };
 	settings.players[1] = { ...settings.players[1]!, id: ALLY_ID, team: [0], position: { x: 220, y: 225 } };
 	settings.players[2] = { ...settings.players[2]!, id: ENEMY_ID, team: [1], position: { x: 380, y: 225 } };
@@ -143,7 +145,7 @@ describe("Section 15.8 item gameplay qualification", () => {
 		const first = qualifyItemGameplay();
 		const second = qualifyItemGameplay();
 		expect(first).toEqual(second);
-		expect(first).toHaveLength(33);
+		expect(first).toHaveLength(36);
 		expect(first.every(metric => metric.availability === 1)).toBe(true);
 		expect(first.every(metric => metric.legalUses === 1 && metric.actualUses === 1)).toBe(true);
 		expect(first.every(metric => metric.replayContinuity && metric.snapshotContinuity)).toBe(true);

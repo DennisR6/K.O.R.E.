@@ -170,6 +170,13 @@ After every change, check whether this guide still reflects the implementation a
   targets against ownership, activity, range, and world bounds.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
+  It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
+  picks a specific or seeded candidate-pool reward and rejects empty pools,
+  unknown IDs, and recursive mystery-box rewards unless explicitly enabled;
+  `grantMysteryBoxReward` adds exactly one capped reward use; `deriveMysteryBoxSeed`
+  derives the deterministic seed from snapshot-stable state (actor, turn, team,
+  and the seeded-draw seed or game-id hash), so restore and replay reproduce
+  the same reward.
 - `src/effects/ghostMode.ts`: serializable collision-filtering effect with turn
   expiration and snapshot-safe state.
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range
@@ -177,7 +184,8 @@ After every change, check whether this guide still reflects the implementation a
 - `src/item/Items.ts` and `src/item/minimalItem.ts`: incomplete item contracts.
 - `src/item/ItemAnker.ts`, `ItemCollector.ts`, and `ItemWall.ts`: empty or
   commented placeholders; the declarative official-item path is active for
-  validation and inventory tests, but item effects are not yet installed by
+  validation and inventory tests, and `GameHandler.useItem()` resolves and
+  grants the mystery-box reward; other item effects are not yet installed by
   `GameHandler.useItem()`.
 
 ### AI drivers
@@ -627,8 +635,10 @@ It also carries sorted, versioned stable system settings plus explicit tick orde
 the allowlisted system factory rejects unknown, duplicate, malformed, executable,
 or unsupported-version system data during restoration.
 `GameModeSettings` can carry an `ItemEconomySettings` contract for fixed
-per-team loadouts, declared map pickups, and deterministic seeded draw pools;
-the selected optional mode is preserved in engine snapshots.
+per-team loadouts, declared map pickups, deterministic seeded draw pools, and
+an optional mystery-box reward configuration (`candidatePool` plus an explicit
+`allowMysteryBoxReward` recursion flag); the selected optional mode is
+preserved in engine snapshots.
 Seeded item-draw state is also preserved in engine snapshots so reconnect and
 replay restoration resume the configured deterministic draw pool.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
@@ -867,7 +877,8 @@ not desired design:
 - Gameplay release qualification is blocked pending an external two-match
   human session. Automated evidence retains blocked matrix configurations,
   hard-AI safety-limit/agency limitations, and item effects that disappear after
-  `GameHandler.useItem()` consumes them.
+  `GameHandler.useItem()` consumes them (the mystery-box reward grant is the
+  one installed item effect).
 - The editor stores one validated temporary draft in browser `localStorage` and
   restores it on startup; its embedded and popup previews use the current
   browser origin.

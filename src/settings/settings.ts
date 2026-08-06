@@ -135,6 +135,10 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 		if (draw && !draw.itemIds.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {
 			throw new Error("Seeded item draw references an unknown item")
 		}
+		const mysteryBox = settings.gameMode.itemEconomy.mysteryBox
+		if (mysteryBox && !mysteryBox.candidatePool.every((itemId: string) => settings.items.some((item: ItemDocument) => item.id === itemId))) {
+			throw new Error("Mystery Box pool references an unknown item")
+		}
 	}
 	if (settings.ai !== undefined) validateAiSettings(settings.ai)
 }
