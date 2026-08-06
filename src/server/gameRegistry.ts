@@ -1,4 +1,4 @@
-import { GameHandler, GameHandlerBuilder } from "../engine/Handler.js";
+import { GameHandler } from "../engine/Handler.js";
 import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
@@ -12,6 +12,7 @@ import { isValidInput } from "../input/validate.js";
 import { WinningSystem } from "../systems/WinningSystem.js";
 import type { AuthoritativeMatchStatus, MatchMetrics, PersistedMatchLifecycle } from "./types.js";
 import type { MapRepository } from "./mapRepository.js";
+import { kore } from "../kore/sdk/index.js";
 export { isValidInput } from "../input/validate.js";
 
 export type GameRecord = {
@@ -411,9 +412,9 @@ export class GameRegistry {
 	}
 
 	private buildAuthoritativeHandler(settings: GameSettings | EngineSettings, teamCount: number): GameHandler {
-		const builder = new GameHandlerBuilder().defaultSystems().fromSettings(settings);
-		if (!("systems" in settings) || !settings.systems?.some(system => system.systemId === "core.winning")) builder.addSystem(new WinningSystem(teamCount));
-		return builder.build();
+		const handler = "systems" in settings ? kore.restoreHandler(settings) : kore.createHandler(settings);
+		if (!("systems" in settings) || !settings.systems?.some(system => system.systemId === "core.winning")) handler.addSystem(new WinningSystem(teamCount));
+		return handler;
 	}
 }
 
