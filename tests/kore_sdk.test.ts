@@ -32,3 +32,21 @@ test("SDK rejects unplayable team layouts and unsafe background protocols", () =
 		.addPlayerSpawn({ x: 700, y: 0, w: 100, h: 100, teamNr: 1, playerCount: 2 })
 		.build()).toThrow("same figure count");
 });
+
+test("SDK hazard descriptors preserve canonical documents and direct runtime behavior", () => {
+	const map = kore.createDefaultMap({ id: "22222222-2222-4222-8222-222222222222", name: "Hazard SDK" })
+		.addPlayerSpawn({ x: 40, y: 130, w: 180, h: 180, teamNr: 0, playerCount: 1 })
+		.addPlayerSpawn({ x: 580, y: 130, w: 180, h: 180, teamNr: 1, playerCount: 1 })
+		.addForceZone({ id: "vent", x: 300, y: 225, r: 20, angle: 90, power: 2 })
+		.addKillZone({ id: "lava", x: 500, y: 225, r: 18 });
+
+	const document = map.buildMapDocument();
+	const settings = map.build();
+	validateMapDocument(document);
+	validateGameSettings(settings);
+	expect(document.hazards.map(hazard => hazard.type)).toEqual(["force", "kill-zone"]);
+	expect(settings.mapBoundarys.filter(boundary => boundary.x === 300 || boundary.x === 500)).toHaveLength(2);
+	expect(JSON.parse(map.buildJson())).toEqual(settings);
+	expect(() => map.addKillZone({ id: "lava", x: 1, y: 1, r: 2 })).toThrow("already registered");
+	expect(() => map.addForceZone({ id: "bad", x: 1, y: 1, r: 2, angle: 360, power: 1 })).toThrow("angle");
+});

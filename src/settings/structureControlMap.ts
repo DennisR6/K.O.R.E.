@@ -1,6 +1,7 @@
-import { DOCUMENT_SCHEMA_VERSION, type MapDocument } from "../contracts/documents.js";
-import { SHAPE, type Vector2D } from "../physics/physics.js";
-import { FRICTION_TABLE, type MapBoundarySettingsRect } from "./settings.js";
+import type { MapDocument } from "../contracts/documents.js";
+import type { Vector2D } from "../physics/physics.js";
+import { kore } from "../kore/sdk/index.js";
+import { FRICTION_TABLE } from "./settings.js";
 
 const blueprint = { x: 800, y: 450 };
 
@@ -26,22 +27,9 @@ export function createStructureControlMap(worldSize: Vector2D): MapDocument {
 	if (!Number.isFinite(worldSize.x) || !Number.isFinite(worldSize.y) || worldSize.x <= 0 || worldSize.y <= 0) throw new Error("Structure Control requires a positive world size")
 	const scaleX = worldSize.x / blueprint.x;
 	const scaleY = worldSize.y / blueprint.y;
-	const rect = (x: number, y: number, w: number, h: number): MapBoundarySettingsRect => ({ type: SHAPE.RECTANGLE, x: x * scaleX, y: y * scaleY, w: w * scaleX, h: h * scaleY, effects: [] });
-	return {
-		schemaVersion: DOCUMENT_SCHEMA_VERSION,
-		metadata: { id: "structure-control", name: "Structure Control", description: "Mirrored arena shaped by solid columns, rebounds, and protected pockets; use the lanes to outmaneuver the opponent." },
-		worldSize: { ...worldSize },
-		friction: { ...FRICTION_TABLE.billiards },
-		drift: 0,
-		arenaGeometry: [
-			{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: worldSize.x, h: worldSize.y, role: "containment", effects: [] },
-			rect(300, 70, 16, 80),
-			rect(300, 300, 16, 80),
-			rect(484, 70, 16, 80),
-			rect(484, 300, 16, 80),
-			rect(392, 213, 16, 24),
-		],
-		spawnRegions: [{ team: 0, x: 138 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY }, { team: 1, x: 638 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY }],
-		hazards: [],
-	};
+	const map = kore.createDefaultMap({ id: "structure-control", name: "Structure Control", description: "Mirrored arena shaped by solid columns, rebounds, and protected pockets; use the lanes to outmaneuver the opponent.", worldSize, friction: FRICTION_TABLE.billiards });
+	const rect = (x: number, y: number, w: number, h: number) => map.addRectangle({ x: x * scaleX, y: y * scaleY, w: w * scaleX, h: h * scaleY });
+	map.addPlayerSpawn({ teamNr: 0, x: 138 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
+	map.addPlayerSpawn({ teamNr: 1, x: 638 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
+	return rect(300, 70, 16, 80).addRectangle({ x: 300 * scaleX, y: 300 * scaleY, w: 16 * scaleX, h: 80 * scaleY }).addRectangle({ x: 484 * scaleX, y: 70 * scaleY, w: 16 * scaleX, h: 80 * scaleY }).addRectangle({ x: 484 * scaleX, y: 300 * scaleY, w: 16 * scaleX, h: 80 * scaleY }).addRectangle({ x: 392 * scaleX, y: 213 * scaleY, w: 16 * scaleX, h: 24 * scaleY }).buildMapDocument();
 }

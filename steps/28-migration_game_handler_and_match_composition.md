@@ -2,7 +2,7 @@
 
 - **Status**: `[x]` Completed
 - **Branch**: `milestone-28-handler-match-composition`
-- **Implementation Commit Hash**: <commit>
+- **Implementation Commit Hash**: `b7c73a4`
 - **Merge Result**: not merged; the pre-existing fast-suite baseline is failing
 
 ## Objective
