@@ -175,7 +175,6 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 			window.location.assign(url)
 			return true
 		})
-		startGame(handler)
 	})
 }
 

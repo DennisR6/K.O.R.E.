@@ -309,6 +309,10 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 				() => (window as any).game?.handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
 			);
 			expect(entities).toBeGreaterThan(0);
+			// The loading handler is replaced in the existing p5 loop; online
+			// initialization must not create a second canvas/game instance.
+			expect(await pageA.locator("canvas").count()).toBe(1);
+			expect(await pageB.locator("canvas").count()).toBe(1);
 
 			assertCleanConsole(captureA);
 			assertCleanConsole(captureB);
