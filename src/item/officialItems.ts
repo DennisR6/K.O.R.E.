@@ -12,6 +12,7 @@ import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
+import { createItem } from "../kore/sdk/index.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
 export const GHOST_MODE_DURATION_TURNS = 2;
@@ -35,8 +36,7 @@ export const MYSTERY_BOX_ITEM_ID = "mystery-box";
 export const DEFAULT_MYSTERY_BOX_POOL = ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
 
 /** Declarative built-in Anker item: halves the affected force. */
-export const ankerItem: ItemDocument = {
-	schemaVersion: 1,
+export const ankerItem: ItemDocument = createItem({
 	id: "anker",
 	name: "Anker",
 	description: "Reduces knockback force for a short duration.",
@@ -46,10 +46,9 @@ export const ankerItem: ItemDocument = {
 	duration: { type: "turns", value: 2 },
 	useLimit: { perTurn: 1, perGame: 2 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-};
+});
 
-export const durchlaessigkeitItem: ItemDocument = {
-	schemaVersion: 1,
+export const durchlaessigkeitItem: ItemDocument = createItem({
 	id: "durchlaessigkeit",
 	name: "Durchlässigkeit",
 	description: "Ignores entity and structure collisions for a short duration.",
@@ -59,10 +58,9 @@ export const durchlaessigkeitItem: ItemDocument = {
 	duration: { type: "turns", value: GHOST_MODE_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-};
+});
 
-export const magnetItem: ItemDocument = {
-	schemaVersion: 1,
+export const magnetItem: ItemDocument = createItem({
 	id: "magnet",
 	name: "Magnet",
 	description: "Attracts a targeted figure within a configured range.",
@@ -72,10 +70,9 @@ export const magnetItem: ItemDocument = {
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 2 },
 	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: true, maxRange: MAGNET_RANGE },
-};
+});
 
-export const falltuerItem: ItemDocument = {
-	schemaVersion: 1,
+export const falltuerItem: ItemDocument = createItem({
 	id: "falltuer",
 	name: "Falltür",
 	description: "Spawns a kill zone at a selected position.",
@@ -85,10 +82,9 @@ export const falltuerItem: ItemDocument = {
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
-};
+});
 
-export const powerDashItem: ItemDocument = {
-	schemaVersion: 1,
+export const powerDashItem: ItemDocument = createItem({
 	id: "power-dash",
 	name: "Power-Dash",
 	description: "Boosts the next applied force by a configured multiplier.",
@@ -98,10 +94,9 @@ export const powerDashItem: ItemDocument = {
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 2 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-};
+});
 
-export const verzoegerteMineItem: ItemDocument = {
-	schemaVersion: 1,
+export const verzoegerteMineItem: ItemDocument = createItem({
 	id: "verzoegerte-mine",
 	name: "Verzögerte Mine",
 	description: "Creates a delayed repelling force explosion at a selected position.",
@@ -111,10 +106,9 @@ export const verzoegerteMineItem: ItemDocument = {
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
-};
+});
 
-export const miniWallItem: ItemDocument = {
-	schemaVersion: 1,
+export const miniWallItem: ItemDocument = createItem({
 	id: "mini-wall",
 	name: "Mini-Wall",
 	description: "Spawns a temporary portable wall at a selected position.",
@@ -124,10 +118,9 @@ export const miniWallItem: ItemDocument = {
 	duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
-};
+});
 
-export const freezeShotItem: ItemDocument = {
-	schemaVersion: 1,
+export const freezeShotItem: ItemDocument = createItem({
 	id: "freeze-shot",
 	name: "Freeze-Shot",
 	description: "Temporarily slows a targeted figure.",
@@ -137,10 +130,9 @@ export const freezeShotItem: ItemDocument = {
 	duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 2 },
 	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
-};
+});
 
-export const switchItem: ItemDocument = {
-	schemaVersion: 1,
+export const switchItem: ItemDocument = createItem({
 	id: "switch",
 	name: "Switch",
 	description: "Swaps the active figure's position with a targeted ally.",
@@ -150,10 +142,9 @@ export const switchItem: ItemDocument = {
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: false, maxRange: SWITCH_RANGE },
-};
+});
 
-export const jaegermeisterElixierItem: ItemDocument = {
-	schemaVersion: 1,
+export const jaegermeisterElixierItem: ItemDocument = createItem({
 	id: "jaegermeister-elixier",
 	name: "Jägermeister-Elixier",
 	description: "Prevents an opponent figure from being selected for its duration.",
@@ -163,10 +154,9 @@ export const jaegermeisterElixierItem: ItemDocument = {
 	duration: { type: "turns", value: JAEGERMEISTER_ELIXIER_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 },
-};
+});
 
-export const vodkaZeroItem: ItemDocument = {
-	schemaVersion: 1,
+export const vodkaZeroItem: ItemDocument = createItem({
 	id: "vodka-zero",
 	name: "Vodka-Zero",
 	description: "Adds seeded deterministic aim variance to shots.",
@@ -176,10 +166,9 @@ export const vodkaZeroItem: ItemDocument = {
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 2 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-};
+});
 
-export const mysteryBoxItem: ItemDocument = {
-	schemaVersion: 1,
+export const mysteryBoxItem: ItemDocument = createItem({
 	id: MYSTERY_BOX_ITEM_ID,
 	name: "Wunderkiste",
 	description: "Spawns randomly on the map and grants either a specific item or a random item from the pool.",
@@ -189,7 +178,7 @@ export const mysteryBoxItem: ItemDocument = {
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 3 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-};
+});
 
 export interface MysteryBoxRewardOptions {
 	specificItemId?: string;
