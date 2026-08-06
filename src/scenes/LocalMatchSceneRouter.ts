@@ -46,8 +46,13 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public getMapId(): string | null { return this.mapId; }
 	public isLocalMatch(): boolean { return this.handler.getSettings()?.gameMode !== undefined; }
 	public isResultVisible(): boolean {
+		this.syncResultUi();
 		if (this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined) this.hud?.applyProjection(createKoreHudProjection(this.handler, this.handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined));
 		return this.handler.getState() === GameState.Game_over && this.handler.getMatchResult() !== undefined;
+	}
+	/** Installs the result controls only after a spectator battle has ended. */
+	public syncResultUi(): void {
+		if (this.mode === "ai-battle" && this.handler.getState() === GameState.Game_over && !this.hud) this.installResultOverlay(this.handler);
 	}
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
@@ -120,6 +125,12 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private installResultOverlay(handler: GameHandler): void {
+		// KI-vs-KI is a spectator engine. Keep its passive mouse handler and do
+		// not attach the player HUD or its input/draw callbacks to the battle.
+		if (this.mode === "ai-battle" && handler.getState() !== GameState.Game_over) {
+			this.hud = undefined;
+			return;
+		}
 		this.hud = installGameplayHud(handler, {
 			language: this.language,
 			onRematch: () => this.handleResultAction("rematch"),

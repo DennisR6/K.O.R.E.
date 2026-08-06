@@ -72,7 +72,7 @@ if (isUiDebugSandboxUrl(uri)) {
 		 void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}), ...(modeId ? { modePreference: modeId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
 	}, activeLanguage!)
 	handler = router.getHandler()
-	startGame(handler, () => router?.getHandler() ?? handler)
+	startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())
 	} else if (usersettings.url && usersettings.url !== "local") {
 	startNetworkGame(usersettings.url, activeLanguage!)
 } else {
