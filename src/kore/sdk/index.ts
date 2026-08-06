@@ -4,12 +4,12 @@ import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
-import { EffectTrigger, EffectType, ItemEffectType, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
+import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler, GameHandlerBuilder } from "../../engine/Handler.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
-import { DOCUMENT_SCHEMA_VERSION, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
+import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import type { InventoryItem } from "../../item/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
@@ -62,6 +62,19 @@ export interface KoreWorldEffects {
 	effects: EffectInput[];
 	trigger?: EffectTrigger;
 	triggerValue?: unknown;
+}
+
+export interface KoreHazardZone {
+	id: string;
+	x: number;
+	y: number;
+	r: number;
+	color?: string;
+}
+
+export interface KoreForceHazardZone extends KoreHazardZone {
+	angle: number;
+	power: number;
 }
 
 /** Input contract for authoring a canonical KORE player snapshot via `kore.createPlayer()`. */
@@ -162,6 +175,8 @@ export class KoreMapBuilder {
 	private readonly spawns: Array<KoreSpawnSettings & { teamNr: number; playerCount: number }> = [];
 	private readonly worldEffects: FullEffectSettings[] = [];
 	private readonly structures: MapBoundarySettings[] = [];
+	private readonly generatedHazardStructureIndexes = new Set<number>();
+	private readonly hazards: HazardDocument[] = [];
 	private background: SettingsBackground = { type: "color", color: "#dff6ff" };
 	private built: GameSettings | undefined;
 
@@ -242,6 +257,28 @@ export class KoreMapBuilder {
 		return this.addStructure({ type: SHAPE.CIRCLE, ...settings, effects: (settings.effects ?? []).map(effect => toFullEffectSettings(effect, EffectTrigger.Collision, [])) });
 	}
 
+	/** Adds a declarative lethal circular zone to the canonical map and runtime build. */
+	public addKillZone(settings: KoreHazardZone): this {
+		this.assertHazardZone(settings);
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
+		const structureIndex = this.structures.length;
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: SettingOperation.Set, key: "dead", value: true })] });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		return this;
+	}
+
+	/** Adds a declarative directional force zone to the canonical map and runtime build. */
+	public addForceZone(settings: KoreForceHazardZone): this {
+		this.assertHazardZone(settings);
+		if (!Number.isFinite(settings.angle) || settings.angle < 0 || settings.angle >= 360 || !Number.isFinite(settings.power) || settings.power <= 0) throw new Error("Force hazard requires an angle in [0, 360) and positive power");
+		const radians = settings.angle * Math.PI / 180;
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
+		const structureIndex = this.structures.length;
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+		this.generatedHazardStructureIndexes.add(structureIndex);
+		return this;
+	}
+
 	/** Produces validated `GameSettings`, directly accepted by `GameHandlerBuilder.fromSettings()`. */
 	public build(): GameSettings {
 		if (this.built) return clone(this.built);
@@ -297,10 +334,16 @@ export class KoreMapBuilder {
 			worldSize: clone(genericWorld.worldSize),
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
-			arenaGeometry: clone(genericWorld.structures as unknown as MapBoundarySettings[]),
+			arenaGeometry: clone((genericWorld.structures as unknown as MapBoundarySettings[]).filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),
 			spawnRegions: spawnRegions.map(clone),
-			hazards: [],
+			hazards: clone(this.hazards),
 		};
+	}
+
+	private assertHazardZone(settings: KoreHazardZone): void {
+		if (typeof settings.id !== "string" || settings.id.trim().length === 0) throw new Error("Hazard ID must be a non-empty string");
+		if (![settings.x, settings.y, settings.r].every(Number.isFinite) || settings.r <= 0) throw new Error("Hazard zone requires finite coordinates and a positive radius");
+		if (this.hazards.some(hazard => hazard.id === settings.id)) throw new Error(`Hazard ${settings.id} is already registered`);
 	}
 
 	private createPlayers(templates: PlayerSettings[], teams: number[]): PlayerSettings[] {
