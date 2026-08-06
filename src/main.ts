@@ -2,7 +2,7 @@ import type p5Types from "p5";
 import { P5Renderer } from "./engine/drawingEngine.js";
 import type { RenderContext } from "./engine/RenderContext.js";
 import { GameSettings } from "./settings/settings.js";
-import { GameHandler, GameHandlerBuilder } from "./engine/Handler.js";
+import { GameHandler } from "./engine/Handler.js";
 import { AudioManager } from "./menu/AudioManager.js";
 import { EmitterSystem } from "./systems/Emitter.js";
 import { UiSystem } from "./systems/UiSystem.js";
@@ -23,6 +23,7 @@ import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
 import { createReplayViewerControls } from "./menu/replayViewerControls.js";
+import { kore } from "./kore/sdk/index.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -45,8 +46,6 @@ const browserAudioMixer = new ApplicationAudioMixer("kore.browser.output", { bus
 // let userid = getUserUUUID()!
 let handler: GameHandler
 let router: LocalMatchSceneRouter | undefined
-const builder = new GameHandlerBuilder()
-	.defaultSystems()
 if (isUiDebugSandboxUrl(uri)) {
 	startUiDebugSandbox()
 } else if (usersettings.replayToken) {
@@ -68,21 +67,16 @@ if (isUiDebugSandboxUrl(uri)) {
 } else {
 	const em = new CombiEmitter()
 	const ems = new EmitterSystem(em);
-	builder
-		.fromSettings(GameSettings)
-		.setPlayerTeam([0, 1])
-		.addSystem(ui)
-		.addUIMouse(ui)
-		.addSystem(ems)
-	handler = builder.build()
+	handler = kore.createHandler(GameSettings)
+	handler.setMyTeam([0, 1])
+	handler.addSystem(ui)
+	handler.setMouseHandler(ui)
+	handler.addSystem(ems)
 	em.addEmitter(new GameEmitter(handler))
 	installGameplayHud(handler, { onReturnToMenu: () => window.location.assign(window.location.pathname) })
 	startGame(handler)
 }
 
-// const landingengine = new GameHandlerBuilder().defaultSystems().setWorldSize(200, 200).addBackground(new BackgroundImageSystem(AssetList.arena2PNG)).build()
-// landingengine.draw = landingengine.drawWorld
-// handler.addPreDrawer(landingengine)
 function startNetworkGame(serverUrl: string) {
 	const loading = showNetworkLoading("Connecting to the match server…")
 	const socket = new WebSocket(serverUrl)
@@ -140,13 +134,10 @@ function startNetworkGame(serverUrl: string) {
 
 		const emitter = new NetworkEmitter(socket)
 		let replayShareAction: "view" | "share" | undefined
-		handler = new GameHandlerBuilder()
-			.defaultSystems()
-			.fromSettings(settings)
-			.addSystem(ui)
-			.addUIMouse(ui)
-			.addSystem(new EmitterSystem(emitter))
-			.build()
+		handler = kore.restoreHandler(settings)
+		handler.addSystem(ui)
+		handler.setMouseHandler(ui)
+		handler.addSystem(new EmitterSystem(emitter))
 		handler.setRuleState(init.ruleState)
 		// The online branch installs the same gameplay HUD as every offline mode;
 		// only the semantic actions and capability limits differ.
