@@ -61,6 +61,8 @@ export enum KoreMenuElement {
 	MainOnline = "main-online",
 	MainLocal = "main-local",
 	MainMaps = "main-maps",
+	MainSettings = "main-settings",
+	MainCredits = "main-credits",
 	OnlineSubTitle = "online-sub-title",
 	LocalSubTitle = "local-sub-title",
 	MapOnlineNote = "map-online-note",

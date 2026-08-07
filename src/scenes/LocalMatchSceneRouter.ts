@@ -187,7 +187,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.menuPreview?.dispose();
 		const preview = new MenuBattlePreview();
 		this.menuPreview = preview;
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId), drawBackground: renderer => preview.draw(renderer) }, createMainMenuComposition(this.language).build());
+		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayOnlineFriends: () => this.onPlayOnline?.(), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId), drawBackground: renderer => preview.draw(renderer) }, createMainMenuComposition(this.language).build());
 	}
 }
 
