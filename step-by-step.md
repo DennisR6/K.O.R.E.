@@ -135,3 +135,273 @@ When starting or completing a milestone, update only its row:
 - replace the planned scope text with a concise delivery note and primary
   evidence files;
 - append a new row only for genuinely new scope that is not already represented.
+
+## Future Architecture Migration Plan
+
+This plan records the next architectural direction. It is intentionally
+incremental and does not authorize a large refactor or arbitrary executable
+systems in normal content packages.
+
+### Target Architecture
+
+```text
+Entity / State
+= canonical typed JSON-safe data
+
+Trigger / Rule
+= determines WHEN something happens
+
+Effect
+= typed semantic request / modifier / command
+
+Predefined ISystem
+= trusted deterministic implementation that makes the Effect real
+
+Framework Registry
+= system graph, capabilities, supported effects, ordering, versions
+
+Custom ISystem
+= optional trusted host extension only, NOT normal mod content
+```
+
+Normal authoring should eventually compose:
+
+```text
+JSON-safe entity state
+  -> trigger/rule
+  -> typed effect
+  -> capability validation
+  -> predefined system
+  -> deterministic state transition
+```
+
+Runtime implementation classes remain internal. Public contracts must not
+expose `GameHandler`, `EntityManager`, `Player`, `PhysicsStrategy`, or similar
+runtime internals. Normal JSON content remains data-only and must not contain
+arbitrary executable code or unrestricted JSON patch effects.
+
+### Phase 0: Baseline And Invariants
+
+- [ ] Establish baseline: inspect branch/worktree, preserve unrelated changes,
+  run focused effect, item-effect, system-settings, snapshot, replay, Engine
+  SDK, and KORE SDK tests, then run `npx tsc --noEmit` and record results.
+- [ ] Document current Player, Handler/world, structure-collision, item, and
+  hazard effect flows, including serialized settings, factories, interpreters,
+  triggers, mutation targets, and snapshot paths.
+
+No production refactor is part of this phase.
+
+### Phase 1: Strongly Typed Effect Contracts
+
+- [ ] Inventory every Effect type, payload, target, trigger, lifecycle,
+  interpreter, serialization path, and validation path.
+- [ ] Introduce a typed mapping between Effect identity and payload without
+  unnecessarily changing the existing serialized shape.
+- [ ] Add per-Effect payload validators for required fields, finite numbers,
+  supported values, executable values, and unexpected structures.
+- [ ] Type Trigger payloads independently from Effect payloads.
+
+Do not migrate every Effect simultaneously. Each change requires focused tests
+and an atomic commit.
+
+### Phase 2: Effect Lifecycle Semantics
+
+- [ ] Add explicit metadata for `modifier`, `command`, `reaction`, `status`,
+  and `scheduled` semantics without forcing a new hierarchy on all existing
+  runtime classes.
+- [ ] Document and test ownership: entity/component state owns current state;
+  Effects own requests, modifiers, statuses, or reactions.
+- [ ] Formalize existing deterministic ordering for conflicting, nested, and
+  multi-Effects, preserving current behavior unless a versioned contract
+  change is required.
+
+### Phase 3: Capability-Aware Effect Metadata
+
+- [ ] Add a separate Effect capability requirement concept; do not overload
+  system-to-system `requires` semantics.
+- [ ] Register stable Effect IDs, schema versions, payload validators, target
+  types, required capabilities, and lifecycle categories in a data/contract
+  catalog. The catalog must not serialize executable factories.
+- [ ] Validate that every Effect capability is provided by the active framework
+  before gameplay starts, including missing providers, duplicate providers,
+  replacement systems, and deterministic validation errors.
+
+### Phase 4: Typed Canonical Entity State
+
+- [ ] Separate generic Engine concepts from KORE-specific state currently held
+  by Player/Entity settings.
+- [ ] Introduce the first small, versioned, validated, detached JSON-safe
+  component boundary, starting with Transform/Position and Movement/Velocity
+  where repository evidence supports it.
+- [ ] Add internal adapters between typed canonical state and existing runtime
+  Player objects; prove settings-to-runtime-to-settings equivalence.
+- [ ] Preserve current KORE SDK Player/Game settings while the transitional
+  generic Engine and KORE boundaries coexist.
+
+Do not convert the whole engine to pure ECS or expose runtime Player objects.
+
+### Phase 5: Pilot One Effect Family Behind A System
+
+Movement is the preferred pilot because it is deterministic, runs every tick,
+has a clear current interpreter, and has clear inputs/outputs. Physics and
+collision should not be migrated in the same change.
+
+- [ ] Add characterization tests for current movement behavior, stacked Effects,
+  ordering, snapshots, replay where relevant, no-Effect behavior, and edge
+  values. This is a test-only atomic commit.
+- [ ] Declare the appropriate movement capabilities and connect Movement
+  Effects to the capability contract without changing runtime interpretation.
+- [ ] Introduce or adapt a trusted internal MovementSystem that interprets the
+  typed movement state/Effects and applies controlled deterministic mutations.
+- [ ] Remove the old duplicate movement interpreter from Player only after the
+  new path is fully tested and there is one authoritative interpreter.
+- [ ] Run movement, Effect, snapshot, replay, local-match, relevant browser,
+  and TypeScript regression checks before continuing.
+
+### Phase 6: Trigger Architecture
+
+- [ ] Inventory current Always, Round, Collision, delayed, environmental,
+  item-runtime, rule, Player, Structure, Physics, and Handler trigger behavior.
+- [ ] Define only the typed, versioned Trigger contracts supported cleanly by
+  current runtime behavior; do not add speculative trigger categories.
+- [ ] Separate Trigger activation from the Effect it activates while retaining
+  compatibility adapters where necessary.
+- [ ] Define deterministic ordering for simultaneous triggers, same-tick versus
+  next-tick Effects, nested triggers, snapshots, and recursion limits.
+- [ ] Reject or bound recursive Trigger/Effect chains deterministically.
+
+### Phase 7: Declarative Commands
+
+Add command families only for real authoring use cases. Every family requires a
+typed payload, schema version, target schema, capability, deterministic
+semantics, ordering semantics, serialization behavior, and tests.
+
+- [ ] Transform commands such as teleport, set-position, and set-rotation.
+- [ ] Movement commands such as set/add velocity, impulse, and speed scaling.
+- [ ] Lifecycle commands such as spawn, destroy, enable, disable, and reset,
+  only after lifecycle state has a stable canonical contract.
+- [ ] Generic score/counter state and commands only where they remain Engine
+  concepts rather than KORE-specific rules.
+
+Avoid microscopic field-level Effects and unrestricted generic setting patches.
+
+### Phase 8: Predefined Generic Systems
+
+When a real authoring requirement cannot be expressed with existing systems,
+add one engine-owned capability instead of exposing arbitrary custom ticks.
+
+Candidate systems are Movement, Input, Collision, Score, Spawn,
+RoundLifecycle, and Trigger systems. Each new system must define its capability,
+versioned state, accepted typed Effects, Trigger integration, deterministic
+runtime implementation, snapshot round trip, replay/network regression, and
+only the authoring-safe SDK exports. Each capability is an atomic change or
+small coherent sequence of commits.
+
+### Phase 9: Pong External Qualification
+
+Use Pong as an external expressiveness test, not as a source of Pong-specific
+engine hacks. From standalone SDK bundles, author a field, ball, paddles,
+movement, input bindings, collision, goals, score, reset, win condition, HUD,
+pause/rematch, and audio without inspecting engine internals or implementing
+arbitrary `tick()` code.
+
+For every unsupported concept, decide whether it is a reusable Engine capability
+or Pong-specific. Add only the smallest reusable capability, with tests and an
+atomic commit, then rerun the external qualification.
+
+### Phase 10: Serialization Hardening
+
+- [ ] Version public Effect schemas, Trigger schemas, and component/state
+  schemas with explicit migration or rejection behavior.
+- [ ] Preserve canonical content fingerprints where required for replay,
+  multiplayer, and compatibility checks.
+- [ ] Distinguish persistent snapshot state, replay actions/events, and
+  ephemeral runtime events so transient execution artifacts are not serialized.
+
+### Phase 11: Replay And Multiplayer Qualification
+
+Qualify the invariant:
+
+```text
+same engine version + same content + same initial state + same actions
+= same deterministic result
+```
+
+- [ ] Verify all migrated state, Effects, and Triggers round-trip.
+- [ ] Verify replay reproduces migrated behavior exactly.
+- [ ] Keep executable behavior server-owned; clients provide validated data and
+  actions only.
+- [ ] Reject unsupported Effect/system capabilities before match start.
+- [ ] Define explicit unsupported schema and capability version errors.
+
+### Phase 12: Public SDK Cleanup
+
+Only after real consumers exist:
+
+- [ ] Export stable typed Effect authoring contracts/builders.
+- [ ] Export Trigger authoring contracts without runtime callbacks.
+- [ ] Export typed canonical state contracts without runtime entities.
+- [ ] Export framework capability metadata while keeping implementation classes
+  internal.
+- [ ] Build standalone bundles/declarations and verify they contain no internal
+  repository imports.
+- [ ] Run an external smoke test using only the standalone SDK bundles.
+
+### Phase 13: Trusted Custom System Tier
+
+This phase is explicitly later and is not required for the initial migration.
+
+Eventually evaluate a second tier for explicitly installed trusted host
+extensions:
+
+```text
+trusted host extension
+  -> custom ISystem
+  -> custom Effect interpreter
+  -> custom runtime factory
+```
+
+Rules:
+
+- never automatically load code from mod JSON;
+- require explicit host installation and extension identity/version;
+- store only IDs and JSON-safe state in snapshots, never implementation code;
+- let multiplayer hosts decide which extensions are permitted;
+- keep normal KORE/Engine content data-only.
+
+### Atomic Commit Policy
+
+Each completed checklist item ends with focused tests, relevant regression
+tests, TypeScript validation, serialization inspection when affected, and one
+atomic commit. Suitable commit scopes include:
+
+```text
+test(effects): characterize movement effect behavior
+refactor(effects): add typed movement payload contract
+refactor(effects): validate movement effect payload
+feat(engine): register movement capability
+refactor(engine): interpret movement effects in MovementSystem
+refactor(entity): remove legacy movement effect interpreter
+feat(triggers): add typed collision trigger contract
+feat(engine): validate effect capability requirements
+```
+
+Do not combine unrelated cleanup, speculative refactors, or broad architecture
+rewrites. After each step, report the exact changed files, architectural and
+behavioral effect, tests and results, serialization impact, replay/network
+impact, commit hash, and remaining risk. If a step reveals a constraint, stop
+after the current safe atomic change and document the adjustment before
+continuing.
+
+### Migration Definition Of Success
+
+Normal external authoring increasingly expresses behavior as:
+
+```text
+Entity State + Trigger + Effect + Rule + predefined capabilities
+```
+
+without access to `GameHandler`, runtime Player classes, `EntityManager`,
+`PhysicsStrategy`, or arbitrary custom `tick()`. The resulting architecture
+must retain deterministic snapshots, replay, authoritative multiplayer,
+JSON-safe mods, public SDK validation, and standalone SDK distribution.
