@@ -330,9 +330,19 @@ persistent Effect definition are serialized independently when applicable.
   runtime classes.
 - [x] Document and test ownership: entity/component state owns current state;
   Effects own requests, modifiers, statuses, or reactions.
-- [ ] Formalize existing deterministic ordering for conflicting, nested, and
+- [x] Formalize existing deterministic ordering for conflicting, nested, and
   multi-Effects, preserving current behavior unless a versioned contract
   change is required.
+
+### Phase 2.3 Ordering Rules
+
+Installed item Effects use ascending explicit `order`, defaulting to zero;
+equal orders retain insertion/declaration order. Multi Effect children retain
+their serialized declaration order. Core triggered Effects retain their
+existing per-trigger insertion lists and canonical serialization grouping;
+this phase does not introduce a new cross-trigger execution order. These rules
+are implemented by `src/effects/ordering.ts` and covered by
+`tests/effect_ordering.test.ts`.
 
 ### Phase 3: Capability-Aware Effect Metadata
 

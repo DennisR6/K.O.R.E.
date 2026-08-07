@@ -6,6 +6,7 @@ import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from ".
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
+import { orderInstalledEffects } from "../effects/ordering.js";
 import { advanceRuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
@@ -253,7 +254,7 @@ export class Player implements IEntity {
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
 	public addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void {
 		this.itemEffects.push({ ...effect, ...(source ?? {}), typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings)
-		this.itemEffects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+		this.itemEffects = orderInstalledEffects(this.itemEffects)
 	}
 	public removeItemEffects(itemIds: ReadonlySet<string>): void {
 		this.itemEffects = this.itemEffects.filter(effect => !effect.itemId || !itemIds.has(effect.itemId))
