@@ -13,15 +13,18 @@ export interface TransformSetRotationPayload {
 	rotation: number;
 }
 
+export type TransformTarget = { type: "entity"; entityId: string } | { type: "structure"; structureId: string };
+
 /** Registers absolute transform commands without selecting their runtime system. */
 export function registerTransformEffects(registry: EngineEffectRegistry): EngineEffectRegistry {
 	return registry
 		.register({
 			id: TRANSFORM_SET_POSITION_EFFECT_ID,
 			requiresCapability: [TRANSFORM_CAPABILITY],
-			targetType: "entity",
+			targetType: "entity-or-structure",
 			lifecycleCategory: "command",
 			validatePayload: payload => validateVectorPayload(payload, "Transform position"),
+			validateTarget: target => validateTransformTarget(target, true),
 		})
 		.register({
 			id: TRANSFORM_SET_ROTATION_EFFECT_ID,
@@ -33,7 +36,24 @@ export function registerTransformEffects(registry: EngineEffectRegistry): Engine
 				exactKeys(value, ["rotation"], "Transform rotation payload");
 				finite(value.rotation, "Transform rotation");
 			},
+			validateTarget: target => validateTransformTarget(target, false),
 		});
+}
+
+export function validateTransformTarget(value: unknown, allowStructure: boolean = true): asserts value is TransformTarget {
+	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Transform target must be an object");
+	const target = value as Record<string, unknown>;
+	if (target.type === "entity") {
+		exactKeys(target, ["type", "entityId"], "Transform entity target");
+		if (typeof target.entityId !== "string" || target.entityId.length === 0) throw new Error("Transform target requires a non-empty entityId");
+		return;
+	}
+	if (allowStructure && target.type === "structure") {
+		exactKeys(target, ["type", "structureId"], "Transform structure target");
+		if (typeof target.structureId !== "string" || target.structureId.length === 0) throw new Error("Transform target requires a non-empty structureId");
+		return;
+	}
+	throw new Error("Transform target type is unsupported");
 }
 
 function validateVectorPayload(payload: unknown, label: string): void {

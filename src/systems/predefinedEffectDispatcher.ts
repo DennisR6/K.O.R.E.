@@ -1,4 +1,5 @@
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import { validateEngineEffectComposition, type EngineEffectComposition } from "../engine/sdk/composition.js";
 import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, ISystem } from "./types.js";
 
 /** Dispatches one validated Engine command through exactly one trusted interpreter. */
@@ -6,16 +7,28 @@ export function dispatchPredefinedEffect(options: {
 	ctx: IGameContext;
 	systems: readonly ISystem[];
 	effect: unknown;
+	positionOverride?: { x: number; y: number };
 }): void {
 	const effect = validateEnvelope(options.effect);
 	const interpreters = options.systems.filter(isPredefinedEffectSystem).filter(system => system.acceptsEffect(effect.type));
 	if (interpreters.length === 0) throw new Error(`No predefined system accepts effect '${effect.type}'`);
 	if (interpreters.length > 1) throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
-	const target = resolveTarget(options.ctx, effect.target);
+	const target = resolveTarget(options.ctx, effect.target, options.positionOverride);
 	interpreters[0]!.applyEffect(options.ctx, effect, target);
 }
 
-function resolveTarget(ctx: IGameContext, value: unknown): ResolvedPredefinedTarget {
+/** Dispatches an ordered current command composition through the same host. */
+export function dispatchPredefinedComposition(options: {
+	ctx: IGameContext;
+	systems: readonly ISystem[];
+	composition: EngineEffectComposition;
+	positionOverride?: { x: number; y: number };
+}): void {
+	validateEngineEffectComposition(options.composition);
+	for (const effect of options.composition.effects) dispatchPredefinedEffect({ ...options, effect, positionOverride: options.positionOverride });
+}
+
+function resolveTarget(ctx: IGameContext, value: unknown, positionOverride?: { x: number; y: number }): ResolvedPredefinedTarget {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Engine effect requires a target");
 	const target = value as Record<string, unknown>;
 	if (target.type === "counter") {
@@ -29,6 +42,12 @@ function resolveTarget(ctx: IGameContext, value: unknown): ResolvedPredefinedTar
 		const entity = ctx.entities.getEntityById(target.entityId);
 		if (!entity) throw new Error(`Unknown entity target '${target.entityId}'`);
 		return { type: "entity", entity };
+	}
+	if (target.type === "structure") {
+		if (typeof target.structureId !== "string" || target.structureId.length === 0) throw new Error("Structure target requires a non-empty structureId");
+		const structure = ctx.structures.find(candidate => candidate.getId() === target.structureId);
+		if (!structure) throw new Error(`Unknown structure target '${target.structureId}'`);
+		return { type: "structure", structure, ...(positionOverride ? { positionOverride: { ...positionOverride } } : {}) };
 	}
 	throw new Error(`Unknown predefined target type '${String(target.type)}'`);
 }

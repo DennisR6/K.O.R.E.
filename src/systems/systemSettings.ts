@@ -15,6 +15,8 @@ import { WinningSystem } from "./WinningSystem.js";
 import { UiSystem } from "./UiSystem.js";
 import { EnvironmentalSystem } from "./EnvironmentalSystem.js";
 import { CounterSystem } from "./CounterSystem.js";
+import { TransformSystem } from "./TransformSystem.js";
+import { ParticipationSystem } from "./ParticipationSystem.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type EnvironmentalState } from "../environment/environmental.js";
 import type { ISerializableSystem, SystemSettings } from "./types.js";
 
@@ -98,6 +100,8 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIndexes as number[])
 		}
 		case "core.counter": if (Object.keys(state).length) throw new Error("Malformed counter settings"); return new CounterSystem()
+		case "core.transform": if (Object.keys(state).length) throw new Error("Malformed transform settings"); return new TransformSystem()
+		case "core.participation": if (Object.keys(state).length) throw new Error("Malformed participation settings"); return new ParticipationSystem()
 		default: throw new Error(`Unknown system ID '${settings.systemId}'`)
 	}
 }

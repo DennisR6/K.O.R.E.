@@ -33,7 +33,10 @@ import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
-import { dispatchPredefinedEffect } from "../systems/predefinedEffectDispatcher.js";
+import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
+import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import { TransformSystem } from "../systems/TransformSystem.js";
+import { ParticipationSystem } from "../systems/ParticipationSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
@@ -839,17 +842,22 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const definition = this.triggerDefinitions.get(String(value.triggerId));
 		if (!definition) return;
 		const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+		if ("effects" in definition.effect) {
+			const composition = definition.effect as EngineEffectComposition;
+			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => dispatchPredefinedComposition({ ctx: this.context, systems: this.systems, composition, positionOverride: value.resolvedPosition as { x: number; y: number } | undefined }) });
+			return;
+		}
 		if (target?.type === "structure") {
 			const structure = this.context.structures.find(candidate => candidate.getId() === target.structureId);
 			if (!structure) throw new Error(`Unknown structure target '${target.structureId}'`);
 			const position = value.resolvedPosition as { x: number; y: number } | undefined;
-			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(structure as unknown as IPhysics<SHAPE>, position) });
+			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect as EffectSettings).apply(structure as unknown as IPhysics<SHAPE>, position) });
 			return;
 		}
 		if (!target || target.type !== "entity") return;
 		const entity = this.entityManager.getEntityById(target.entityId);
 		if (!entity || entity.isDead()) return;
-		dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
+		dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect as EffectSettings).apply(entity) });
 	}
 
 	private mysteryBoxRewardOptions(actorId: string): MysteryBoxRewardOptions {
@@ -1023,6 +1031,10 @@ export class GameHandlerBuilder {
 		this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? [])
 		this.engine.loadEffects(gameSettings.effects)
 		this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? [])
+		if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some(definition => "effects" in definition.effect)) {
+			this.engine.addSystem(new TransformSystem())
+			this.engine.addSystem(new ParticipationSystem())
+		}
 
 		// Player
 		players.forEach((player) => this.addPlayer(createRuntimePlayer(player)))

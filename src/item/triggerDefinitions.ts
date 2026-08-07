@@ -1,10 +1,12 @@
 import { validateEffectSettings } from "../effects/validate.js";
 import type { EffectSettings } from "../effects/types.js";
+import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import { validateEngineEffectComposition } from "../engine/sdk/composition.js";
 
 export interface TriggerDefinition {
 	schemaVersion: 1;
 	id: string;
-	effect: EffectSettings;
+	effect: EffectSettings | EngineEffectComposition;
 }
 
 export interface TriggerDefinitionDescriptor {
@@ -49,7 +51,12 @@ export function validateTriggerDefinition(value: unknown): asserts value is Trig
 	exactKeys(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
 	if (definition.schemaVersion !== 1) throw new Error("Unsupported trigger definition schema version");
 	if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id)) throw new Error("Invalid trigger definition ID");
-	validateEffectSettings(definition.effect);
+	if (isEngineComposition(definition.effect)) validateEngineEffectComposition(definition.effect);
+	else validateEffectSettings(definition.effect);
+}
+
+function isEngineComposition(value: unknown): value is EngineEffectComposition {
+	return typeof value === "object" && value !== null && !Array.isArray(value) && (value as { type?: unknown }).type === "effect.composition";
 }
 
 function record(value: unknown, label: string): Record<string, unknown> {

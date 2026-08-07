@@ -2,17 +2,18 @@ import type { GameState, IInput, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { MatchResult } from "../rules/types.js";
-import type { IStructure } from "../structures/types.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
 import type { CounterState } from "../engine/contracts/counterState.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import type { IEntity } from "../entity/Entity.js";
+import type { IStructure } from "../structures/types.js";
 export type { SystemSettings } from "../engine/contracts/systemSettings.js";
 
 export type ResolvedPredefinedTarget =
 	| { type: "counter"; counter: CounterState }
-	| { type: "entity"; entity: IEntity };
+	| { type: "entity"; entity: IEntity }
+	| { type: "structure"; structure: IStructure; positionOverride?: Vector2D };
 
 /** Versioned, data-only identity of a registered engine system. */
 type SystemSettings = CanonicalSystemSettings;
