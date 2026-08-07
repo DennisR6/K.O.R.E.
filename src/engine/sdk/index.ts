@@ -25,6 +25,8 @@ export const engine = {
 export { EngineSystemRegistry, EngineWorldBuilder };
 export { EngineEffectRegistry };
 export { MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_ID, registerMovementEffect } from "./movementCapability.js";
+export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, registerTransformEffects } from "./transformCapability.js";
+export type { TransformSetPositionPayload, TransformSetRotationPayload } from "./transformCapability.js";
 export { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createScheduleDueTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "./trigger.js";
 export type { EngineCollisionEnterTriggerEvent, EngineEnvironmentActivationTriggerEvent, EngineRoundStartTriggerEvent, EngineScheduleDueTriggerEvent, EngineTickTriggerEvent, EngineTriggerActivation, EngineTriggerEvent, EngineTriggerType } from "./trigger.js";
 export type { EngineEffectDefinition, EngineEffectDescriptor, EngineEffectSettings } from "./effectRegistry.js";

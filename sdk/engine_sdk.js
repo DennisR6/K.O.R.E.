@@ -338,6 +338,52 @@ function registerMovementEffect(registry) {
     }
   });
 }
+var TRANSFORM_CAPABILITY = "transform.state";
+var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
+var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
+function registerTransformEffects(registry) {
+  return registry.register({
+    id: TRANSFORM_SET_POSITION_EFFECT_ID,
+    requiresCapability: [TRANSFORM_CAPABILITY],
+    targetType: "entity",
+    lifecycleCategory: "command",
+    validatePayload: (payload) => validateVectorPayload(payload, "Transform position")
+  }).register({
+    id: TRANSFORM_SET_ROTATION_EFFECT_ID,
+    requiresCapability: [TRANSFORM_CAPABILITY],
+    targetType: "entity",
+    lifecycleCategory: "command",
+    validatePayload: (payload) => {
+      const value = record2(payload, "Transform rotation payload");
+      exactKeys2(value, ["rotation"], "Transform rotation payload");
+      finite2(value.rotation, "Transform rotation");
+    }
+  });
+}
+function validateVectorPayload(payload, label) {
+  const value = record2(payload, `${label} payload`);
+  exactKeys2(value, ["x", "y"], `${label} payload`);
+  finite2(value.x, `${label} x`);
+  finite2(value.y, `${label} y`);
+}
+function record2(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys2(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unexpected fields`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite2(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -421,45 +467,45 @@ function createScheduleDueTriggerEvent(input) {
   return structuredClone(event);
 }
 function validateTriggerActivation(value) {
-  const activation = record2(value, "Trigger activation");
-  exactKeys2(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+  const activation = record3(value, "Trigger activation");
+  exactKeys3(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
   if (activation.schemaVersion !== 1)
     throw new Error("Unsupported Trigger activation schema version");
   string(activation.effectId, "Trigger activation effectId");
   validateTriggerEvent(activation.event);
 }
 function validateTriggerEvent(value) {
-  const event = record2(value, "Trigger event");
-  exactKeys2(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
+  const event = record3(value, "Trigger event");
+  exactKeys3(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
   if (event.schemaVersion !== 1)
     throw new Error("Unsupported Trigger event schema version");
   string(event.sourceId, "Trigger event sourceId");
   safeSequence(event.sequence, "Trigger event sequence");
   if (event.type === "tick") {
-    const payload = record2(event.payload, "Tick trigger payload");
-    exactKeys2(payload, ["dt"], "Tick trigger payload");
+    const payload = record3(event.payload, "Tick trigger payload");
+    exactKeys3(payload, ["dt"], "Tick trigger payload");
     finiteNonNegative(payload.dt, "Tick trigger dt");
     return;
   }
   if (event.type === "collision.enter") {
-    const payload = record2(event.payload, "Collision trigger payload");
-    exactKeys2(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
+    const payload = record3(event.payload, "Collision trigger payload");
+    exactKeys3(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
     string(payload.entityId, "Collision trigger entityId");
     string(payload.otherId, "Collision trigger otherId");
     string(payload.contactKey, "Collision trigger contactKey");
     return;
   }
   if (event.type === "round.start") {
-    const payload = record2(event.payload, "Round trigger payload");
-    exactKeys2(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+    const payload = record3(event.payload, "Round trigger payload");
+    exactKeys3(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
     safeSequence(payload.turnNumber, "Round trigger turnNumber");
     safeSequence(payload.activeTeam, "Round trigger activeTeam");
     string(payload.phase, "Round trigger phase");
     return;
   }
   if (event.type === "environment.activation") {
-    const payload = record2(event.payload, "Environment activation payload");
-    exactKeys2(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
+    const payload = record3(event.payload, "Environment activation payload");
+    exactKeys3(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
     string(payload.mechanicId, "Environment activation mechanicId");
     safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
     safeSequence(payload.tick, "Environment activation tick");
@@ -468,8 +514,8 @@ function validateTriggerEvent(value) {
     return;
   }
   if (event.type === "schedule.due") {
-    const payload = record2(event.payload, "Schedule due payload");
-    exactKeys2(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
+    const payload = record3(event.payload, "Schedule due payload");
+    exactKeys3(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
     string(payload.scheduleId, "Schedule due scheduleId");
     if (payload.clock !== "tick" && payload.clock !== "turn")
       throw new Error("Schedule due clock must be tick or turn");
@@ -478,12 +524,12 @@ function validateTriggerEvent(value) {
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
 }
-function record2(value, label) {
+function record3(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys2(value, keys, label) {
+function exactKeys3(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -541,6 +587,7 @@ export {
   validateTriggerActivation,
   validateTransformState,
   validateMovementState,
+  registerTransformEffects,
   registerMovementEffect,
   engine,
   createTriggerActivation,
@@ -551,6 +598,9 @@ export {
   createMovementState,
   createEnvironmentActivationTriggerEvent,
   createCollisionEnterTriggerEvent,
+  TRANSFORM_SET_ROTATION_EFFECT_ID,
+  TRANSFORM_SET_POSITION_EFFECT_ID,
+  TRANSFORM_CAPABILITY,
   MOVEMENT_EFFECT_ID,
   MOVEMENT_CAPABILITY,
   EngineWorldBuilder,

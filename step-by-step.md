@@ -548,7 +548,7 @@ Add command families only for real authoring use cases. Every family requires a
 typed payload, schema version, target schema, capability, deterministic
 semantics, ordering semantics, serialization behavior, and tests.
 
-- [ ] Transform commands such as teleport, set-position, and set-rotation.
+- [x] Transform commands: generic absolute set-position and set-rotation contracts are registered through the Engine SDK; teleport remains the set-position semantic rather than a separate speculative primitive. Runtime interpretation remains deferred until a generic runtime host exists.
 - [ ] Movement commands such as set/add velocity, impulse, and speed scaling.
 - [ ] Lifecycle commands such as spawn, destroy, enable, disable, and reset,
   only after lifecycle state has a stable canonical contract.
