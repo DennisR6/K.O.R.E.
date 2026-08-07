@@ -355,14 +355,25 @@ Effect declaration order, and existing trigger-list grouping are covered by
 
 ### Phase 3: Capability-Aware Effect Metadata
 
-- [ ] Add a separate Effect capability requirement concept; do not overload
+- [x] Add a separate Effect capability requirement concept; do not overload
   system-to-system `requires` semantics.
-- [ ] Register stable Effect IDs, schema versions, payload validators, target
+- [x] Register stable Effect IDs, schema versions, payload validators, target
   types, required capabilities, and lifecycle categories in a data/contract
   catalog. The catalog must not serialize executable factories.
-- [ ] Validate that every Effect capability is provided by the active framework
+- [x] Validate that every Effect capability is provided by the active framework
   before gameplay starts, including missing providers, duplicate providers,
   replacement systems, and deterministic validation errors.
+
+#### Phase 3 Completion Evidence
+
+`EngineEffectRegistry` stores stable Effect descriptors and host-side payload
+validators separately from serialized framework settings. `acceptsEffects` is
+system metadata, while `requiresCapability` remains Effect metadata; neither
+is overloaded into the existing system dependency fields. Framework validation
+now rejects unknown Effects, unsupported payloads, unaccepted Effect IDs, and
+missing capability providers before execution. Runtime validator functions are
+never included in descriptors or snapshots. The standalone Engine SDK bundle
+and declarations publish the catalog and framework validation APIs.
 
 ### Phase 4: Typed Canonical Entity State
 
