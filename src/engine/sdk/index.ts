@@ -3,6 +3,7 @@ import { EngineWorldBuilder, type EngineWorldSettings } from "./worldBuilder.js"
 import { assertJsonValue, type JsonValue } from "../contracts/systemSettings.js";
 import { EngineEffectRegistry } from "./effectRegistry.js";
 import { createMovementState, createTransformState } from "./entityState.js";
+import { canonicalizeCounterStates, createCounterState, validateCounterState } from "../contracts/counterState.js";
 
 /** Single generic Engine SDK entry point. It has no dependency on KORE game code. */
 export const engine = {
@@ -11,6 +12,9 @@ export const engine = {
 	createEffectRegistry(): EngineEffectRegistry { return new EngineEffectRegistry(); },
 	createTransformState,
 	createMovementState,
+	createCounterState,
+	canonicalizeCounterStates,
+	validateCounterState,
 	/** Creates a detached JSON-safe generic entity authoring record. */
 	createEntity<T extends JsonValue>(settings: T): T { assertJsonValue(settings); return structuredClone(settings); },
 	/** Creates a detached JSON-safe generic structure/geometry authoring record. */
@@ -33,4 +37,6 @@ export type { EngineCollisionEnterTriggerEvent, EngineEnvironmentActivationTrigg
 export type { EngineEffectDefinition, EngineEffectDescriptor, EngineEffectSettings } from "./effectRegistry.js";
 export { createMovementState, createTransformState, validateMovementState, validateTransformState } from "./entityState.js";
 export type { EngineMovementState, EngineTransformState } from "./entityState.js";
+export { COUNTER_SCHEMA_VERSION, canonicalizeCounterStates, createCounterState, validateCounterState } from "../contracts/counterState.js";
+export type { CounterState } from "../contracts/counterState.js";
 export type { EngineFrameworkSettings, EngineSystemDefinition, EngineWorldSettings };
