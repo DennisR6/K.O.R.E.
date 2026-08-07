@@ -21,7 +21,7 @@ function rendererSpy(): RenderContext & { circles: number; rectangles: number } 
 }
 
 function damageEffect(): EffectSettings {
-	return { schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 5 } };
+	return { schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -5 } };
 }
 
 test("structures participate in collision only while physicsEnabled is true", () => {

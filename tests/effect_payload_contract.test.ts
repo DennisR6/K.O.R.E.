@@ -4,7 +4,7 @@ import { EffectType, ItemEffectType, SettingOperation, type EffectSettings, type
 test("core EffectSettings maps each implemented type to a typed payload", () => {
 	const effects: EffectSettings[] = [
 		{ type: EffectType.Physics, typeValue: { friction: 0.9, linearDrag: 0.1, stopThreshold: 0.2 } },
-		{ type: EffectType.Damage, typeValue: { damage: 3 } },
+		{ type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -3 } },
 		{ type: EffectType.Movement, typeValue: { deltaTime: 1, x: 2, y: 0 } },
 		{ type: EffectType.Multi, typeValue: [{ type: EffectType.Velocity, typeValue: { x: 1, y: 2 } }] },
 		{ type: EffectType.ModifyMass, typeValue: { mass: 1 } },

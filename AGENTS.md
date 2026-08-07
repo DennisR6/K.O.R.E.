@@ -976,7 +976,7 @@ not desired design:
 
 - `Player.setMass()` clamps values above one and rejects non-finite or
   non-positive mass.
-- Positive `EffectDamage` values reduce HP, and HP at or below zero disables a
+- Positive KORE `numeric.add` HP values reduce HP, and HP at or below zero disables a
   player's physics and drawing participation. Death circles use ordered
   `EffectType.Multi` Effects to set both flags false. Inactive players render
   as authoritative `OUT` markers but no longer tick, collide, accept selection,

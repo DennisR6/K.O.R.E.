@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { EffectType, ItemEffectType } from "../src/effects/types.ts";
+import { EffectType, ItemEffectType, SettingOperation } from "../src/effects/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { createItemDocument } from "../src/item/types.ts";
 
@@ -16,7 +16,7 @@ function scheduledItem(targetType: "self" | "position" = "self") {
 function settings(item: ReturnType<typeof scheduledItem>) {
 	const game = createDefaultGameSettings(2, 1);
 	game.items = [item];
-	game.triggerDefinitions = [{ schemaVersion: 1, id: "trap.explode", effect: { type: EffectType.Damage, typeValue: { damage: 5 } } }];
+	game.triggerDefinitions = [{ schemaVersion: 1, id: "trap.explode", effect: { schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -5 } } }];
 	return game;
 }
 

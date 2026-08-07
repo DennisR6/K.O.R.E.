@@ -12,7 +12,7 @@ export interface EffectLifecycleMetadata {
 /** Static metadata for core Effects; it is not embedded in serialized settings. */
 export const CORE_EFFECT_LIFECYCLE: Readonly<Record<EffectType, EffectLifecycleMetadata>> = {
 	[EffectType.Physics]: { category: "modifier", execution: "tick", persistent: true },
-	[EffectType.Damage]: { category: "command", execution: "collision", persistent: false },
+	[EffectType.NumericAdd]: { category: "command", execution: "collision", persistent: false },
 	[EffectType.Movement]: { category: "modifier", execution: "tick", persistent: true },
 	[EffectType.Multi]: { category: "command", execution: "composition", persistent: false },
 	[EffectType.ModifyMass]: { category: "modifier", execution: "action", persistent: false },

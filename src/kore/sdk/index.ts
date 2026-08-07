@@ -1,9 +1,9 @@
-import { EffectDamage } from "../../effects/damage.js";
 import { MultiEffect } from "../../effects/effects.js";
 import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
+import { EffectNumericAdd } from "../../effects/numericAdd.js";
 import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
@@ -638,9 +638,9 @@ export const kore = {
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
 		physics(values: FrictionSettings): EffectPhysics { return new EffectPhysics({ typeValue: values }); },
-		damage(damage: number): EffectDamage {
+		damage(damage: number): EffectNumericAdd {
 			if (!Number.isFinite(damage) || damage < 0) throw new Error("Damage must be a non-negative finite number");
-			return new EffectDamage({ typeValue: { damage } });
+			return new EffectNumericAdd({ typeValue: { stateId: "hp", amount: -damage } });
 		},
 		mass(mass: number): EffectModifyMass {
 			if (!Number.isFinite(mass) || mass <= 0) throw new Error("Mass must be a finite positive number");
@@ -717,7 +717,7 @@ export const kore = {
 		rulePhase: { item: RulePhase.Item, aim: RulePhase.Aim, charge: RulePhase.Charge, push: RulePhase.Push, physics: RulePhase.Physics, complete: RulePhase.Complete },
 		winCondition: { lastTeamStanding: WinCondition.LastTeamStanding },
 		shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
-		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, damage: EffectType.Damage, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
+		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
 		itemEffectType: {
 			modifyForce: ItemEffectType.ModifyForce,
 			modifyRotation: ItemEffectType.ModifyRotation,

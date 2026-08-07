@@ -17,7 +17,7 @@ import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalP
 import type { SystemSettings } from "../src/engine/contracts/systemSettings.js";
 import type { EngineFrameworkSettings } from "../src/engine/sdk/index.js";
 
-const CANONICAL_MATCH_SYSTEM_ORDER = ["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"];
+const CANONICAL_MATCH_SYSTEM_ORDER = ["core.movement", "core.numeric", "core.participation", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"];
 
 function canonicalMode(): GameModeSettings {
 	return createGameMode({ id: "match-sdk-test", phases: [RulePhase.Item, RulePhase.Physics], maxItemsPerTurn: 1, winCondition: WinCondition.LastTeamStanding, itemEconomy: { fixedLoadouts: [], mapPickups: [] } });
@@ -46,6 +46,8 @@ test("createMatchSystemProfile is deterministic, ordered like the legacy pipelin
 	expect(() => createMatchSystemProfile(0)).toThrow("at least one team");
 	// The profile states are exactly the fresh runtime systems' serialized states.
 	const expected: Record<string, unknown> = {
+		"core.numeric": {},
+		"core.participation": {},
 		"core.movement": new MovementSystem().toSettings().state,
 		"core.playback": new PlaybackSystem().toSettings().state,
 		"core.physics": new PhysicsSystem(new defaultPhysics()).toSettings().state,

@@ -1,5 +1,4 @@
-import type { EffectSettings, FullEffectSettings } from "../effects/types.js";
-import { EFFECT_SCHEMA_VERSION } from "../effects/types.js";
+import { EffectType, EFFECT_SCHEMA_VERSION, type EffectSettings, type FullEffectSettings } from "../effects/types.js";
 import type { EngineSettings } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import { migrateStructureSettings } from "./structures.js";
@@ -9,6 +8,11 @@ import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 export function migrateEffectSettings(value: unknown): EffectSettings {
 	if (!isRecord(value)) throw new Error("Effect migration requires an object");
 	if (value.schemaVersion !== undefined && value.schemaVersion !== EFFECT_SCHEMA_VERSION) throw new Error(`Unsupported historical Effect schema version: ${String(value.schemaVersion)}`);
+	if (value.type === "EffectType.Damage") {
+		const payload = isRecord(value.typeValue) ? value.typeValue : undefined;
+		if (!payload || typeof payload.damage !== "number" || !Number.isFinite(payload.damage) || payload.damage < 0) throw new Error("Historical Damage payload is invalid");
+		return { schemaVersion: EFFECT_SCHEMA_VERSION, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -payload.damage } };
+	}
 	const effect = { schemaVersion: EFFECT_SCHEMA_VERSION, type: value.type, typeValue: structuredClone(value.typeValue) } as EffectSettings;
 	if (effect.type === "EffectType.Multi" && Array.isArray(effect.typeValue)) effect.typeValue = effect.typeValue.map(migrateEffectSettings);
 	return effect;

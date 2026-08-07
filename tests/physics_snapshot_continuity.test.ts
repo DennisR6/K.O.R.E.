@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import type { EngineSettings } from "../src/engine/types.ts";
-import { EffectTrigger, EffectType } from "../src/effects/types.ts";
+import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 function collisionDamage(damage: number) {
-	return [{ type: EffectType.Damage, typeValue: { damage }, trigger: EffectTrigger.Collision, triggerValue: [] }];
+	return [{ schemaVersion: 1 as const, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -damage }, trigger: EffectTrigger.Collision, triggerValue: [] }];
 }
 
 function physicsFixture(): ReturnType<typeof createDefaultGameSettings> {

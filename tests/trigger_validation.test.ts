@@ -10,7 +10,7 @@ test("Trigger settings validate independently from concrete Effects", () => {
 });
 
 test("FullEffectSettings composes independently validated Effect and Trigger data", () => {
-	const effect: EffectSettings = { schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 2 } };
+	const effect: EffectSettings = { schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -2 } };
 	const full: FullEffectSettings = { ...effect, trigger: EffectTrigger.Collision, triggerValue: [] };
 
 	expect(() => validateFullEffectSettings(full)).not.toThrow();

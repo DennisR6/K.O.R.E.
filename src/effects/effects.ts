@@ -1,5 +1,4 @@
 import type { IPhysics, SHAPE } from "../physics/physics.js";
-import { EffectDamage } from "./damage.js";
 import { EffectModifyMass } from "./modifyMass.js";
 import { EffectModifyPosition } from "./modifyPosition.js";
 import { EffectModifySize } from "./modifySize.js";
@@ -8,6 +7,7 @@ import { EffectModifyVelocity } from "./modifyVelocity.js";
 import { EffectModifySetting } from "./modifySetting.js";
 import { EffectMove } from "./movement.js";
 import { EffectPhysics } from "./physics.js";
+import { EffectNumericAdd } from "./numericAdd.js";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
 import { createRuntimeEffect } from "./runtimeFactory.js";
 import { validateEffectSettings } from "./validate.js";
@@ -36,9 +36,9 @@ export class MetaEffect implements Effect {
 	constructor(effect: EffectSettings) {
 		validateEffectSettings(effect)
 		switch (effect.type) {
-			case EffectType.Damage: this.eff = new EffectDamage(effect); return
 			case EffectType.Movement: this.eff = new EffectMove(effect); return
 			case EffectType.Physics: this.eff = new EffectPhysics(effect); return
+			case EffectType.NumericAdd: this.eff = new EffectNumericAdd(effect); return
 			case EffectType.Multi: this.eff = new MultiEffect(effect); return
 			case EffectType.ModifyMass: this.eff = new EffectModifyMass(effect); return
 			case EffectType.Position: this.eff = new EffectModifyPosition(effect); return

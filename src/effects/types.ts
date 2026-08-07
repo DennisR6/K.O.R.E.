@@ -5,7 +5,7 @@ import type { ResolvedEffectTarget } from "../item/resolvedTarget.js";
 
 export const enum EffectType {
 	Physics = "EffectType.Physics",
-	Damage = "EffectType.Damage",
+	NumericAdd = "numeric.add",
 	Movement = "EffectType.Movement",
 	Multi = "EffectType.Multi",
 	ModifyMass = "EffectType.ModifyMass",
@@ -57,7 +57,7 @@ export interface EffectMovePayload extends Vector2D {
 /** Payloads for the serialized core EffectType discriminant. */
 export interface EffectPayloadMap {
 	[EffectType.Physics]: FrictionSettings;
-	[EffectType.Damage]: { damage: number };
+	[EffectType.NumericAdd]: { stateId: string; amount: number };
 	[EffectType.Movement]: EffectMovePayload;
 	[EffectType.Multi]: EffectSettings[];
 	[EffectType.ModifyMass]: { mass: number };

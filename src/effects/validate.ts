@@ -16,7 +16,7 @@ const FULL_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue", "trigger
 const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
-const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
+const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
 const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.Freeze, ItemEffectType.SwapPosition, ItemEffectType.TemporaryWall, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
@@ -35,8 +35,10 @@ export function validateEffectSettings(value: unknown): asserts value is EffectS
 		case EffectType.Physics:
 			exactKeys(payload, ["friction", "linearDrag", "stopThreshold"], "Physics payload");
 			finite(payload.friction, "Physics friction"); finite(payload.linearDrag, "Physics linearDrag"); finite(payload.stopThreshold, "Physics stopThreshold"); return;
-		case EffectType.Damage:
-			exactKeys(payload, ["damage"], "Damage payload"); finiteNonNegative(payload.damage, "Damage amount"); return;
+		case EffectType.NumericAdd:
+			exactKeys(payload, ["stateId", "amount"], "Numeric add payload");
+			if (typeof payload.stateId !== "string" || payload.stateId.length === 0) throw new Error("Numeric add stateId must be a non-empty string");
+			finite(payload.amount, "Numeric add amount"); return;
 		case EffectType.Movement:
 			exactKeys(payload, ["deltaTime", "x", "y"], "Movement payload"); finite(payload.deltaTime, "Movement deltaTime"); finite(payload.x, "Movement x"); finite(payload.y, "Movement y"); return;
 		case EffectType.ModifyMass:

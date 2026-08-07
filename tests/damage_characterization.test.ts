@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { EffectDamage } from "../src/effects/damage.ts";
+import { EffectNumericAdd } from "../src/effects/numericAdd.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
-import { EffectTrigger, EffectType } from "../src/effects/types.ts";
+import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { WinningSystem } from "../src/systems/WinningSystem.ts";
 
-function damage(amount: number): EffectDamage {
-	return new EffectDamage({ typeValue: { damage: amount } });
+function damage(amount: number): EffectNumericAdd {
+	return new EffectNumericAdd({ typeValue: { stateId: "hp", amount: -amount } });
 }
 
 function player(hp = 30): Player {
@@ -84,8 +84,8 @@ describe("legacy Damage observable contract", () => {
 			schemaVersion: 1,
 			trigger: EffectTrigger.Collision,
 			triggerValue: [],
-			type: EffectType.Damage,
-			typeValue: { damage: 30 },
+			type: EffectType.NumericAdd,
+			typeValue: { stateId: "hp", amount: -30 },
 		}];
 
 		const handler = new GameHandlerBuilder()

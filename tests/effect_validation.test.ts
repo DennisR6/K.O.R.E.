@@ -10,9 +10,9 @@ test("core Effect validation is independent from trigger composition", () => {
 
 test("core Effect validation rejects malformed and executable payloads", () => {
 	expect(() => validateEffectSettings({ schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 1, x: Number.NaN, y: 0 } })).toThrow();
-	expect(() => validateEffectSettings({ schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 1, callback: () => undefined } })).toThrow();
+	expect(() => validateEffectSettings({ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: "add", key: "hp", value: 1, callback: () => undefined } })).toThrow();
 	expect(() => validateFullEffectSettings({ schemaVersion: 1, type: EffectType.Velocity, typeValue: { x: 0, y: 0 }, trigger: "unknown", triggerValue: [] })).toThrow();
-	expect(() => validateEffectSettings({ type: EffectType.Damage, typeValue: { damage: 1 } })).toThrow(/schema version/);
+	expect(() => validateEffectSettings({ type: EffectType.ModifySetting, typeValue: { operation: "add", key: "hp", value: 1 } })).toThrow(/schema version/);
 });
 
 test("persistent item Effect validation checks typed lifecycle state", () => {

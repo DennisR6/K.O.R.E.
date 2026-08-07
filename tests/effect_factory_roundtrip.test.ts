@@ -17,7 +17,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
  * round-trip their remaining-state exactly.
  */
 
-const damageSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 5 } };
+const damageSettings: EffectSettings = { schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -5 } };
 const physicsSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Physics, typeValue: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 } };
 const movementSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 1, x: 2, y: 3 } };
 

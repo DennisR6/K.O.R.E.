@@ -8,12 +8,12 @@ import { FRICTION_TABLE } from "../src/settings/settings.js";
 describe("Effect SDK Authoring & Migration Parity", () => {
 
 	describe("SDK Core Effect Helpers", () => {
-		test("kore.effects.damage produces JSON-safe EffectDamage settings", () => {
+		test("kore.effects.damage produces JSON-safe numeric.add settings", () => {
 			const effect = kore.effects.damage(25);
 			expect(effect.toSettings()).toEqual({
 				schemaVersion: 1,
-				type: EffectType.Damage,
-				typeValue: { damage: 25 },
+				type: EffectType.NumericAdd,
+				typeValue: { stateId: "hp", amount: -25 },
 			});
 			expect(JSON.parse(JSON.stringify(effect.toSettings()))).toEqual(effect.toSettings());
 		});
@@ -72,7 +72,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 				schemaVersion: 1,
 				type: EffectType.Multi,
 				typeValue: [
-					{ schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 10 } },
+					{ schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -10 } },
 					{ schemaVersion: 1, type: EffectType.ModifyMass, typeValue: { mass: 1.5 } },
 				],
 			});
@@ -150,7 +150,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			const settings = kore.effects.damage(15).toSettings();
 			const runtimeEffect = createRuntimeEffect(settings);
 
-			expect(runtimeEffect.getType()).toBe(EffectType.Damage);
+			expect(runtimeEffect.getType()).toBe(EffectType.NumericAdd);
 			expect(runtimeEffect.toSettings()).toEqual(settings);
 		});
 
