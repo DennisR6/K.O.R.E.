@@ -627,7 +627,7 @@ contracts unless a concrete Engine-neutral consumer exists.
 | Status | Effect | Classification | Current semantic / boundary |
 |---|---|---|---|
 | `[ ]` | `Physics` | D | Entity friction/drag tick behavior owned by `Player`; overlaps physics rather than a generic command. |
-| `[ ]` | `Damage` | C / KORE | Legacy collision damage combines raw HP subtraction with immediate KORE participation elimination when HP reaches zero; generic health mutation and KORE elimination are not yet safely separable at the existing trigger boundary. |
+| `[x]` | `Damage` | C / KORE | Legacy Damage declarations dispatch `numeric.add(hp, -amount)`; canonical HP threshold configuration owns the ordered KORE elimination composition. The legacy serialized type remains a compatibility adapter. |
 | `[ ]` | `Movement` | D / special | Temporal pre-tick integration with drift and ordering; distinct from movement set/add/scale commands. |
 | `[ ]` | `Multi` | B | Ordered KORE composition primitive; preserve declaration order and migrate children independently. |
 | `[ ]` | `ModifyMass` | A/D | Direct entity mass mutation; candidate for a future object-state command only with a concrete host consumer. |
@@ -679,13 +679,12 @@ composition remains intentionally unchanged and is a separate future semantic.
 
 ### Damage Ownership Decision
 
-Damage was characterized before any production migration. Current HP is a
-single unbounded finite-number field, `PlayerSettings.hp`, owned at runtime by
+Damage was characterized before production migration. Current HP is a single
+unbounded finite-number field, `PlayerSettings.hp`, owned at runtime by
 `Player`; there is no maximum, clamping, integer restriction, or Health
-component on generic Engine world state. `EffectDamage` subtracts the payload
-through `Player.addSetting("hp", -amount)`, which immediately invokes the
-Player depletion path. The `DeadlyObstacleCirle` runtime bypasses serialized
-Damage entirely and calls `addHP(-100)`, so it is a separate KORE hazard path.
+component on generic Engine world state. Migrated Damage paths now mutate this
+scalar through `numeric.add`; the legacy serialized Damage type and direct
+compatibility APIs remain separate boundaries.
 
 The current transition is:
 
@@ -696,21 +695,17 @@ The current transition is:
 | Exact zero or overkill | zero or negative, not clamped | disabled immediately | disabled immediately | excluded through `isDead()` projection | `WinningSystem` may finalize after authoritative playback flush |
 | Repeated Damage after elimination | further raw subtraction | remains disabled | remains disabled | excluded | unchanged after completion |
 
-The canonical owner therefore remains `PlayerSettings.hp` plus the runtime
-`Player` object for this migration slice. A generic Health state with
-`maximum`, healing, or clamping is not justified by current consumers. A
-future generic mutation command could target an Entity capability and perform
-only raw health subtraction, but the current Damage contract also requires a
-conditional same-contact transition to KORE participation and velocity state.
-No existing generic conditional/event primitive represents that transition.
+The canonical owner remains `PlayerSettings.hp` plus the runtime `Player`
+object. A generic Health state with `maximum`, healing, or clamping is not
+justified by current consumers. The reusable numeric capability performs only
+the scalar mutation; the canonical HP threshold supplies the KORE reaction.
 
 The ownership split is consequently explicit: Health mutation is the narrow
 candidate Engine operation; depletion/elimination, participation flags, team
 membership, and winning remain KORE concerns. `WinningSystem` observes
 `IEntity.isDead()` and independently evaluates living teams; it does not own
-HP arithmetic. Collision Damage is currently classified as a KORE-specific
-composition (`health mutation` plus `elimination`), not migrated to a generic
-`health.damage` command yet.
+HP arithmetic. Collision Damage is represented by the compatibility
+`EffectType.Damage` adapter, whose runtime path is `numeric.add`.
 
 Replay records shots and replays collision Damage as an emergent result of the
 authoritative physics path; it does not record transient Damage activations.
@@ -724,12 +719,36 @@ PlayerSettings round trips, and replayed collision Damage. Existing collision,
 physics-contact, winning, and AI replay tests cover contact entry timing,
 snapshot continuity, playback flush, and match-result determinism.
 
-The smallest safe next slice is a separately qualified target capability and
-depletion transition contract. It must let a generic health interpreter report
-the mutation result without owning KORE elimination. Implementing that would
-be new conditional transition infrastructure, so Damage production migration
-is intentionally deferred until that boundary is either established from an
-existing primitive or explicitly approved as new shared infrastructure.
+The target capability and depletion transition contract are now qualified by
+the numeric threshold tests. The next cleanup boundary is removal or separate
+qualification of direct compatibility wrappers (`Player.addHP` and
+`ModifySetting(set/remove hp)`).
+
+### Damage Numeric Convergence
+
+`Player.setNumericValue("hp", value)` mutates only the canonical HP scalar;
+it does not disable participation or alter velocity. Every default handler
+installs `NumericSystem` and `ParticipationSystem`, and every canonical Player
+snapshot carries the HP threshold with comparator `below-or-equal` and value
+`0`. Its ordered follow-up Effects are:
+
+1. `movement.set-velocity(0, 0)`
+2. `participation.set-physics(false)`
+3. `participation.set-drawing(false)`
+
+The velocity-first order is required because `MovementSystem` rejects commands
+against inactive entities. Ordered composition therefore preserves intermediate
+state validity, not merely final-state equivalence.
+
+| Path | Current representation | Status |
+|---|---|---|
+| `EffectDamage` | compatibility adapter to `numeric.add(hp, -damage)` | migrated |
+| `DeadlyObstacleCirle` | `numeric.add(hp, -100)` through the attached dispatcher | migrated |
+| `EffectModifySetting(add hp)` | numeric dispatch for the HP-add branch | migrated |
+
+`EffectType.Damage`, `Player.addHP`, and `ModifySetting(set/remove hp)` remain
+compatibility contracts for direct callers or historical serialized content.
+They no longer participate in the migrated production Damage paths.
 
 ### Phase 9: Pong External Qualification
 

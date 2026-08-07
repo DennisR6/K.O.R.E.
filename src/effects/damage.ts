@@ -4,7 +4,7 @@ import { EffectType, type Effect, type EffectSettings } from "./types.js";
 export interface EffectDamageType {
 	damage: number
 }
-/** @deprecated Prefer EffectModifySetting with `{ operation: "add", key: "hp", value: -amount }`. */
+/** Compatibility adapter: legacy Damage declarations now dispatch `numeric.add(hp, -amount)`. */
 export class EffectDamage implements Effect {
 	private damage: number
 	constructor({ typeValue }: { typeValue: EffectDamageType }) {
