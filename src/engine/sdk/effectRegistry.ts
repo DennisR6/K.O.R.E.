@@ -19,7 +19,7 @@ export interface EngineEffectDefinition {
 	validateTarget?: (target: JsonValue) => void;
 }
 
-export type EngineEffectDescriptor = Omit<EngineEffectDefinition, "validatePayload">;
+export type EngineEffectDescriptor = Omit<EngineEffectDefinition, "validatePayload" | "validateTarget">;
 
 /** Data catalog plus host-side validators for supported Effect contracts. */
 export class EngineEffectRegistry {
