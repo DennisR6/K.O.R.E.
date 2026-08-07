@@ -563,6 +563,13 @@ fields such as movement `enabled` and KORE structure `physicsEnabled`/
 destroy, enable, disable, or reset command payloads until those invariants are
 specified and qualified.
 
+Generic score/counter state also remains deferred. The repository currently has
+no engine-neutral scoring requirement or canonical counter ownership;
+`Goal_scored`, winning evaluation, and points-to-win mode data belong to KORE
+rules and content. Do not expose a generic score command until an independent
+authoring use case defines its state, ordering, persistence, and replay
+semantics.
+
 Avoid microscopic field-level Effects and unrestricted generic setting patches.
 
 ### Phase 8: Predefined Generic Systems
