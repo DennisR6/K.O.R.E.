@@ -7,7 +7,7 @@ import type { AiDifficulty } from "../../ai/types.js";
 import { koreAudio } from "../audio.js";
 import { createMainMenuComposition, mapScreenId, validateKoreMainMenuSettings, type KoreMainMenuSettings, type KoreMenuMapIntent } from "./mainMenu.js";
 import { KoreMenuCommand, parseKoreMenuCommand } from "./menuVocabulary.js";
-import { Canvas2DUiRenderer, type UiElementState } from "./koreUiTheme.js";
+import { Canvas2DUiRenderer, KORE_UI_THEME, type UiElementState } from "./koreUiTheme.js";
 
 export interface KoreMainMenuCallbacks {
     onPlayLocal?: () => void;
@@ -124,10 +124,8 @@ class KoreMenuRenderer implements UiRenderer {
         // Unsichtbare Interaktions-Hitboxen werden übersprungen
         if (element.style === "kore.menu.landing-hitbox") return;
 
-        // Bestimme das Theme (Standard: "kore.button.blue", für Back-Buttons: "kore.button.blue-back")
-        const themeKey = (element.style === "kore.menu.difficulty-back" || element.style === "kore.menu.back") 
-            ? "kore.button.blue-back" 
-            : "kore.button.blue";
+        // Bestimme das Theme aus dem Element-Style (Fallback: "kore.button.blue")
+        const themeKey = (element.style && element.style in KORE_UI_THEME) ? element.style : "kore.button.blue";
 
         // Ermittle den aktiven Interaktions-Zustand aus dem SDK-Element
         const state = this.resolveElementState(element);
