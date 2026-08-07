@@ -377,7 +377,7 @@ and declarations publish the catalog and framework validation APIs.
 
 ### Phase 4: Typed Canonical Entity State
 
-- [ ] Separate generic Engine concepts from KORE-specific state currently held
+- [x] Separate generic Engine concepts from KORE-specific state currently held
   by Player/Entity settings.
 - [ ] Introduce the first small, versioned, validated, detached JSON-safe
   component boundary, starting with Transform/Position and Movement/Velocity
@@ -388,6 +388,23 @@ and declarations publish the catalog and framework validation APIs.
   generic Engine and KORE boundaries coexist.
 
 Do not convert the whole engine to pure ECS or expose runtime Player objects.
+
+#### Phase 4.1 State Inventory
+
+Generic Engine state candidates already present in runtime snapshots are:
+
+| Generic concept | Current canonical fields | KORE-specific fields kept outside the generic boundary |
+|---|---|---|
+| Transform | `position`, `rotation` | player icon, hoop, color, rendering assets |
+| Movement | `velocity`, `angularVelocity`, `isPhysicsEnabled` | ice drift/friction interpretation and turn rules |
+| Collision shape | `size`, `shape`, `bouncyness`, `mass` | current KORE circle-only Player implementation |
+| Health/lifecycle | `hp`, `isDead` | last-team-standing match semantics |
+| Ownership | `team` | KORE team roster/naming and player-count metadata |
+| Inventory/status | `inventory`, `itemEffects`, `effects` | KORE item catalog and target rules |
+
+Phase 4 exposes only the first two generic state groups. Complete Player and
+GameSettings documents remain the KORE compatibility boundary; no generic
+component store or arbitrary JSON component mutation is introduced here.
 
 ### Phase 5: Pilot One Effect Family Behind A System
 
