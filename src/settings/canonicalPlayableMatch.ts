@@ -39,8 +39,8 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 	// The arena geometry (roles, containment) is map authoring; it migrates to
 	// KORE map descriptors in milestone 29. The match header, teams, ids,
 	// items, and game mode are authored through the KORE match SDK.
-	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
-	base.mapBoundarys.unshift({ id: "ice.arena.containment", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
+	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d", physicsEnabled: boundary.physicsEnabled ?? true, drawingEnabled: boundary.drawingEnabled ?? true }));
+	base.mapBoundarys.unshift({ id: "ice.arena.containment", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment", physicsEnabled: true, drawingEnabled: true });
 	const settings = kore.authorMatchSettings(base, {
 		matchId: CANONICAL_MATCH_ID,
 		myTeam: [0, 1],
