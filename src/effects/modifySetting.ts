@@ -20,6 +20,14 @@ export class EffectModifySetting implements Effect {
 			entity.dispatchNumericAdd("hp", settings.value)
 			return
 		}
+		if (settings.operation === "set" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericSet" in entity && typeof entity.dispatchNumericSet === "function") {
+			entity.dispatchNumericSet("hp", settings.value)
+			return
+		}
+		if (settings.operation === "remove" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+			entity.dispatchNumericAdd("hp", -settings.value)
+			return
+		}
 		switch (settings.operation) {
 			case "set": entity.setSetting(settings.key, settings.value); break
 			case "add": entity.addSetting(settings.key, settings.value); break

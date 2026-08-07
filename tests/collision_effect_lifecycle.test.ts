@@ -108,7 +108,7 @@ describe("collision effect lifecycle (13.8)", () => {
 		const player = new Player(createPlayerSettings({ id: "shielded", position: { x: 0, y: 0 }, size: 10 }));
 		player.onCollision = () => {
 			collisionCallbacks++;
-			if (!ghost.shouldIgnoreCollision()) player.addHP(-shield.absorbDamage(3));
+			if (!ghost.shouldIgnoreCollision()) player.dispatchNumericAdd("hp", -shield.absorbDamage(3));
 		};
 		const wall = new StructureCircle(15, 0, 10, undefined, [], "solid");
 		const ctx = context([player], [wall]);

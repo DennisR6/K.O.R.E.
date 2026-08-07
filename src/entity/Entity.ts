@@ -58,6 +58,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getItemEffects(): ItemEffectSettings[]
 	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
 	dispatchNumericAdd(stateId: string, amount: number): void;
+	dispatchNumericSet(stateId: string, value: number): void;
 }
 export interface IInventory {
 	AddItem(item: InventoryItem): void

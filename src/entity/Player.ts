@@ -146,10 +146,6 @@ export class Player implements IEntity {
 	public setFriction(friction: number | undefined): void { this.friction = friction }
 	public getFriction(): number | undefined { return this.friction }
 	public getSize(): Vector2D { return { x: this.size, y: this.size } }
-	public addHP(hp: number): void {
-		this.hp += hp;
-		if (this.hp <= 0) this.setIsDead(true);
-	}
 	public getHP(): number { return this.hp }
 	public getNumericValue(stateId: string): number {
 		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
@@ -165,6 +161,11 @@ export class Player implements IEntity {
 		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
 		if (!this.numericEffectDispatcher) throw new Error("Numeric effect dispatcher is not attached")
 		this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.add", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { amount } })
+	}
+	public dispatchNumericSet(stateId: string, value: number): void {
+		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
+		if (!this.numericEffectDispatcher) throw new Error("Numeric effect dispatcher is not attached")
+		this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.set", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { value } })
 	}
 	public getNumericResetValue(stateId: string): number | undefined {
 		return this.numericThresholds.find(binding => binding.id === stateId)?.resetValue
@@ -188,7 +189,6 @@ export class Player implements IEntity {
 	public getTeam(): number[] { return this.team }
 	public isActive(): boolean { return this.isPhysicsEnabled && this.isDrawingEnabled }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
-	public setHP(hp: number): void { this.hp = hp }
 	public drawingEnabled(): boolean { return this.isDrawingEnabled }
 	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
@@ -197,7 +197,6 @@ export class Player implements IEntity {
 	/** Applies an allowlisted setting exactly, including serializable state changes. */
 	public setSetting(key: SettingKey, value: SettingValue): void {
 		switch (key) {
-			case "hp": if (typeof value === "number") this.setHPAndDeath(value); break
 			case "mass": if (typeof value === "number") this.setMass(value); break
 			case "size": if (typeof value === "number") this.setSize(value); break
 			case "friction": if (typeof value === "number" || value === undefined) this.setFriction(value); break
@@ -213,7 +212,6 @@ export class Player implements IEntity {
 	public addSetting(key: SettingKey, value: SettingValue): void {
 		if (typeof value === "number") {
 			switch (key) {
-				case "hp": this.setHPAndDeath(this.hp + value); return
 				case "mass": this.setMass(this.mass + value); return
 				case "size": this.setSize(this.size + value); return
 				case "friction": this.setFriction((this.friction ?? 0) + value); return
@@ -230,7 +228,6 @@ export class Player implements IEntity {
 	public removeSetting(key: SettingKey, value: SettingValue): void {
 		if (typeof value === "number") {
 			switch (key) {
-				case "hp": this.setHPAndDeath(this.hp - value); return
 				case "mass": this.setMass(this.mass - value); return
 				case "size": this.setSize(this.size - value); return
 				case "friction": this.setFriction((this.friction ?? 0) - value); return
@@ -336,10 +333,6 @@ export class Player implements IEntity {
 		}
 	}
 
-	private setHPAndDeath(hp: number): void {
-		this.hp = hp
-		if (hp <= 0) this.setIsDead(true)
-	}
 }
 
 function isVector(value: SettingValue): value is Vector2D {
