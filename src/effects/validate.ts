@@ -1,6 +1,6 @@
 import { assertJsonValue } from "../engine/contracts/systemSettings.js";
 import {
-	EffectType,
+	EffectType, EFFECT_SCHEMA_VERSION,
 	ItemEffectType,
 	SettingOperation,
 	type EffectSettings,
@@ -11,8 +11,8 @@ import {
 import { validateTriggerSettings } from "./triggerValidation.js";
 import { validateResolvedEffectTarget } from "../item/resolvedTarget.js";
 
-const CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
-const FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
+const CORE_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue"]);
+const FULL_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue", "trigger", "triggerValue"]);
 const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
@@ -23,6 +23,7 @@ const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRota
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
 	const effect = record(value, "Effect settings");
 	knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
+	if (effect.schemaVersion !== EFFECT_SCHEMA_VERSION) throw new Error(`Unsupported Effect schema version: ${String(effect.schemaVersion)}`);
 	if (!(CORE_EFFECT_TYPES as readonly unknown[]).includes(effect.type)) throw new Error(`Unknown effect type "${String(effect.type)}"`);
 	if (effect.type === EffectType.Multi) {
 		if (!Array.isArray(effect.typeValue)) throw new Error("EffectType.Multi requires a typeValue array of effect settings");
@@ -61,7 +62,7 @@ export function validateFullEffectSettings(value: unknown): asserts value is Ful
 	const full = record(value, "Full effect settings");
 	knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
 	validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
-	validateEffectSettings({ type: full.type, typeValue: full.typeValue });
+	validateEffectSettings({ schemaVersion: full.schemaVersion, type: full.type, typeValue: full.typeValue });
 }
 
 /** Validates persistent item-runtime state, not the looser item document input. */

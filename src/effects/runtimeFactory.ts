@@ -7,6 +7,6 @@ import type { Effect, EffectSettings, FullEffectSettings } from "./types.js";
  */
 export function createRuntimeEffect(settings: EffectSettings | FullEffectSettings): Effect {
 	// Trigger composition belongs to the settings/content boundary. Runtime
-	// Effects receive only their independent `{ type, typeValue }` contract.
-	return new MetaEffect({ type: settings.type, typeValue: settings.typeValue } as EffectSettings);
+	// Effects receive the current versioned independent Effect contract.
+	return new MetaEffect({ schemaVersion: settings.schemaVersion, type: settings.type, typeValue: settings.typeValue } as EffectSettings);
 }

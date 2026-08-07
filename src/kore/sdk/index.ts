@@ -645,21 +645,21 @@ export const kore = {
 		},
 		size(size: number): EffectSettings {
 			if (!Number.isFinite(size) || size <= 0) throw new Error("Size must be a finite positive number");
-			return { type: EffectType.ModifySize, typeValue: { size } };
+			return { schemaVersion: 1, type: EffectType.ModifySize, typeValue: { size } };
 		},
 		position(position: Vector2D): EffectSettings {
 			if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error("Position coordinates must be finite numbers");
-			return { type: EffectType.Position, typeValue: { ...position } };
+			return { schemaVersion: 1, type: EffectType.Position, typeValue: { ...position } };
 		},
 		velocity(velocity: Vector2D): EffectSettings {
 			if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) throw new Error("Velocity components must be finite numbers");
-			return { type: EffectType.Velocity, typeValue: { ...velocity } };
+			return { schemaVersion: 1, type: EffectType.Velocity, typeValue: { ...velocity } };
 		},
 		team(team: number[]): EffectSettings {
-			return { type: EffectType.Team, typeValue: { team: [...team] } };
+			return { schemaVersion: 1, type: EffectType.Team, typeValue: { team: [...team] } };
 		},
 		modifySetting(values: ModifySettingValue): EffectModifySetting { return new EffectModifySetting({ typeValue: values }); },
-		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
+		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
 
 		// Item Effect Authoring Helpers
 		itemEffect(type: ItemEffectType, typeValue: Record<string, unknown> = {}): ItemEffectSettings {

@@ -15,6 +15,7 @@ export const enum EffectType {
 	Team = "EffectType.Team",
 	ModifySetting = "EffectType.ModifySetting"
 }
+export const EFFECT_SCHEMA_VERSION = 1 as const;
 /** Data-addressable effects that modify an item action before it is applied. */
 export const enum ItemEffectType {
 	ModifyForce = "modifyForce",
@@ -140,7 +141,7 @@ export interface TemporaryWallPayload {
 }
 
 export type EffectSettings = {
-	[K in EffectType]: { type: K; typeValue: EffectPayloadMap[K] }
+	[K in EffectType]: { schemaVersion: typeof EFFECT_SCHEMA_VERSION; type: K; typeValue: EffectPayloadMap[K] }
 }[EffectType];
 
 /** Existing item authoring/runtime boundary; payload validation is added in Phase 1.3. */

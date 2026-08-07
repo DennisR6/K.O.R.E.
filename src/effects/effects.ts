@@ -28,7 +28,7 @@ export class MultiEffect implements Effect {
 	}
 	apply(entity: IPhysics<SHAPE>, override?: Object): void { for (const child of this.children) child.apply(entity, override) }
 	getType(): EffectType { return EffectType.Multi }
-	toSettings(): EffectSettings { return { type: EffectType.Multi, typeValue: this.children.map(child => child.toSettings()) } }
+	toSettings(): EffectSettings { return { schemaVersion: 1, type: EffectType.Multi, typeValue: this.children.map(child => child.toSettings()) } }
 }
 
 export class MetaEffect implements Effect {

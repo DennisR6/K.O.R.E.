@@ -3,15 +3,16 @@ import { EffectTrigger, EffectType, ItemEffectType, SettingOperation } from "../
 import { validateEffectSettings, validateFullEffectSettings, validateRuntimeItemEffectSettings } from "../src/effects/validate.ts";
 
 test("core Effect validation is independent from trigger composition", () => {
-	const effect = { type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } };
+	const effect = { schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } };
 	expect(() => validateEffectSettings(effect)).not.toThrow();
 	expect(() => validateFullEffectSettings({ ...effect, trigger: EffectTrigger.Collision, triggerValue: [] })).not.toThrow();
 });
 
 test("core Effect validation rejects malformed and executable payloads", () => {
-	expect(() => validateEffectSettings({ type: EffectType.Movement, typeValue: { deltaTime: 1, x: Number.NaN, y: 0 } })).toThrow();
-	expect(() => validateEffectSettings({ type: EffectType.Damage, typeValue: { damage: 1, callback: () => undefined } })).toThrow();
-	expect(() => validateFullEffectSettings({ type: EffectType.Velocity, typeValue: { x: 0, y: 0 }, trigger: "unknown", triggerValue: [] })).toThrow();
+	expect(() => validateEffectSettings({ schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 1, x: Number.NaN, y: 0 } })).toThrow();
+	expect(() => validateEffectSettings({ schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 1, callback: () => undefined } })).toThrow();
+	expect(() => validateFullEffectSettings({ schemaVersion: 1, type: EffectType.Velocity, typeValue: { x: 0, y: 0 }, trigger: "unknown", triggerValue: [] })).toThrow();
+	expect(() => validateEffectSettings({ type: EffectType.Damage, typeValue: { damage: 1 } })).toThrow(/schema version/);
 });
 
 test("persistent item Effect validation checks typed lifecycle state", () => {

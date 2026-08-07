@@ -88,6 +88,7 @@ export const falltuerItem: ItemDocument = createItem({
 });
 
 const falltuerDeathCollision: FullEffectSettings = {
+	schemaVersion: 1,
 	trigger: EffectTrigger.Collision,
 	triggerValue: [],
 	type: EffectType.Multi,
@@ -111,7 +112,7 @@ export const falltuerStructure: MapBoundarySettingsCircle = {
 	effects: [falltuerDeathCollision],
 };
 
-const falltuerPosition: EffectSettings = { type: EffectType.Position, typeValue: { x: 0, y: 0 } };
+const falltuerPosition: EffectSettings = { schemaVersion: 1, type: EffectType.Position, typeValue: { x: 0, y: 0 } };
 const falltuerEnablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: true } }).toSettings();
 const falltuerEnableDrawing: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: true } }).toSettings();
 const falltuerDisablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings();
@@ -119,8 +120,8 @@ const falltuerDisableDrawing: EffectSettings = new EffectModifySetting({ typeVal
 
 /** Data-only trigger catalog entries used by the official Falltür item. */
 export const falltuerTriggerDefinitions: TriggerDefinition[] = [
-	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { type: EffectType.Multi, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
-	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { type: EffectType.Multi, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } },
+	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: EffectType.Multi, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
+	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: EffectType.Multi, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } },
 ];
 
 export const powerDashItem: ItemDocument = createItem({

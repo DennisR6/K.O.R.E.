@@ -17,7 +17,7 @@ function createPlayerStartPoints(team: number, players: PlayerSettings[]) {
 }
 const friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }
 const defaultEffects: FullEffectSettings[] = [{ trigger: EffectTrigger.Always, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: EffectTrigger.Always, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }]
-const deadly: FullEffectSettings = { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+const deadly: FullEffectSettings = { schemaVersion: 1, trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
 	new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
 	new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
 ] }

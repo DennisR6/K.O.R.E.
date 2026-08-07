@@ -16,20 +16,20 @@ import { EffectType, SettingOperation, type EffectSettings } from "../src/effect
  * round-trip their remaining-state exactly.
  */
 
-const damageSettings: EffectSettings = { type: EffectType.Damage, typeValue: { damage: 5 } };
-const physicsSettings: EffectSettings = { type: EffectType.Physics, typeValue: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 } };
-const movementSettings: EffectSettings = { type: EffectType.Movement, typeValue: { deltaTime: 1, x: 2, y: 3 } };
+const damageSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 5 } };
+const physicsSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Physics, typeValue: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 } };
+const movementSettings: EffectSettings = { schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 1, x: 2, y: 3 } };
 
 const allEngineEffects: EffectSettings[] = [
 	physicsSettings,
 	damageSettings,
 	movementSettings,
-	{ type: EffectType.ModifyMass, typeValue: { mass: 3 } },
-	{ type: EffectType.ModifySize, typeValue: { size: 2 } },
-	{ type: EffectType.Position, typeValue: { x: 100, y: 200 } },
-	{ type: EffectType.Velocity, typeValue: { x: 1.5, y: -2 } },
-	{ type: EffectType.Team, typeValue: { team: [1] } },
-	{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "hp", value: 20 } },
+	{ schemaVersion: 1, type: EffectType.ModifyMass, typeValue: { mass: 3 } },
+	{ schemaVersion: 1, type: EffectType.ModifySize, typeValue: { size: 2 } },
+	{ schemaVersion: 1, type: EffectType.Position, typeValue: { x: 100, y: 200 } },
+	{ schemaVersion: 1, type: EffectType.Velocity, typeValue: { x: 1.5, y: -2 } },
+	{ schemaVersion: 1, type: EffectType.Team, typeValue: { team: [1] } },
+	{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "hp", value: 20 } },
 ];
 
 describe("effect factory hardening", () => {
@@ -42,13 +42,13 @@ describe("effect factory hardening", () => {
 	});
 
 	test("unknown effect types are rejected, never silently replaced by movement", () => {
-		expect(() => new MetaEffect({ type: "EffectType.Bogus" as never, typeValue: {} })).toThrow(/Unknown effect type "EffectType.Bogus"/);
-		expect(() => new MetaEffect({ type: undefined as never, typeValue: {} })).toThrow(/Unknown effect type "undefined"/);
-		expect(() => new MetaEffect({ type: null as never, typeValue: {} })).toThrow(/Unknown effect type "null"/);
+		expect(() => new MetaEffect({ schemaVersion: 1, type: "EffectType.Bogus" as never, typeValue: {} })).toThrow(/Unknown effect type "EffectType.Bogus"/);
+		expect(() => new MetaEffect({ schemaVersion: 1, type: undefined as never, typeValue: {} })).toThrow(/Unknown effect type "undefined"/);
+		expect(() => new MetaEffect({ schemaVersion: 1, type: null as never, typeValue: {} })).toThrow(/Unknown effect type "null"/);
 	});
 
 	test("Multi applies every child in order and round-trips its children", () => {
-		const settings: EffectSettings = { type: EffectType.Multi, typeValue: [damageSettings, movementSettings] };
+		const settings: EffectSettings = { schemaVersion: 1, type: EffectType.Multi, typeValue: [damageSettings, movementSettings] };
 		const multi = new MetaEffect(settings);
 		expect(multi.getType()).toBe(EffectType.Multi);
 		expect(multi.toSettings()).toEqual(settings);
@@ -60,7 +60,7 @@ describe("effect factory hardening", () => {
 		expect(player.getPos()).toEqual({ x: 2, y: 3 });
 
 		// Nested Multi effects resolve recursively.
-		const nested: EffectSettings = { type: EffectType.Multi, typeValue: [settings, damageSettings] };
+		const nested: EffectSettings = { schemaVersion: 1, type: EffectType.Multi, typeValue: [settings, damageSettings] };
 		const nestedMulti = new MetaEffect(nested);
 		expect(nestedMulti.toSettings()).toEqual(nested);
 		const fresh = new Player(createPlayerSettings({ hp: 10 }));
@@ -69,8 +69,8 @@ describe("effect factory hardening", () => {
 	});
 
 	test("a malformed Multi effect is rejected", () => {
-		expect(() => new MetaEffect({ type: EffectType.Multi, typeValue: { not: "an array" } as never })).toThrow(/requires a typeValue array/);
-		expect(() => new MultiEffect({ type: EffectType.Multi, typeValue: undefined as never })).toThrow(/requires a typeValue array/);
+		expect(() => new MetaEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: { not: "an array" } as never })).toThrow(/requires a typeValue array/);
+		expect(() => new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: undefined as never })).toThrow(/requires a typeValue array/);
 	});
 
 	test("freeze serialized state round-trips including remaining turns", () => {

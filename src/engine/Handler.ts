@@ -18,6 +18,7 @@ import type { UUID } from "crypto";
 import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
 import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { migrateGameSettingsEffects } from "../migrations/effects.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
@@ -967,6 +968,7 @@ export class GameHandlerBuilder {
 	}
 
 	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
+		gameSettings = migrateGameSettingsEffects(gameSettings)
 		const drift = gameSettings.drift ?? DEFAULT_DRIFT
 		validateDrift(drift)
 		const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1)

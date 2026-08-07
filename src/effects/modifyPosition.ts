@@ -27,7 +27,7 @@ export class EffectModifyPosition implements Effect {
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Position,
+            schemaVersion: 1, type: EffectType.Position,
             typeValue: {
                 x: this.x,
                 y: this.y

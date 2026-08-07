@@ -19,13 +19,14 @@ test("setting effects mutate and serialize set, add, and remove operations", () 
 	expect(player.getHP()).toBe(15)
 
 	const serialized = damage.toSettings()
-	expect(serialized).toEqual({ type: damage.getType(), typeValue: { operation: SettingOperation.Add, key: "hp", value: -10 } })
+	expect(serialized).toEqual({ schemaVersion: 1, type: damage.getType(), typeValue: { operation: SettingOperation.Add, key: "hp", value: -10 } })
 	new MetaEffect(serialized).apply(player)
 	expect(player.getHP()).toBe(5)
 })
 
 test("a death circle marks colliding players dead and removes them from selection", () => {
 	const deathEffect = {
+		schemaVersion: 1 as const,
 		type: EffectType.Multi,
 		typeValue: [
 			new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),

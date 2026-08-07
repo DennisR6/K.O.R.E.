@@ -41,7 +41,7 @@ export class EffectModifyTeam implements Effect {
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Team,
+            schemaVersion: 1, type: EffectType.Team,
             typeValue: {
                 team: this.team
             }

@@ -11,6 +11,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.damage produces JSON-safe EffectDamage settings", () => {
 			const effect = kore.effects.damage(25);
 			expect(effect.toSettings()).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Damage,
 				typeValue: { damage: 25 },
 			});
@@ -20,6 +21,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.mass produces valid EffectModifyMass settings", () => {
 			const effect = kore.effects.mass(2);
 			expect(effect.toSettings()).toEqual({
+				schemaVersion: 1,
 				type: EffectType.ModifyMass,
 				typeValue: { mass: 2 },
 			});
@@ -28,6 +30,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.size produces valid ModifySize settings", () => {
 			const effect = kore.effects.size(30);
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.ModifySize,
 				typeValue: { size: 30 },
 			});
@@ -36,6 +39,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.position produces valid Position settings", () => {
 			const effect = kore.effects.position({ x: 100, y: 200 });
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Position,
 				typeValue: { x: 100, y: 200 },
 			});
@@ -44,6 +48,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.velocity produces valid Velocity settings", () => {
 			const effect = kore.effects.velocity({ x: 15, y: -5 });
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Velocity,
 				typeValue: { x: 15, y: -5 },
 			});
@@ -52,6 +57,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.team produces valid Team settings", () => {
 			const effect = kore.effects.team([0, 1]);
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Team,
 				typeValue: { team: [0, 1] },
 			});
@@ -63,10 +69,11 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			const multi = kore.effects.multi(damage, mass);
 
 			expect(multi.toSettings()).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Multi,
 				typeValue: [
-					{ type: EffectType.Damage, typeValue: { damage: 10 } },
-					{ type: EffectType.ModifyMass, typeValue: { mass: 1.5 } },
+					{ schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 10 } },
+					{ schemaVersion: 1, type: EffectType.ModifyMass, typeValue: { mass: 1.5 } },
 				],
 			});
 		});

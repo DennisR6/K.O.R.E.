@@ -17,5 +17,5 @@ export class EffectDamage implements Effect {
 		if (override) dmg = override.damage
 		new EffectModifySetting({ typeValue: { operation: SettingOperation.Add, key: "hp", value: -dmg } }).apply(entity)
 	}
-	toSettings(): EffectSettings { return { typeValue: { damage: this.damage }, type: EffectType.Damage } }
+	toSettings(): EffectSettings { return { schemaVersion: 1, typeValue: { damage: this.damage }, type: EffectType.Damage } }
 }

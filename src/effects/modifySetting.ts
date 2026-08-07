@@ -26,7 +26,7 @@ export class EffectModifySetting implements Effect {
 	public getType(): EffectType { return EffectType.ModifySetting }
 	public toSettings(): EffectSettings {
 		return {
-			type: EffectType.ModifySetting,
+			schemaVersion: 1, type: EffectType.ModifySetting,
 			typeValue: { ...this.settings },
 		}
 	}
