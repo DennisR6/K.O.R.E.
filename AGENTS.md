@@ -240,8 +240,9 @@ After every change, check whether this guide still reflects the implementation a
   `physicsEnabled` and `drawingEnabled` participation flags. Dormant structures
   remain in the canonical collection and can be positioned and reactivated by
   generic structure-targeted Effects; no runtime structure-spawn system is
-  used for Falltür. Structure `dead` is only a legacy convenience operation
-  that disables both flags; dormant flags do not imply dead state.
+  used for Falltür. Historical geometry-derived IDs are assigned only by
+  `src/migrations/structures.ts`; runtime `FullStructure` construction requires
+  the persisted ID.
 - `src/structures/DeadlyObstacleCircle.ts` and `DebuggerStructure.ts`: special
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator
@@ -459,6 +460,10 @@ After every change, check whether this guide still reflects the implementation a
   used by the menu's "Play Online" action.
 - `src/utils/random.ts`: deterministic pseudo-random source for replayable
   gameplay decisions.
+- `src/migrations/effects.ts` and `src/migrations/structures.ts`: explicit
+  historical-input normalization boundaries. Runtime Effect validation accepts
+  only current schema-versioned Effects, and runtime structure construction
+  requires persisted canonical IDs.
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
 - `src/utils/ErrorHandling.ts`: error utility.
 - `src/utils/log.ts`: commented logger prototype.
@@ -944,11 +949,12 @@ not desired design:
 
 - `Player.setMass()` clamps values above one and rejects non-finite or
   non-positive mass.
-- Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
-  player dead. Death circles use `EffectModifySetting` to set `dead: true`.
-  Dead players render as authoritative `OUT` markers but no longer tick,
-  collide, accept selection, or resolve a turn; settings snapshots preserve
-  their dead state. Match-end input is
+- Positive `EffectDamage` values reduce HP, and HP at or below zero disables a
+  player's physics and drawing participation. Death circles use ordered
+  `EffectType.Multi` Effects to set both flags false. Inactive players render
+  as authoritative `OUT` markers but no longer tick, collide, accept selection,
+  or resolve a turn; snapshots preserve the orthogonal participation flags.
+  Match-end input is
   blocked, but winning evaluation is not yet integrated into round progression.
 - Round effects are stored but not meaningfully executed. Circle and rectangle
   collision effects execute, including converted editor push and kill zones.

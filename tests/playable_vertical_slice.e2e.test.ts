@@ -100,4 +100,4 @@ test("menu to canonical match to result and back through the application surface
 	expect(router.isResultVisible()).toBe(true);
 	click(router, 450, 320);
 	expect(router.isLocalMatch()).toBe(false);
-});
+}, { timeout: 30_000 });

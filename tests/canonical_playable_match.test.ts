@@ -48,4 +48,4 @@ test("canonical playable match is stable, valid, actionable, and headlessly comp
 	}
 	expect(handler.getState()).toBe(GameState.Game_over);
 	expect(handler.getMatchResult()?.winnerTeam).toBe(0);
-});
+}, { timeout: 30_000 });

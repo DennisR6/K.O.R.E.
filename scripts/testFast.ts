@@ -19,6 +19,7 @@ const SLOW_TEST_PATHS = [
 	"tests/*validation*",
 	"tests/*snapshot*",
 	"tests/*consistency*",
+	"tests/*playable*",
 ];
 
 const startedAt = performance.now();

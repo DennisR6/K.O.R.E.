@@ -610,10 +610,13 @@ intended external expressiveness evidence.
 
 ### Phase 10: Serialization Hardening
 
-- [ ] Version public Effect schemas, Trigger schemas, and component/state
-  schemas with explicit migration or rejection behavior. Trigger events,
-  activations, and generic component state are versioned; core Effect settings
-  remain deferred pending an explicit legacy-normalization/output decision.
+- [x] Version public Effect schemas, Trigger schemas, and component/state
+  schemas with explicit migration or rejection behavior. Current runtime Effect
+  settings require schema version one; historical unversioned Effects are
+  normalized only at the handler restore boundary. Canonical entity state uses
+  orthogonal participation flags, and canonical structures require stable IDs
+  plus explicit physics/drawing participation flags. Historical structure IDs
+  are assigned only by the structure migration boundary.
 - [x] Preserve canonical content fingerprints where required for replay,
   multiplayer, and compatibility checks.
 - [x] Distinguish persistent snapshot state, replay actions/events, and
@@ -623,7 +626,9 @@ Evidence: `tests/content_package.test.ts`,
 `tests/sdk_content_release_gate.test.ts`,
 `tests/engine_trigger_contract.test.ts`,
 `tests/item_effect_snapshot_validation.test.ts`, and
-`tests/handler_snapshot_isolation.test.ts`.
+`tests/handler_snapshot_isolation.test.ts`,
+`tests/effect_migration.test.ts`, and
+`tests/structure_identity_migration.test.ts`.
 
 ### Phase 11: Replay And Multiplayer Qualification
 
