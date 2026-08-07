@@ -584,6 +584,13 @@ runtime implementation, snapshot round trip, replay/network regression, and
 only the authoring-safe SDK exports. Each capability is an atomic change or
 small coherent sequence of commits.
 
+Phase 8 generic system implementation is currently deferred. The Engine SDK is
+metadata-only and has no generic runtime host or entity-component execution
+boundary. Existing Movement, Input, Physics, Boundary, and Trigger
+interpreters are authoritative KORE runtime systems; adding parallel generic
+interpreters for the Phase 7 contracts would duplicate behavior without a
+consumer, runtime state contract, or migration target.
+
 ### Phase 9: Pong External Qualification
 
 Use Pong as an external expressiveness test, not as a source of Pong-specific
