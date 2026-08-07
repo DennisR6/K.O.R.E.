@@ -10,9 +10,11 @@ test("generic Engine SDK authors JSON worlds without importing KORE", () => {
 		.addEntity(engine.createEntity({ id: "generic-entity", capabilities: ["position"] }))
 		.addStructure(engine.createStructure({ shape: "rectangle", x: 0, y: 0, w: 320, h: 180 }))
 		.addEffect(engine.createEffect({ type: "example", params: { value: 1 } }))
+		.addCounter(engine.createCounterState({ id: "coins" }))
 		.build();
 	expect(JSON.parse(engine.buildJson(world))).toEqual(world);
 	expect(() => engine.validate(world)).not.toThrow();
+	expect(world.counters).toEqual([{ schemaVersion: 1, id: "coins", value: 0 }]);
 	for (const file of ["src/engine/sdk/index.ts", "src/engine/sdk/systemRegistry.ts", "src/engine/sdk/worldBuilder.ts"]) {
 		const source = readFileSync(file, "utf8");
 		expect(source).not.toMatch(/from\s+["'].*(?:kore|settings|rules|item|ai|content|server|ui|menu|scenes)[/"']/);
