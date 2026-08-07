@@ -79,9 +79,9 @@ test("serialization round-trip and replay regression for mixed items and effects
 		position: { x: 100, y: 100 },
 		rotation: 45,
 		inventory: [{ itemId: "anker", remainingUses: 2, usesThisTurn: 0 }],
-		effects: [
-			{ type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 }, trigger: EffectTrigger.Always, triggerValue: [] },
-		],
+			effects: [
+				{ schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 }, trigger: EffectTrigger.Always, triggerValue: [] },
+			],
 	}));
 
 	const handler = new GameHandlerBuilder().defaultSystems().addPlayer(player).build();

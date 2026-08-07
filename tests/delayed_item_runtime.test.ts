@@ -88,10 +88,10 @@ test("delayedEffect executes a normal nested MultiEffect in declaration order", 
 		targetType: "self",
 		effects: [{ type: ItemEffectType.DelayedEffect, value: {
 			nestedEffect: {
-				type: EffectType.Multi,
+				schemaVersion: 1, type: EffectType.Multi,
 				typeValue: [
-					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -1 } },
-					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -2 } },
+					{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -1 } },
+					{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -2 } },
 				],
 			},
 			delayTicks: 1,

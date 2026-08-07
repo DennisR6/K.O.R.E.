@@ -34,27 +34,27 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 	const value = settings.typeValue as Record<string, unknown>;
 	switch (settings.type) {
 		case ItemEffectType.ModifyForce:
-			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor", "multiplier") } });
+			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
 		case ItemEffectType.Freeze:
-			return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor", "factor", 0.25), durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
+			return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor"), durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.GhostMode:
 			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Magnet:
-			return new EffectMagnet({ typeValue: { mode: value.mode === undefined ? "attract" : value.mode as "attract" | "repel", force: numberValue(value, "force", "strength"), range: numberValue(value, "range") } });
+			return new EffectMagnet({ typeValue: { mode: value.mode as "attract" | "repel", force: numberValue(value, "force"), range: numberValue(value, "range") } });
 		case ItemEffectType.SelectionLock:
 			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Shield:
 			return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
 		case ItemEffectType.SpawnTrigger:
-			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...(value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }), ...(value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition as never }) } });
+			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...(value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }), ...(value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition as never }) } });
 		case ItemEffectType.DelayedEffect: {
-			const nested = value.effectValue ?? value.effect;
+			const nested = value.effectValue;
 			return new EffectDelayed({ typeValue: { ...(value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined } : { nestedEffect: value.nestedEffect as never }), delayTicks: integerValue(value, "delayTicks"), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
 		}
 		case ItemEffectType.TemporaryWall:
 			return new EffectTemporaryWall({ typeValue: {
-				wallId: stringValue(value, "wallId"), x: numberValue(value, "x", undefined, 0), y: numberValue(value, "y", undefined, 0),
-				w: numberValue(value, "w", undefined, 1), h: numberValue(value, "h", undefined, 1), durationTurns: integerValue(value, "durationTurns", "lifetimeTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.active === undefined ? {} : { active: value.active as boolean }),
+				wallId: stringValue(value, "wallId"), x: numberValue(value, "x"), y: numberValue(value, "y"),
+				w: numberValue(value, "w"), h: numberValue(value, "h"), durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.active === undefined ? {} : { active: value.active as boolean }),
 			} });
 		case ItemEffectType.AimVariance:
 			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
@@ -102,20 +102,20 @@ export function applyRuntimeForceEffects(force: ForceInput, effects: readonly Ru
 	return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
 }
 
-function numberValue(value: Record<string, unknown>, key: string, alias?: string, fallback?: number): number {
-	const raw = value[key] ?? (alias ? value[alias] : undefined) ?? fallback;
+function numberValue(value: Record<string, unknown>, key: string): number {
+	const raw = value[key];
 	if (typeof raw !== "number") throw new Error(`Item effect requires numeric ${key}`);
 	return raw;
 }
 
-function integerValue(value: Record<string, unknown>, key: string, alias?: string, fallback?: number): number {
-	const raw = numberValue(value, key, alias, fallback);
+function integerValue(value: Record<string, unknown>, key: string): number {
+	const raw = numberValue(value, key);
 	if (!Number.isSafeInteger(raw)) throw new Error(`Item effect requires integer ${key}`);
 	return raw;
 }
 
-function stringValue(value: Record<string, unknown>, key: string, alias?: string): string {
-	const raw = value[key] ?? (alias ? value[alias] : undefined);
+function stringValue(value: Record<string, unknown>, key: string): string {
+	const raw = value[key];
 	if (typeof raw !== "string" || raw.length === 0) throw new Error(`Item effect requires non-empty ${key}`);
 	return raw;
 }
