@@ -1022,6 +1022,8 @@ export class GameHandlerBuilder {
 			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
 			if (byId.has("core.simulator")) restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator")!, restored))
 			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.numeric")) this.engine.addSystem(new NumericSystem())
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.participation")) this.engine.addSystem(new ParticipationSystem())
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
 			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
 			restoredPhysics.strategy = this.engine.getPhysics()
