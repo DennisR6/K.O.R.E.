@@ -240,7 +240,8 @@ After every change, check whether this guide still reflects the implementation a
   `physicsEnabled` and `drawingEnabled` participation flags. Dormant structures
   remain in the canonical collection and can be positioned and reactivated by
   generic structure-targeted Effects; no runtime structure-spawn system is
-  used for Falltür.
+  used for Falltür. Structure `dead` is only a legacy convenience operation
+  that disables both flags; dormant flags do not imply dead state.
 - `src/structures/DeadlyObstacleCircle.ts` and `DebuggerStructure.ts`: special
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator
