@@ -10,6 +10,9 @@ import { buildMapSettings } from "../content/mapCatalog.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { applyGameMode } from "../rules/modeCatalog.js";
+import type { LoadedContentPackage } from "../content/package.js";
+import { loadMapDocument } from "../contracts/documents.js";
+import { validateGameSettings } from "../settings/settings.js";
 
 /** Bounded hard-AI search for browser-responsible KI-vs-KI decisions. */
 export const AI_BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 };
@@ -24,6 +27,7 @@ export type MatchPipelineConfig = {
 	difficulty?: AiDifficulty;
 	seed?: number;
 	gameModeId?: string;
+	mod?: LoadedContentPackage;
 };
 
 /**
@@ -35,8 +39,15 @@ export type MatchPipelineConfig = {
  */
 export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const seed = config.seed ?? (config.mode === "hotseat" ? 12345 : Math.floor(Math.random() * 0x7fffffff));
-	const settings = buildMapSettings(config.mapId, createCanonicalPlayableMatchSettings());
-	if (config.gameModeId) applyGameMode(settings, config.gameModeId);
+	const baseSettings = createCanonicalPlayableMatchSettings();
+	const modMap = config.mod?.package.maps?.[0];
+	const settings = modMap ? loadMapDocument(modMap, baseSettings) : buildMapSettings(config.mapId, baseSettings);
+	if (config.mod) {
+		if (config.mod.package.items) settings.items = structuredClone(config.mod.package.items);
+		const modMode = config.mod.package.modes?.[0];
+		if (modMode) settings.gameMode = kore.createGameMode(modMode);
+	} else if (config.gameModeId) applyGameMode(settings, config.gameModeId);
+	validateGameSettings(settings);
 	const difficulty = config.difficulty ?? "medium";
 	const header = config.mode === "human-vs-ai"
 		? { myTeam: [0] as number[], allTeams: ["Human", `${difficulty} KI`], ai: kore.ai.createSettings({ difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) }) }

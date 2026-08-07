@@ -15,6 +15,7 @@ import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js
 import type { RenderContext } from "../engine/RenderContext.js";
 import { readClipboardText } from "../mods/browserClipboard.js";
 import { createModFileInput } from "../mods/browserFileInput.js";
+import type { LoadedContentPackage } from "../content/package.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -72,6 +73,12 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.mode = "hotseat";
 		return this.startScene(() => this.createLocalHandler(mapId, modeId), mapId);
 	}
+	public startModMatch(mod: LoadedContentPackage): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		this.mode = "hotseat";
+		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
+		return this.startScene(() => createLocalGameplayHandler(mapId, undefined, mod), mapId);
+	}
 
 	/**
 	 * Starts one autonomous KI-vs-KI battle on the canonical arena. Every
@@ -88,6 +95,18 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		} else {
 			this.mode = undefined;
 		}
+		return started;
+	}
+	public startModAiBattle(mod: LoadedContentPackage): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		const seed = this.battleSeedSource();
+		this.mode = "ai-battle";
+		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed, mod), mapId);
+		if (started) {
+			this.aiBattle = true;
+			this.battleSeed = seed;
+		} else this.mode = undefined;
 		return started;
 	}
 
@@ -201,6 +220,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			drawBackground: renderer => preview.draw(renderer),
 			onImportModFile: () => this.pickModFile(),
 			onReadModClipboard: () => readClipboardText(),
+			onLaunchMod1v1: mod => this.startModMatch(mod),
+			onLaunchModAiBattle: mod => this.startModAiBattle(mod),
 		}, createMainMenuComposition(this.language).build(), this.language);
 	}
 
@@ -254,8 +275,8 @@ class MenuBattlePreview {
 }
 
 /** Builds a local hotseat match handler on any browser-available catalog map. */
-export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameModeId?: string): GameHandler {
-	return createMatchHandler({ mode: "hotseat", mapId, gameModeId });
+export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameModeId?: string, mod?: LoadedContentPackage): GameHandler {
+	return createMatchHandler({ mode: "hotseat", mapId, gameModeId, mod });
 }
 
 /**
@@ -265,8 +286,8 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameMod
  * random draw and varies the hard-AI decisions deterministically; pass an
  * explicit seed for reproducible games.
  */
-export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	return createMatchHandler({ mode: "ai-battle", mapId, seed });
+export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage): GameHandler {
+	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod });
 }
 
 /** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
