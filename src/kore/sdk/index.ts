@@ -694,9 +694,11 @@ export const kore = {
 			if (!Number.isFinite(torque)) throw new Error("Torque must be a finite number");
 			return { type: ItemEffectType.ApplyTorque, typeValue: { torque } };
 		},
-		delayedEffect(delayTicks: number, effect: ItemEffectSettings): ItemEffectSettings {
+		delayedEffect(delayTicks: number, effect: ItemEffectSettings | EffectSettings): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
-			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effectType: effect.type, effectValue: clone(effect.typeValue) } };
+			return "typeValue" in effect && isItemEffectType(effect.type)
+				? { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effectType: effect.type, effectValue: clone(effect.typeValue) } }
+				: { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, nestedEffect: clone(effect) } };
 		},
 		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
@@ -730,6 +732,10 @@ export const kore = {
 		friction: FRICTION_TABLE,
 	},
 } as const;
+
+function isItemEffectType(value: string): value is ItemEffectType {
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"].includes(value);
+}
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };
 export type { GameSettings } from "../../settings/settings.js";

@@ -49,7 +49,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	onRound(event: EngineTriggerEvent): void
 	addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void
 	removeItemEffects(itemIds: ReadonlySet<string>): void
-	advanceItemEffectsTurn(): void
+	advanceItemEffectsTurn(): ItemEffectSettings[]
 	advanceItemEffectsTick(): ItemEffectSettings[]
 	getItemEffects(): ItemEffectSettings[]
 }

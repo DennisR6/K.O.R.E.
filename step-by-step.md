@@ -508,14 +508,15 @@ not re-run the activation.
 `EnvironmentalSystem` emits `environment.activation` through the same bounded
 queue when a mechanic changes active state. Structure enablement remains the
 authoritative mutation and environmental lifecycle snapshots are unchanged.
-`delayedEffect` and `spawnTrigger` remain pending because current item runtime
-schemas define countdown/fired state but not a general target or activation
-application contract.
+`delayedEffect` now has explicit target and due-activation semantics. `spawnTrigger`
+uses the separate named TriggerDefinition catalog for the supported entity-target
+path; official item-specific triggers remain explicit unsupported/special paths.
 
 ## Scheduled Item Semantics
 
-`delayedEffect` preserves the existing item-runtime nested-effect namespace and
-now captures a version-one resolved entity or position target at item use. Its
+`delayedEffect` supports a validated normal `nestedEffect` core Effect/MultiEffect
+branch and preserves the existing item-runtime nested-effect branch for current
+official content. It captures a version-one resolved entity or position target at item use. Its
 remaining tick count is advanced only by `GameHandler.tick()`; a transition from
 `remainingTicks: 1` to zero emits one transient `schedule.due` activation in the
 same authoritative tick. Entity targets resolve by stable ID and missing/dead
@@ -527,6 +528,12 @@ Current supported delayed target compatibility is explicit: entity targets may
 install supported persistent item effects or apply Magnet immediately; position
 targets currently support Magnet only. Structural, swap, and nested scheduled
 item Effects are rejected rather than interpreted generically.
+
+`spawnTrigger` persists its entity/self target and turn countdown. At the next
+turn boundary it resolves `triggerId` through `GameSettings.triggerDefinitions`,
+emits one transient `schedule.due` activation, and executes the validated core
+Effect or MultiEffect against the persisted entity. Unknown definitions,
+position targets, and recursive scheduled definitions reject before mutation.
 
 ### Phase 7: Declarative Commands
 

@@ -95,11 +95,13 @@ export interface SpawnTriggerPayload {
 	delayTurns: number;
 	remainingTurns?: number;
 	fired?: boolean;
+	resolvedTarget?: ResolvedEffectTarget;
 }
 
 export interface DelayedEffectPayload {
-	effectType: string;
+	effectType?: string;
 	effectValue?: Record<string, unknown>;
+	nestedEffect?: EffectSettings;
 	delayTicks: number;
 	remainingTicks?: number;
 	fired?: boolean;

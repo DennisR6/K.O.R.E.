@@ -10,6 +10,7 @@ import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
 import { EffectSwapPosition } from "../../effects/swapPosition.js";
 import { EffectTemporaryWall } from "../../effects/temporaryWall.js";
 import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../effects/types.js";
+import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
 
 export type RuntimeItemEffect =
 	| EffectAimVariance
@@ -29,6 +30,7 @@ export type RuntimeItemEffect =
  * remains declarative and callers never need to import effect implementations.
  */
 export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeItemEffect {
+	validateRuntimeItemEffectSettings(settings);
 	const value = settings.typeValue as Record<string, unknown>;
 	switch (settings.type) {
 		case ItemEffectType.ModifyForce:
@@ -44,10 +46,10 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.Shield:
 			return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
 		case ItemEffectType.SpawnTrigger:
-			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }) } });
+			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
 		case ItemEffectType.DelayedEffect: {
 			const nested = value.effectValue ?? value.effect;
-			return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined, delayTicks: integerValue(value, "delayTicks"), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
+			return new EffectDelayed({ typeValue: { ...(value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined } : { nestedEffect: value.nestedEffect as never }), delayTicks: integerValue(value, "delayTicks"), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
 		}
 		case ItemEffectType.TemporaryWall:
 			return new EffectTemporaryWall({ typeValue: {
@@ -69,13 +71,19 @@ export function resolveRuntimeItemEffects(effects: readonly { type: string; valu
 
 /** Advances turn-scoped item primitives and drops effects at their boundary. */
 export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffectSettings | undefined {
+	return advanceRuntimeItemEffectTurn(effect).next;
+}
+
+export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
-	if (advance) advance.call(runtime);
+	if (!advance) return { next: structuredClone(effect), due: false };
+	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
+	if (advance.call(runtime) === true) return { due: true };
 	const next = runtime.toSettings();
 	const value = next.typeValue as Record<string, unknown>;
-	if (value.remainingTurns === 0 || value.active === false || value.fired === true) return undefined;
-	return { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings;
+	if (value.remainingTurns === 0 || value.active === false || value.fired === true) return { due: false };
+	return { next: { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings, due: false };
 }
 
 export function advanceRuntimeItemEffectTick(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {

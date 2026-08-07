@@ -1,21 +1,24 @@
 import { ItemEffectType, type ItemEffectSettings } from "./types.js";
+import type { ResolvedEffectTarget } from "../item/resolvedTarget.js";
 
 export interface SpawnTriggerValue {
 	triggerId: string;
 	delayTurns: number;
 	remainingTurns?: number;
 	fired?: boolean;
+	resolvedTarget?: ResolvedEffectTarget;
 }
 
 /** A serializable one-shot trigger that activates after a deterministic turn delay. */
 export class EffectSpawnTrigger {
 	public readonly triggerId: string;
 	public readonly delayTurns: number;
+	public readonly resolvedTarget: ResolvedEffectTarget | undefined;
 	private remainingTurns: number;
 	private fired: boolean;
 
 	public constructor(settings: { typeValue: SpawnTriggerValue }) {
-		const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false } = settings.typeValue;
+		const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false, resolvedTarget } = settings.typeValue;
 		if (typeof triggerId !== "string" || triggerId.length === 0) throw new Error("spawnTrigger requires a non-empty triggerId");
 		if (!Number.isSafeInteger(delayTurns) || delayTurns < 0) throw new Error("spawnTrigger delayTurns must be a non-negative integer");
 		if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > delayTurns) throw new Error("spawnTrigger remainingTurns must be between zero and delayTurns");
@@ -25,6 +28,7 @@ export class EffectSpawnTrigger {
 		this.delayTurns = delayTurns;
 		this.remainingTurns = remainingTurns;
 		this.fired = fired;
+		this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
 	}
 
 	/** Advances one turn and returns true exactly once when the trigger fires. */
@@ -45,6 +49,7 @@ export class EffectSpawnTrigger {
 			typeValue: {
 				triggerId: this.triggerId,
 				delayTurns: this.delayTurns,
+				...(this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) }),
 				remainingTurns: this.remainingTurns,
 				fired: this.fired,
 			},

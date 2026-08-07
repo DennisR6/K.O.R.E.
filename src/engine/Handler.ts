@@ -15,7 +15,7 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
-import { EffectTrigger, ItemEffectType, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
+import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
 import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
@@ -39,8 +39,10 @@ import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
+import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectSwapPosition } from "../effects/swapPosition.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
+import { TriggerDefinitionCatalog, type TriggerDefinition } from "../item/triggerDefinitions.js";
 import type { AiSettings } from "../ai/types.js";
 import type { IAiTurnProducer } from "../ai/aiEmitter.js";
 import { EasyAi } from "../ai/easyAi.js";
@@ -122,6 +124,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectAlways: Effect[] = []
 	private effectRound: Effect[] = []
 	private effectCollision: Effect[] = []
+	private triggerDefinitions = new TriggerDefinitionCatalog()
 	private items: ItemDocument[] = []
 	private itemDrawRandom: SeededRandom | undefined
 	private mapPickupSystem = new MapPickupSystem()
@@ -473,7 +476,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void {
-		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => { entity.resetItemUses(); entity.advanceItemEffectsTurn() })
+		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => {
+			entity.resetItemUses();
+			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
+		})
 		this.context.currTurn = turnNumber
 		this.ruleState.turnNumber = turnNumber
 	}
@@ -548,6 +554,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.setTeamSize(settings.allTeamSize)
 		this.setItems(settings.items)
 		this.loadEffects(settings.effects)
+		this.loadTriggerDefinitions(settings.triggerDefinitions ?? [])
 		this.initializeItemDraws()
 		this.resetMapItemPickups()
 		const initialPhase = settings.gameMode?.phases?.[0] ?? RulePhase.Physics
@@ -641,6 +648,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...(this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {}),
 			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
 			...(this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {}),
+			...(this.triggerDefinitions.describe().length ? { triggerDefinitions: this.triggerDefinitions.toSettings() } : {}),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
@@ -678,6 +686,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public addEffectEveryTick(effect: Effect): void { this.effectAlways.push(effect) }
 	public addEffectEveryRound(effect: Effect): void { this.effectRound.push(effect) }
 	public addEffectEveryCollision(effect: Effect): void { this.effectCollision.push(effect) }
+	public loadTriggerDefinitions(definitions: readonly TriggerDefinition[]): void {
+		const catalog = new TriggerDefinitionCatalog();
+		definitions.forEach(definition => catalog.register(definition));
+		this.triggerDefinitions = catalog;
+	}
 	public setTeamSize(size: number): void { this.teamSize = size }
 	public setItems(items: ItemDocument[]): void {
 		items.forEach(validateItemDocument)
@@ -709,7 +722,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
-		const delayedTarget = item.effects.some(effect => effect.type === ItemEffectType.DelayedEffect) ? resolveEffectTarget(target, { actor }) : undefined
+		const delayedTarget = item.effects.some(effect => effect.type === ItemEffectType.DelayedEffect || effect.type === ItemEffectType.SpawnTrigger) ? resolveEffectTarget(target, { actor }) : undefined
 		if (item.id === MYSTERY_BOX_ITEM_ID) {
 			this.resolveMysteryBoxUse(actor, item)
 			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -720,6 +733,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
 		for (const effect of runtimeEffects) {
 			if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== ItemEffectType.Magnet) throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
+			if (effect instanceof EffectSpawnTrigger) {
+				this.triggerDefinitions.require(effect.triggerId);
+				if (delayedTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+			}
 		}
 		const inventory = actor.getInventory()
 		// Validate and reserve the use before applying effects. The live inventory
@@ -742,6 +759,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				const delayedSettings = effect.toSettings();
 				actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
 			}
+			else if (effect instanceof EffectSpawnTrigger) {
+				if (!delayedTarget || delayedTarget.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+				const triggerSettings = effect.toSettings();
+				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+			}
 			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
@@ -756,7 +778,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			for (const scheduled of owner.advanceItemEffectsTick()) {
 				if (scheduled.type !== ItemEffectType.DelayedEffect) continue;
 				const value = scheduled.typeValue;
-				if (!value.resolvedTarget || typeof value.effectType !== "string") continue;
+				if (!value.resolvedTarget || (typeof value.effectType !== "string" && value.nestedEffect === undefined)) continue;
 				const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${scheduled.itemId ?? "delayed"}`, "tick", 0);
 				dispatchTriggerActivation({ effectId: "item.delayedEffect", event, apply: () => this.executeDueDelayedEffect(owner, scheduled) });
 			}
@@ -767,6 +789,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const value = scheduled.typeValue;
 		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
 		if (!target) return;
+		if (value.nestedEffect !== undefined) {
+			if (target.type !== "entity") return;
+			const entity = this.entityManager.getEntityById(target.entityId);
+			if (!entity || entity.isDead()) return;
+			createRuntimeEffect(value.nestedEffect as EffectSettings).apply(entity);
+			return;
+		}
+		if (typeof value.effectType !== "string") return;
 		const nested = createRuntimeItemEffect({ type: value.effectType as ItemEffectType, typeValue: structuredClone(value.effectValue ?? {}) as Record<string, unknown> });
 		if (target.type === "entity") {
 			const entity = this.entityManager.getEntityById(target.entityId);
@@ -783,6 +813,19 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			if (entity.isDead()) continue;
 			entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
 		}
+	}
+
+	private executeDueSpawnTrigger(owner: IEntity, scheduled: ItemEffectSettings): void {
+		if (scheduled.type !== ItemEffectType.SpawnTrigger) return;
+		const value = scheduled.typeValue;
+		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
+		if (!target || target.type !== "entity") return;
+		const entity = this.entityManager.getEntityById(target.entityId);
+		if (!entity || entity.isDead()) return;
+		const definition = this.triggerDefinitions.get(String(value.triggerId));
+		if (!definition) return;
+		const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+		dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
 	}
 
 	private mysteryBoxRewardOptions(actorId: string): MysteryBoxRewardOptions {
@@ -951,6 +994,7 @@ export class GameHandlerBuilder {
 		this.engine.setItems(gameSettings.items)
 		this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? [])
 		this.engine.loadEffects(gameSettings.effects)
+		this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? [])
 
 		// Player
 		players.forEach((player) => this.addPlayer(createRuntimePlayer(player)))

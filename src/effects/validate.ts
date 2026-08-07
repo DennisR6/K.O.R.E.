@@ -78,14 +78,23 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 		case ItemEffectType.SelectionLock: validateTurns(payload, String(effect.type)); return;
 		case ItemEffectType.ApplyTorque: exactKeys(payload, ["torque"], "applyTorque payload"); finite(payload.torque, "applyTorque torque"); return;
 		case ItemEffectType.SpawnTrigger:
-			knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired"]), "spawnTrigger payload"); requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
-			string(payload.triggerId, "spawnTrigger triggerId"); boundedTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger"); optionalBoolean(payload.fired, "spawnTrigger fired"); return;
+			knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired", "resolvedTarget"]), "spawnTrigger payload"); requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
+			string(payload.triggerId, "spawnTrigger triggerId"); boundedDelayTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
+			optionalBoolean(payload.fired, "spawnTrigger fired"); return;
 		case ItemEffectType.DelayedEffect:
-			knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
-			string(payload.effectType, "delayedEffect effectType"); boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
-			if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
-			if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
-			validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
+			knownKeys(payload, new Set(["effectType", "effectValue", "nestedEffect", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["delayTicks"], "delayedEffect payload");
+			if ((payload.effectType === undefined) === (payload.nestedEffect === undefined)) throw new Error("delayedEffect requires exactly one nested Effect representation");
+			if (payload.effectType !== undefined) {
+				string(payload.effectType, "delayedEffect effectType");
+				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+				if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
+				validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
+			} else {
+				if (payload.effectValue !== undefined) throw new Error("delayedEffect effectValue requires effectType");
+				validateEffectSettings(payload.nestedEffect);
+			}
+			boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
 			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
 			optionalBoolean(payload.fired, "delayedEffect fired"); return;
 		case ItemEffectType.Shield:
@@ -126,6 +135,7 @@ function validateTurns(payload: Record<string, unknown>, label: string): void {
 	knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), `${label} payload`); requiredKeys(payload, ["durationTurns"], `${label} payload`); boundedTurns(payload.durationTurns, payload.remainingTurns, label);
 }
 function boundedTurns(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 1) throw new Error(`${label} durationTurns must be a positive integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTurns is outside durationTurns`); }
+function boundedDelayTurns(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 0) throw new Error(`${label} delayTurns must be a non-negative integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTurns is outside delayTurns`); }
 function boundedTicks(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 0) throw new Error(`${label} delayTicks must be a non-negative integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTicks is outside delayTicks`); }
 function record(value: unknown, label: string): Record<string, unknown> { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`); return value as Record<string, unknown>; }
 function knownKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>, label: string): void { for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`${label} contains unknown field '${key}'`); }

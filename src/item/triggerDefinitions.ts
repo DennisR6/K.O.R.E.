@@ -38,6 +38,10 @@ export class TriggerDefinitionCatalog {
 	public describe(): TriggerDefinitionDescriptor[] {
 		return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map(definition => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
 	}
+
+	public toSettings(): TriggerDefinition[] {
+		return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map(definition => structuredClone(definition));
+	}
 }
 
 export function validateTriggerDefinition(value: unknown): asserts value is TriggerDefinition {

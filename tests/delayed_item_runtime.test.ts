@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { createItemDocument, type ItemDocument } from "../src/item/types.ts";
-import { ItemEffectType } from "../src/effects/types.ts";
+import { EffectType, ItemEffectType, SettingOperation } from "../src/effects/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 function delayedMagnetItem(targetType: "entity" | "position"): ItemDocument {
@@ -79,4 +79,31 @@ test("delayedEffect rejects unsupported position nested Effects before consuming
 
 	expect(() => handler.useItem(actor.getId(), item.id, { type: "position", position: { x: 10, y: 10 } })).toThrow(/does not support position/);
 	expect(actor.getInventory()[0]!.remainingUses).toBe(1);
+});
+
+test("delayedEffect executes a normal nested MultiEffect in declaration order", () => {
+	const settings = createDefaultGameSettings(2, 1);
+	const item = createItemDocument({
+		id: "delayed-core-multi",
+		targetType: "self",
+		effects: [{ type: ItemEffectType.DelayedEffect, value: {
+			nestedEffect: {
+				type: EffectType.Multi,
+				typeValue: [
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -1 } },
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -2 } },
+				],
+			},
+			delayTicks: 1,
+		} }],
+	});
+	settings.items = [item];
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
+	const actor = handler.getEntityManager().getEntities()[0]!;
+	actor.setInventory([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);
+
+	handler.useItem(actor.getId(), item.id, { type: "self" });
+	handler.tick(1);
+
+	expect(actor.getHP()).toBe(27);
 });

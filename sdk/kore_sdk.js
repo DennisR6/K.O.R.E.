@@ -870,22 +870,32 @@ function validateRuntimeItemEffectSettings(value) {
       finite2(payload.torque, "applyTorque torque");
       return;
     case "spawnTrigger" /* SpawnTrigger */:
-      knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired"]), "spawnTrigger payload");
+      knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired", "resolvedTarget"]), "spawnTrigger payload");
       requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
       string2(payload.triggerId, "spawnTrigger triggerId");
-      boundedTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+      boundedDelayTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+      if (payload.resolvedTarget !== undefined)
+        validateResolvedEffectTarget(payload.resolvedTarget);
       optionalBoolean(payload.fired, "spawnTrigger fired");
       return;
     case "delayedEffect" /* DelayedEffect */:
-      knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload");
-      requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
-      string2(payload.effectType, "delayedEffect effectType");
+      knownKeys(payload, new Set(["effectType", "effectValue", "nestedEffect", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload");
+      requiredKeys(payload, ["delayTicks"], "delayedEffect payload");
+      if (payload.effectType === undefined === (payload.nestedEffect === undefined))
+        throw new Error("delayedEffect requires exactly one nested Effect representation");
+      if (payload.effectType !== undefined) {
+        string2(payload.effectType, "delayedEffect effectType");
+        if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */)
+          throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+        if (payload.effectValue !== undefined)
+          assertJsonValue(payload.effectValue);
+        validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
+      } else {
+        if (payload.effectValue !== undefined)
+          throw new Error("delayedEffect effectValue requires effectType");
+        validateEffectSettings(payload.nestedEffect);
+      }
       boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
-      if (payload.effectValue !== undefined)
-        assertJsonValue(payload.effectValue);
-      if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */)
-        throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
-      validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
       if (payload.resolvedTarget !== undefined)
         validateResolvedEffectTarget(payload.resolvedTarget);
       optionalBoolean(payload.fired, "delayedEffect fired");
@@ -981,6 +991,12 @@ function boundedTurns(duration, remaining, label) {
     throw new Error(`${label} durationTurns must be a positive integer`);
   if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
     throw new Error(`${label} remainingTurns is outside durationTurns`);
+}
+function boundedDelayTurns(duration, remaining, label) {
+  if (!Number.isSafeInteger(duration) || duration < 0)
+    throw new Error(`${label} delayTurns must be a non-negative integer`);
+  if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
+    throw new Error(`${label} remainingTurns is outside delayTurns`);
 }
 function boundedTicks(duration, remaining, label) {
   if (!Number.isSafeInteger(duration) || duration < 0)
@@ -2653,6 +2669,7 @@ function normalizeAngle(angle) {
 
 class EffectDelayed {
   effectType;
+  nestedEffect;
   effectValue;
   delayTicks;
   resolvedTarget;
@@ -2660,7 +2677,9 @@ class EffectDelayed {
   fired;
   constructor(settings) {
     const { effectType, effectValue, delayTicks, remainingTicks = delayTicks, fired = false, resolvedTarget } = settings.typeValue;
-    if (typeof effectType !== "string" || effectType.length === 0)
+    if (effectType === undefined === (settings.typeValue.nestedEffect === undefined))
+      throw new Error("delayedEffect requires exactly one nested Effect representation");
+    if (effectType !== undefined && (typeof effectType !== "string" || effectType.length === 0))
       throw new Error("delayedEffect requires a non-empty effectType");
     if (!Number.isSafeInteger(delayTicks) || delayTicks < 0)
       throw new Error("delayedEffect delayTicks must be a non-negative integer");
@@ -2670,8 +2689,9 @@ class EffectDelayed {
       throw new Error("delayedEffect fired must be boolean");
     if (fired && remainingTicks !== 0)
       throw new Error("A fired delayedEffect must have zero remaining ticks");
-    this.effectType = effectType;
+    this.effectType = effectType ?? "";
     this.effectValue = effectValue === undefined ? undefined : structuredClone(effectValue);
+    this.nestedEffect = settings.typeValue.nestedEffect === undefined ? undefined : structuredClone(settings.typeValue.nestedEffect);
     this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
     this.delayTicks = delayTicks;
     this.remainingTicks = remainingTicks;
@@ -2697,8 +2717,7 @@ class EffectDelayed {
     return {
       type: "delayedEffect" /* DelayedEffect */,
       typeValue: {
-        effectType: this.effectType,
-        effectValue: this.effectValue === undefined ? undefined : structuredClone(this.effectValue),
+        ...this.nestedEffect === undefined ? { effectType: this.effectType, ...this.effectValue === undefined ? {} : { effectValue: structuredClone(this.effectValue) } } : { nestedEffect: structuredClone(this.nestedEffect) },
         delayTicks: this.delayTicks,
         ...this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) },
         remainingTicks: this.remainingTicks,
@@ -2924,10 +2943,11 @@ class EffectShield {
 class EffectSpawnTrigger {
   triggerId;
   delayTurns;
+  resolvedTarget;
   remainingTurns;
   fired;
   constructor(settings) {
-    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false } = settings.typeValue;
+    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false, resolvedTarget } = settings.typeValue;
     if (typeof triggerId !== "string" || triggerId.length === 0)
       throw new Error("spawnTrigger requires a non-empty triggerId");
     if (!Number.isSafeInteger(delayTurns) || delayTurns < 0)
@@ -2942,6 +2962,7 @@ class EffectSpawnTrigger {
     this.delayTurns = delayTurns;
     this.remainingTurns = remainingTurns;
     this.fired = fired;
+    this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
   }
   advanceTurn() {
     if (this.fired)
@@ -2965,6 +2986,7 @@ class EffectSpawnTrigger {
       typeValue: {
         triggerId: this.triggerId,
         delayTurns: this.delayTurns,
+        ...this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) },
         remainingTurns: this.remainingTurns,
         fired: this.fired
       }
@@ -3065,6 +3087,7 @@ class EffectTemporaryWall {
 }
 
 function createRuntimeItemEffect(settings) {
+  validateRuntimeItemEffectSettings(settings);
   const value = settings.typeValue;
   switch (settings.type) {
     case "modifyForce" /* ModifyForce */:
@@ -3080,10 +3103,10 @@ function createRuntimeItemEffect(settings) {
     case "shield" /* Shield */:
       return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
     case "spawnTrigger" /* SpawnTrigger */:
-      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired } } });
+      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
     case "delayedEffect" /* DelayedEffect */: {
       const nested = value.effectValue ?? value.effect;
-      return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
+      return new EffectDelayed({ typeValue: { ...value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested } : { nestedEffect: value.nestedEffect }, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
     }
     case "temporaryWall" /* TemporaryWall */:
       return new EffectTemporaryWall({ typeValue: {
@@ -3107,16 +3130,20 @@ function createRuntimeItemEffect(settings) {
 function resolveRuntimeItemEffects(effects) {
   return effects.map((effect) => createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
 }
-function advanceRuntimeItemEffect(effect) {
+function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
   const advance = runtime.advanceTurn;
-  if (advance)
-    advance.call(runtime);
+  if (!advance)
+    return { next: structuredClone(effect), due: false };
+  if (runtime instanceof EffectSpawnTrigger && runtime.hasFired())
+    return { due: false };
+  if (advance.call(runtime) === true)
+    return { due: true };
   const next = runtime.toSettings();
   const value = next.typeValue;
   if (value.remainingTurns === 0 || value.active === false || value.fired === true)
-    return;
-  return { ...effect, typeValue: structuredClone(value) };
+    return { due: false };
+  return { next: { ...effect, typeValue: structuredClone(value) }, due: false };
 }
 function advanceRuntimeItemEffectTick(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
@@ -3740,10 +3767,17 @@ class Player {
     this.itemEffects = this.itemEffects.filter((effect) => !effect.itemId || !itemIds.has(effect.itemId));
   }
   advanceItemEffectsTurn() {
-    this.itemEffects = this.itemEffects.flatMap((effect) => {
-      const next = advanceRuntimeItemEffect(effect);
-      return next ? [{ ...next, ...effect.itemId ? { itemId: effect.itemId } : {}, ...effect.order === undefined ? {} : { order: effect.order } }] : [];
-    });
+    const due = [];
+    const next = [];
+    for (const effect of this.itemEffects) {
+      const result = advanceRuntimeItemEffectTurn(effect);
+      if (result.due)
+        due.push(effect);
+      else if (result.next)
+        next.push({ ...result.next, ...effect.itemId ? { itemId: effect.itemId } : {}, ...effect.order === undefined ? {} : { order: effect.order } });
+    }
+    this.itemEffects = next;
+    return due.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
   }
   advanceItemEffectsTick() {
     const due = [];
@@ -5546,6 +5580,56 @@ var IceMap = {
 };
 var iceMap_default = { createPlayerStartPoints, IceMap };
 
+class TriggerDefinitionCatalog {
+  definitions = new Map;
+  register(definition) {
+    validateTriggerDefinition(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate trigger definition '${definition.id}'`);
+    this.definitions.set(definition.id, structuredClone(definition));
+    return this;
+  }
+  get(id) {
+    const definition = this.definitions.get(id);
+    return definition === undefined ? undefined : structuredClone(definition);
+  }
+  require(id) {
+    const definition = this.get(id);
+    if (!definition)
+      throw new Error(`Unknown trigger definition '${id}'`);
+    return definition;
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
+  }
+  toSettings() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => structuredClone(definition));
+  }
+}
+function validateTriggerDefinition(value) {
+  const definition = record5(value, "Trigger definition");
+  exactKeys5(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  if (definition.schemaVersion !== 1)
+    throw new Error("Unsupported trigger definition schema version");
+  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid trigger definition ID");
+  validateEffectSettings(definition.effect);
+}
+function record5(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys5(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+
 var DEFAULT_DRIFT = 0;
 function validateDrift(drift) {
   if (!Number.isFinite(drift) || drift < 0 || drift > 1)
@@ -5599,6 +5683,8 @@ function validateGameSettings(settings) {
     validateAiSettings(settings.ai);
   if (settings.environmentalMechanics !== undefined)
     validateEnvironmentalMechanics(settings.environmentalMechanics);
+  if (settings.triggerDefinitions !== undefined)
+    settings.triggerDefinitions.forEach(validateTriggerDefinition);
 }
 function isRecord6(value) {
   return typeof value === "object" && value !== null;
@@ -8063,6 +8149,7 @@ class GameHandler {
   effectAlways = [];
   effectRound = [];
   effectCollision = [];
+  triggerDefinitions = new TriggerDefinitionCatalog;
   items = [];
   itemDrawRandom;
   mapPickupSystem = new MapPickupSystem;
@@ -8341,7 +8428,8 @@ class GameHandler {
     if (this.context.currTurn !== turnNumber)
       this.entityManager.getEntities().forEach((entity) => {
         entity.resetItemUses();
-        entity.advanceItemEffectsTurn();
+        for (const scheduled of entity.advanceItemEffectsTurn())
+          this.executeDueSpawnTrigger(entity, scheduled);
       });
     this.context.currTurn = turnNumber;
     this.ruleState.turnNumber = turnNumber;
@@ -8426,6 +8514,7 @@ class GameHandler {
     this.setTeamSize(settings.allTeamSize);
     this.setItems(settings.items);
     this.loadEffects(settings.effects);
+    this.loadTriggerDefinitions(settings.triggerDefinitions ?? []);
     this.initializeItemDraws();
     this.resetMapItemPickups();
     const initialPhase = settings.gameMode?.phases?.[0] ?? "physics" /* Physics */;
@@ -8552,6 +8641,7 @@ class GameHandler {
       ...this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {},
       ...this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {},
       ...this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {},
+      ...this.triggerDefinitions.describe().length ? { triggerDefinitions: this.triggerDefinitions.toSettings() } : {},
       turnNumber: this.getContext().currTurn,
       activeTeam: this.getActiveTeam(),
       ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
@@ -8601,6 +8691,11 @@ class GameHandler {
   addEffectEveryCollision(effect) {
     this.effectCollision.push(effect);
   }
+  loadTriggerDefinitions(definitions) {
+    const catalog = new TriggerDefinitionCatalog;
+    definitions.forEach((definition) => catalog.register(definition));
+    this.triggerDefinitions = catalog;
+  }
   setTeamSize(size) {
     this.teamSize = size;
   }
@@ -8636,7 +8731,7 @@ class GameHandler {
     if (!item)
       throw new Error(`Item '${itemId}' is not declared for this game`);
     validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize });
-    const delayedTarget = item.effects.some((effect) => effect.type === "delayedEffect" /* DelayedEffect */) ? resolveEffectTarget(target, { actor }) : undefined;
+    const delayedTarget = item.effects.some((effect) => effect.type === "delayedEffect" /* DelayedEffect */ || effect.type === "spawnTrigger" /* SpawnTrigger */) ? resolveEffectTarget(target, { actor }) : undefined;
     if (item.id === MYSTERY_BOX_ITEM_ID) {
       this.resolveMysteryBoxUse(actor, item);
       this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -8649,6 +8744,11 @@ class GameHandler {
     for (const effect of runtimeEffects) {
       if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== "magnet" /* Magnet */)
         throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
+      if (effect instanceof EffectSpawnTrigger) {
+        this.triggerDefinitions.require(effect.triggerId);
+        if (delayedTarget?.type !== "entity")
+          throw new Error("spawnTrigger requires an entity or self target");
+      }
     }
     const inventory = actor.getInventory();
     consumeInventoryItem(inventory, item);
@@ -8670,6 +8770,11 @@ class GameHandler {
           throw new Error("Delayed Effects require a resolved target");
         const delayedSettings = effect.toSettings();
         actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+      } else if (effect instanceof EffectSpawnTrigger) {
+        if (!delayedTarget || delayedTarget.type !== "entity")
+          throw new Error("spawnTrigger requires an entity or self target");
+        const triggerSettings = effect.toSettings();
+        actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
       } else if (effect instanceof EffectMagnet && targetEntity)
         targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()));
       else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
@@ -8687,7 +8792,7 @@ class GameHandler {
         if (scheduled.type !== "delayedEffect" /* DelayedEffect */)
           continue;
         const value = scheduled.typeValue;
-        if (!value.resolvedTarget || typeof value.effectType !== "string")
+        if (!value.resolvedTarget || typeof value.effectType !== "string" && value.nestedEffect === undefined)
           continue;
         const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${scheduled.itemId ?? "delayed"}`, "tick", 0);
         dispatchTriggerActivation({ effectId: "item.delayedEffect", event, apply: () => this.executeDueDelayedEffect(owner, scheduled) });
@@ -8698,6 +8803,17 @@ class GameHandler {
     const value = scheduled.typeValue;
     const target = value.resolvedTarget;
     if (!target)
+      return;
+    if (value.nestedEffect !== undefined) {
+      if (target.type !== "entity")
+        return;
+      const entity = this.entityManager.getEntityById(target.entityId);
+      if (!entity || entity.isDead())
+        return;
+      createRuntimeEffect(value.nestedEffect).apply(entity);
+      return;
+    }
+    if (typeof value.effectType !== "string")
       return;
     const nested = createRuntimeItemEffect({ type: value.effectType, typeValue: structuredClone(value.effectValue ?? {}) });
     if (target.type === "entity") {
@@ -8718,6 +8834,22 @@ class GameHandler {
         continue;
       entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
     }
+  }
+  executeDueSpawnTrigger(owner, scheduled) {
+    if (scheduled.type !== "spawnTrigger" /* SpawnTrigger */)
+      return;
+    const value = scheduled.typeValue;
+    const target = value.resolvedTarget;
+    if (!target || target.type !== "entity")
+      return;
+    const entity = this.entityManager.getEntityById(target.entityId);
+    if (!entity || entity.isDead())
+      return;
+    const definition = this.triggerDefinitions.get(String(value.triggerId));
+    if (!definition)
+      return;
+    const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+    dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
   }
   mysteryBoxRewardOptions(actorId) {
     const economy = this.settings?.gameMode?.itemEconomy;
@@ -8902,6 +9034,7 @@ class GameHandlerBuilder {
     this.engine.setItems(gameSettings.items);
     this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? []);
     this.engine.loadEffects(gameSettings.effects);
+    this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? []);
     players.forEach((player) => this.addPlayer(createRuntimePlayer(player)));
     if (!("state" in gameSettings)) {
       this.engine.initializeFixedLoadouts();
@@ -9085,52 +9218,6 @@ function hazardEffect(hazard) {
 }
 function environmentalMechanicToBoundary(mechanic) {
   return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
-}
-class TriggerDefinitionCatalog {
-  definitions = new Map;
-  register(definition) {
-    validateTriggerDefinition(definition);
-    if (this.definitions.has(definition.id))
-      throw new Error(`Duplicate trigger definition '${definition.id}'`);
-    this.definitions.set(definition.id, structuredClone(definition));
-    return this;
-  }
-  get(id) {
-    const definition = this.definitions.get(id);
-    return definition === undefined ? undefined : structuredClone(definition);
-  }
-  require(id) {
-    const definition = this.get(id);
-    if (!definition)
-      throw new Error(`Unknown trigger definition '${id}'`);
-    return definition;
-  }
-  describe() {
-    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
-  }
-}
-function validateTriggerDefinition(value) {
-  const definition = record5(value, "Trigger definition");
-  exactKeys5(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
-  if (definition.schemaVersion !== 1)
-    throw new Error("Unsupported trigger definition schema version");
-  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
-    throw new Error("Invalid trigger definition ID");
-  validateEffectSettings(definition.effect);
-}
-function record5(value, label) {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error(`${label} must be an object`);
-  return value;
-}
-function exactKeys5(value, keys, label) {
-  const allowed = new Set(keys);
-  for (const key of Object.keys(value))
-    if (!allowed.has(key))
-      throw new Error(`${label} contains unknown field '${key}'`);
-  for (const key of keys)
-    if (!(key in value))
-      throw new Error(`${label} is missing '${key}'`);
 }
 var KORE_AUDIO_ASSETS = {
   "kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
@@ -10100,7 +10187,7 @@ var kore = {
     delayedEffect(delayTicks, effect) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
         throw new Error("Delay ticks must be a non-negative integer");
-      return { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, effectType: effect.type, effectValue: clone8(effect.typeValue) } };
+      return "typeValue" in effect && isItemEffectType(effect.type) ? { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, effectType: effect.type, effectValue: clone8(effect.typeValue) } } : { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, nestedEffect: clone8(effect) } };
     },
     spawnTrigger(delayTicks, triggerType) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
@@ -10134,6 +10221,9 @@ var kore = {
     friction: FRICTION_TABLE
   }
 };
+function isItemEffectType(value) {
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"].includes(value);
+}
 export {
   validateTriggerDefinition,
   validateResolvedEffectTarget,

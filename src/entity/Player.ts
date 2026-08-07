@@ -7,7 +7,7 @@ import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type I
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { orderInstalledEffects } from "../effects/ordering.js";
-import { advanceRuntimeItemEffect, advanceRuntimeItemEffectTick } from "../kore/sdk/itemRuntime.js";
+import { advanceRuntimeItemEffectTick, advanceRuntimeItemEffectTurn } from "../kore/sdk/itemRuntime.js";
 import { createCollisionEnterEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 
@@ -272,11 +272,16 @@ export class Player implements IEntity {
 	public removeItemEffects(itemIds: ReadonlySet<string>): void {
 		this.itemEffects = this.itemEffects.filter(effect => !effect.itemId || !itemIds.has(effect.itemId))
 	}
-	public advanceItemEffectsTurn(): void {
-		this.itemEffects = this.itemEffects.flatMap(effect => {
-			const next = advanceRuntimeItemEffect(effect)
-			return next ? [{ ...next, ...(effect.itemId ? { itemId: effect.itemId } : {}), ...(effect.order === undefined ? {} : { order: effect.order }) }] : []
-		})
+	public advanceItemEffectsTurn(): ItemEffectSettings[] {
+		const due: ItemEffectSettings[] = [];
+		const next: ItemEffectSettings[] = [];
+		for (const effect of this.itemEffects) {
+			const result = advanceRuntimeItemEffectTurn(effect);
+			if (result.due) due.push(effect);
+			else if (result.next) next.push({ ...result.next, ...(effect.itemId ? { itemId: effect.itemId } : {}), ...(effect.order === undefined ? {} : { order: effect.order }) });
+		}
+		this.itemEffects = next;
+		return due.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
 	}
 	public advanceItemEffectsTick(): ItemEffectSettings[] {
 		const due: ItemEffectSettings[] = [];

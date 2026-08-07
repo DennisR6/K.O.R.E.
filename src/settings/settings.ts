@@ -14,6 +14,7 @@ import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { validateFullEffectSettings } from "../effects/validate.js";
+import { validateTriggerDefinition, type TriggerDefinition } from "../item/triggerDefinitions.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -45,6 +46,8 @@ export interface GameSettings {
 	mapReference?: { mapId: string; contentHash: string }
 	/** Deterministic map mechanics; omitted by legacy maps. */
 	environmentalMechanics?: EnvironmentalMechanic[]
+	/** Optional data-only named trigger definitions for scheduled item triggers. */
+	triggerDefinitions?: TriggerDefinition[]
 }
 
 export interface SettingsScreenResolution {
@@ -147,6 +150,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	}
 	if (settings.ai !== undefined) validateAiSettings(settings.ai)
 	if (settings.environmentalMechanics !== undefined) validateEnvironmentalMechanics(settings.environmentalMechanics)
+	if (settings.triggerDefinitions !== undefined) settings.triggerDefinitions.forEach(validateTriggerDefinition)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }

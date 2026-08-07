@@ -500,7 +500,7 @@ export declare const kore: {
         readonly modifyForce: (multiplier: number) => any;
         readonly modifyRotation: (angle: number) => any;
         readonly applyTorque: (torque: number) => any;
-        readonly delayedEffect: (delayTicks: number, effect: any) => any;
+        readonly delayedEffect: (delayTicks: number, effect: any | any) => any;
         readonly spawnTrigger: (delayTicks: number, triggerType: string) => any;
     };
     /** Shared engine enums and friction presets for declarative authoring. */

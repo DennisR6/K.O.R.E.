@@ -178,6 +178,9 @@ After every change, check whether this guide still reflects the implementation a
   targets against ownership, activity, range, and world bounds.
 - `src/item/resolvedTarget.ts`: version-one detached entity/position targets for
   scheduled item Effects; zone targets are explicitly unsupported.
+- `src/item/triggerDefinitions.ts`: version-one JSON-safe named TriggerDefinition
+  catalog for validated core Effect/MultiEffect payloads; it is separate from
+  Effect IDs.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
@@ -200,6 +203,9 @@ After every change, check whether this guide still reflects the implementation a
   advancement. Due delayed effects emit transient `schedule.due` activations
   and execute against their persisted resolved target; completed schedules are
   removed from item state.
+- `GameHandler` is also the authoritative owner of due `spawnTrigger` turn
+  schedules; named definitions are loaded from `GameSettings.triggerDefinitions`
+  and execute only against persisted entity targets.
 
 ### AI drivers
 
@@ -711,6 +717,8 @@ an optional mystery-box reward configuration (`candidatePool` plus an explicit
 preserved in engine snapshots.
 Seeded item-draw state is also preserved in engine snapshots so reconnect and
 replay restoration resume the configured deterministic draw pool.
+`GameSettings.triggerDefinitions` carries validated named core Effect/MultiEffect
+definitions for supported `spawnTrigger` schedules.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 
