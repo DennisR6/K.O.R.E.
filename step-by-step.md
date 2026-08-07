@@ -379,13 +379,28 @@ and declarations publish the catalog and framework validation APIs.
 
 - [x] Separate generic Engine concepts from KORE-specific state currently held
   by Player/Entity settings.
-- [ ] Introduce the first small, versioned, validated, detached JSON-safe
+- [x] Introduce the first small, versioned, validated, detached JSON-safe
   component boundary, starting with Transform/Position and Movement/Velocity
   where repository evidence supports it.
-- [ ] Add internal adapters between typed canonical state and existing runtime
+- [x] Add internal adapters between typed canonical state and existing runtime
   Player objects; prove settings-to-runtime-to-settings equivalence.
-- [ ] Preserve current KORE SDK Player/Game settings while the transitional
+- [x] Preserve current KORE SDK Player/Game settings while the transitional
   generic Engine and KORE boundaries coexist.
+
+#### Phase 4.4 Compatibility Evidence
+
+`tests/kore_state_compatibility.test.ts` verifies that `kore.createPlayer()`
+continues to return complete `PlayerSettings` and that generic Transform/
+Movement state additions do not add component fields to canonical KORE
+`GameSettings`. The generic state boundary and KORE document boundary coexist
+without converting Player into a public ECS runtime object.
+
+#### Phase 4 Completion Evidence
+
+The generic Engine SDK now exposes detached version-one Transform and Movement
+state plus validators/builders. `src/entity/stateAdapter.ts` is internal and
+maps only those fields to runtime Player objects. KORE `PlayerSettings` and
+`GameSettings` remain unchanged and continue through their existing validators.
 
 Do not convert the whole engine to pure ECS or expose runtime Player objects.
 
