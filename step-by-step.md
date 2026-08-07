@@ -677,3 +677,25 @@ without access to `GameHandler`, runtime Player classes, `EntityManager`,
 `PhysicsStrategy`, or arbitrary custom `tick()`. The resulting architecture
 must retain deterministic snapshots, replay, authoritative multiplayer,
 JSON-safe mods, public SDK validation, and standalone SDK distribution.
+
+## Post-Milestone Cleanup
+
+### Remove Unused Structure Spawn Contract
+
+Commit `7320e82` removed the unused transitional `structure.spawn` contract and
+its standalone test:
+
+- `src/structures/spawnCommand.ts`
+- `tests/structure_spawn_command.test.ts`
+
+No production, content, Engine SDK, KORE SDK, or documentation references to
+the removed contract remain. The qualified dormant Falltür composition is
+unchanged: it uses a canonical dormant structure, stable structure identity,
+resolved targets and positions, `TriggerDefinition`, ordered `MultiEffect`
+enablement, collision Effects, and scheduled deactivation. Runtime structure
+spawning remains a deferred future capability and has no current canonical
+contract.
+
+Verification: focused architecture tests passed (`38 pass`, `0 fail`),
+`npx tsc --noEmit` passed, SDK generation passed, and the fast suite passed
+(`861 pass`, `3 skip`, `0 fail`). The worktree was clean after the commit.
