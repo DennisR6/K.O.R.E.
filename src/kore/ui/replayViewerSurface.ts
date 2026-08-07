@@ -1,7 +1,7 @@
 import type { IDrawer, RenderContext } from "../../engine/RenderContext.js";
 import type { IMouse } from "../../engine/types.js";
 import { UiRuntime, type UiCommand, type UiRenderer, type UiRuntimeElement, type UiRuntimeNode } from "../../engine/ui-sdk/index.js";
-import { createReplayViewerComposition, KoreReplayCommand, KoreReplayElement } from "./replayViewer.js";
+import { createReplayViewerComposition, KoreReplayCommand, KoreReplayElement, KoreReplayStyle } from "./replayViewer.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../../i18n/language.js";
 
 export type ReplayViewerSurfaceCallbacks = {
@@ -53,7 +53,7 @@ class ReplayViewerRenderer implements UiRenderer {
 		this.renderer.drawText(element.text ?? "", element.rect.x, element.rect.y + 24, element.id === KoreReplayElement.Title ? 30 : 16);
 	}
 	public drawButton(element: Readonly<UiRuntimeElement>): void {
-		this.renderer.setFillColor(element.style === "kore.button.blue-back" ? "#0f172a" : "#1d4ed8");
+		this.renderer.setFillColor(element.style === KoreReplayStyle.Paste ? "#0f172a" : "#1d4ed8");
 		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height);
 		this.renderer.setFillColor("#ffffff");
 		this.renderer.drawText(element.text ?? "", element.rect.x + 10, element.rect.y + 24, 14);
