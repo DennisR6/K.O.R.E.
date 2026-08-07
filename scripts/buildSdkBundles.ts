@@ -22,6 +22,11 @@ export declare function createTransformState(input: { position: { x: number; y: 
 export declare function createMovementState(input: { velocity: { x: number; y: number }; angularVelocity?: number; enabled?: boolean }): EngineMovementState;
 export declare function validateTransformState(value: unknown): asserts value is EngineTransformState;
 export declare function validateMovementState(value: unknown): asserts value is EngineMovementState;
+export declare const MOVEMENT_SET_VELOCITY_EFFECT_ID: "movement.set-velocity";
+export declare const MOVEMENT_ADD_VELOCITY_EFFECT_ID: "movement.add-velocity";
+export declare const MOVEMENT_SCALE_SPEED_EFFECT_ID: "movement.scale-speed";
+export interface MovementVelocityPayload { x: number; y: number; }
+export interface MovementScaleSpeedPayload { factor: number; }
 export declare const TRANSFORM_CAPABILITY: "transform.state";
 export declare const TRANSFORM_SET_POSITION_EFFECT_ID: "transform.set-position";
 export declare const TRANSFORM_SET_ROTATION_EFFECT_ID: "transform.set-rotation";
@@ -72,6 +77,7 @@ export declare class EngineEffectRegistry {
     validate(effect: unknown): asserts effect is EngineEffectSettings;
     describe(): EngineEffectDescriptor[];
 }
+export declare function registerMovementCommands(registry: EngineEffectRegistry): EngineEffectRegistry;
 export declare function registerTransformEffects(registry: EngineEffectRegistry): EngineEffectRegistry;
 export declare class EngineWorldBuilder {
     constructor(id: string, worldSize: { x: number; y: number });

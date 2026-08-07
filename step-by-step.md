@@ -549,7 +549,7 @@ typed payload, schema version, target schema, capability, deterministic
 semantics, ordering semantics, serialization behavior, and tests.
 
 - [x] Transform commands: generic absolute set-position and set-rotation contracts are registered through the Engine SDK; teleport remains the set-position semantic rather than a separate speculative primitive. Runtime interpretation remains deferred until a generic runtime host exists.
-- [ ] Movement commands such as set/add velocity, impulse, and speed scaling.
+- [x] Movement commands: generic set-velocity, add-velocity, and non-negative speed-scaling contracts are registered through the Engine SDK; impulse remains deferred because it requires an explicit mass/impulse semantic. Runtime interpretation remains deferred until a generic runtime host exists.
 - [ ] Lifecycle commands such as spawn, destroy, enable, disable, and reset,
   only after lifecycle state has a stable canonical contract.
 - [ ] Generic score/counter state and commands only where they remain Engine
