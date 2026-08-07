@@ -611,11 +611,19 @@ intended external expressiveness evidence.
 ### Phase 10: Serialization Hardening
 
 - [ ] Version public Effect schemas, Trigger schemas, and component/state
-  schemas with explicit migration or rejection behavior.
-- [ ] Preserve canonical content fingerprints where required for replay,
+  schemas with explicit migration or rejection behavior. Trigger events,
+  activations, and generic component state are versioned; core Effect settings
+  remain deferred pending an explicit legacy-normalization/output decision.
+- [x] Preserve canonical content fingerprints where required for replay,
   multiplayer, and compatibility checks.
-- [ ] Distinguish persistent snapshot state, replay actions/events, and
+- [x] Distinguish persistent snapshot state, replay actions/events, and
   ephemeral runtime events so transient execution artifacts are not serialized.
+
+Evidence: `tests/content_package.test.ts`,
+`tests/sdk_content_release_gate.test.ts`,
+`tests/engine_trigger_contract.test.ts`,
+`tests/item_effect_snapshot_validation.test.ts`, and
+`tests/handler_snapshot_isolation.test.ts`.
 
 ### Phase 11: Replay And Multiplayer Qualification
 
@@ -626,25 +634,35 @@ same engine version + same content + same initial state + same actions
 = same deterministic result
 ```
 
-- [ ] Verify all migrated state, Effects, and Triggers round-trip.
-- [ ] Verify replay reproduces migrated behavior exactly.
-- [ ] Keep executable behavior server-owned; clients provide validated data and
+- [x] Verify all migrated state, Effects, and Triggers round-trip.
+- [x] Verify replay reproduces migrated behavior exactly.
+- [x] Keep executable behavior server-owned; clients provide validated data and
   actions only.
-- [ ] Reject unsupported Effect/system capabilities before match start.
-- [ ] Define explicit unsupported schema and capability version errors.
+- [x] Reject unsupported Effect/system capabilities before match start.
+- [x] Define explicit unsupported schema and capability version errors.
+
+Evidence: `tests/cross_system_validation_smoke.test.ts`,
+`tests/deterministic_replay.test.ts`, `tests/replay_format.test.ts`,
+`tests/engine_effect_capability_validation.test.ts`,
+`tests/engine_trigger_contract.test.ts`, and the server/network validation
+suites.
 
 ### Phase 12: Public SDK Cleanup
 
 Only after real consumers exist:
 
-- [ ] Export stable typed Effect authoring contracts/builders.
-- [ ] Export Trigger authoring contracts without runtime callbacks.
-- [ ] Export typed canonical state contracts without runtime entities.
-- [ ] Export framework capability metadata while keeping implementation classes
+- [x] Export stable typed Effect authoring contracts/builders.
+- [x] Export Trigger authoring contracts without runtime callbacks.
+- [x] Export typed canonical state contracts without runtime entities.
+- [x] Export framework capability metadata while keeping implementation classes
   internal.
-- [ ] Build standalone bundles/declarations and verify they contain no internal
+- [x] Build standalone bundles/declarations and verify they contain no internal
   repository imports.
-- [ ] Run an external smoke test using only the standalone SDK bundles.
+- [x] Run an external smoke test using only the standalone SDK bundles.
+
+Evidence: `tests/sdk_only_release_gate.test.ts`,
+`tests/sdk_standalone_bundles.test.ts`, `tests/sdk_examples_ci.test.ts`, and
+`bun run sdk:release-gate`.
 
 ### Phase 13: Trusted Custom System Tier
 
