@@ -620,6 +620,29 @@ export async function clickWorld(page: Page, worldX: number, worldY: number): Pr
 	await boundedPageCall(page.mouse.click(pixel.x, pixel.y), "mouse click");
 }
 
+/** Clicks a visible production menu element by its SDK-authored identity. */
+export async function clickMenuElement(page: Page, elementId: string): Promise<void> {
+	const rect = await boundedPageCall(page.evaluate((id) => {
+		const surface = (window as any).game?.handler?.getMouseHandler?.();
+		const runtime = surface?.getRuntime?.();
+		const visit = (elements: any[]): any => {
+			for (const element of elements) {
+				if (element.id === id) return element;
+				if (Array.isArray(element.elements)) {
+					const found = visit(element.elements);
+					if (found) return found;
+				}
+			}
+			return undefined;
+		};
+		const elements = runtime?.getActiveElements?.() ?? [];
+		const element = visit(elements);
+		if (!element || element.visible === false || element.enabled === false) throw new Error(`Menu element '${id}' is not active on '${runtime?.getActiveScreen?.()}'; available: ${JSON.stringify(elements.map((candidate: any) => candidate.id))}`);
+		return element.rect;
+	}, elementId), `menu element ${elementId}`);
+	await clickWorld(page, rect.x + rect.width / 2, rect.y + rect.height / 2);
+}
+
 /**
  * Performs a real drag gesture (move -> down -> intermediate moves -> up)
  * between world coordinates on the game canvas.
