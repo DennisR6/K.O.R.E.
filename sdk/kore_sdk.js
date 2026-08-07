@@ -1533,6 +1533,8 @@ function movementSystemDefinition() {
 function registerMovementSystem(registry) {
   return registry.register(movementSystemDefinition());
 }
+var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
+var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -1757,6 +1759,29 @@ function exactKeys5(value, keys, label) {
   for (const key of keys)
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
+}
+var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
+var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
+var PARTICIPATION_EFFECT_IDS = [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID];
+var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
+function createEngineEffectComposition(effects) {
+  const composition = { schemaVersion: 1, type: ENGINE_EFFECT_COMPOSITION_TYPE, effects: structuredClone([...effects]) };
+  validateEngineEffectComposition(composition);
+  return composition;
+}
+function validateEngineEffectComposition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed Engine effect composition");
+  const composition = value;
+  if (Object.keys(composition).some((key) => !["schemaVersion", "type", "effects"].includes(key)) || Object.keys(composition).length !== 3)
+    throw new Error("Malformed Engine effect composition");
+  if (composition.schemaVersion !== 1 || composition.type !== ENGINE_EFFECT_COMPOSITION_TYPE || !Array.isArray(composition.effects))
+    throw new Error("Unsupported Engine effect composition");
+  composition.effects.forEach((effect) => {
+    assertJsonValue(effect);
+    if (!effect || typeof effect !== "object" || Array.isArray(effect) || typeof effect.type !== "string")
+      throw new Error("Composition children must be Engine effects");
+  });
 }
 
 var engine = {
@@ -5622,6 +5647,67 @@ class CounterSystem {
   }
 }
 
+class TransformSystem {
+  systemId = "core.transform";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return effectId === TRANSFORM_SET_POSITION_EFFECT_ID || effectId === TRANSFORM_SET_ROTATION_EFFECT_ID;
+  }
+  applyEffect(_ctx, effect, target) {
+    if (!effect.typeValue || typeof effect.typeValue !== "object" || Array.isArray(effect.typeValue))
+      throw new Error("Transform command requires an object payload");
+    if (effect.type === TRANSFORM_SET_POSITION_EFFECT_ID) {
+      const value2 = effect.typeValue;
+      if (typeof value2.x !== "number" || !Number.isFinite(value2.x) || typeof value2.y !== "number" || !Number.isFinite(value2.y) || Object.keys(value2).some((key) => key !== "x" && key !== "y") || !Object.keys(value2).includes("x") || !Object.keys(value2).includes("y"))
+        throw new Error("Transform position payload is invalid");
+      const position = target.type === "structure" && target.positionOverride ? target.positionOverride : { x: value2.x, y: value2.y };
+      if (target.type === "entity")
+        target.entity.setPos(position);
+      else if (target.type === "structure")
+        target.structure.setPos(position);
+      else
+        throw new Error("Transform position requires an entity or structure target");
+      return;
+    }
+    if (target.type !== "entity")
+      throw new Error("Transform rotation requires an entity target");
+    const value = effect.typeValue;
+    if (typeof value.rotation !== "number" || !Number.isFinite(value.rotation) || Object.keys(value).length !== 1)
+      throw new Error("Transform rotation payload is invalid");
+    target.entity.setRotation(value.rotation);
+  }
+}
+
+class ParticipationSystem {
+  systemId = "core.participation";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return PARTICIPATION_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (target.type !== "entity" && target.type !== "structure")
+      throw new Error("Participation effect requires an entity or structure target");
+    const payload = effect.typeValue;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      throw new Error("Participation payload must be an object");
+    const value = payload;
+    if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
+      throw new Error("Participation payload is invalid");
+    if (effect.type === PARTICIPATION_SET_PHYSICS_EFFECT_ID)
+      target.type === "entity" ? target.entity.setPhysicsEnabled(value.enabled) : target.structure.setPhysicsEnabled(value.enabled);
+    else if (effect.type === PARTICIPATION_SET_DRAWING_EFFECT_ID)
+      target.type === "entity" ? target.entity.setDrawingEnabled(value.enabled) : target.structure.setDrawingEnabled(value.enabled);
+    else
+      throw new Error(`Unknown participation effect '${effect.type}'`);
+  }
+}
+
 var ENVIRONMENT_SCHEMA_VERSION = 1;
 function validateEnvironmentalMechanics(value) {
   if (!Array.isArray(value))
@@ -5811,6 +5897,14 @@ function createSystemFromSettings(settings, restored = new Map) {
       if (Object.keys(state).length)
         throw new Error("Malformed counter settings");
       return new CounterSystem;
+    case "core.transform":
+      if (Object.keys(state).length)
+        throw new Error("Malformed transform settings");
+      return new TransformSystem;
+    case "core.participation":
+      if (Object.keys(state).length)
+        throw new Error("Malformed participation settings");
+      return new ParticipationSystem;
     default:
       throw new Error(`Unknown system ID '${settings.systemId}'`);
   }
@@ -5887,7 +5981,13 @@ function validateTriggerDefinition(value) {
     throw new Error("Unsupported trigger definition schema version");
   if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
     throw new Error("Invalid trigger definition ID");
-  validateEffectSettings(definition.effect);
+  if (isEngineComposition(definition.effect))
+    validateEngineEffectComposition(definition.effect);
+  else
+    validateEffectSettings(definition.effect);
+}
+function isEngineComposition(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
 }
 function record6(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
@@ -6727,10 +6827,13 @@ function migrateGameSettingsEffects(settings) {
   copy.players = copy.players.map((player) => ({ ...player, effects: (player.effects ?? []).map(migrateFullEffectSettings) }));
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
   if (copy.triggerDefinitions)
-    copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: migrateEffectSettings(definition.effect) }));
+    copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
   if (copy.environmentalMechanics)
     copy.environmentalMechanics = copy.environmentalMechanics.map((mechanic) => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
   return copy;
+}
+function isEngineEffectComposition(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
 }
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -6887,10 +6990,15 @@ function dispatchPredefinedEffect(options) {
     throw new Error(`No predefined system accepts effect '${effect.type}'`);
   if (interpreters.length > 1)
     throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
-  const target = resolveTarget(options.ctx, effect.target);
+  const target = resolveTarget(options.ctx, effect.target, options.positionOverride);
   interpreters[0].applyEffect(options.ctx, effect, target);
 }
-function resolveTarget(ctx, value) {
+function dispatchPredefinedComposition(options) {
+  validateEngineEffectComposition(options.composition);
+  for (const effect of options.composition.effects)
+    dispatchPredefinedEffect({ ...options, effect, positionOverride: options.positionOverride });
+}
+function resolveTarget(ctx, value, positionOverride) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Engine effect requires a target");
   const target = value;
@@ -6910,6 +7018,14 @@ function resolveTarget(ctx, value) {
       throw new Error(`Unknown entity target '${target.entityId}'`);
     return { type: "entity", entity };
   }
+  if (target.type === "structure") {
+    if (typeof target.structureId !== "string" || target.structureId.length === 0)
+      throw new Error("Structure target requires a non-empty structureId");
+    const structure = ctx.structures.find((candidate) => candidate.getId() === target.structureId);
+    if (!structure)
+      throw new Error(`Unknown structure target '${target.structureId}'`);
+    return { type: "structure", structure, ...positionOverride ? { positionOverride: { ...positionOverride } } : {} };
+  }
   throw new Error(`Unknown predefined target type '${String(target.type)}'`);
 }
 function validateEnvelope(value) {
@@ -6918,7 +7034,7 @@ function validateEnvelope(value) {
   const effect = value;
   if (typeof effect.type !== "string" || effect.type.length === 0)
     throw new Error("Engine effect requires a type");
-  if (effect.schemaVersion !== undefined && effect.schemaVersion !== 1)
+  if (effect.schemaVersion !== 1)
     throw new Error("Unsupported Engine effect schema version");
   if (!("typeValue" in effect))
     throw new Error("Engine effect requires a payload");
@@ -7363,14 +7479,14 @@ var falltuerStructure = {
   drawingEnabled: false,
   effects: [falltuerDeathCollision]
 };
-var falltuerPosition = { schemaVersion: 1, type: "EffectType.Position" /* Position */, typeValue: { x: 0, y: 0 } };
-var falltuerEnablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: true } }).toSettings();
-var falltuerEnableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: true } }).toSettings();
-var falltuerDisablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings();
-var falltuerDisableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings();
+var falltuerPosition = { schemaVersion: 1, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };
+var falltuerEnablePhysics = { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+var falltuerEnableDrawing = { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+var falltuerDisablePhysics = { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+var falltuerDisableDrawing = { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
 var falltuerTriggerDefinitions = [
-  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
-  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } }
+  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing]) },
+  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerDisablePhysics, falltuerDisableDrawing]) }
 ];
 var powerDashItem = createItem({
   id: "power-dash",
@@ -9420,6 +9536,11 @@ class GameHandler {
     if (!definition)
       return;
     const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+    if ("effects" in definition.effect) {
+      const composition = definition.effect;
+      dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => dispatchPredefinedComposition({ ctx: this.context, systems: this.systems, composition, positionOverride: value.resolvedPosition }) });
+      return;
+    }
     if (target?.type === "structure") {
       const structure = this.context.structures.find((candidate) => candidate.getId() === target.structureId);
       if (!structure)
@@ -9623,6 +9744,10 @@ class GameHandlerBuilder {
     this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? []);
     this.engine.loadEffects(gameSettings.effects);
     this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? []);
+    if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some((definition) => ("effects" in definition.effect))) {
+      this.engine.addSystem(new TransformSystem);
+      this.engine.addSystem(new ParticipationSystem);
+    }
     players.forEach((player) => this.addPlayer(createRuntimePlayer(player)));
     if (!("state" in gameSettings)) {
       this.engine.initializeFixedLoadouts();

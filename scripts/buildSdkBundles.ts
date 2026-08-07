@@ -40,6 +40,8 @@ export declare const TRANSFORM_SET_POSITION_EFFECT_ID: "transform.set-position";
 export declare const TRANSFORM_SET_ROTATION_EFFECT_ID: "transform.set-rotation";
 export interface TransformSetPositionPayload { x: number; y: number; }
 export interface TransformSetRotationPayload { rotation: number; }
+export type TransformTarget = { type: "entity"; entityId: string } | { type: "structure"; structureId: string };
+export declare function validateTransformTarget(value: unknown, allowStructure?: boolean): asserts value is TransformTarget;
 export type EngineEffectSettings = { type: string; schemaVersion?: 1; typeValue: JsonValue; target?: JsonValue };
 export interface EngineEffectDefinition {
     id: string;
@@ -89,6 +91,19 @@ export declare class EngineEffectRegistry {
 }
 export declare function registerMovementCommands(registry: EngineEffectRegistry): EngineEffectRegistry;
 export declare function registerTransformEffects(registry: EngineEffectRegistry): EngineEffectRegistry;
+export declare const PARTICIPATION_CAPABILITY: "participation.state";
+export declare const PARTICIPATION_SET_PHYSICS_EFFECT_ID: "participation.set-physics";
+export declare const PARTICIPATION_SET_DRAWING_EFFECT_ID: "participation.set-drawing";
+export declare const PARTICIPATION_EFFECT_IDS: readonly ["participation.set-physics", "participation.set-drawing"];
+export interface ParticipationPayload { enabled: boolean; }
+export declare function participationSystemDefinition(): EngineSystemDefinition;
+export declare function registerParticipationSystem(registry: EngineSystemRegistry): EngineSystemRegistry;
+export declare function registerParticipationCommands(registry: EngineEffectRegistry): EngineEffectRegistry;
+export declare const ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION: 1;
+export declare const ENGINE_EFFECT_COMPOSITION_TYPE: "effect.composition";
+export interface EngineEffectComposition { schemaVersion: 1; type: "effect.composition"; effects: EngineEffectSettings[]; }
+export declare function createEngineEffectComposition(effects: readonly EngineEffectSettings[]): EngineEffectComposition;
+export declare function validateEngineEffectComposition(value: unknown): asserts value is EngineEffectComposition;
 export declare const COUNTER_CAPABILITY: "counter.state";
 export declare const COUNTER_SET_EFFECT_ID: "counter.set";
 export declare const COUNTER_ADD_EFFECT_ID: "counter.add";

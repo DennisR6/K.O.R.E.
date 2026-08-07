@@ -448,9 +448,10 @@ function registerTransformEffects(registry) {
   return registry.register({
     id: TRANSFORM_SET_POSITION_EFFECT_ID,
     requiresCapability: [TRANSFORM_CAPABILITY],
-    targetType: "entity",
+    targetType: "entity-or-structure",
     lifecycleCategory: "command",
-    validatePayload: (payload) => validateVectorPayload2(payload, "Transform position")
+    validatePayload: (payload) => validateVectorPayload2(payload, "Transform position"),
+    validateTarget: (target) => validateTransformTarget(target, true)
   }).register({
     id: TRANSFORM_SET_ROTATION_EFFECT_ID,
     requiresCapability: [TRANSFORM_CAPABILITY],
@@ -460,8 +461,27 @@ function registerTransformEffects(registry) {
       const value = record3(payload, "Transform rotation payload");
       exactKeys3(value, ["rotation"], "Transform rotation payload");
       finite2(value.rotation, "Transform rotation");
-    }
+    },
+    validateTarget: (target) => validateTransformTarget(target, false)
   });
+}
+function validateTransformTarget(value, allowStructure = true) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Transform target must be an object");
+  const target = value;
+  if (target.type === "entity") {
+    exactKeys3(target, ["type", "entityId"], "Transform entity target");
+    if (typeof target.entityId !== "string" || target.entityId.length === 0)
+      throw new Error("Transform target requires a non-empty entityId");
+    return;
+  }
+  if (allowStructure && target.type === "structure") {
+    exactKeys3(target, ["type", "structureId"], "Transform structure target");
+    if (typeof target.structureId !== "string" || target.structureId.length === 0)
+      throw new Error("Transform target requires a non-empty structureId");
+    return;
+  }
+  throw new Error("Transform target type is unsupported");
 }
 function validateVectorPayload2(payload, label) {
   const value = record3(payload, `${label} payload`);
@@ -725,6 +745,47 @@ function exactKeys5(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
+var PARTICIPATION_CAPABILITY = "participation.state";
+var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
+var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
+var PARTICIPATION_EFFECT_IDS = [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID];
+function participationSystemDefinition() {
+  return { id: "core.participation", provides: [PARTICIPATION_CAPABILITY], acceptsEffects: [...PARTICIPATION_EFFECT_IDS] };
+}
+function registerParticipationSystem(registry) {
+  return registry.register(participationSystemDefinition());
+}
+function registerParticipationCommands(registry) {
+  return registry.register({ id: PARTICIPATION_SET_PHYSICS_EFFECT_ID, requiresCapability: [PARTICIPATION_CAPABILITY], targetType: "entity-or-structure", lifecycleCategory: "command", validatePayload: validateParticipationPayload }).register({ id: PARTICIPATION_SET_DRAWING_EFFECT_ID, requiresCapability: [PARTICIPATION_CAPABILITY], targetType: "entity-or-structure", lifecycleCategory: "command", validatePayload: validateParticipationPayload });
+}
+function validateParticipationPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    throw new Error("Participation payload must be an object");
+  const value = payload;
+  if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
+    throw new Error("Participation payload requires only boolean enabled");
+}
+var ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION = 1;
+var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
+function createEngineEffectComposition(effects) {
+  const composition = { schemaVersion: 1, type: ENGINE_EFFECT_COMPOSITION_TYPE, effects: structuredClone([...effects]) };
+  validateEngineEffectComposition(composition);
+  return composition;
+}
+function validateEngineEffectComposition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed Engine effect composition");
+  const composition = value;
+  if (Object.keys(composition).some((key) => !["schemaVersion", "type", "effects"].includes(key)) || Object.keys(composition).length !== 3)
+    throw new Error("Malformed Engine effect composition");
+  if (composition.schemaVersion !== 1 || composition.type !== ENGINE_EFFECT_COMPOSITION_TYPE || !Array.isArray(composition.effects))
+    throw new Error("Unsupported Engine effect composition");
+  composition.effects.forEach((effect) => {
+    assertJsonValue(effect);
+    if (!effect || typeof effect !== "object" || Array.isArray(effect) || typeof effect.type !== "string")
+      throw new Error("Composition children must be Engine effects");
+  });
+}
 
 var engine = {
   createWorld(options) {
@@ -763,18 +824,23 @@ var engine = {
 export {
   validateTriggerEvent,
   validateTriggerActivation,
+  validateTransformTarget,
   validateTransformState,
   validateMovementState,
+  validateEngineEffectComposition,
   validateCounterTriggerBinding,
   validateCounterTarget,
   validateCounterState,
   validateCounterEffectSettings,
   registerTransformEffects,
+  registerParticipationSystem,
+  registerParticipationCommands,
   registerMovementSystem,
   registerMovementEffect,
   registerMovementCommands,
   registerCounterSystem,
   registerCounterCommands,
+  participationSystemDefinition,
   movementSystemDefinition,
   engine,
   createTriggerActivation,
@@ -784,6 +850,7 @@ export {
   createRoundStartTriggerEvent,
   createMovementState,
   createEnvironmentActivationTriggerEvent,
+  createEngineEffectComposition,
   createCounterState,
   createCollisionEnterTriggerEvent,
   counterTriggerMatches,
@@ -792,6 +859,10 @@ export {
   TRANSFORM_SET_ROTATION_EFFECT_ID,
   TRANSFORM_SET_POSITION_EFFECT_ID,
   TRANSFORM_CAPABILITY,
+  PARTICIPATION_SET_PHYSICS_EFFECT_ID,
+  PARTICIPATION_SET_DRAWING_EFFECT_ID,
+  PARTICIPATION_EFFECT_IDS,
+  PARTICIPATION_CAPABILITY,
   MOVEMENT_SET_VELOCITY_EFFECT_ID,
   MOVEMENT_SCALE_SPEED_EFFECT_ID,
   MOVEMENT_EFFECT_ID,
@@ -802,6 +873,8 @@ export {
   EngineTriggerActivationQueue,
   EngineSystemRegistry,
   EngineEffectRegistry,
+  ENGINE_EFFECT_COMPOSITION_TYPE,
+  ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION,
   COUNTER_SET_EFFECT_ID,
   COUNTER_SCHEMA_VERSION,
   COUNTER_RESET_EFFECT_ID,

@@ -30,7 +30,7 @@ export { EngineSystemRegistry, EngineWorldBuilder };
 export { EngineEffectRegistry };
 export { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID, movementSystemDefinition, registerMovementCommands, registerMovementEffect, registerMovementSystem } from "./movementCapability.js";
 export type { MovementScaleSpeedPayload, MovementVelocityPayload } from "./movementCapability.js";
-export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, registerTransformEffects } from "./transformCapability.js";
+export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, registerTransformEffects, validateTransformTarget } from "./transformCapability.js";
 export type { TransformSetPositionPayload, TransformSetRotationPayload } from "./transformCapability.js";
 export { COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_EFFECT_IDS, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, counterSystemDefinition, registerCounterCommands, registerCounterSystem, validateCounterEffectSettings, validateCounterTarget } from "./counterCapability.js";
 export { PARTICIPATION_CAPABILITY, PARTICIPATION_EFFECT_IDS, PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID, participationSystemDefinition, registerParticipationCommands, registerParticipationSystem } from "./participationCapability.js";
