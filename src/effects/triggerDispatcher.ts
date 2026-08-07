@@ -1,4 +1,4 @@
-import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "../engine/sdk/trigger.js";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { Effect } from "./types.js";
 
 /** Internal bridge from legacy trigger lists to detached, bounded activations. */
@@ -36,4 +36,14 @@ export function createCollisionEnterEvent(sourceId: string, entityId: string, ot
 
 export function createRoundStartEvent(sourceId: string, turnNumber: number, activeTeam: number, phase: string): EngineTriggerEvent {
 	return createRoundStartTriggerEvent({ sourceId, sequence: turnNumber, turnNumber, activeTeam, phase });
+}
+
+export function createEnvironmentActivationEvent(sourceId: string, sequence: number, mechanicId: string, mechanicIndex: number, tick: number, active: boolean): EngineTriggerEvent {
+	return createEnvironmentActivationTriggerEvent({ sourceId, sequence, mechanicId, mechanicIndex, tick, active });
+}
+
+export function dispatchTriggerActivation(options: { effectId: string; event: EngineTriggerEvent; apply: (event: EngineTriggerEvent) => void }): void {
+	const queue = new TrustedTriggerActivationQueue(1);
+	queue.enqueueTrusted({ schemaVersion: 1, effectId: options.effectId, event: options.event });
+	queue.process(activation => options.apply(activation.event));
 }

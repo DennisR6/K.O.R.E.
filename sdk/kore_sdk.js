@@ -1425,6 +1425,17 @@ function createRoundStartTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createEnvironmentActivationTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "environment.activation",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { mechanicId: input.mechanicId, mechanicIndex: input.mechanicIndex, tick: input.tick, active: input.active }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record3(value, "Trigger activation");
   exactKeys3(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -1460,6 +1471,16 @@ function validateTriggerEvent(value) {
     safeSequence(payload.turnNumber, "Round trigger turnNumber");
     safeSequence(payload.activeTeam, "Round trigger activeTeam");
     string2(payload.phase, "Round trigger phase");
+    return;
+  }
+  if (event.type === "environment.activation") {
+    const payload = record3(event.payload, "Environment activation payload");
+    exactKeys3(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
+    string2(payload.mechanicId, "Environment activation mechanicId");
+    safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
+    safeSequence(payload.tick, "Environment activation tick");
+    if (typeof payload.active !== "boolean")
+      throw new Error("Environment activation active must be boolean");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -3074,6 +3095,14 @@ function createCollisionEnterEvent(sourceId, entityId, otherId, contactKey) {
 }
 function createRoundStartEvent(sourceId, turnNumber, activeTeam, phase) {
   return createRoundStartTriggerEvent({ sourceId, sequence: turnNumber, turnNumber, activeTeam, phase });
+}
+function createEnvironmentActivationEvent(sourceId, sequence, mechanicId, mechanicIndex, tick, active) {
+  return createEnvironmentActivationTriggerEvent({ sourceId, sequence, mechanicId, mechanicIndex, tick, active });
+}
+function dispatchTriggerActivation(options) {
+  const queue = new TrustedTriggerActivationQueue(1);
+  queue.enqueueTrusted({ schemaVersion: 1, effectId: options.effectId, event: options.event });
+  queue.process((activation) => options.apply(activation.event));
 }
 
 function createItemDocument(overrides = {}) {
@@ -5143,13 +5172,16 @@ class EnvironmentalSystem {
         this.state.cyclePhase[index] = phase;
         active = mechanic.phases[phase].enabled;
       }
+      const changed = this.state.active[index] !== active;
       this.state.active[index] = active;
       const structure = ctx.structures[this.structureIndexes[index]];
       if (!structure)
         continue;
       if (mechanic.type === "moving-structure" && "getPos" in structure && "setPos" in structure)
         this.move(structure, mechanic);
-      if ("setPhysicsEnabled" in structure)
+      if (changed && "setPhysicsEnabled" in structure)
+        dispatchTriggerActivation({ effectId: `environment.${mechanic.id}`, event: createEnvironmentActivationEvent("environment", index, mechanic.id, index, this.state.tick, active), apply: (event) => structure.setPhysicsEnabled(event.type === "environment.activation" ? event.payload.active : active) });
+      else if ("setPhysicsEnabled" in structure)
         structure.setPhysicsEnabled(active);
     }
   }

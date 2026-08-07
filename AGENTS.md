@@ -284,7 +284,8 @@ After every change, check whether this guide still reflects the implementation a
   structure effects.
 - `src/environment/environmental.ts` and `src/systems/EnvironmentalSystem.ts`:
   versioned deterministic timed hazards, triggered zones, force fields, moving
-  structures, and environmental cycles with snapshot-safe lifecycle state.
+  structures, and environmental cycles with snapshot-safe lifecycle state;
+  activation transitions use bounded typed trigger events.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
   `magmaCradleMap.ts`: scalable validated canonical map factories with world
   sizes independent of render dimensions. Magma Cradle uses loaded force and

@@ -404,6 +404,17 @@ function createRoundStartTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createEnvironmentActivationTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "environment.activation",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { mechanicId: input.mechanicId, mechanicIndex: input.mechanicIndex, tick: input.tick, active: input.active }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record2(value, "Trigger activation");
   exactKeys2(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -439,6 +450,16 @@ function validateTriggerEvent(value) {
     safeSequence(payload.turnNumber, "Round trigger turnNumber");
     safeSequence(payload.activeTeam, "Round trigger activeTeam");
     string(payload.phase, "Round trigger phase");
+    return;
+  }
+  if (event.type === "environment.activation") {
+    const payload = record2(event.payload, "Environment activation payload");
+    exactKeys2(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
+    string(payload.mechanicId, "Environment activation mechanicId");
+    safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
+    safeSequence(payload.tick, "Environment activation tick");
+    if (typeof payload.active !== "boolean")
+      throw new Error("Environment activation active must be boolean");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -513,6 +534,7 @@ export {
   createTickTriggerEvent,
   createRoundStartTriggerEvent,
   createMovementState,
+  createEnvironmentActivationTriggerEvent,
   createCollisionEnterTriggerEvent,
   MOVEMENT_EFFECT_ID,
   MOVEMENT_CAPABILITY,

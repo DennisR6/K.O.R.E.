@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
 
 test("typed trigger events are versioned, detached, and JSON-safe", () => {
 	const tick = createTickTriggerEvent({ sourceId: "world", sequence: 4, dt: 0.016 });
@@ -21,6 +21,13 @@ test("round-start trigger events carry deterministic turn context", () => {
 
 	expect(event.payload).toEqual({ turnNumber: 3, activeTeam: 1, phase: "physics" });
 	expect(() => validateTriggerEvent({ ...event, payload: { ...event.payload, activeTeam: -1 } })).toThrow(/activeTeam/);
+});
+
+test("environment activation events carry bounded lifecycle state", () => {
+	const event = createEnvironmentActivationTriggerEvent({ sourceId: "environment", sequence: 2, mechanicId: "pulse", mechanicIndex: 0, tick: 2, active: true });
+
+	expect(event.payload).toEqual({ mechanicId: "pulse", mechanicIndex: 0, tick: 2, active: true });
+	expect(() => validateTriggerEvent({ ...event, payload: { ...event.payload, tick: -1 } })).toThrow(/tick/);
 });
 
 test("activation pairs a trigger event with data-only Effect identity", () => {

@@ -486,10 +486,10 @@ callbacks.
 #### Phase 6.2 Trigger Contract Evidence
 
 `src/engine/sdk/trigger.ts` defines detached schema-version-one `tick` and
-`collision.enter` events with exact payload validation, finite timing, safe
-sequence numbers, and no executable fields. Round, item-runtime, environmental,
-pickup, and rule-specific activations are intentionally not represented as
-generic Engine triggers yet.
+`collision.enter`, `round.start`, and `environment.activation` events with exact
+payload validation, finite timing, safe sequence numbers, and no executable
+fields. Item-runtime, pickup, and rule-specific schedules remain domain-specific
+until their application targets are explicit.
 
 The same module separates trigger events from Effect identity through a
 versioned activation envelope and provides a trusted-host FIFO activation queue.
@@ -504,6 +504,13 @@ Round activation now uses the same bridge at `GameHandler.startTurn()`, with a
 typed `round.start` event carrying turn, team, and phase context. Handler and
 Player Round Effects execute once per started turn; snapshot restoration does
 not re-run the activation.
+
+`EnvironmentalSystem` emits `environment.activation` through the same bounded
+queue when a mechanic changes active state. Structure enablement remains the
+authoritative mutation and environmental lifecycle snapshots are unchanged.
+`delayedEffect` and `spawnTrigger` remain pending because current item runtime
+schemas define countdown/fired state but not a general target or activation
+application contract.
 
 ### Phase 7: Declarative Commands
 
