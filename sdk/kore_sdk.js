@@ -1312,6 +1312,59 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect validator for '${definition.id}'`);
 }
 
+function createTransformState(input) {
+  const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
+  validateTransformState(state);
+  return structuredClone(state);
+}
+function createMovementState(input) {
+  const state = { schemaVersion: 1, velocity: { ...input.velocity }, angularVelocity: input.angularVelocity ?? 0, enabled: input.enabled ?? true };
+  validateMovementState(state);
+  return structuredClone(state);
+}
+function validateTransformState(value) {
+  const state = record2(value, "Transform state");
+  exactKeys2(state, ["schemaVersion", "position", "rotation"], "Transform state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Transform state schema version");
+  validateVector(state.position, "Transform position");
+  finite2(state.rotation, "Transform rotation");
+}
+function validateMovementState(value) {
+  const state = record2(value, "Movement state");
+  exactKeys2(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Movement state schema version");
+  validateVector(state.velocity, "Movement velocity");
+  finite2(state.angularVelocity, "Movement angularVelocity");
+  if (typeof state.enabled !== "boolean")
+    throw new Error("Movement enabled must be boolean");
+}
+function validateVector(value, label) {
+  const vector = record2(value, label);
+  exactKeys2(vector, ["x", "y"], label);
+  finite2(vector.x, `${label} x`);
+  finite2(vector.y, `${label} y`);
+}
+function record2(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys2(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite2(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -1322,6 +1375,8 @@ var engine = {
   createEffectRegistry() {
     return new EngineEffectRegistry;
   },
+  createTransformState,
+  createMovementState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);
@@ -2520,8 +2575,8 @@ class EffectMagnet {
     this.range = range2;
   }
   calculateDelta(source, target) {
-    validateVector(source);
-    validateVector(target);
+    validateVector2(source);
+    validateVector2(target);
     const dx = target.x - source.x;
     const dy = target.y - source.y;
     const distance = Math.hypot(dx, dy);
@@ -2531,7 +2586,7 @@ class EffectMagnet {
     return { x: normalizeZero(dx / distance * this.force * direction), y: normalizeZero(dy / distance * this.force * direction) };
   }
   applyToVelocity(velocity, source, target) {
-    validateVector(velocity);
+    validateVector2(velocity);
     const delta = this.calculateDelta(source, target);
     return { x: velocity.x + delta.x, y: velocity.y + delta.y };
   }
@@ -2539,7 +2594,7 @@ class EffectMagnet {
     return { type: "magnet" /* Magnet */, typeValue: { mode: this.mode, force: this.force, range: this.range } };
   }
 }
-function validateVector(value) {
+function validateVector2(value) {
   if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
     throw new Error("Magnet vectors must be finite");
 }
@@ -4977,26 +5032,26 @@ function validateEnvironmentalMechanics(value) {
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function finite2(value) {
+function finite3(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
 function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 function isVector3(value) {
-  return isRecord5(value) && finite2(value.x) && finite2(value.y);
+  return isRecord5(value) && finite3(value.x) && finite3(value.y);
 }
 function isZone(value) {
-  return isRecord5(value) && finite2(value.x) && finite2(value.y) && finite2(value.r) && value.r > 0;
+  return isRecord5(value) && finite3(value.x) && finite3(value.y) && finite3(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord5(value) || !finite2(value.x) || !finite2(value.y) || !Array.isArray(value.effects))
+  if (!isRecord5(value) || !finite3(value.x) || !finite3(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
-    return finite2(value.r) && value.r > 0;
+    return finite3(value.r) && value.r > 0;
   if (value.type === 2 /* RECTANGLE */)
-    return finite2(value.w) && finite2(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && finite2(value.x2) && finite2(value.y2);
+    return finite3(value.w) && finite3(value.h) && value.w > 0 && value.h > 0;
+  return value.type === 1 /* LINE */ && finite3(value.x2) && finite3(value.y2);
 }
 
 function validateSystemSettings(value) {
@@ -9029,9 +9084,9 @@ function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record2 = value;
-  const metadata = record2.metadata;
-  return String(record2.id ?? metadata?.id ?? "");
+  const record3 = value;
+  const metadata = record3.metadata;
+  return String(record3.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);

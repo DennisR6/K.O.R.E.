@@ -65,7 +65,7 @@ test("standalone bundles preserve runtime public export names", async () => {
 		import("../sdk/presentation_sdk.js"),
 		import("../sdk/kore_sdk.js"),
 	]);
-	expect(Object.keys(engineBundle).sort()).toEqual(["EngineEffectRegistry", "EngineSystemRegistry", "EngineWorldBuilder", "engine"].sort());
+	expect(Object.keys(engineBundle).sort()).toEqual(["EngineEffectRegistry", "EngineSystemRegistry", "EngineWorldBuilder", "createMovementState", "createTransformState", "engine", "validateMovementState", "validateTransformState"].sort());
 	expect(Object.keys(uiBundle).sort()).toEqual(["UiMenuBuilder", "UiRuntime", "createDefaultUiFramework", "ui", "validateUiSettings"].sort());
 	expect(Object.keys(audioBundle).sort()).toEqual(["ApplicationAudioMixer", "AudioEmitter", "AudioRuntime", "SoundSystem", "audio", "createAudioRuntime", "createAudioSettings", "createDefaultAudioFramework", "validateApplicationAudioSettings", "validateAudioBatch", "validateAudioCommand", "validateAudioSettings"].sort());
 	expect(Object.keys(presentationBundle).sort()).toEqual(["PresentationRuntime", "presentation", "validateAnimationSettings", "validatePresentationEvent", "validatePresentationRuntimeSettings"].sort());

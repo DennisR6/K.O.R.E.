@@ -16,6 +16,12 @@ const bundles = [
 const engineDeclaration = `/** Standalone public Engine SDK declaration. */
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type SystemSettings = { systemId: string; schemaVersion: 1; state: Record<string, unknown> };
+export interface EngineTransformState { schemaVersion: 1; position: { x: number; y: number }; rotation: number; }
+export interface EngineMovementState { schemaVersion: 1; velocity: { x: number; y: number }; angularVelocity: number; enabled: boolean; }
+export declare function createTransformState(input: { position: { x: number; y: number }; rotation?: number }): EngineTransformState;
+export declare function createMovementState(input: { velocity: { x: number; y: number }; angularVelocity?: number; enabled?: boolean }): EngineMovementState;
+export declare function validateTransformState(value: unknown): asserts value is EngineTransformState;
+export declare function validateMovementState(value: unknown): asserts value is EngineMovementState;
 export type EngineEffectSettings = { type: string; schemaVersion?: 1; typeValue: JsonValue };
 export interface EngineEffectDefinition {
     id: string;
@@ -75,6 +81,8 @@ export declare const engine: {
     readonly createWorld: (options: { id: string; worldSize: { x: number; y: number } }) => EngineWorldBuilder;
     readonly createSystemRegistry: () => EngineSystemRegistry;
     readonly createEffectRegistry: () => EngineEffectRegistry;
+    readonly createTransformState: typeof createTransformState;
+    readonly createMovementState: typeof createMovementState;
     readonly createEntity: <T extends JsonValue>(settings: T) => T;
     readonly createStructure: <T extends JsonValue>(settings: T) => T;
     readonly createEffect: <T extends JsonValue>(settings: T) => T;

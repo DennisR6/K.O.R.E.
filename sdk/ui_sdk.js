@@ -212,7 +212,6 @@ function validateDefinition2(definition) {
   if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
     throw new Error(`Invalid effect validator for '${definition.id}'`);
 }
-
 class UiRuntime {
   settings;
   screens = new Map;
