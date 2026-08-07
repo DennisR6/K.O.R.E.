@@ -167,7 +167,203 @@ const MAIN_HELP_BUTTON_THEME: UiElementTheme = {
   },
 }
 
-function coloredButton(background: string, borderColor: string, textColor = "#ffffff", fontSize = 18): UiElementTheme {
+// 1. PLAY ONLINE (Türkis/Cyan)
+export const MAIN_PLAY_ONLINE_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#1e293b",
+    backgroundAlpha: 0.85,
+    borderColor: "#22d3ee",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  hover: {
+    background: "#2a394f",
+    backgroundAlpha: 0.95,
+    borderColor: "#67e8f9",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  active: {
+    background: "#161e2e",
+    backgroundAlpha: 1.0,
+    borderColor: "#0891b2",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#e0f2fe",
+    fontSize: 18,
+  },
+  focused: {
+    background: "#2a394f",
+    backgroundAlpha: 0.95,
+    borderColor: "#67e8f9",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  disabled: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#475569",
+    borderWidth: 1,
+    borderRadius: 14,
+    textColor: "#64748b",
+    fontSize: 18,
+  },
+};
+
+// 2. PLAY LOCAL GAME (Lila/Purple)
+export const MAIN_PLAY_LOCAL_GAME_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#241f37",
+    backgroundAlpha: 0.85,
+    borderColor: "#a855f7",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  hover: {
+    background: "#322b4d",
+    backgroundAlpha: 0.95,
+    borderColor: "#c084fc",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  active: {
+    background: "#1a1628",
+    backgroundAlpha: 1.0,
+    borderColor: "#7e22ce",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#f3e8ff",
+    fontSize: 18,
+  },
+  focused: {
+    background: "#322b4d",
+    backgroundAlpha: 0.95,
+    borderColor: "#c084fc",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  disabled: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#475569",
+    borderWidth: 1,
+    borderRadius: 14,
+    textColor: "#64748b",
+    fontSize: 18,
+  },
+};
+
+// 3. SETTINGS (Orange)
+export const MAIN_SETTINGS_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#2d2319",
+    backgroundAlpha: 0.85,
+    borderColor: "#f97316",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  hover: {
+    background: "#3d2f21",
+    backgroundAlpha: 0.95,
+    borderColor: "#fb923c",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  active: {
+    background: "#201811",
+    backgroundAlpha: 1.0,
+    borderColor: "#c2410c",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffedd5",
+    fontSize: 18,
+  },
+  focused: {
+    background: "#3d2f21",
+    backgroundAlpha: 0.95,
+    borderColor: "#fb923c",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  disabled: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#475569",
+    borderWidth: 1,
+    borderRadius: 14,
+    textColor: "#64748b",
+    fontSize: 18,
+  },
+};
+
+// 4. CREDITS (Gold/Gelb)
+export const MAIN_CREDITS_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#2e2a1b",
+    backgroundAlpha: 0.85,
+    borderColor: "#eab308",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  hover: {
+    background: "#3e3823",
+    backgroundAlpha: 0.95,
+    borderColor: "#fde047",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  active: {
+    background: "#211e12",
+    backgroundAlpha: 1.0,
+    borderColor: "#a16207",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#fef9c3",
+    fontSize: 18,
+  },
+  focused: {
+    background: "#3e3823",
+    backgroundAlpha: 0.95,
+    borderColor: "#fde047",
+    borderWidth: 2,
+    borderRadius: 14,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  disabled: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#475569",
+    borderWidth: 1,
+    borderRadius: 14,
+    textColor: "#64748b",
+    fontSize: 18,
+  },
+};
+
+/*function coloredButton(background: string, borderColor: string, textColor = "#ffffff", fontSize = 18): UiElementTheme {
 	const token = (fill: string, border: string, alpha = 0.75): UiStyleToken => ({ background: fill, backgroundAlpha: alpha, borderColor: border, borderWidth: 2, borderRadius: 18, textColor, fontSize });
 	return {
 		normal: token(background, borderColor),
@@ -176,7 +372,7 @@ function coloredButton(background: string, borderColor: string, textColor = "#ff
 		focused: token(background, "#ffffff", 0.9),
 		disabled: token("#111827", "#334155", 0.5),
 	};
-}
+}*/
 
 /**
  * Registered KORE button themes. Any style authored by the KORE UI vocabulary
@@ -185,10 +381,10 @@ function coloredButton(background: string, borderColor: string, textColor = "#ff
  */
 export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   [KoreMenuStyle.MainButton]: BLUE_BUTTON_THEME,
-  [KoreMenuStyle.OnlineButton]: coloredButton("#07141f", "#42e8ff"),
-  [KoreMenuStyle.LocalButton]: coloredButton("#151024", "#a78bfa"),
-  [KoreMenuStyle.SettingsButton]: coloredButton("#20170d", "#fb923c"),
-  [KoreMenuStyle.CreditsButton]: coloredButton("#211b08", "#facc15"),
+  [KoreMenuStyle.OnlineButton]: MAIN_PLAY_ONLINE_BUTTON_THEME,
+  [KoreMenuStyle.LocalButton]: MAIN_PLAY_LOCAL_GAME_BUTTON_THEME,
+  [KoreMenuStyle.SettingsButton]: MAIN_SETTINGS_BUTTON_THEME,
+  [KoreMenuStyle.CreditsButton]: MAIN_CREDITS_BUTTON_THEME,
   [KoreMenuStyle.MapRow]: BLUE_BUTTON_THEME,
   [KoreMenuStyle.Back]: BACK_BUTTON_THEME,
   [KoreMenuStyle.HelpButton]: MAIN_HELP_BUTTON_THEME,
@@ -202,13 +398,6 @@ export function resolveKoreButtonTheme(style: string | undefined): UiElementThem
 
 export class Canvas2DUiRenderer {
   constructor(private readonly ctx: RenderContext) { }
-
-  public drawContainer(
-    rect: { x: number; y: number; width: number; height: number },
-    // styleKey: string | undefined
-  ): void {
-    this.ctx.drawRect(rect.x, rect.y, rect.width, rect.height);
-    }
 
   public drawButton(
     rect: { x: number; y: number; width: number; height: number },

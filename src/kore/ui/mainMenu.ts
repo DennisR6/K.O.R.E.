@@ -89,11 +89,10 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
           style: "HelpContainer",
           elements: 
           [
-            ui.button({ id: "HelpButton", rect: rect(0, 0, 100, 50), style: "HelpButton", text:"Hallo" }),
             ui.container({
 					id: KoreMenuElement.MainActions,
 					rect: rect(0, 0, 740, 240),
-					layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center", padding: { top:  0, right: 0, bottom: 0, left: 0 } }),
+					layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center", padding: { top:  0, right: 0, bottom: 30, left: 0 } }),
 					style: KoreMenuStyle.MainActions,
 					elements: [
             ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 60, 48), style: KoreMenuStyle.MapTitle }),
@@ -102,7 +101,7 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 						ui.button({ id: KoreMenuElement.MainSettings, text: "Settings", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.SettingsButton, action: ui.action.navigate(KoreMenuScreen.Settings) }),
 						ui.button({ id: KoreMenuElement.MainCredits, text: "Credits", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.CreditsButton, action: ui.action.navigate(KoreMenuScreen.Credits) }),
 					],
-				}),]
+				}),ui.button({ id: "HelpButton", rect: rect(250, 40, 240, 270), style: "HelpButton", text:"" }),]
           }
         ),
 			],

@@ -88,7 +88,7 @@ export enum KoreMenuStyle {
 	DifficultyTitle = "kore.menu.difficulty-title",
 	Difficulty = "kore.button.blue",
 	DifficultyBack = "kore.button.blue-back",
-	HelpButton = "kore.button.helpbutton",
+	HelpButton = "HelpButton",
 }
 
 export enum KoreMenuColor {
