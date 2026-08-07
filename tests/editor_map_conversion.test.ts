@@ -48,8 +48,8 @@ test("converts editor rectangles, circles, team spawn bounds, and collision haza
 	expect(pushZone).toMatchObject({ type: SHAPE.RECTANGLE, x: 40, y: 40, w: 100, h: 100 });
 	expect(pushZone.effects[0].typeValue.value).toEqual({ x: expect.closeTo(0), y: 3 });
 	expect(killZone.effects[0].typeValue).toEqual([
-		{ type: EffectType.ModifySetting, typeValue: { operation: "set", key: "physicsEnabled", value: false } },
-		{ type: EffectType.ModifySetting, typeValue: { operation: "set", key: "drawingEnabled", value: false } },
+		{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: "set", key: "physicsEnabled", value: false } },
+		{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: "set", key: "drawingEnabled", value: false } },
 	]);
 });
 

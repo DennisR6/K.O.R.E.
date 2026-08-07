@@ -9,6 +9,7 @@ import type { SettingKey, SettingValue } from "../effects/types.js";
 export class FullStructure implements IStructure, IdefaultPhysics {
 	str: IStructure & RoleAwarePhysics
 	constructor(str: MapBoundarySettings) {
+		if (str.id === undefined) throw new Error("Runtime structures require an explicit canonical ID");
 		switch (str.type) {
 			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled); break;
 			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled); break;

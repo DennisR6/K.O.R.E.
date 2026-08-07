@@ -216,7 +216,7 @@ export class KoreMapBuilder {
 	public constructor(private readonly options: Required<KoreMapOptions>) {
 		this.world = engine.createWorld({ id: options.id, worldSize: options.worldSize });
 		this.world.setBackground(toJson(this.background));
-		const containment: MapBoundarySettings = { type: SHAPE.RECTANGLE, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
+		const containment: MapBoundarySettings = { id: `${options.id}.containment`, type: SHAPE.RECTANGLE, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
 		this.structures.push(containment);
 		this.world.addStructure(toJson(containment));
 	}
@@ -274,8 +274,9 @@ export class KoreMapBuilder {
 	/** Adds a serializable runtime structure or raw map-boundary settings. */
 	public addStructure(structure: StructureInput): this {
 		const settings = "toSettings" in structure ? structure.toSettings() : structure;
-		this.structures.push(clone(settings));
-		this.world.addStructure(toJson(settings));
+		const canonical = { ...settings, id: settings.id ?? `${this.options.id}.structure.${this.structures.length}` };
+		this.structures.push(clone(canonical));
+		this.world.addStructure(toJson(canonical));
 		this.built = undefined;
 		return this;
 	}

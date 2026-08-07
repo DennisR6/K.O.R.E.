@@ -178,7 +178,7 @@ function isEffect(value: unknown): value is FullEffectSettings {
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
-	if (value.id !== undefined && (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))) return false
+	if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id)) return false
 	if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean") return false
 	if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean") return false
 	if (value.role !== undefined && !isStructureCollisionRole(value.role)) return false

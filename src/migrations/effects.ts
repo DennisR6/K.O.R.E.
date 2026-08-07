@@ -2,6 +2,7 @@ import type { EffectSettings, FullEffectSettings } from "../effects/types.js";
 import { EFFECT_SCHEMA_VERSION } from "../effects/types.js";
 import type { EngineSettings } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
+import { migrateStructureSettings } from "./structures.js";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {
@@ -22,7 +23,7 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 	const copy = structuredClone(settings) as T;
 	copy.effects = copy.effects.map(migrateFullEffectSettings);
 	copy.players = copy.players.map(player => ({ ...player, effects: player.effects.map(migrateFullEffectSettings) }));
-	copy.mapBoundarys = copy.mapBoundarys.map(boundary => ({ ...boundary, effects: boundary.effects.map(migrateFullEffectSettings) }));
+	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys).map(boundary => ({ ...boundary, effects: boundary.effects.map(migrateFullEffectSettings) }));
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: migrateEffectSettings(definition.effect) }));
 	if (copy.environmentalMechanics) copy.environmentalMechanics = copy.environmentalMechanics.map(mechanic => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
 	return copy;

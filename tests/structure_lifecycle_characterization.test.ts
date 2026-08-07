@@ -21,7 +21,7 @@ function rendererSpy(): RenderContext & { circles: number; rectangles: number } 
 }
 
 function damageEffect(): EffectSettings {
-	return { type: EffectType.Damage, typeValue: { damage: 5 } };
+	return { schemaVersion: 1, type: EffectType.Damage, typeValue: { damage: 5 } };
 }
 
 test("structures participate in collision only while physicsEnabled is true", () => {
@@ -51,10 +51,10 @@ test("mutated structure lifecycle state serializes with deterministic identity",
 		trigger: EffectTrigger.Collision,
 		triggerValue: [],
 		...damageEffect(),
-	}]);
+	}], undefined, "explicit-circle");
 	structure.setPhysicsEnabled(false);
 	const settings = structure.toSettings();
-	expect(settings.id).toMatch(/^structure-[0-9a-f]{8}$/);
+	expect(settings.id).toBe("explicit-circle");
 	expect(settings.physicsEnabled).toBe(false);
 	expect(settings.drawingEnabled).toBe(true);
 	expect(settings.effects).toHaveLength(1);
@@ -69,9 +69,9 @@ test("EffectModifySetting can mutate the generic physics lifecycle setting", () 
 
 test("MultiEffect preserves declaration order at the core Effect boundary", () => {
 	const applied: string[] = [];
-	const first = { type: EffectType.Position, typeValue: { x: 1, y: 2 } } satisfies EffectSettings;
-	const second = { type: EffectType.Velocity, typeValue: { x: 3, y: 4 } } satisfies EffectSettings;
-	const multi = new MultiEffect({ type: EffectType.Multi, typeValue: [first, second] });
+	const first = { schemaVersion: 1, type: EffectType.Position, typeValue: { x: 1, y: 2 } } satisfies EffectSettings;
+	const second = { schemaVersion: 1, type: EffectType.Velocity, typeValue: { x: 3, y: 4 } } satisfies EffectSettings;
+	const multi = new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: [first, second] });
 	const target = new StructureCircle(0, 0, 5, "red", []);
 	const originalSetPos = target.setPos.bind(target);
 	const originalSetVel = target.setVel.bind(target);
