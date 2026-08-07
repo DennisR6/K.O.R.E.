@@ -119,7 +119,55 @@ const BACK_BUTTON_THEME: UiElementTheme = {
   },
 };
 
-function coloredButton(background: string, borderColor: string, textColor = "#ffffff", fontSize = 24): UiElementTheme {
+const MAIN_HELP_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#a0a8b8",
+    borderWidth: 1,
+    borderRadius: 22,
+    textColor: "#e5ecef",
+    fontSize: 28,
+  },
+  hover: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#a0a8b8",
+    borderWidth: 1,
+    borderRadius: 22,
+    textColor: "#e5ecef",
+    fontSize: 28,
+  },
+  active: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#a0a8b8",
+    borderWidth: 1,
+    borderRadius: 22,
+    textColor: "#e5ecef",
+    fontSize: 28,
+  },
+  focused: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#a0a8b8",
+    borderWidth: 1,
+    borderRadius: 22,
+    textColor: "#e5ecef",
+    fontSize: 28,
+  },
+  disabled: {
+    background: "#12151c",
+    backgroundAlpha: 0.45,
+    borderColor: "#a0a8b8",
+    borderWidth: 1,
+    borderRadius: 22,
+    textColor: "#e5ecef",
+    fontSize: 28,
+  },
+}
+
+function coloredButton(background: string, borderColor: string, textColor = "#ffffff", fontSize = 18): UiElementTheme {
 	const token = (fill: string, border: string, alpha = 0.75): UiStyleToken => ({ background: fill, backgroundAlpha: alpha, borderColor: border, borderWidth: 2, borderRadius: 18, textColor, fontSize });
 	return {
 		normal: token(background, borderColor),
@@ -143,6 +191,7 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   [KoreMenuStyle.CreditsButton]: coloredButton("#211b08", "#facc15"),
   [KoreMenuStyle.MapRow]: BLUE_BUTTON_THEME,
   [KoreMenuStyle.Back]: BACK_BUTTON_THEME,
+  [KoreMenuStyle.HelpButton]: MAIN_HELP_BUTTON_THEME,
 };
 
 /** Resolves an authored element style to its registered theme; unknown styles are rejected at this boundary. */
@@ -153,6 +202,13 @@ export function resolveKoreButtonTheme(style: string | undefined): UiElementThem
 
 export class Canvas2DUiRenderer {
   constructor(private readonly ctx: RenderContext) { }
+
+  public drawContainer(
+    rect: { x: number; y: number; width: number; height: number },
+    // styleKey: string | undefined
+  ): void {
+    this.ctx.drawRect(rect.x, rect.y, rect.width, rect.height);
+    }
 
   public drawButton(
     rect: { x: number; y: number; width: number; height: number },
@@ -196,14 +252,15 @@ export class Canvas2DUiRenderer {
         this.ctx.noStroke();
       }
       this.ctx.setFillColor(style.textColor);
-      const lines = wrapButtonLabel(text, rect.width - 16, value => this.ctx.getTextWidth(value, style.fontSize));
-      const lineHeight = style.fontSize * 1.1;
+      // const lines = wrapButtonLabel(text, rect.width - 16, value => this.ctx.getTextWidth(value, style.fontSize));
+      const lines = [text]
+      const lineHeight = style.fontSize * 1.2;
       const centerX = rect.x + rect.width / 2;
       const centerY = rect.y + rect.height / 2;
       lines.forEach((line, index) => {
         const textWidth = this.ctx.getTextWidth(line, style.fontSize);
-        const textX = Math.round(centerX - textWidth / 2);
-        const textY = Math.round(centerY + (index - (lines.length - 1) / 2) * lineHeight + style.fontSize * 0.25);
+        const textX = Math.round(centerX - textWidth / 3.5);
+        const textY = Math.round(centerY + (index - (lines.length - 1) / 2) * lineHeight + style.fontSize * 0.35);
         this.ctx.drawText(line, textX, textY, style.fontSize);
       });
     }
@@ -226,7 +283,7 @@ export class Canvas2DUiRenderer {
   }
 }
 
-function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string) => number): string[] {
+/* function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string) => number): string[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
   const lines: string[] = [];
@@ -244,4 +301,4 @@ function wrapButtonLabel(text: string, maxWidth: number, measure: (value: string
   return lines.length > 1 && lines.some(value => measure(value) > maxWidth)
     ? [text]
     : lines;
-}
+} */

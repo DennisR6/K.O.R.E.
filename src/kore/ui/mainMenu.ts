@@ -25,7 +25,7 @@ export const MAIN_ACTIONS = {
 const SIZE = { width: 800, height: 450 };
 const MENU_TITLE = "KORE";
 
-const BTN_W = 140;
+const BTN_W = 180;
 const BTN_H = 48;
 
 /** The sole production source for KORE's menu screens, actions, and audio intent. */
@@ -81,21 +81,30 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 	builder.addScreen(
 		ui.screen({
 			id: KoreMenuScreen.Main,
-			layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
+			layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 0, right: 30, bottom: 40, left: 30 } }),
 			elements: [
-				ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
-				ui.container({
+        ui.container({
+          id: "HelpContainer",
+          rect: rect(0, 0, 740, 240),
+          style: "HelpContainer",
+          elements: 
+          [
+            ui.button({ id: "HelpButton", rect: rect(0, 0, 100, 50), style: "HelpButton", text:"Hallo" }),
+            ui.container({
 					id: KoreMenuElement.MainActions,
 					rect: rect(0, 0, 740, 240),
-					layout: ui.layout.horizontal({ gap: 12, justify: "center", align: "center", padding: { top: 200, right: 0, bottom: 0, left: 0 } }),
+					layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center", padding: { top:  0, right: 0, bottom: 0, left: 0 } }),
 					style: KoreMenuStyle.MainActions,
 					elements: [
+            ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 60, 48), style: KoreMenuStyle.MapTitle }),
 						menuButton(KoreMenuElement.MainOnline, translate(language, KoreMenuText.Online), KoreMenuScreen.OnlineSub, KoreMenuStyle.OnlineButton),
 						menuButton(KoreMenuElement.MainLocal, translate(language, KoreMenuText.Local), KoreMenuScreen.LocalSub, KoreMenuStyle.LocalButton),
 						ui.button({ id: KoreMenuElement.MainSettings, text: "Settings", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.SettingsButton, action: ui.action.navigate(KoreMenuScreen.Settings) }),
 						ui.button({ id: KoreMenuElement.MainCredits, text: "Credits", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.CreditsButton, action: ui.action.navigate(KoreMenuScreen.Credits) }),
 					],
-				}),
+				}),]
+          }
+        ),
 			],
 		})
 	);

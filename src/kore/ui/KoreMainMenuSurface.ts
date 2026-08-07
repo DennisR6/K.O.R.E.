@@ -55,7 +55,7 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 		// needed once the actual menu controls are visible.
 		if (this.runtime.getActiveScreen() !== KoreMenuScreen.Landing) {
 			ctx.noStroke();
-			ctx.setFillColor("#000000", 0.45);
+			ctx.setFillColor("#000000", 0.65);
 			ctx.drawRect(0, 0, 800, 450);
 		}
 
