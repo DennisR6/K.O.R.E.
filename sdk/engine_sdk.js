@@ -354,6 +354,19 @@ function createCollisionEnterTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createTriggerActivation(input) {
+  const activation = { schemaVersion: 1, effectId: input.effectId, event: structuredClone(input.event) };
+  validateTriggerActivation(activation);
+  return structuredClone(activation);
+}
+function validateTriggerActivation(value) {
+  const activation = record2(value, "Trigger activation");
+  exactKeys2(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+  if (activation.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger activation schema version");
+  string(activation.effectId, "Trigger activation effectId");
+  validateTriggerEvent(activation.event);
+}
 function validateTriggerEvent(value) {
   const event = record2(value, "Trigger event");
   exactKeys2(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
@@ -437,10 +450,12 @@ var engine = {
 };
 export {
   validateTriggerEvent,
+  validateTriggerActivation,
   validateTransformState,
   validateMovementState,
   registerMovementEffect,
   engine,
+  createTriggerActivation,
   createTransformState,
   createTickTriggerEvent,
   createMovementState,

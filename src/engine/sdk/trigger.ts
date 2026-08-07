@@ -20,6 +20,12 @@ export interface EngineCollisionEnterTriggerEvent {
 
 export type EngineTriggerEvent = EngineTickTriggerEvent | EngineCollisionEnterTriggerEvent;
 
+export interface EngineTriggerActivation {
+	schemaVersion: 1;
+	effectId: string;
+	event: EngineTriggerEvent;
+}
+
 export function createTickTriggerEvent(input: { sourceId: string; sequence: number; dt: number }): EngineTickTriggerEvent {
 	const event: EngineTickTriggerEvent = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
 	validateTriggerEvent(event);
@@ -36,6 +42,20 @@ export function createCollisionEnterTriggerEvent(input: { sourceId: string; sequ
 	};
 	validateTriggerEvent(event);
 	return structuredClone(event);
+}
+
+export function createTriggerActivation(input: { effectId: string; event: EngineTriggerEvent }): EngineTriggerActivation {
+	const activation: EngineTriggerActivation = { schemaVersion: 1, effectId: input.effectId, event: structuredClone(input.event) };
+	validateTriggerActivation(activation);
+	return structuredClone(activation);
+}
+
+export function validateTriggerActivation(value: unknown): asserts value is EngineTriggerActivation {
+	const activation = record(value, "Trigger activation");
+	exactKeys(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+	if (activation.schemaVersion !== 1) throw new Error("Unsupported Trigger activation schema version");
+	string(activation.effectId, "Trigger activation effectId");
+	validateTriggerEvent(activation.event);
 }
 
 export function validateTriggerEvent(value: unknown): asserts value is EngineTriggerEvent {
