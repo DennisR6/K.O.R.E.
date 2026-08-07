@@ -987,13 +987,20 @@ function optionalSafeInteger(value, label) {
     throw new Error(`${label} must be a safe integer`);
 }
 
+function orderInstalledEffects(effects) {
+  return effects.map((effect, index) => ({ effect, index })).sort((a, b) => (a.effect.order ?? 0) - (b.effect.order ?? 0) || a.index - b.index).map((entry) => entry.effect);
+}
+function preserveEffectDeclarationOrder(effects) {
+  return [...effects];
+}
+
 class MultiEffect {
   children;
   constructor(effect) {
     const children = effect.typeValue;
     if (!Array.isArray(children))
       throw new Error("EffectType.Multi requires a typeValue array of effect settings");
-    this.children = children.map((child) => createRuntimeEffect(child));
+    this.children = preserveEffectDeclarationOrder(children).map((child) => createRuntimeEffect(child));
   }
   apply(entity, override) {
     for (const child of this.children)
@@ -1116,6 +1123,23 @@ class EngineSystemRegistry {
     if (expected.join("|") !== value.systemOrder.join("|"))
       throw new Error("Framework system order violates dependencies");
   }
+  validateEffectSupport(settings, effects, catalog) {
+    this.validate(settings);
+    const selected = new Set(settings.systemOrder);
+    const definitions = [...selected].map((id) => this.definitions.get(id));
+    for (const effect of effects) {
+      catalog.validate(effect);
+      const typed = effect;
+      const definition = catalog.get(typed.type);
+      const accepted = definitions.some((candidate) => candidate.acceptsEffects?.includes(typed.type) === true);
+      if (!accepted)
+        throw new Error(`No selected system accepts effect '${typed.type}'`);
+      for (const capability of definition.requiresCapability ?? []) {
+        if (!definitions.some((candidate) => provides(candidate, capability)))
+          throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
+      }
+    }
+  }
 }
 function validateDefinition(definition) {
   if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
@@ -1126,6 +1150,8 @@ function validateDefinition(definition) {
     if (list !== undefined && (!Array.isArray(list) || list.some((value) => typeof value !== "string" || value.length === 0)))
       throw new Error(`Invalid system definition '${definition.id}'`);
   }
+  if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid accepted Effects for '${definition.id}'`);
   assertJsonValue(definition.state ?? {});
 }
 function provides(definition, capability) {
@@ -1239,12 +1265,62 @@ function clone2(value) {
   return structuredClone(value);
 }
 
+class EngineEffectRegistry {
+  definitions = new Map;
+  register(definition) {
+    validateDefinition2(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate effect definition '${definition.id}'`);
+    this.definitions.set(definition.id, { ...definition, ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {} });
+    return this;
+  }
+  get(id) {
+    return this.definitions.get(id);
+  }
+  validate(effect) {
+    if (!effect || typeof effect !== "object" || Array.isArray(effect))
+      throw new Error("Malformed effect settings");
+    const value = effect;
+    if (typeof value.type !== "string" || !this.definitions.has(value.type))
+      throw new Error(`Unknown effect '${String(value.type)}'`);
+    if (value.schemaVersion !== undefined && value.schemaVersion !== 1)
+      throw new Error(`Unsupported effect schema version for '${value.type}'`);
+    assertJsonValue(value.typeValue);
+    this.definitions.get(value.type).validatePayload?.(value.typeValue);
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
+      id: definition.id,
+      schemaVersion: definition.schemaVersion ?? 1,
+      ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {},
+      ...definition.targetType ? { targetType: definition.targetType } : {},
+      ...definition.lifecycleCategory ? { lifecycleCategory: definition.lifecycleCategory } : {}
+    }));
+  }
+}
+function validateDefinition2(definition) {
+  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid effect definition ID");
+  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
+    throw new Error("Unsupported effect definition version");
+  for (const value of [definition.targetType, definition.lifecycleCategory])
+    if (value !== undefined && (typeof value !== "string" || value.length === 0))
+      throw new Error(`Invalid effect definition '${definition.id}'`);
+  if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid effect capabilities for '${definition.id}'`);
+  if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
+    throw new Error(`Invalid effect validator for '${definition.id}'`);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
   },
   createSystemRegistry() {
     return new EngineSystemRegistry;
+  },
+  createEffectRegistry() {
+    return new EngineEffectRegistry;
   },
   createEntity(settings) {
     assertJsonValue(settings);
@@ -3313,7 +3389,7 @@ class Player {
   }
   addItemEffect(effect, source) {
     this.itemEffects.push({ ...effect, ...source ?? {}, typeValue: structuredClone(effect.typeValue) });
-    this.itemEffects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    this.itemEffects = orderInstalledEffects(this.itemEffects);
   }
   removeItemEffects(itemIds) {
     this.itemEffects = this.itemEffects.filter((effect) => !effect.itemId || !itemIds.has(effect.itemId));

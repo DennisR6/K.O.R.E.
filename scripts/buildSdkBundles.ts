@@ -16,6 +16,16 @@ const bundles = [
 const engineDeclaration = `/** Standalone public Engine SDK declaration. */
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type SystemSettings = { systemId: string; schemaVersion: 1; state: Record<string, unknown> };
+export type EngineEffectSettings = { type: string; schemaVersion?: 1; typeValue: JsonValue };
+export interface EngineEffectDefinition {
+    id: string;
+    schemaVersion?: 1;
+    requiresCapability?: readonly string[];
+    targetType?: string;
+    lifecycleCategory?: string;
+    validatePayload?: (payload: JsonValue) => void;
+}
+export type EngineEffectDescriptor = Omit<EngineEffectDefinition, "validatePayload">;
 export interface EngineSystemDefinition {
     id: string;
     schemaVersion?: 1;
@@ -26,6 +36,7 @@ export interface EngineSystemDefinition {
     replaces?: readonly string[];
     optional?: boolean;
     state?: Record<string, JsonValue>;
+    acceptsEffects?: readonly string[];
 }
 export type EngineFrameworkSettings = { schemaVersion: 1; systems: SystemSettings[]; systemOrder: string[] };
 export interface EngineWorldSettings {
@@ -42,6 +53,13 @@ export declare class EngineSystemRegistry {
     register(definition: EngineSystemDefinition): this;
     select(ids: readonly string[]): EngineFrameworkSettings;
     validate(settings: unknown): asserts settings is EngineFrameworkSettings;
+    validateEffectSupport(settings: unknown, effects: readonly unknown[], catalog: EngineEffectRegistry): void;
+}
+export declare class EngineEffectRegistry {
+    register(definition: EngineEffectDefinition): this;
+    get(id: string): EngineEffectDefinition | undefined;
+    validate(effect: unknown): asserts effect is EngineEffectSettings;
+    describe(): EngineEffectDescriptor[];
 }
 export declare class EngineWorldBuilder {
     constructor(id: string, worldSize: { x: number; y: number });
@@ -56,6 +74,7 @@ export declare class EngineWorldBuilder {
 export declare const engine: {
     readonly createWorld: (options: { id: string; worldSize: { x: number; y: number } }) => EngineWorldBuilder;
     readonly createSystemRegistry: () => EngineSystemRegistry;
+    readonly createEffectRegistry: () => EngineEffectRegistry;
     readonly createEntity: <T extends JsonValue>(settings: T) => T;
     readonly createStructure: <T extends JsonValue>(settings: T) => T;
     readonly createEffect: <T extends JsonValue>(settings: T) => T;
