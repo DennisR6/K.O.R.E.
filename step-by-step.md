@@ -552,8 +552,11 @@ semantics, ordering semantics, serialization behavior, and tests.
 - [x] Movement commands: generic set-velocity, add-velocity, and non-negative speed-scaling contracts are registered through the Engine SDK; impulse remains deferred because it requires an explicit mass/impulse semantic. Runtime interpretation remains deferred until a generic runtime host exists.
 - [ ] Lifecycle commands such as spawn, destroy, enable, disable, and reset,
   only after lifecycle state has a stable canonical contract.
-- [ ] Generic score/counter state and commands only where they remain Engine
-  concepts rather than KORE-specific rules.
+- [x] Generic counter state and commands are Engine concepts; numeric counter
+  state is world-owned, versioned, snapshot/replay-safe, and interpreted by
+  the predefined `core.counter` system. KORE score remains a game-layer
+  meaning and is not introduced because the current game has no numeric score
+  consumer.
 
 Lifecycle commands remain intentionally deferred. The generic Engine SDK does
 not yet define canonical active/destroyed state, entity or structure allocation
@@ -563,12 +566,14 @@ fields such as movement `enabled` and KORE structure `physicsEnabled`/
 destroy, enable, disable, or reset command payloads until those invariants are
 specified and qualified.
 
-Generic score/counter state also remains deferred. The repository currently has
-no engine-neutral scoring requirement or canonical counter ownership;
-`Goal_scored`, winning evaluation, and points-to-win mode data belong to KORE
-rules and content. Do not expose a generic score command until an independent
-authoring use case defines its state, ordering, persistence, and replay
-semantics.
+Generic counter state is now canonical Engine state. `CounterState[]` is owned
+by the world snapshot, `counter.set`, `counter.add`, and `counter.reset` are
+typed current-schema commands, and `core.counter` is an interpreter with no
+parallel value store. Stable counter IDs are the target identity; team/entity
+meanings remain content-layer conventions. Counter commands compose in
+declaration order, use the existing trigger vocabulary and activation budget,
+and replay from canonical initial state. KORE's current last-team-standing
+winner remains independent because it has no numeric score state to migrate.
 
 Avoid microscopic field-level Effects and unrestricted generic setting patches.
 
@@ -651,6 +656,11 @@ Evidence: `tests/cross_system_validation_smoke.test.ts`,
 `tests/engine_effect_capability_validation.test.ts`,
 `tests/engine_trigger_contract.test.ts`, and the server/network validation
 suites.
+
+Counter evidence: `tests/engine_counter_state.test.ts`,
+`tests/engine_counter_capability.test.ts`,
+`tests/counter_system_composition.test.ts`,
+`tests/counter_runtime.test.ts`, and `tests/counter_replay.test.ts`.
 
 ### Phase 12: Public SDK Cleanup
 

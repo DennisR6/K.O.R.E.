@@ -249,6 +249,9 @@ After every change, check whether this guide still reflects the implementation a
   contracts.
 - `src/systems/MovementSystem.ts`: trusted pre-entity movement-effect
   interpreter using typed movement state.
+- `src/systems/CounterSystem.ts`: trusted deterministic interpreter for generic
+  numeric counter mutations; it mutates canonical context state but owns no
+  persistent counter values or feature-specific meaning.
 - `src/systems/PhysicsSystem.ts`: entity/entity and entity/structure collision
   iteration; friction remains an entity effect and position integration for
   collisions remains in this system's CCD solver.
@@ -272,6 +275,11 @@ After every change, check whether this guide still reflects the implementation a
   metadata selection. It must not import KORE/game domains or runtime adapters.
 - `src/engine/sdk/trigger.ts`: generic version-one detached tick and
   collision-entry trigger-event contracts with strict payload validation.
+- `src/engine/contracts/counterState.ts` and
+  `src/engine/sdk/counterCapability.ts`: generic version-one world-owned
+  numeric CounterState plus typed `counter.set`, `counter.add`, and
+  `counter.reset` commands. Counter IDs are stable targets; score, kills,
+  coins, and other meanings remain content-layer semantics.
 - `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
   menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
   no browser loop/listeners, and must not import KORE/game or browser domains.
@@ -718,6 +726,8 @@ remain unsupported.
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.
+It also persists the complete world-owned `counters` collection; counter reads
+use canonical state and never inspect Effect history or hidden system state.
 It also carries sorted, versioned stable system settings plus explicit tick order;
 the allowlisted system factory rejects unknown, duplicate, malformed, executable,
 or unsupported-version system data during restoration.
