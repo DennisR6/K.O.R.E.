@@ -579,6 +579,12 @@ Avoid microscopic field-level Effects and unrestricted generic setting patches.
 
 ### Phase 8: Predefined Generic Systems
 
+- [x] Qualified through CounterSystem and MovementSystem's generic command
+  family. The shared predefined-System host, exact-one routing, centralized
+  target resolution, canonical state/runtime-object mutation, snapshot/replay
+  path, and SDK qualification are complete. Additional Systems remain
+  consumer-driven.
+
 When a real authoring requirement cannot be expressed with existing systems,
 add one engine-owned capability instead of exposing arbitrary custom ticks.
 
@@ -610,6 +616,8 @@ The current network protocol has no generic Effect transport, so network
 dispatch remains explicitly unsupported rather than silently emulated.
 
 ### Phase 9: Pong External Qualification
+
+**Status: deferred.**
 
 Use Pong as an external expressiveness test, not as a source of Pong-specific
 engine hacks. From standalone SDK bundles, author a field, ball, paddles,
