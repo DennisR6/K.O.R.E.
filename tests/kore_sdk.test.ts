@@ -25,6 +25,21 @@ test("single kore SDK export builds JSON-safe settings accepted by the engine", 
 	expect(() => validateMapDocument(map.buildMapDocument())).not.toThrow();
 });
 
+test("KORE SDK UI builder supports standalone images and icon buttons", () => {
+	const settings = kore.ui.createMenu({ id: "kore-ui", size: { width: 320, height: 180 } })
+		.addScreen(kore.ui.screen({ id: "main", elements: [
+			kore.ui.image({ id: "logo", source: "https://example.test/logo.png", rect: { x: 10, y: 10, width: 80, height: 40 } }),
+			kore.ui.button({ id: "settings", text: "Settings", icon: "settings", rect: { x: 10, y: 60, width: 120, height: 30 } }),
+		] }))
+		.build();
+
+	expect(settings.screens[0]?.elements).toEqual(expect.arrayContaining([
+		expect.objectContaining({ kind: "image", source: "https://example.test/logo.png" }),
+		expect.objectContaining({ kind: "button", icon: "settings" }),
+	]));
+	expect(() => kore.ui.validate(settings)).not.toThrow();
+});
+
 test("SDK rejects unplayable team layouts and unsafe background protocols", () => {
 	expect(() => kore.createDefaultMap().addBackground({ type: "url", url: "javascript:alert(1)" })).toThrow();
 	expect(() => kore.createDefaultMap()

@@ -13,7 +13,7 @@ export function run(): Record<string, unknown> {
 		}))
 		.build();
 	const runtime = ui.fromSettings(menu);
-	const renderer: UiRenderer = { drawText: () => {}, drawButton: () => {}, drawTextInput: () => {} };
+	const renderer: UiRenderer = { drawText: () => {}, drawButton: () => {}, drawTextInput: () => {}, drawImage: () => {} };
 	runtime.draw(renderer);
 	runtime.tick({ pointer: { x: 75, y: 62, justPressed: true } });
 	const commands = runtime.drainCommands();

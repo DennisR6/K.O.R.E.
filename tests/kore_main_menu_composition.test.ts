@@ -18,7 +18,7 @@ test("central KORE main-menu composition builds validated JSON-safe UI and persi
 test("SDK menu surface uses explicit ticks, pure draws, semantic transitions, and snapshot reconstruction", () => {
 	const menu = createKoreMainMenuSurface();
 	const before = menu.toSettings();
-	menu.getRuntime().draw({ drawText() {}, drawButton() {}, drawTextInput() {} });
+	menu.getRuntime().draw({ drawText() {}, drawButton() {}, drawTextInput() {}, drawImage() {} });
 	expect(menu.toSettings()).toEqual(before);
 	menu.updateMouse(400, 100); menu.handleMousePressed();
 	expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Main);
@@ -53,6 +53,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	menu.getRuntime().draw({
 		drawText() {},
 		drawTextInput() {},
+		drawImage() {},
 		drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; },
 	});
 	expect(states["main-ai"]?.hovered).toBe(true);
@@ -60,7 +61,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	menu.updateMouse(551, 368);
 	menu.handleMousePressed();
 	states = {};
-	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
+	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawImage() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
 	expect(states["main-local"]).toEqual({ hovered: true, focused: true });
 });
 
@@ -70,7 +71,7 @@ test("main menu centers its action row at the bottom and wraps long labels", () 
 	menu.handleMousePressed();
 	let localRect: { x: number; y: number; width: number; height: number } | undefined;
 	const buttons: Array<{ id: string; rect: { x: number; y: number; width: number; height: number } }> = [];
-	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawButton(element) { if (element.id.startsWith("main-")) buttons.push({ id: element.id, rect: element.rect }); if (element.id === "main-local") localRect = element.rect; } });
+	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawImage() {}, drawButton(element) { if (element.id.startsWith("main-")) buttons.push({ id: element.id, rect: element.rect }); if (element.id === "main-local") localRect = element.rect; } });
 	expect(localRect).toBeDefined();
 	expect(buttons).toHaveLength(5);
 	const left = Math.min(...buttons.map(button => button.rect.x));

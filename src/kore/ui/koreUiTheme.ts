@@ -1,4 +1,5 @@
 import type { RenderContext } from "../../engine/RenderContext.js";
+import { KoreMenuStyle } from "./menuVocabulary.js";
 
 export type UiElementState = "normal" | "hover" | "active" | "focused" | "disabled";
 
@@ -22,103 +23,118 @@ export interface UiElementTheme {
   disabled: UiStyleToken;
 }
 
-export const KORE_UI_THEME: Record<string, UiElementTheme> = {
-  "kore.button.blue": {
-    normal: {
-      background: "#1d4ed8",
-      backgroundAlpha: 0,
-      borderColor: "#60a5fa",
-      borderWidth: 2,
-      borderRadius: 12,
-      textColor: "#ffffff",
-      fontSize: 20,
-    },
-    hover: {
-      background: "#2563eb",
-      backgroundAlpha: 0,
-      borderColor: "#f97316",
-      borderWidth: 3,
-      borderRadius: 12,
-      textColor: "#ffffff",
-      fontSize: 20,
-    },
-    active: {
-      background: "#1e40af",
-      backgroundAlpha: 0,
-      borderColor: "#ea580c",
-      borderWidth: 2,
-      borderRadius: 12,
-      textColor: "#cbd5e1",
-      fontSize: 20,
-    },
-    focused: {
-      background: "#2563eb",
-      backgroundAlpha: 0,
-      borderColor: "#fb923c",
-      borderWidth: 3,
-      borderRadius: 12,
-      textColor: "#ffffff",
-      fontSize: 20,
-    },
-    disabled: {
-      background: "#334155",
-      backgroundAlpha: 0,
-      borderColor: "#475569",
-      borderWidth: 1,
-      borderRadius: 12,
-      textColor: "#94a3b8",
-      fontSize: 20,
-    },
+const BLUE_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#1d4ed8",
+    backgroundAlpha: 0,
+    borderColor: "#60a5fa",
+    borderWidth: 2,
+    borderRadius: 12,
+    textColor: "#ffffff",
+    fontSize: 20,
   },
-
-  "kore.button.blue-back": {
-    normal: {
-      background: "#0f172a",
-      backgroundAlpha: 0,
-      borderColor: "#334155",
-      borderWidth: 2,
-      borderRadius: 12,
-      textColor: "#cbd5e1",
-      fontSize: 18,
-    },
-    hover: {
-      background: "#1e293b",
-      backgroundAlpha: 0,
-      borderColor: "#f97316",
-      borderWidth: 3,
-      borderRadius: 12,
-      textColor: "#ffffff",
-      fontSize: 18,
-    },
-    active: {
-      background: "#020617",
-      backgroundAlpha: 0,
-      borderColor: "#ea580c",
-      borderWidth: 2,
-      borderRadius: 12,
-      textColor: "#94a3b8",
-      fontSize: 18,
-    },
-    focused: {
-      background: "#1e293b",
-      backgroundAlpha: 0,
-      borderColor: "#fb923c",
-      borderWidth: 3,
-      borderRadius: 12,
-      textColor: "#ffffff",
-      fontSize: 18,
-    },
-    disabled: {
-      background: "#020617",
-      backgroundAlpha: 0,
-      borderColor: "#1e293b",
-      borderWidth: 1,
-      borderRadius: 12,
-      textColor: "#475569",
-      fontSize: 18,
-    },
+  hover: {
+    background: "#2563eb",
+    backgroundAlpha: 0,
+    borderColor: "#f97316",
+    borderWidth: 3,
+    borderRadius: 12,
+    textColor: "#ffffff",
+    fontSize: 20,
+  },
+  active: {
+    background: "#1e40af",
+    backgroundAlpha: 0,
+    borderColor: "#ea580c",
+    borderWidth: 2,
+    borderRadius: 12,
+    textColor: "#cbd5e1",
+    fontSize: 20,
+  },
+  focused: {
+    background: "#2563eb",
+    backgroundAlpha: 0,
+    borderColor: "#fb923c",
+    borderWidth: 3,
+    borderRadius: 12,
+    textColor: "#ffffff",
+    fontSize: 20,
+  },
+  disabled: {
+    background: "#334155",
+    backgroundAlpha: 0,
+    borderColor: "#475569",
+    borderWidth: 1,
+    borderRadius: 12,
+    textColor: "#94a3b8",
+    fontSize: 20,
   },
 };
+
+const BACK_BUTTON_THEME: UiElementTheme = {
+  normal: {
+    background: "#0f172a",
+    backgroundAlpha: 0,
+    borderColor: "#334155",
+    borderWidth: 2,
+    borderRadius: 12,
+    textColor: "#cbd5e1",
+    fontSize: 18,
+  },
+  hover: {
+    background: "#1e293b",
+    backgroundAlpha: 0,
+    borderColor: "#f97316",
+    borderWidth: 3,
+    borderRadius: 12,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  active: {
+    background: "#020617",
+    backgroundAlpha: 0,
+    borderColor: "#ea580c",
+    borderWidth: 2,
+    borderRadius: 12,
+    textColor: "#94a3b8",
+    fontSize: 18,
+  },
+  focused: {
+    background: "#1e293b",
+    backgroundAlpha: 0,
+    borderColor: "#fb923c",
+    borderWidth: 3,
+    borderRadius: 12,
+    textColor: "#ffffff",
+    fontSize: 18,
+  },
+  disabled: {
+    background: "#020617",
+    backgroundAlpha: 0,
+    borderColor: "#1e293b",
+    borderWidth: 1,
+    borderRadius: 12,
+    textColor: "#475569",
+    fontSize: 18,
+  },
+};
+
+/**
+ * Registered KORE button themes. Any style authored by the KORE UI vocabulary
+ * resolves here; unknown style values are rejected instead of being silently
+ * remapped to a valid button style.
+ */
+export const KORE_UI_THEME: Record<string, UiElementTheme> = {
+  [KoreMenuStyle.MainButton]: BLUE_BUTTON_THEME,
+  [KoreMenuStyle.MapRow]: BLUE_BUTTON_THEME,
+  [KoreMenuStyle.Back]: BACK_BUTTON_THEME,
+};
+
+/** Resolves an authored element style to its registered theme; unknown styles are rejected at this boundary. */
+export function resolveKoreButtonTheme(style: string | undefined): UiElementTheme {
+  if (style === undefined || !(style in KORE_UI_THEME)) throw new Error(`Unknown KORE UI button style '${String(style)}'`);
+  return KORE_UI_THEME[style]!;
+}
 
 export class Canvas2DUiRenderer {
   constructor(private readonly ctx: RenderContext) { }
@@ -126,10 +142,10 @@ export class Canvas2DUiRenderer {
   public drawButton(
     rect: { x: number; y: number; width: number; height: number },
     text: string,
-    styleKey: string,
+    styleKey: string | undefined,
     state: UiElementState
   ): void {
-    const themeGroup = KORE_UI_THEME[styleKey] ?? KORE_UI_THEME["kore.button.blue"]!;
+    const themeGroup = resolveKoreButtonTheme(styleKey);
     const style = themeGroup[state] ?? themeGroup.normal;
 
     this.ctx.push();

@@ -64,22 +64,22 @@ export enum KoreMenuElement {
 export enum KoreMenuStyle {
 	LandingPrompt = "kore.menu.landing-prompt",
 	LandingHitbox = "kore.menu.landing-hitbox",
-	MainButton = "kore.menu.main-button",
+	/** Shared KORE button theme styles; the renderer resolves them through KORE_UI_THEME. */
+	MainButton = "kore.button.blue",
 	MainActions = "kore.menu.main-actions",
 	MapTitle = "kore.menu.map-title",
 	MapNote = "kore.menu.map-note",
 	MapRow = "kore.menu.map-row",
-	Back = "kore.menu.back",
+	/** Back buttons keep their dedicated theme style. */
+	Back = "kore.button.blue-back",
 	DifficultyTitle = "kore.menu.difficulty-title",
-	Difficulty = "kore.menu.difficulty",
-	DifficultyBack = "kore.menu.difficulty-back",
+	Difficulty = "kore.button.blue",
+	DifficultyBack = "kore.button.blue-back",
 }
 
 export enum KoreMenuColor {
-	Prompt = "blue",
-	Text = "white",
-	BackButton = "#475569",
-	Button = "#102a43",
+	Prompt = "#3b82f6",
+	Text = "#f8fafc",
 	Error = "#b91c1c",
 }
 
@@ -142,9 +142,11 @@ export function koreMenuMapScreen(intent: KoreMenuMapIntent, difficulty?: KoreMe
 }
 
 /** Dynamic map-row IDs are derived only from validated KORE enum context and catalog data. */
-export function koreMenuMapElementId(intent: KoreMenuMapIntent, mapId: string, difficulty?: KoreMenuDifficulty): string { return `map-${intent}-${difficulty ?? "root"}-${mapId}`; }
+export function koreMenuMapElementId(intent: KoreMenuMapIntent, mapId: string, difficulty?: KoreMenuDifficulty, modeId?: string): string { return `map-${intent}-${difficulty ?? "root"}-${mapId}${modeId ? `-${modeId}` : ""}`; }
 export function koreMenuMapTitleElementId(intent: KoreMenuMapIntent, difficulty?: KoreMenuDifficulty): string { return `map-${intent}-${difficulty ?? "root"}-title`; }
 export function koreMenuMapBackElementId(intent: KoreMenuMapIntent, difficulty?: KoreMenuDifficulty): string { return `map-${intent}-${difficulty ?? "root"}-back`; }
+/** Difficulty-row IDs are derived solely from the closed difficulty enum. */
+export function koreMenuDifficultyElementId(difficulty: KoreMenuDifficulty): string { return `difficulty-${difficulty}`; }
 
 /** The KORE UI difficulty enum remains compatible with the AI domain contract. */
 export function asAiDifficulty(difficulty: KoreMenuDifficulty): AiDifficulty { return difficulty; }

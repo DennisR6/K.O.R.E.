@@ -8,6 +8,7 @@ import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type Effec
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
+import { ui as engineUi } from "../../engine/ui-sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import { applyRuntimeForceEffects, createRuntimeItemEffect, resolveRuntimeItemEffects } from "./itemRuntime.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
@@ -15,8 +16,7 @@ import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
-import { createItemDocument, validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
-import { ItemValidator } from "../../item/validate.js";
+import { validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
@@ -99,43 +99,9 @@ export interface KoreForceHazardZone extends KoreHazardZone {
 	power: number;
 }
 
-export interface KoreItemInput {
-	id: string;
-	name: string;
-	type: string;
-	effects?: Array<{ type: string; value?: Record<string, unknown> }>;
-	targetType?: ItemDocument["targetType"];
-	duration?: ItemDocument["duration"];
-	useLimit?: ItemDocument["useLimit"];
-	targetValidation?: ItemDocument["targetValidation"];
-	description?: string;
-	cooldown?: number;
-	interaction?: ItemDocument["interaction"];
-}
-
-function sdkItemEffectTypes(): readonly string[] {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
-}
-
-/** Creates a validated declarative item document without constructing runtime effects. */
-export function createItem(input: KoreItemInput): ItemDocument {
-	const item = createItemDocument({
-		...input,
-		effects: (input.effects ?? []).map(effect => ({ type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) })),
-	});
-	const validator = new ItemValidator();
-	for (const effectType of sdkItemEffectTypes()) validator.registerEffectType(effectType);
-	for (const effect of item.effects) if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
-	return clone(validator.validate(item));
-}
-
-/** Composes multiple declarative item effects while keeping their order stable. */
-export function composeItemEffects(...effects: Array<{ type: string; value?: Record<string, unknown> }>): Array<{ type: string; value?: Record<string, unknown> }> {
-	return effects.map(effect => {
-		if (!sdkItemEffectTypes().includes(effect.type)) throw new Error(`Unsupported KORE item effect '${effect.type}'`);
-		return { type: effect.type, ...(effect.value === undefined ? {} : { value: clone(effect.value) }) };
-	});
-}
+import { composeItemEffects, createItem, type KoreItemInput } from "../../item/sdkItemFactory.js";
+export { composeItemEffects, createItem } from "../../item/sdkItemFactory.js";
+export type { KoreItemInput } from "../../item/sdkItemFactory.js";
 
 /** Input contract for authoring a canonical KORE player snapshot via `kore.createPlayer()`. */
 export interface KorePlayerInput {
@@ -608,6 +574,8 @@ export function createDefaultKoreFramework(): EngineFrameworkSettings {
 export const kore = {
 	/** Deliberately selected generic primitives for KORE authors who need custom framework metadata. */
 	engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
+	/** KORE-facing JSON-safe UI builder, including standalone images and icon buttons. */
+	ui: engineUi,
 	/** Creates a reusable serializable team definition. */
 	createTeam(settings: KoreTeamSettings): KoreTeam { return new TeamBuilder(settings); },
 	/** Authors a detached, canonical `PlayerSettings` snapshot with KORE defaults and structural validation. */

@@ -160,6 +160,11 @@ After every change, check whether this guide still reflects the implementation a
   values, and rejects executable fields and unknown schema fields.
 - `src/item/loader.ts`: stores built-in and local-mod item documents through the
   same validator, prevents duplicate IDs, and returns defensive copies.
+- `src/item/sdkItemFactory.ts`: leaf-module `createItem`/`composeItemEffects`
+  item-document authoring used by both the public KORE SDK and the official
+  item catalog. Keeping it outside `kore/sdk/index.ts` breaks the
+  `modeCatalog -> kore/sdk/match -> engine/Handler -> officialItems ->
+  kore/sdk/index` module cycle.
 - `src/item/inventory.ts`: initializes fixed team loadouts and enforces
   per-turn/per-game inventory consumption; player snapshots preserve counters.
 - `src/item/MapPickupSystem.ts`: grants configured map pickups to active-team
