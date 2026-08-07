@@ -14,6 +14,7 @@ export interface KoreMainMenuCallbacks {
 	onSelectMap?: (mapId: string, modeId?: string) => void;
 	getStartError?: () => string | undefined;
 	onPlayOnline?: (mapId?: string, modeId?: string) => void;
+	onPlayOnlineFriends?: () => void;
 	onPlayAiBattle?: (mapId: string) => void;
 	onPlayAiOpponent?: (difficulty: AiDifficulty, mapId: string) => void;
 	/** Draws an optional world layer underneath the menu UI. */
@@ -50,6 +51,11 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 		ctx.push();
 		const backgroundDrawn = this.callbacks.drawBackground?.(ctx) ?? false;
 		if (!backgroundDrawn) ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG);
+		// Keep the background/preview visible while giving the menu a consistent
+		// dark translucent backdrop for its gray controls and text.
+		ctx.noStroke();
+		ctx.setFillColor("#000000", 0.45);
+		ctx.drawRect(0, 0, 800, 450);
 
 		// Nutzt den modernisierten Theme-Renderer für das Canvas-Viewport
 		this.runtime.draw(new KoreMenuRenderer(ctx));
@@ -70,6 +76,7 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 			case KoreMenuCommand.OpenBattle: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapBattle }); return;
 			case KoreMenuCommand.OpenLocalMaps: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapLocal }); return;
 			case KoreMenuCommand.OpenOnline: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapOnline }); return;
+			case KoreMenuCommand.OpenOnlineFriends: this.confirm(command.type); this.callbacks.onPlayOnlineFriends?.(); return;
 			case KoreMenuCommand.StartLocal: this.confirm(command.type); this.callbacks.onPlayLocal?.(); return;
 			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
 			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;

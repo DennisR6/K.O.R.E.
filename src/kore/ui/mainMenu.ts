@@ -11,6 +11,17 @@ import { getSelectableGameModes } from "../../rules/modeCatalog.js";
 export { KoreMenuCommand, KoreMenuDifficulty, KoreMenuMapIntent } from "./menuVocabulary.js";
 export type KoreMainMenuSettings = { schemaVersion: 1; id: KoreMenuId.Composition; ui: UiMenuSettings; audio: AudioRuntimeSettings; metadata: { schemaVersion: 1; title: string; worldSize: { width: number; height: number }; confirmationCommands: KoreMenuCommand[]; confirmationSoundId: string } };
 
+export const MAIN_ACTIONS = {
+	openOnline: KoreMenuCommand.OpenOnline,
+	openBattle: KoreMenuCommand.OpenBattle,
+	openAi: KoreMenuCommand.OpenAi,
+	openLocalMaps: KoreMenuCommand.OpenLocalMaps,
+	openAiMaps: KoreMenuCommand.OpenAiMaps,
+	selectMap: KoreMenuCommand.SelectMap,
+	startLocal: KoreMenuCommand.StartLocal,
+	openOnlineFriends: KoreMenuCommand.OpenOnlineFriends,
+} as const;
+
 const SIZE = { width: 800, height: 450 };
 const MENU_TITLE = "KORE";
 
@@ -30,7 +41,7 @@ export class KoreMainMenuComposition {
 			id: KoreMenuId.Composition,
 			ui: buildUiSettings(this.language),
 			audio: { ...audioSettings, framework: audio.createDefaultFramework(), persistentSources: [{ sourceId: KoreMenuId.AudioSource, command: menuMusic }] },
-			metadata: { schemaVersion: 1, title: MENU_TITLE, worldSize: { ...SIZE }, confirmationCommands: [KoreMenuCommand.OpenAi, KoreMenuCommand.OpenBattle, KoreMenuCommand.OpenOnline, KoreMenuCommand.OpenLocalMaps, KoreMenuCommand.OpenAiMaps, KoreMenuCommand.SelectMap, KoreMenuCommand.StartLocal], confirmationSoundId: koreAudio.sounds.uiConfirm },
+			metadata: { schemaVersion: 1, title: MENU_TITLE, worldSize: { ...SIZE }, confirmationCommands: [KoreMenuCommand.OpenAi, KoreMenuCommand.OpenBattle, KoreMenuCommand.OpenOnline, KoreMenuCommand.OpenOnlineFriends, KoreMenuCommand.OpenLocalMaps, KoreMenuCommand.OpenAiMaps, KoreMenuCommand.SelectMap, KoreMenuCommand.StartLocal], confirmationSoundId: koreAudio.sounds.uiConfirm },
 		};
 		validateKoreMainMenuSettings(settings);
 		return structuredClone(settings);
@@ -81,12 +92,12 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 					rect: rect(0, 0, 740, BTN_H),
 					layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
 					style: KoreMenuStyle.MainActions,
-					elements: [
-						menuButton(KoreMenuElement.MainAi, translate(language, KoreMenuText.Ai), KoreMenuScreen.Difficulty),
-						menuButton(KoreMenuElement.MainBattle, translate(language, KoreMenuText.Battle), KoreMenuScreen.MapBattle),
-						menuButton(KoreMenuElement.MainOnline, translate(language, KoreMenuText.Online), KoreMenuScreen.MapOnline),
-						ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
-						ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenLocalMaps) }),
+						elements: [
+							menuButton(KoreMenuElement.MainAi, translate(language, KoreMenuText.Ai), KoreMenuScreen.Difficulty, KoreMenuStyle.LocalButton),
+							menuButton(KoreMenuElement.MainBattle, translate(language, KoreMenuText.Battle), KoreMenuScreen.MapBattle, KoreMenuStyle.MainButton),
+							menuButton(KoreMenuElement.MainOnline, translate(language, KoreMenuText.Online), KoreMenuScreen.MapOnline, KoreMenuStyle.OnlineButton),
+							ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.LocalButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
+							ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.SettingsButton, action: ui.action.emit(KoreMenuCommand.OpenLocalMaps) }),
 					],
 				}),
 			],
@@ -102,8 +113,8 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 }
 
 /** Primary menu actions navigate; the navigation target is authored per button. */
-function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen) {
-	return ui.button({ id, text, rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.navigate(target) });
+function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen, style: KoreMenuStyle = KoreMenuStyle.MainButton) {
+	return ui.button({ id, text, rect: rect(0, 0, BTN_W, BTN_H), style, action: ui.action.navigate(target) });
 }
 
 function mapScreen(intent: KoreMenuMapIntent, difficulty: KoreMenuDifficulty | undefined, language: LanguageCatalog) {

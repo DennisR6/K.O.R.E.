@@ -119,6 +119,17 @@ const BACK_BUTTON_THEME: UiElementTheme = {
   },
 };
 
+function coloredButton(background: string, borderColor: string, textColor = "#ffffff", fontSize = 24): UiElementTheme {
+	const token = (fill: string, border: string, alpha = 0.75): UiStyleToken => ({ background: fill, backgroundAlpha: alpha, borderColor: border, borderWidth: 2, borderRadius: 18, textColor, fontSize });
+	return {
+		normal: token(background, borderColor),
+		hover: token(background, "#ffffff", 0.9),
+		active: token("#020617", borderColor, 0.95),
+		focused: token(background, "#ffffff", 0.9),
+		disabled: token("#111827", "#334155", 0.5),
+	};
+}
+
 /**
  * Registered KORE button themes. Any style authored by the KORE UI vocabulary
  * resolves here; unknown style values are rejected instead of being silently
@@ -126,6 +137,10 @@ const BACK_BUTTON_THEME: UiElementTheme = {
  */
 export const KORE_UI_THEME: Record<string, UiElementTheme> = {
   [KoreMenuStyle.MainButton]: BLUE_BUTTON_THEME,
+  [KoreMenuStyle.OnlineButton]: coloredButton("#07141f", "#42e8ff"),
+  [KoreMenuStyle.LocalButton]: coloredButton("#151024", "#a78bfa"),
+  [KoreMenuStyle.SettingsButton]: coloredButton("#20170d", "#fb923c"),
+  [KoreMenuStyle.CreditsButton]: coloredButton("#211b08", "#facc15"),
   [KoreMenuStyle.MapRow]: BLUE_BUTTON_THEME,
   [KoreMenuStyle.Back]: BACK_BUTTON_THEME,
 };

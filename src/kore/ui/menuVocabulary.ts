@@ -28,6 +28,7 @@ export enum KoreMenuCommand {
 	OpenAi = "kore.menu.open-ai",
 	OpenBattle = "kore.menu.open-battle",
 	OpenOnline = "kore.menu.open-online",
+	OpenOnlineFriends = "kore.menu.open-online-friends",
 	StartLocal = "kore.menu.start-local-game",
 	OpenLocalMaps = "kore.menu.open-local-maps",
 	SelectMap = "kore.menu.select-map",
@@ -37,6 +38,10 @@ export enum KoreMenuCommand {
 export enum KoreMenuScreen {
 	Landing = "landing",
 	Main = "main",
+	OnlineSub = "online_sub",
+	LocalSub = "local_sub",
+	Settings = "settings",
+	Credits = "credits",
 	Difficulty = "difficulty",
 	MapLocal = "map-local",
 	MapOnline = "map-online",
@@ -56,6 +61,8 @@ export enum KoreMenuElement {
 	MainOnline = "main-online",
 	MainLocal = "main-local",
 	MainMaps = "main-maps",
+	OnlineSubTitle = "online-sub-title",
+	LocalSubTitle = "local-sub-title",
 	MapOnlineNote = "map-online-note",
 	DifficultyTitle = "difficulty-title",
 	DifficultyBack = "difficulty-back",
@@ -66,6 +73,10 @@ export enum KoreMenuStyle {
 	LandingHitbox = "kore.menu.landing-hitbox",
 	/** Shared KORE button theme styles; the renderer resolves them through KORE_UI_THEME. */
 	MainButton = "kore.button.blue",
+	OnlineButton = "kore.button.online",
+	LocalButton = "kore.button.local",
+	SettingsButton = "kore.button.settings",
+	CreditsButton = "kore.button.credits",
 	MainActions = "kore.menu.main-actions",
 	MapTitle = "kore.menu.map-title",
 	MapNote = "kore.menu.map-note",
@@ -105,6 +116,7 @@ export type KoreMenuCommandMessage =
 	| { type: KoreMenuCommand.OpenAi; payload: undefined }
 	| { type: KoreMenuCommand.OpenBattle; payload: undefined }
 	| { type: KoreMenuCommand.OpenOnline; payload: undefined }
+	| { type: KoreMenuCommand.OpenOnlineFriends; payload: undefined }
 	| { type: KoreMenuCommand.StartLocal; payload: undefined }
 	| { type: KoreMenuCommand.OpenLocalMaps; payload: undefined }
 	| { type: KoreMenuCommand.OpenAiMaps; payload: { difficulty: KoreMenuDifficulty } }
