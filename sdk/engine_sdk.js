@@ -283,7 +283,8 @@ class EngineEffectRegistry {
     this.definitions.get(value.type).validatePayload?.(value.typeValue);
     if (value.target !== undefined)
       assertJsonValue(value.target);
-    this.definitions.get(value.type).validateTarget?.(value.target);
+    if (value.target !== undefined)
+      this.definitions.get(value.type).validateTarget?.(value.target);
   }
   describe() {
     return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
