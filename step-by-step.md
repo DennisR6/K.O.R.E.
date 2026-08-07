@@ -555,6 +555,14 @@ semantics, ordering semantics, serialization behavior, and tests.
 - [ ] Generic score/counter state and commands only where they remain Engine
   concepts rather than KORE-specific rules.
 
+Lifecycle commands remain intentionally deferred. The generic Engine SDK does
+not yet define canonical active/destroyed state, entity or structure allocation
+and identity semantics, or lifecycle snapshot/replay behavior. Capability-local
+fields such as movement `enabled` and KORE structure `physicsEnabled`/
+`drawingEnabled` are not substitutes for that contract. Do not add spawn,
+destroy, enable, disable, or reset command payloads until those invariants are
+specified and qualified.
+
 Avoid microscopic field-level Effects and unrestricted generic setting patches.
 
 ### Phase 8: Predefined Generic Systems
