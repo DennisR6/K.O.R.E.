@@ -87,6 +87,19 @@ test("multiple UI runtimes are independent and the architecture record matches t
 	for (const heading of ["Purpose", "Layer model", "Passive engine lifecycle", "Capability model", "System model", "Input lifecycle", "Rendering lifecycle", "Serialization lifecycle", "Engine switching", "UI actions", "Framework composition", "Generic versus KORE responsibilities", "Extension and generation model", "Stability guarantees"]) expect(document).toContain(heading);
 });
 
+test("overlapping UI elements prioritize top-most (later declared) elements for hit testing", () => {
+	const menu = ui.createMenu({ id: "overlap", size: { width: 400, height: 300 } })
+		.addScreen(ui.screen({ id: "main", layout: ui.layout.absolute(), elements: [
+			ui.button({ id: "bottom", text: "Bottom", rect: { x: 50, y: 50, width: 200, height: 100 }, action: ui.action.emit("click-bottom") }),
+			ui.button({ id: "top", text: "Top", rect: { x: 50, y: 50, width: 200, height: 100 }, action: ui.action.emit("click-top") }),
+		] }))
+		.build();
+
+	const runtime = ui.fromSettings(menu);
+	runtime.tick({ pointer: { x: 100, y: 100, justPressed: true } });
+	expect(runtime.drainCommands()).toEqual([{ command: "click-top" }]);
+});
+
 function renderer(commands: string[] = []): UiRenderer {
 	return {
 		drawText(element) { commands.push(`text:${element.id}`); },
@@ -95,3 +108,4 @@ function renderer(commands: string[] = []): UiRenderer {
 		drawImage(element) { commands.push(`image:${element.id}`); },
 	};
 }
+
