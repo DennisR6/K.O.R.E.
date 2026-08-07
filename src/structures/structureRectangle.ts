@@ -1,4 +1,4 @@
-import { MetaEffect } from "../effects/effects.js";
+import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
@@ -65,9 +65,9 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 		this.collisionRole = role
 		for (const eff of effects) {
 			switch (eff.trigger) {
-				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
-				case EffectTrigger.Round: this.roundEffects.push(new MetaEffect(eff)); continue
-				case EffectTrigger.Always: this.alwaysEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Collision: this.collisionEffects.push(createRuntimeEffect(eff)); continue
+				case EffectTrigger.Round: this.roundEffects.push(createRuntimeEffect(eff)); continue
+				case EffectTrigger.Always: this.alwaysEffects.push(createRuntimeEffect(eff)); continue
 				default: console.log("this is not implemted yet"); continue
 			}
 		}

@@ -1,7 +1,6 @@
 import type { ISettingsSerialize } from "../engine/types.js";
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import type { Vector2D } from "../physics/physics.js";
 
 export const enum EffectType {
 	Physics = "EffectType.Physics",
@@ -13,8 +12,7 @@ export const enum EffectType {
 	Position = "EffectType.Position",
 	Velocity = "EffectType.Velocity",
 	Team = "EffectType.Team",
-	ModifySetting = "EffectType.ModifySetting",
-	RespawningPosition = "EffectType.RespawningPosition"
+	ModifySetting = "EffectType.ModifySetting"
 }
 /** Data-addressable effects that modify an item action before it is applied. */
 export const enum ItemEffectType {
@@ -43,10 +41,6 @@ export interface EffectMovePayload extends Vector2D {
 	deltaTime: number;
 }
 
-export interface EffectMultiPayload {
-	children: EffectSettings[];
-}
-
 /** Payloads for the serialized core EffectType discriminant. */
 export interface EffectPayloadMap {
 	[EffectType.Physics]: FrictionSettings;
@@ -59,8 +53,6 @@ export interface EffectPayloadMap {
 	[EffectType.Velocity]: Vector2D;
 	[EffectType.Team]: { team: number[] };
 	[EffectType.ModifySetting]: ModifySettingValue;
-	/** Reserved until a runtime implementation and payload are defined. */
-	[EffectType.RespawningPosition]: never;
 }
 
 /** Payloads for serialized item-runtime effects. */
@@ -131,8 +123,8 @@ export interface TemporaryWallPayload {
 }
 
 export type EffectSettings = {
-	[K in Exclude<EffectType, EffectType.RespawningPosition>]: { type: K; typeValue: EffectPayloadMap[K] }
-}[Exclude<EffectType, EffectType.RespawningPosition>];
+	[K in EffectType]: { type: K; typeValue: EffectPayloadMap[K] }
+}[EffectType];
 
 /** Existing item authoring/runtime boundary; payload validation is added in Phase 1.3. */
 export interface ItemEffectSettings {

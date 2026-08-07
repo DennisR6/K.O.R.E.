@@ -272,7 +272,7 @@ trigger. Core effects target physics-capable entities or structures, except
 | `Velocity` | x/y velocity | Command | runtime Effect → physics object | Attached settings |
 | `Team` | team number array | Command | runtime Effect → team-capable entity | Attached settings |
 | `ModifySetting` | set/add/remove, allowlisted key, typed value | Command | `Player.setSetting()` | Handler/player/structure settings |
-| `RespawningPosition` | no active runtime factory case | Planned/unsupported | rejected by `MetaEffect` | No valid runtime path |
+| `RespawningPosition` | removed unused identifier | Legacy contract removed in Phase 1 | No runtime interpreter | No serialized support |
 
 Item effects use `{ type, typeValue }` with optional `itemId` and `order` source
 metadata. They are validated as item content, constructed by

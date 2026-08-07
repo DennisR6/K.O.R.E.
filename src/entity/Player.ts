@@ -5,6 +5,7 @@ import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { advanceRuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
@@ -84,6 +85,7 @@ export class Player implements IEntity {
 		this.isPhysicsEnabled = settings.isPhysicsEnabled
 		this.dead = settings.isDead
 		this.items = settings.inventory.map(item => ({ ...item }))
+		for (const effect of settings.itemEffects ?? []) validateRuntimeItemEffectSettings(effect)
 		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
 		this.effectAlways = []
 		this.effectCollision = []

@@ -10,6 +10,7 @@ import { EffectMove } from "./movement.js";
 import { EffectPhysics } from "./physics.js";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
 import { createRuntimeEffect } from "./runtimeFactory.js";
+import { validateEffectSettings } from "./validate.js";
 
 /**
  * Applies a list of child effects in order and round-trips their settings.
@@ -32,6 +33,7 @@ export class MultiEffect implements Effect {
 export class MetaEffect implements Effect {
 	private eff: Effect
 	constructor(effect: EffectSettings) {
+		validateEffectSettings(effect)
 		switch (effect.type) {
 			case EffectType.Damage: this.eff = new EffectDamage(effect); return
 			case EffectType.Movement: this.eff = new EffectMove(effect); return

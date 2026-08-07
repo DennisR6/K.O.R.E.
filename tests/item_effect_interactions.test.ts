@@ -11,6 +11,7 @@ import { EffectSelectionLock } from "../src/effects/selectionLock.ts";
 import { EffectTemporaryWall } from "../src/effects/temporaryWall.ts";
 import { EffectSpawnTrigger } from "../src/effects/spawnTrigger.ts";
 import { createOfficialItemLoader } from "../src/item/officialItems.ts";
+import { EffectTrigger, EffectType } from "../src/effects/types.ts";
 
 test("mixed effect stacking and conflict resolution behave deterministically", () => {
 	// Stacking force multipliers (e.g. Anker 0.5 * Power-Dash 1.5 = 0.75)
@@ -79,7 +80,7 @@ test("serialization round-trip and replay regression for mixed items and effects
 		rotation: 45,
 		inventory: [{ itemId: "anker", remainingUses: 2, usesThisTurn: 0 }],
 		effects: [
-			{ type: "EffectType.Movement", typeValue: {}, trigger: 0, triggerValue: [] },
+			{ type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 }, trigger: EffectTrigger.Always, triggerValue: [] },
 		],
 	}));
 

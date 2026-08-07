@@ -5,7 +5,7 @@ import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 
 
 import IceMap from "./iceMap.js";
-import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
+import { EffectTrigger, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
@@ -13,6 +13,7 @@ import { validateItemEconomySettings, type GameModeSettings } from "../rules/typ
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
+import { validateFullEffectSettings } from "../effects/validate.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -162,9 +163,7 @@ function isBackground(value: unknown): value is SettingsBackground {
 }
 function isTeam(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 }
 function isEffect(value: unknown): value is FullEffectSettings {
-	const types = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting]
-	const triggers = [EffectTrigger.Always, EffectTrigger.Collision, EffectTrigger.Round]
-	return isRecord(value) && types.includes(value.type) && triggers.includes(value.trigger)
+	try { validateFullEffectSettings(value); return true } catch { return false }
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
