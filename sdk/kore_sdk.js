@@ -6,7 +6,7 @@ class EffectModifySetting {
   apply(entity, override) {
     if (!isSettingMutable(entity))
       return;
-    const settings = isModifySettingValue(override) ? override : this.settings;
+    const settings = override === undefined ? this.settings : isModifySettingValue(override) ? override : this.settings;
     switch (settings.operation) {
       case "set":
         entity.setSetting(settings.key, settings.value);
@@ -5861,7 +5861,7 @@ function arrangeInGrid(players, rect, padding = 0) {
 function deriveStructureId(settings) {
   if (settings.id !== undefined)
     return settings.id;
-  const canonical = JSON.stringify(settings);
+  const canonical = settings.type === 0 ? [settings.type, settings.x, settings.y, settings.r, settings.role ?? ""].join("|") : settings.type === 2 ? [settings.type, settings.x, settings.y, settings.w, settings.h, settings.role ?? ""].join("|") : [settings.type, settings.x, settings.y, settings.x2, settings.y2].join("|");
   let hash = 2166136261;
   for (let index = 0;index < canonical.length; index++)
     hash = Math.imul(hash ^ canonical.charCodeAt(index), 16777619) >>> 0;
@@ -5878,6 +5878,7 @@ class StructureCircle {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
+  dead = false;
   id;
   serializeState;
   friction;
@@ -5976,6 +5977,19 @@ class StructureCircle {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
   }
+  isDead() {
+    return this.dead;
+  }
+  setDead(dead) {
+    this.dead = dead;
+    if (dead) {
+      this.setPhysicsEnabled(false);
+      this.setDrawingEnabled(false);
+    } else {
+      this.setPhysicsEnabled(true);
+      this.setDrawingEnabled(true);
+    }
+  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -6053,6 +6067,7 @@ class StructureLine {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
+  dead = false;
   id;
   serializeState;
   effects = [];
@@ -6135,6 +6150,19 @@ class StructureLine {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
   }
+  isDead() {
+    return this.dead;
+  }
+  setDead(dead) {
+    this.dead = dead;
+    if (dead) {
+      this.setPhysicsEnabled(false);
+      this.setDrawingEnabled(false);
+    } else {
+      this.setPhysicsEnabled(true);
+      this.setDrawingEnabled(true);
+    }
+  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -6206,6 +6234,7 @@ class StructureRectangle {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
+  dead = false;
   id;
   serializeState;
   collisionRole;
@@ -6297,6 +6326,19 @@ class StructureRectangle {
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
+  }
+  isDead() {
+    return this.dead;
+  }
+  setDead(dead) {
+    this.dead = dead;
+    if (dead) {
+      this.setPhysicsEnabled(false);
+      this.setDrawingEnabled(false);
+    } else {
+      this.setPhysicsEnabled(true);
+      this.setDrawingEnabled(true);
+    }
   }
   drawingEnabled() {
     return this.isDrawingEnabled;
@@ -6397,6 +6439,12 @@ class FullStructure {
   }
   setDrawingEnabled(drawingEnabled) {
     this.str.setDrawingEnabled(drawingEnabled);
+  }
+  isDead() {
+    return this.str.isDead();
+  }
+  setDead(dead) {
+    this.str.setDead(dead);
   }
   setSetting(key, value) {
     this.str.setSetting(key, value);
