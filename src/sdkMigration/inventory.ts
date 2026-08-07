@@ -49,6 +49,7 @@ export const sourceClassificationRules: readonly SdkMigrationEntry[] = [
 	{ path: "src/debug/", classification: "adapter", owner: "Debug platform adapter", targetMilestone: 36, note: "Diagnostic host outside production SDK authoring." },
 	{ path: "src/mods/", classification: "adapter", owner: "Mod platform I/O adapter", targetMilestone: null, note: "Browser-only mod file and clipboard adapters; validation stays in importMod." },
 	{ path: "src/sdkMigration/", classification: "adapter", owner: "Migration contract tooling", targetMilestone: null, note: "Machine-checkable architecture inventory and migration guardrails." },
+	{ path: "src/migrations/", classification: "adapter", owner: "Canonical input migration boundaries", targetMilestone: null, note: "Historical documents are normalized here before strict runtime validation." },
 	{ path: "src/engine/", classification: "removal-candidate", owner: "Legacy engine internals", targetMilestone: 28, note: "Non-SDK engine implementation is retained behind SDK/runtime boundaries during migration." },
 	{ path: "src/ai/", classification: "removal-candidate", owner: "Legacy AI composition", targetMilestone: 34, note: "AI producers and systems need KORE SDK entry points." },
 	{ path: "src/content/", classification: "removal-candidate", owner: "Legacy content composition", targetMilestone: 29, note: "Catalog composition must move to KORE map descriptors." },

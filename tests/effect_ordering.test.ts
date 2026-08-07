@@ -16,11 +16,11 @@ test("installed item Effects order by explicit order and retain declaration orde
 
 test("Multi Effect children preserve serialized declaration order", () => {
 	const children: EffectSettings[] = [
-		{ type: EffectType.Velocity, typeValue: { x: 1, y: 0 } },
-		{ type: EffectType.Position, typeValue: { x: 4, y: 5 } },
+		{ schemaVersion: 1, type: EffectType.Velocity, typeValue: { x: 1, y: 0 } },
+		{ schemaVersion: 1, type: EffectType.Position, typeValue: { x: 4, y: 5 } },
 	];
-	const effect = new MultiEffect({ type: EffectType.Multi, typeValue: children });
+	const effect = new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: children });
 
 	expect(preserveEffectDeclarationOrder(children)).toEqual(children);
-	expect(effect.toSettings()).toEqual({ type: EffectType.Multi, typeValue: children });
+	expect(effect.toSettings()).toEqual({ schemaVersion: 1, type: EffectType.Multi, typeValue: children });
 });

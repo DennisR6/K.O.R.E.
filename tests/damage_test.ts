@@ -18,6 +18,7 @@ test("we are testing the Damage Effect", () => {
 
 test("we are testing the Meta Damage Effect", () => {
 	const eff = new MetaEffect({
+		schemaVersion: 1,
 		type: EffectType.Damage,
 		typeValue: { damage: 10 },
 	})

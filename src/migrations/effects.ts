@@ -21,9 +21,9 @@ export function migrateFullEffectSettings(value: unknown): FullEffectSettings {
 /** Normalizes only Effect-bearing fields before strict runtime construction. */
 export function migrateGameSettingsEffects<T extends GameSettings | EngineSettings>(settings: T): T {
 	const copy = structuredClone(settings) as T;
-	copy.effects = copy.effects.map(migrateFullEffectSettings);
-	copy.players = copy.players.map(player => ({ ...player, effects: player.effects.map(migrateFullEffectSettings) }));
-	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys).map(boundary => ({ ...boundary, effects: boundary.effects.map(migrateFullEffectSettings) }));
+	copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
+	copy.players = copy.players.map(player => ({ ...player, effects: (player.effects ?? []).map(migrateFullEffectSettings) }));
+	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: migrateEffectSettings(definition.effect) }));
 	if (copy.environmentalMechanics) copy.environmentalMechanics = copy.environmentalMechanics.map(mechanic => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
 	return copy;

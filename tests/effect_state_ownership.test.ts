@@ -14,7 +14,7 @@ test("current entity state is canonical and is serialized separately from a sett
 	const settings = player.toSettings();
 
 	expect(settings.hp).toBe(7);
-	expect(request.toSettings()).toEqual({ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -3 } });
+	expect(request.toSettings()).toEqual({ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -3 } });
 	expect(settings.effects).toEqual([]);
 });
 
