@@ -182,14 +182,63 @@ arbitrary executable code or unrestricted JSON patch effects.
 
 ### Phase 0: Baseline And Invariants
 
-- [ ] Establish baseline: inspect branch/worktree, preserve unrelated changes,
+- [x] Establish baseline: inspect branch/worktree, preserve unrelated changes,
   run focused effect, item-effect, system-settings, snapshot, replay, Engine
   SDK, and KORE SDK tests, then run `npx tsc --noEmit` and record results.
-- [ ] Document current Player, Handler/world, structure-collision, item, and
+- [x] Document current Player, Handler/world, structure-collision, item, and
   hazard effect flows, including serialized settings, factories, interpreters,
   triggers, mutation targets, and snapshot paths.
 
 No production refactor is part of this phase.
+
+#### Phase 0 Evidence
+
+Baseline was run on branch `engine_expansion` with the pre-existing unrelated
+worktree change in `src/main.ts` preserved:
+
+| Area | Command | Result |
+|---|---|---|
+| Effects | `bun test tests/effect_test.ts tests/effect_factory_roundtrip.test.ts tests/setting_effect.test.ts` | 22 passed, 0 failed |
+| Item effects | `bun test tests/item_effect_snapshot_validation.test.ts tests/item_effect_interactions.test.ts tests/item_inventory.test.ts` | 11 passed, 0 failed |
+| System settings/registry | `bun test tests/system_settings_roundtrip.test.ts tests/engine_system_registry.test.ts tests/system_id_stability.test.ts` | 7 passed, 0 failed |
+| Snapshots | `bun test tests/handler_snapshot_isolation.test.ts tests/simulate_turn_isolation.test.ts tests/parallel_engine_instances.test.ts` | 7 passed, 0 failed |
+| Replay | `bun test tests/ai_replay_lifecycle.test.ts tests/replay_rule_state_orchestration.test.ts tests/replay_validation.test.ts` | 8 passed, 0 failed |
+| Engine/KORE SDK | `bun test tests/engine_sdk_architecture.test.ts tests/sdk_standalone_bundles.test.ts tests/kore_sdk.test.ts` | 15 passed, 0 failed |
+| TypeScript | `npx tsc --noEmit` | Passed |
+
+The current effect flows are:
+
+- **Player effects:** `PlayerSettings.effects` are reconstructed by
+  `Player.applySettings()` through `createRuntimeEffect()`; Always Movement
+  and Physics effects are interpreted directly by `Player.tick()`, Collision
+  effects by `Player.onCollision()`, and all three trigger lists are serialized
+  back into `PlayerSettings.effects`.
+- **Handler/world effects:** `GameSettings.effects` are loaded by
+  `GameHandler.loadEffects()` into runtime effect lists. Always effects are
+  applied to every entity from `GameHandler.tick()`; Round and Collision lists
+  are retained and serialized by `GameHandler.toSettings()`, but their runtime
+  execution is not a complete centralized EffectSystem pipeline.
+- **Structure collision effects:** map boundary effects are reconstructed by
+  `StructureCircle`, `StructureRectangle`, or `StructureLine`. Collision
+  callbacks from `defaultPhysics` invoke the concrete structure's
+  `onCollision()`, which applies its `MetaEffect` list to the colliding entity.
+  Structure settings serialize the effect lists again.
+- **Item effects:** validated `ItemDocument.effects` enter through
+  `ItemValidator` and `createRuntimeItemEffect()`. Immediate effects are
+  resolved by `GameHandler.useItem()`; persistent effects are stored as
+  `PlayerSettings.itemEffects`, advanced at turn boundaries, and restored by
+  the item runtime boundary. This is currently the strongest data-defined
+  effect flow.
+- **Hazard effects:** supported map/editor hazards are converted into typed
+  collision `FullEffectSettings` by `src/contracts/documents.ts`, commonly
+  `ModifySetting` mutations for death or velocity. They then follow the
+  structure collision path rather than a separate hazard interpreter.
+
+The common serialized boundary remains `{ type, typeValue, trigger,
+triggerValue }`; `typeValue` and `triggerValue` are still broad in the current
+contract. `MetaEffect` rejects unknown core effect types, while
+`validateGameSettings()` currently validates known type/trigger identities more
+strongly than their payload shapes. This is the primary constraint for Phase 1.
 
 ### Phase 1: Strongly Typed Effect Contracts
 
