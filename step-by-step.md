@@ -313,12 +313,22 @@ is the only composition validator. The unused `RespawningPosition` identifier
 and empty movement-payload compatibility path were removed because no legacy
 serialized games require them.
 
+### Phase 2.2 Ownership Rule
+
+Canonical entity/component state owns the current value observed by gameplay and
+snapshots, including position, velocity, health, team, and lifecycle flags.
+Effects own the request, modifier, status, reaction, or scheduled instruction
+that can produce a transition. An applied `ModifySetting` therefore does not
+become the current health value, and a persistent Movement Effect does not
+replace the entity's current position. Both the resulting state and the
+persistent Effect definition are serialized independently when applicable.
+
 ### Phase 2: Effect Lifecycle Semantics
 
 - [ ] Add explicit metadata for `modifier`, `command`, `reaction`, `status`,
   and `scheduled` semantics without forcing a new hierarchy on all existing
   runtime classes.
-- [ ] Document and test ownership: entity/component state owns current state;
+- [x] Document and test ownership: entity/component state owns current state;
   Effects own requests, modifiers, statuses, or reactions.
 - [ ] Formalize existing deterministic ordering for conflicting, nested, and
   multi-Effects, preserving current behavior unless a versioned contract
