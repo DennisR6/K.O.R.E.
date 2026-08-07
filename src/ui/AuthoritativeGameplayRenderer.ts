@@ -86,7 +86,7 @@ export class AuthoritativeGameplayRenderer {
   private drawPlayer(renderer: RenderContext, player: PlayerSettings, activeTeam: number): void {
     const position = player.position;
     renderer.push();
-    if (player.isDead) {
+    if (!player.isPhysicsEnabled && !player.isDrawingEnabled) {
       renderer.setFillColor("#64748b");
       renderer.setStrokeColor("#cbd5e1");
       renderer.drawCircle(position.x, position.y, player.size);

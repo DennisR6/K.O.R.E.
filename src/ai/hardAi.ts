@@ -75,9 +75,9 @@ export class HardAi implements IAiTurnProducer {
 						// Evaluate finalState from simulation
 						for (const pSnapshot of sim.finalState) {
 							if (pSnapshot.team.includes(aiSettings.team)) {
-								if (pSnapshot.isDead) score -= 10000; // Penalize AI death
+								if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score -= 10000; // Penalize AI elimination
 							} else {
-								if (pSnapshot.isDead) score += 5000; // Reward enemy elimination
+								if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score += 5000; // Reward enemy elimination
 							}
 						}
 					} catch {

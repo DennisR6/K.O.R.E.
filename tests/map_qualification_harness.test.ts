@@ -35,7 +35,10 @@ function spawnInKillZone(settings: ReturnType<typeof createCanonicalPlayableMatc
 		y: settings.players[0]!.position.y,
 		r: 30,
 		color: "#d94b28",
-		effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }],
+		effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+		] }],
 	});
 }
 
@@ -43,7 +46,8 @@ function deadSpawn(settings: ReturnType<typeof createCanonicalPlayableMatchSetti
 	// With six figures per team, every actor must be dead for the
 	// "no legal actor" finding to apply.
 	for (const player of settings.players) {
-		player.isDead = true;
+		player.isPhysicsEnabled = false;
+		player.isDrawingEnabled = false;
 	}
 }
 

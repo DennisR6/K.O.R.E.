@@ -48,7 +48,7 @@ export class Player implements IEntity {
 	private shape: SHAPE.CIRCLE = SHAPE.CIRCLE
 	private hoop: AssetList
 	private isPhysicsEnabled: boolean = true
-	private dead: boolean = false
+	private isDrawingEnabled: boolean = true
 	private items: InventoryItem[] = []
 	private itemEffects: ItemEffectSettings[] = []
 
@@ -86,7 +86,7 @@ export class Player implements IEntity {
 		this.shape = settings.shape
 		this.hoop = settings.hoop
 		this.isPhysicsEnabled = settings.isPhysicsEnabled
-		this.dead = settings.isDead
+		this.isDrawingEnabled = settings.isDrawingEnabled
 		this.items = settings.inventory.map(item => ({ ...item }))
 		for (const effect of settings.itemEffects ?? []) validateRuntimeItemEffectSettings(effect)
 		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
@@ -101,7 +101,7 @@ export class Player implements IEntity {
 		 * Der Richtungsvektor hilft dem Spieler zu sehen, wohin sich der Puck bewegt.
 		 */
 	public draw(ctx: RenderContext): void {
-		if (this.dead) return
+		if (!this.isDrawingEnabled) return
 		ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 		ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
 	}
@@ -111,7 +111,7 @@ export class Player implements IEntity {
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
 	public tick(_deltaTime: number, _globalFriction: number, _drift: number = 0, _stopThreshold: number = 0) {
-		if (this.dead || !this.isPhysicsEnabled) return
+		if (!this.isPhysicsEnabled) return
 		if (this.effectAlways.length === 0) return;
 		dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), _deltaTime), apply: effect => {
 			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
@@ -159,9 +159,11 @@ export class Player implements IEntity {
 		});
 	}
 	public getTeam(): number[] { return this.team }
-	public isActive(): boolean { return !this.dead }
+	public isActive(): boolean { return this.isPhysicsEnabled && this.isDrawingEnabled }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setHP(hp: number): void { this.hp = hp }
+	public drawingEnabled(): boolean { return this.isDrawingEnabled }
+	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
 	public use(item: ItemDocument): void { consumeInventoryItem(this.items, item) }
 
@@ -175,9 +177,8 @@ export class Player implements IEntity {
 			case "position": if (isVector(value)) this.setPos(value); break
 			case "velocity": if (isVector(value)) this.setVel(value); break
 			case "team": if (Array.isArray(value) && value.every(Number.isFinite)) this.setTeam([...value]); break
-			case "dead": if (typeof value === "boolean") this.setIsDead(value); break
 			case "physicsEnabled": if (typeof value === "boolean") this.setPhysicsEnabled(value); break
-			case "drawingEnabled": break
+			case "drawingEnabled": if (typeof value === "boolean") this.setDrawingEnabled(value); break
 		}
 	}
 
@@ -213,8 +214,8 @@ export class Player implements IEntity {
 			if (key === "velocity") this.setVel({ x: this.velocity.x - value.x, y: this.velocity.y - value.y })
 		}
 		if (key === "team" && Array.isArray(value) && value.every(Number.isFinite)) this.team = this.team.filter(team => !value.includes(team))
-		if (key === "dead") this.setIsDead(false)
 		if (key === "physicsEnabled") this.setPhysicsEnabled(false)
+		if (key === "drawingEnabled") this.setDrawingEnabled(false)
 	}
 
 	public toSettings(): PlayerSettings {
@@ -238,7 +239,7 @@ export class Player implements IEntity {
 			friction: this.friction,
 			shape: this.shape,
 			isPhysicsEnabled: this.isPhysicsEnabled,
-			isDead: this.dead,
+			isDrawingEnabled: this.isDrawingEnabled,
 			effects: [
 				...sett0,
 				...sett1,
@@ -252,18 +253,20 @@ export class Player implements IEntity {
 	public setHoop(asset: AssetList) { this.hoop = asset }
 	public setBouncyness(bouncyness: number) { this.bouncyness = bouncyness }
 	public setIsDead(dead: boolean) {
-		this.dead = dead
+		this.setPhysicsEnabled(!dead)
+		this.setDrawingEnabled(!dead)
 		if (dead) this.setVel({ x: 0, y: 0 })
 	}
 	public AddItem(item: InventoryItem): void { this.items.push({ ...item }) }
 	public setInventory(items: InventoryItem[]): void { this.items = items.map(item => ({ ...item })) }
 	public resetItemUses(): void { resetInventoryTurnUses(this.items) }
 	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
-	public isDead(): boolean { return this.dead }
+	/** Transitional convenience projection; participation flags are canonical. */
+	public isDead(): boolean { return !this.isActive() }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
 	public getAlwaysEffects(): Effect[] { return [...this.effectAlways] }
 	public onRound(event: EngineTriggerEvent): void {
-		if (this.dead) return;
+		if (!this.isActive()) return;
 		dispatchTriggeredEffects({ effects: this.effectRound, event, apply: effect => effect.apply(this) });
 	}
 	public addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void {

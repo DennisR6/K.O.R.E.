@@ -126,7 +126,7 @@ export interface KorePlayerInput {
 	playericon?: AssetList;
 	hoop?: AssetList;
 	isPhysicsEnabled?: boolean;
-	isDead?: boolean;
+	isDrawingEnabled?: boolean;
 	effects?: FullEffectSettings[];
 	inventory?: InventoryItem[];
 }
@@ -184,7 +184,7 @@ export function createPlayer(input: KorePlayerInput = {}): PlayerSettings {
 		...(input.playericon !== undefined ? { playericon: input.playericon } : {}),
 		...(input.hoop !== undefined ? { hoop: input.hoop } : {}),
 		...(input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {}),
-		...(input.isDead !== undefined ? { isDead: input.isDead } : {}),
+		...(input.isDrawingEnabled !== undefined ? { isDrawingEnabled: input.isDrawingEnabled } : {}),
 		...(input.effects !== undefined ? { effects: input.effects.map(e => ({ ...e })) } : {}),
 		...(input.inventory !== undefined ? { inventory: input.inventory.map(i => ({ ...i })) } : {}),
 	});
@@ -295,7 +295,10 @@ export class KoreMapBuilder {
 		this.assertHazardZone(settings);
 		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
 		const structureIndex = this.structures.length;
-		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: SettingOperation.Set, key: "dead", value: true })] });
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.multi(
+			kore.effects.modifySetting({ operation: SettingOperation.Set, key: "physicsEnabled", value: false }),
+			kore.effects.modifySetting({ operation: SettingOperation.Set, key: "drawingEnabled", value: false }),
+		)] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
 		return this;
 	}

@@ -3,7 +3,7 @@ import { EffectTrigger, EffectType, ItemEffectType, SettingOperation } from "../
 import { validateEffectSettings, validateFullEffectSettings, validateRuntimeItemEffectSettings } from "../src/effects/validate.ts";
 
 test("core Effect validation is independent from trigger composition", () => {
-	const effect = { type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } };
+	const effect = { type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } };
 	expect(() => validateEffectSettings(effect)).not.toThrow();
 	expect(() => validateFullEffectSettings({ ...effect, trigger: EffectTrigger.Collision, triggerValue: [] })).not.toThrow();
 });

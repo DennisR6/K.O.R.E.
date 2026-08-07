@@ -42,6 +42,8 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	setSize(size: number): void;
 	getColor(): string;
 	getTeam(): number[];
+	drawingEnabled(): boolean;
+	setDrawingEnabled(drawingEnabled: boolean): void;
 	setTeam(team: number[]): void
 	setRotation(rotation: number): void
 	getEffects(): Effect[]

@@ -3,6 +3,7 @@ import { convertEditorMapDocument, DOCUMENT_SCHEMA_VERSION, type EditorMapDocume
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
+import { EffectType } from "../src/effects/types.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
@@ -46,7 +47,10 @@ test("converts editor rectangles, circles, team spawn bounds, and collision haza
 	const [pushZone, killZone] = settings.mapBoundarys.slice(2);
 	expect(pushZone).toMatchObject({ type: SHAPE.RECTANGLE, x: 40, y: 40, w: 100, h: 100 });
 	expect(pushZone.effects[0].typeValue.value).toEqual({ x: expect.closeTo(0), y: 3 });
-	expect(killZone.effects[0].typeValue).toEqual({ operation: "set", key: "dead", value: true });
+	expect(killZone.effects[0].typeValue).toEqual([
+		{ type: EffectType.ModifySetting, typeValue: { operation: "set", key: "physicsEnabled", value: false } },
+		{ type: EffectType.ModifySetting, typeValue: { operation: "set", key: "drawingEnabled", value: false } },
+	]);
 });
 
 test("converted rectangular zones apply push and kill collision effects", () => {

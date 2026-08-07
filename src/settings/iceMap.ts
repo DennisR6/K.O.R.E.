@@ -2,7 +2,7 @@ import { AssetList } from "../assetManager/assets/assetRegistry.js";
 import { EffectModifySetting } from "../effects/modifySetting.js";
 import { EffectMove } from "../effects/movement.js";
 import { EffectPhysics } from "../effects/physics.js";
-import { EffectTrigger, SettingOperation, type FullEffectSettings } from "../effects/types.js";
+import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type SettingsMap } from "./settings.js";
 import type { PlayerSettings } from "../entity/types.js";
@@ -17,7 +17,10 @@ function createPlayerStartPoints(team: number, players: PlayerSettings[]) {
 }
 const friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }
 const defaultEffects: FullEffectSettings[] = [{ trigger: EffectTrigger.Always, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: EffectTrigger.Always, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }]
-const deadly: FullEffectSettings = { trigger: EffectTrigger.Collision, triggerValue: [], ...new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }).toSettings() }
+const deadly: FullEffectSettings = { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+	new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
+	new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
+] }
 const IceMap: SettingsMap = {
 	schemaVersion: 1, screenResolution: { x, y }, worldSize: { x, y }, background: { type: "image", url: AssetList.slipStirkeMapIceJPG }, drift: 0, mapBoundarys: [
 		{ id: "ice.wall.left", type: SHAPE.RECTANGLE, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.top-left", type: SHAPE.RECTANGLE, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.top-right", type: SHAPE.RECTANGLE, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.bottom-left", type: SHAPE.RECTANGLE, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.bottom-right", type: SHAPE.RECTANGLE, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.right", type: SHAPE.RECTANGLE, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] }, { id: "ice.wall.center", type: SHAPE.RECTANGLE, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },

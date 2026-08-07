@@ -229,7 +229,7 @@ export function inspectMapSettings(settings: GameSettings): SpawnInspection {
 			finiteSpawn = false;
 			spawnFindings.push(`non-finite or invalid spawn for player ${player.id} (position ${x},${y}, size ${size}, hp ${player.hp})`);
 		}
-		if (player.isDead) spawnFindings.push(`player ${player.id} spawns already dead`);
+		if (!player.isPhysicsEnabled || !player.isDrawingEnabled) spawnFindings.push(`player ${player.id} spawns already inactive`);
 	}
 	for (let i = 0; i < settings.players.length; i++) {
 		for (let j = i + 1; j < settings.players.length; j++) {
@@ -276,7 +276,7 @@ export function inspectMapSettings(settings: GameSettings): SpawnInspection {
 		containmentValid = false;
 		spawnFindings.push("containment region extends outside the world bounds");
 	}
-	if (settings.players.every(player => player.isDead)) spawnFindings.push("no legal actor: every configured player is dead");
+	if (settings.players.every(player => !player.isPhysicsEnabled || !player.isDrawingEnabled)) spawnFindings.push("no legal actor: every configured player is inactive");
 	return { schemaValid, finiteSpawn, uniqueSpawn, noSolidOverlap, noLethalOverlap, containmentValid, spawnFindings };
 }
 

@@ -177,7 +177,7 @@ export const enum SettingOperation {
 	Remove = "remove",
 }
 
-export type PlayerSettingKey = "hp" | "mass" | "size" | "friction" | "position" | "velocity" | "team" | "dead" | "physicsEnabled";
+export type PlayerSettingKey = "hp" | "mass" | "size" | "friction" | "position" | "velocity" | "team" | "physicsEnabled" | "drawingEnabled";
 export type StructureSettingKey = "physicsEnabled" | "drawingEnabled";
 export type SettingKey = PlayerSettingKey | StructureSettingKey;
 export type SettingValue = number | boolean | number[] | { x: number, y: number } | undefined;

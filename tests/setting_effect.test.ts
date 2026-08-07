@@ -25,9 +25,13 @@ test("setting effects mutate and serialize set, add, and remove operations", () 
 })
 
 test("a death circle marks colliding players dead and removes them from selection", () => {
-	const deathEffect = new EffectModifySetting({
-		typeValue: { operation: SettingOperation.Set, key: "dead", value: true },
-	}).toSettings()
+	const deathEffect = {
+		type: EffectType.Multi,
+		typeValue: [
+			new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
+			new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
+		],
+	};
 	const player = new Player(createPlayerSettings({ position: { x: 35, y: 20 }, size: 12 }))
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()
@@ -41,12 +45,11 @@ test("a death circle marks colliding players dead and removes them from selectio
 	expect(handler.getEntityManager().getEntityAt(player.getPos().x, player.getPos().y)).toBeUndefined()
 })
 
-test("ice-map death circles use the serializable dead-setting effect", () => {
+	test("ice-map death circles use serializable participation settings", () => {
 	const deathCircle = IceMap.IceMap.mapBoundarys.find(boundary => boundary.type === SHAPE.CIRCLE)!
 	expect(deathCircle.effects.some(effect =>
-		effect.type === EffectType.ModifySetting &&
-		effect.typeValue.operation === SettingOperation.Set &&
-		effect.typeValue.key === "dead" &&
-		effect.typeValue.value === true,
+		 effect.type === EffectType.Multi && Array.isArray(effect.typeValue) &&
+		 effect.typeValue.some(child => child.typeValue.key === "physicsEnabled" && child.typeValue.value === false) &&
+		 effect.typeValue.some(child => child.typeValue.key === "drawingEnabled" && child.typeValue.value === false),
 	)).toBe(true)
 })

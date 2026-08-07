@@ -6,7 +6,7 @@ import { GameSettings } from "../src/settings/settings.ts";
 
 test("local rematch restores configured players and fresh match state", () => {
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(GameSettings).build();
-	const initial = GameSettings.players.map(player => ({ id: player.id, position: player.position, isDead: player.isDead }));
+	const initial = GameSettings.players.map(player => ({ id: player.id, position: player.position, isPhysicsEnabled: player.isPhysicsEnabled, isDrawingEnabled: player.isDrawingEnabled }));
 	const player = handler.getEntityManager().getEntities()[0];
 	player.setPos({ x: 999, y: 999 });
 	player.setIsDead(true);
@@ -21,5 +21,5 @@ test("local rematch restores configured players and fresh match state", () => {
 	expect(handler.getTurnNumber()).toBe(0);
 	expect(handler.getActiveTeam()).toBe(0);
 	expect(handler.getMatchResult()).toBeUndefined();
-	expect(handler.getEntityManager().getEntities().map(entity => ({ id: entity.getId(), position: entity.getPos(), isDead: entity.isDead() }))).toEqual(initial);
+	expect(handler.getEntityManager().getEntities().map(entity => ({ id: entity.getId(), position: entity.getPos(), isPhysicsEnabled: entity.physicsEnabled(), isDrawingEnabled: entity.drawingEnabled() }))).toEqual(initial);
 });

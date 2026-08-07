@@ -48,7 +48,7 @@ export function validateReplayOrigin(document: ReplayDocument): asserts document
 	if (Array.isArray(initial.players)) {
 		for (const player of initial.players) {
 			if (!isRecord(player)) throw new Error("Replay origin players must be serialized settings");
-			if (player.isDead === true) throw new Error("Replay origin actors must be alive");
+			if (player.isPhysicsEnabled === false || player.isDrawingEnabled === false) throw new Error("Replay origin actors must be alive");
 			if (player.hp !== undefined && (typeof player.hp !== "number" || player.hp <= 0)) throw new Error("Replay origin actors must be healthy");
 		}
 	}

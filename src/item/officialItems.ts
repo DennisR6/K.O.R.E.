@@ -90,7 +90,11 @@ export const falltuerItem: ItemDocument = createItem({
 const falltuerDeathCollision: FullEffectSettings = {
 	trigger: EffectTrigger.Collision,
 	triggerValue: [],
-	...new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }).toSettings(),
+	type: EffectType.Multi,
+	typeValue: [
+		new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
+		new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
+	],
 };
 
 /** One canonical dormant trap slot reused by the declarative Falltür item. */

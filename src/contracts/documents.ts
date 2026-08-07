@@ -329,7 +329,10 @@ function isDefaultEditorAi(ai: EditorAi): boolean {
 function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
 	const effect: FullEffectSettings = hazard.type === "push_zone"
 		? pushZoneEffect(hazard)
-		: { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }
+		: { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+		] }
 	return {
 		type: SHAPE.RECTANGLE,
 		x: hazard.position.x,
@@ -380,7 +383,10 @@ function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
 
 function hazardEffect(hazard: HazardDocument): FullEffectSettings {
 	if (hazard.type === "kill-zone") {
-		return { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } };
+		return { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+			{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+		] };
 	}
 	const config = hazard.config as ForceHazardConfig;
 	const radians = (config.angle * Math.PI) / 180;

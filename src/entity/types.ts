@@ -67,7 +67,7 @@ export interface PlayerSettings {
 	shape: SHAPE.CIRCLE
 	hoop: AssetList
 	isPhysicsEnabled: boolean
-	isDead: boolean
+	isDrawingEnabled: boolean
 	effects: FullEffectSettings[]
 	inventory: InventoryItem[]
 	itemEffects?: ItemEffectSettings[]
@@ -98,7 +98,7 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		shape: SHAPE.CIRCLE,
 		hoop: overrides.hoop ?? AssetList.pictureReifenPNG,
 		isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
-		isDead: overrides.isDead ?? false,
+		isDrawingEnabled: overrides.isDrawingEnabled ?? true,
 		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
 		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),

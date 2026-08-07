@@ -229,7 +229,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			const previous = before.get(player.id);
 			if (!previous) continue;
 			if (player.hp < previous.hp) this.feedback.record(KoreGameplayFeedbackType.Damage, this.getTurnNumber(), { targetIds: [player.id], data: { amount: previous.hp - player.hp } });
-			if (player.isDead && !previous.isDead) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
+			if ((!player.isPhysicsEnabled || !player.isDrawingEnabled) && previous.isPhysicsEnabled && previous.isDrawingEnabled) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
 		}
 		this.feedback.record(KoreGameplayFeedbackType.Turn, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
 		return {

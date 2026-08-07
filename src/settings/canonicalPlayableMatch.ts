@@ -96,7 +96,7 @@ export function validateReferenceSpawnAndCamera(settings: GameSettings): void {
 	const containment = settings.mapBoundarys.find(structure => structure.role === "containment");
 	if (!containment || containment.type !== SHAPE.RECTANGLE) throw new Error("reference camera requires rectangular containment");
 	for (const player of settings.players) {
-		if (player.isDead || player.hp <= 0 || player.team.length !== 1 || (player.team[0] !== 0 && player.team[0] !== 1)) throw new Error("reference player is not selectable");
+		if (!player.isPhysicsEnabled || !player.isDrawingEnabled || player.hp <= 0 || player.team.length !== 1 || (player.team[0] !== 0 && player.team[0] !== 1)) throw new Error("reference player is not selectable");
 		if (!camera.containsCircle(player.position, player.size)) throw new Error("reference player is outside the initial camera");
 		if (player.position.x - player.size < containment.x || player.position.y - player.size < containment.y || player.position.x + player.size > containment.x + containment.w || player.position.y + player.size > containment.y + containment.h) throw new Error("reference player is outside containment");
 	}

@@ -12,7 +12,7 @@ test("core EffectSettings maps each implemented type to a typed payload", () => 
 		{ type: EffectType.Position, typeValue: { x: 1, y: 2 } },
 		{ type: EffectType.Velocity, typeValue: { x: 1, y: 2 } },
 		{ type: EffectType.Team, typeValue: { team: [0, 1] } },
-		{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: false } },
+		{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
 	];
 
 	expect(JSON.parse(JSON.stringify(effects))).toEqual(effects);
