@@ -3,6 +3,11 @@ import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
 import { createItem } from "./sdkItemFactory.js";
+import { EffectType, EffectTrigger, SettingOperation, type EffectSettings, type FullEffectSettings } from "../effects/types.js";
+import { EffectModifySetting } from "../effects/modifySetting.js";
+import { SHAPE } from "../physics/physics.js";
+import type { MapBoundarySettingsCircle } from "../settings/settings.js";
+import type { TriggerDefinition } from "./triggerDefinitions.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -10,6 +15,10 @@ export const GHOST_MODE_DURATION_TURNS = 2;
 export const MAGNET_RANGE = 200;
 export const MAGNET_FORCE = 2;
 export const FALLTUER_RADIUS = 25;
+export const FALLTUER_DURATION_TURNS = 2;
+export const FALLTUER_STRUCTURE_ID = "falltuer-slot-0";
+export const FALLTUER_ACTIVATE_TRIGGER_ID = "falltuer.activate";
+export const FALLTUER_DEACTIVATE_TRIGGER_ID = "falltuer.deactivate";
 export const POWER_DASH_FACTOR = 1.5;
 export const DELAYED_MINE_DELAY_TICKS = 3;
 export const DELAYED_MINE_RADIUS = 60;
@@ -66,14 +75,49 @@ export const magnetItem: ItemDocument = createItem({
 export const falltuerItem: ItemDocument = createItem({
 	id: "falltuer",
 	name: "Falltür",
-	description: "Spawns a kill zone at a selected position.",
+	description: "Activates a kill zone at a selected position.",
 	type: "trap",
-	effects: [{ type: "spawnTrigger", value: { triggerId: "falltuer-kill-zone", delayTurns: 0, radius: FALLTUER_RADIUS } }],
+	effects: [
+		{ type: "spawnTrigger", value: { triggerId: FALLTUER_ACTIVATE_TRIGGER_ID, delayTurns: 0, structureId: FALLTUER_STRUCTURE_ID } },
+		{ type: "spawnTrigger", value: { triggerId: FALLTUER_DEACTIVATE_TRIGGER_ID, delayTurns: FALLTUER_DURATION_TURNS, structureId: FALLTUER_STRUCTURE_ID } },
+	],
 	targetType: "position",
-	duration: { type: "turns", value: 1 },
+	duration: { type: "turns", value: FALLTUER_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 });
+
+const falltuerDeathCollision: FullEffectSettings = {
+	trigger: EffectTrigger.Collision,
+	triggerValue: [],
+	...new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }).toSettings(),
+};
+
+/** One canonical dormant trap slot reused by the declarative Falltür item. */
+export const falltuerStructure: MapBoundarySettingsCircle = {
+	id: FALLTUER_STRUCTURE_ID,
+	type: SHAPE.CIRCLE,
+	x: 0,
+	y: 0,
+	r: FALLTUER_RADIUS,
+	color: "#7c3aed",
+	role: "solid",
+	physicsEnabled: false,
+	drawingEnabled: false,
+	effects: [falltuerDeathCollision],
+};
+
+const falltuerPosition: EffectSettings = { type: EffectType.Position, typeValue: { x: 0, y: 0 } };
+const falltuerEnablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: true } }).toSettings();
+const falltuerEnableDrawing: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: true } }).toSettings();
+const falltuerDisablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings();
+const falltuerDisableDrawing: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings();
+
+/** Data-only trigger catalog entries used by the official Falltür item. */
+export const falltuerTriggerDefinitions: TriggerDefinition[] = [
+	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { type: EffectType.Multi, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
+	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { type: EffectType.Multi, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } },
+];
 
 export const powerDashItem: ItemDocument = createItem({
 	id: "power-dash",

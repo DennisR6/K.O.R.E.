@@ -5,6 +5,7 @@ import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { MultiEffect } from "../src/effects/effects.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
+import { FullStructure } from "../src/structures/fullStructure.ts";
 import type { RenderContext } from "../src/engine/RenderContext.ts";
 
 function rendererSpy(): RenderContext & { circles: number; rectangles: number } {
@@ -45,7 +46,7 @@ test("structure position mutation round-trips through geometry", () => {
 	expect(structure.toSettings()).toMatchObject({ type: SHAPE.CIRCLE, x: 40, y: 60 });
 });
 
-test("structure settings currently omit runtime physics state and identity", () => {
+test("mutated structure lifecycle state serializes with deterministic identity", () => {
 	const structure = new StructureCircle(10, 20, 5, "red", [{
 		trigger: EffectTrigger.Collision,
 		triggerValue: [],
@@ -53,17 +54,17 @@ test("structure settings currently omit runtime physics state and identity", () 
 	}]);
 	structure.setPhysicsEnabled(false);
 	const settings = structure.toSettings();
-	expect(settings).not.toHaveProperty("id");
-	expect(settings).not.toHaveProperty("physicsEnabled");
-	expect(settings).not.toHaveProperty("drawingEnabled");
+	expect(settings.id).toMatch(/^structure-[0-9a-f]{8}$/);
+	expect(settings.physicsEnabled).toBe(false);
+	expect(settings.drawingEnabled).toBe(true);
 	expect(settings.effects).toHaveLength(1);
 });
 
-test("EffectModifySetting is currently restricted to Player-style setting mutators", () => {
+test("EffectModifySetting can mutate the generic physics lifecycle setting", () => {
 	const effect = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } });
 	const structure = new StructureCircle(10, 20, 5, "red", []);
 	effect.apply(structure);
-	expect(structure.physicsEnabled()).toBe(true);
+	expect(structure.physicsEnabled()).toBe(false);
 });
 
 test("MultiEffect preserves declaration order at the core Effect boundary", () => {
@@ -78,4 +79,19 @@ test("MultiEffect preserves declaration order at the core Effect boundary", () =
 	target.setVel = velocity => { applied.push("velocity"); originalSetVel(velocity); };
 	multi.apply(target);
 	expect(applied).toEqual(["position", "velocity"]);
+});
+
+test("structures preserve all four independent physics/drawing states", () => {
+	const states = [
+		[true, true],
+		[true, false],
+		[false, true],
+		[false, false],
+	] as const;
+	for (const [physicsEnabled, drawingEnabled] of states) {
+		const structure = new FullStructure({ id: `state-${physicsEnabled}-${drawingEnabled}`, type: SHAPE.CIRCLE, x: 10, y: 10, r: 5, effects: [], physicsEnabled, drawingEnabled });
+		expect(structure.physicsEnabled()).toBe(physicsEnabled);
+		expect(structure.drawingEnabled()).toBe(drawingEnabled);
+		expect(structure.toSettings()).toMatchObject({ physicsEnabled, drawingEnabled });
+	}
 });

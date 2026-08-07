@@ -34,7 +34,7 @@ import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
-import type { ResolvedEffectTarget } from "../item/resolvedTarget.js";
+import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
@@ -735,7 +735,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== ItemEffectType.Magnet) throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
 			if (effect instanceof EffectSpawnTrigger) {
 				this.triggerDefinitions.require(effect.triggerId);
-				if (delayedTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+				if (effect.structureId !== undefined) {
+					if (!this.context.structures.some(structure => structure.getId() === effect.structureId)) throw new Error(`Unknown structure target '${effect.structureId}'`);
+					if (delayedTarget?.type !== "position") throw new Error("Structure spawnTrigger requires a position target");
+				} else if (delayedTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
 			}
 		}
 		const inventory = actor.getInventory()
@@ -760,9 +763,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
 			}
 			else if (effect instanceof EffectSpawnTrigger) {
-				if (!delayedTarget || delayedTarget.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+				if (!delayedTarget) throw new Error("spawnTrigger requires a resolved target");
 				const triggerSettings = effect.toSettings();
-				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+				const resolvedTarget = effect.structureId === undefined ? delayedTarget : createStructureResolvedTarget(effect.structureId);
+				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(delayedTarget.type === "position" ? { resolvedPosition: { ...delayedTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
 			}
 			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
@@ -809,6 +813,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			return;
 		}
 		if (!(nested instanceof EffectMagnet)) return;
+		if (target.type !== "position") return;
 		for (const entity of this.entityManager.getEntities()) {
 			if (entity.isDead()) continue;
 			entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
@@ -819,12 +824,19 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (scheduled.type !== ItemEffectType.SpawnTrigger) return;
 		const value = scheduled.typeValue;
 		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
-		if (!target || target.type !== "entity") return;
-		const entity = this.entityManager.getEntityById(target.entityId);
-		if (!entity || entity.isDead()) return;
 		const definition = this.triggerDefinitions.get(String(value.triggerId));
 		if (!definition) return;
 		const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+		if (target?.type === "structure") {
+			const structure = this.context.structures.find(candidate => candidate.getId() === target.structureId);
+			if (!structure) throw new Error(`Unknown structure target '${target.structureId}'`);
+			const position = value.resolvedPosition as { x: number; y: number } | undefined;
+			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(structure as unknown as IPhysics<SHAPE>, position) });
+			return;
+		}
+		if (!target || target.type !== "entity") return;
+		const entity = this.entityManager.getEntityById(target.entityId);
+		if (!entity || entity.isDead()) return;
 		dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
 	}
 

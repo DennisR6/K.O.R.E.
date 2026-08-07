@@ -1,9 +1,10 @@
-import { type Effect, type EffectSettings } from "../effects/types.js";
+import { type Effect, type EffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
 import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
+import { deriveStructureId } from "./identity.js";
 
 /**
  * Repräsentiert ein statisches Liniensegment (z.B. eine Bande oder Mauer).
@@ -27,6 +28,9 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	private color: string | undefined
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true;
+	private isDrawingEnabled: boolean = true;
+	private readonly id: string
+	private serializeState: boolean
 
 	// @ts-ignore
 	private effects: Effect[] = []
@@ -41,7 +45,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	 * @param y2 - End Y.
 		 * @param color - Farbe der Wand.
 		 */
-	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = []) {
+	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = [], id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean) {
 		// Zero-length lines have no valid segment direction and would corrupt
 		// the collision normal (Task 13.4). Reject them at construction so no
 		// arbitrary fallback direction is silently invented.
@@ -58,6 +62,10 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 		this.shape = SHAPE.LINE
 		this.vel = { x: 0, y: 0 }
 		this.bounce = Infinity
+		this.id = id ?? deriveStructureId({ type: SHAPE.LINE, x, y, x2, y2, color, effects: [] });
+		this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+		this.isPhysicsEnabled = physicsEnabled ?? true;
+		this.isDrawingEnabled = drawingEnabled ?? true;
 		this.effects = []
 		for (const effect of effects) {
 			switch (effect.type) {
@@ -67,7 +75,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	}
 
 	public draw(ctx: RenderContext) {
-		if (!this.color) return
+		if (!this.color || !this.isDrawingEnabled) return
 		ctx.setFillColor(this.color)
 		ctx.setStrokeColor(this.color)
 		ctx.line(this.position.x, this.position.y, this.w, this.h)
@@ -105,12 +113,20 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	/** @returns Immer "rectangle" für den Collision-Dispatcher. */
 	public getShape(): SHAPE.LINE { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
-	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
+	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled; this.serializeState = true }
+	public drawingEnabled(): boolean { return this.isDrawingEnabled }
+	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled; this.serializeState = true }
+	public getId(): string { return this.id }
+	public setSetting(key: SettingKey, value: SettingValue): void { if (typeof value !== "boolean") return; if (key === "physicsEnabled") this.setPhysicsEnabled(value); else if (key === "drawingEnabled") this.setDrawingEnabled(value); }
+	public addSetting(key: SettingKey, value: SettingValue): void { this.setSetting(key, value); }
+	public removeSetting(key: SettingKey, value: SettingValue): void { if (typeof value === "boolean") this.setSetting(key, !value); }
 	public setColor(color: string | undefined) { this.color = color }
 	/** Line segments are collision obstacles only and never containment. */
 	public getCollisionRole(): StructureCollisionRole | undefined { return undefined }
 	public toSettings(): MapBoundarySettingsLine {
-		return { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] }
+		const out: MapBoundarySettingsLine = { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+		if (this.serializeState) { out.id = this.id; out.physicsEnabled = this.isPhysicsEnabled; out.drawingEnabled = this.isDrawingEnabled; }
+		return out;
 	}
 	public getEffects(): EffectSettings[] { return [] }
 	public getType(): SHAPE.LINE { return this.shape }

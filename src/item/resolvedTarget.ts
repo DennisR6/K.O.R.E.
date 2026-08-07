@@ -2,6 +2,7 @@ export const RESOLVED_EFFECT_TARGET_SCHEMA_VERSION = 1 as const;
 
 export type ResolvedEffectTarget =
 	| { schemaVersion: 1; type: "entity"; entityId: string }
+	| { schemaVersion: 1; type: "structure"; structureId: string }
 	| { schemaVersion: 1; type: "position"; position: { x: number; y: number } };
 
 export function createEntityResolvedTarget(entityId: string): ResolvedEffectTarget {
@@ -12,6 +13,12 @@ export function createEntityResolvedTarget(entityId: string): ResolvedEffectTarg
 
 export function createPositionResolvedTarget(position: { x: number; y: number }): ResolvedEffectTarget {
 	const target: ResolvedEffectTarget = { schemaVersion: 1, type: "position", position: { ...position } };
+	validateResolvedEffectTarget(target);
+	return structuredClone(target);
+}
+
+export function createStructureResolvedTarget(structureId: string): ResolvedEffectTarget {
+	const target: ResolvedEffectTarget = { schemaVersion: 1, type: "structure", structureId };
 	validateResolvedEffectTarget(target);
 	return structuredClone(target);
 }
@@ -30,6 +37,11 @@ export function validateResolvedEffectTarget(value: unknown): asserts value is R
 		exactKeys(position, ["x", "y"], "Resolved position");
 		finite(position.x, "Resolved position x");
 		finite(position.y, "Resolved position y");
+		return;
+	}
+	if (target.type === "structure") {
+		exactKeys(target, ["schemaVersion", "type", "structureId"], "Resolved structure target");
+		string(target.structureId, "Resolved structure target structureId");
 		return;
 	}
 	throw new Error(`Unsupported resolved Effect target type '${String(target.type)}'`);

@@ -236,6 +236,11 @@ After every change, check whether this guide still reflects the implementation a
 - `src/structures/fullStructure.ts`: settings-to-runtime structure adapter.
 - `src/structures/structureCircle.ts`, `structureRectangle.ts`, and
   `structureLine.ts`: concrete geometry. Line support is incomplete.
+- Canonical structures carry stable IDs plus independent serialized
+  `physicsEnabled` and `drawingEnabled` participation flags. Dormant structures
+  remain in the canonical collection and can be positioned and reactivated by
+  generic structure-targeted Effects; no runtime structure-spawn system is
+  used for Falltür.
 - `src/structures/DeadlyObstacleCircle.ts` and `DebuggerStructure.ts`: special
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator

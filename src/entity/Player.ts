@@ -3,7 +3,7 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
-import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type PlayerSettingKey, type SettingValue } from "../effects/types.js";
+import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { orderInstalledEffects } from "../effects/ordering.js";
@@ -166,7 +166,7 @@ export class Player implements IEntity {
 	public use(item: ItemDocument): void { consumeInventoryItem(this.items, item) }
 
 	/** Applies an allowlisted setting exactly, including serializable state changes. */
-	public setSetting(key: PlayerSettingKey, value: SettingValue): void {
+	public setSetting(key: SettingKey, value: SettingValue): void {
 		switch (key) {
 			case "hp": if (typeof value === "number") this.setHPAndDeath(value); break
 			case "mass": if (typeof value === "number") this.setMass(value); break
@@ -177,11 +177,12 @@ export class Player implements IEntity {
 			case "team": if (Array.isArray(value) && value.every(Number.isFinite)) this.setTeam([...value]); break
 			case "dead": if (typeof value === "boolean") this.setIsDead(value); break
 			case "physicsEnabled": if (typeof value === "boolean") this.setPhysicsEnabled(value); break
+			case "drawingEnabled": break
 		}
 	}
 
 	/** Adds a numeric/vector setting or appends team IDs. */
-	public addSetting(key: PlayerSettingKey, value: SettingValue): void {
+	public addSetting(key: SettingKey, value: SettingValue): void {
 		if (typeof value === "number") {
 			switch (key) {
 				case "hp": this.setHPAndDeath(this.hp + value); return
@@ -198,7 +199,7 @@ export class Player implements IEntity {
 	}
 
 	/** Removes numeric/vector values, team IDs, or clears boolean settings. */
-	public removeSetting(key: PlayerSettingKey, value: SettingValue): void {
+	public removeSetting(key: SettingKey, value: SettingValue): void {
 		if (typeof value === "number") {
 			switch (key) {
 				case "hp": this.setHPAndDeath(this.hp - value); return

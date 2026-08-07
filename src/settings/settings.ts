@@ -72,9 +72,14 @@ export interface SettingsBackgroundColor {
 
 export type MapBoundarySettings = MapBoundarySettingsCircle | MapBoundarySettingsLine | MapBoundarySettingsRect
 export interface IMapBoundarySettings extends IEffectable {
+	/** Stable content identity; legacy maps may be normalized at the load boundary. */
+	id?: string;
 	type: SHAPE
 	x: number;
 	y: number;
+	/** Independent simulation and presentation participation flags. */
+	physicsEnabled?: boolean;
+	drawingEnabled?: boolean;
 	/**
 	 * Explicit structure role. `undefined` keeps the legacy heuristic: a
 	 * structure that encloses every other non-line structure is treated as a
@@ -133,6 +138,8 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.players) || !settings.players.every(player => isRecord(player) && isVector(player.position) && isVector(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect))) throw new Error("Invalid player settings")
 	if (!isBackground(settings.background)) throw new Error("Invalid background settings")
 	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
+	const structureIds = settings.mapBoundarys.flatMap(boundary => boundary.id === undefined ? [] : [boundary.id]);
+	if (new Set(structureIds).size !== structureIds.length) throw new Error("Structure IDs must be unique");
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
 	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
@@ -171,6 +178,9 @@ function isEffect(value: unknown): value is FullEffectSettings {
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
+	if (value.id !== undefined && (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))) return false
+	if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean") return false
+	if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean") return false
 	if (value.role !== undefined && !isStructureCollisionRole(value.role)) return false
 	if (value.type === SHAPE.CIRCLE) return Number.isFinite(value.r) && value.r > 0
 	if (value.type === SHAPE.RECTANGLE) return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0

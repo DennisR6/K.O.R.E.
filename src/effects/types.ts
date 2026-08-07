@@ -93,9 +93,11 @@ export interface LockRotationPayload {
 export interface SpawnTriggerPayload {
 	triggerId: string;
 	delayTurns: number;
+	structureId?: string;
 	remainingTurns?: number;
 	fired?: boolean;
 	resolvedTarget?: ResolvedEffectTarget;
+	resolvedPosition?: Vector2D;
 }
 
 export interface DelayedEffectPayload {
@@ -176,10 +178,12 @@ export const enum SettingOperation {
 }
 
 export type PlayerSettingKey = "hp" | "mass" | "size" | "friction" | "position" | "velocity" | "team" | "dead" | "physicsEnabled";
+export type StructureSettingKey = "physicsEnabled" | "drawingEnabled";
+export type SettingKey = PlayerSettingKey | StructureSettingKey;
 export type SettingValue = number | boolean | number[] | { x: number, y: number } | undefined;
 export interface ModifySettingValue {
 	operation: SettingOperation;
-	key: PlayerSettingKey;
+	key: SettingKey;
 	value: SettingValue;
 }
 export interface Effect extends ISettingsSerialize<EffectSettings> {

@@ -4,6 +4,7 @@ import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
+import { deriveStructureId } from "../structures/identity.js";
 
 
 
@@ -235,7 +236,7 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 		worldSize: { ...map.worldSize },
 		friction: { ...map.friction },
 		drift: map.drift,
-		mapBoundarys: [
+		mapBoundarys: assignStableStructureIds([
 			...map.arenaGeometry.map(boundary => ({
 				...boundary,
 				// Uncolored solid geometry must stay render-visible in the
@@ -246,7 +247,7 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 			})),
 			...map.hazards.map(hazardToBoundary),
 			...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary),
-		],
+		]),
 		environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined,
 	}
 }
@@ -282,8 +283,13 @@ export function convertEditorMapDocument(editorMap: unknown, template: GameSetti
 	return {
 		...settings,
 		screenResolution: { ...worldSize },
-		mapBoundarys: [...settings.mapBoundarys, ...editorMap.effects.map(editorHazardToBoundary)],
+		mapBoundarys: assignStableStructureIds([...settings.mapBoundarys, ...editorMap.effects.map(editorHazardToBoundary)]),
 	}
+}
+
+/** Adds deterministic IDs to legacy map geometry without using runtime indexes. */
+function assignStableStructureIds(boundaries: MapBoundarySettings[]): MapBoundarySettings[] {
+	return boundaries.map(boundary => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
 }
 
 const EDITOR_SPAWN_PADDING = 20;

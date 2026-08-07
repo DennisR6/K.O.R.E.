@@ -37,7 +37,7 @@ test("converts editor rectangles, circles, team spawn bounds, and collision haza
 	expect(settings.worldSize).toEqual({ x: 800, y: 450 });
 	expect(settings.friction).toEqual(editorMap.friction);
 	expect(settings.drift).toBe(0.25);
-	expect(settings.mapBoundarys.slice(0, 2)).toEqual([
+	expect(settings.mapBoundarys.slice(0, 2)).toMatchObject([
 		{ type: SHAPE.RECTANGLE, x: 10, y: 20, w: 100, h: 20, color: "#4da3ff", effects: [] },
 		{ type: SHAPE.CIRCLE, x: 300, y: 200, r: 30, color: "#ff4444", effects: [] },
 	]);

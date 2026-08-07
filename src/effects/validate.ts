@@ -14,7 +14,8 @@ import { validateResolvedEffectTarget } from "../item/resolvedTarget.js";
 const CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
 const FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
 const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
-const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "dead", "physicsEnabled"]);
+	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "dead", "physicsEnabled"]);
+	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
 const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.Freeze, ItemEffectType.SwapPosition, ItemEffectType.TemporaryWall, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance] as const;
 
@@ -78,9 +79,11 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 		case ItemEffectType.SelectionLock: validateTurns(payload, String(effect.type)); return;
 		case ItemEffectType.ApplyTorque: exactKeys(payload, ["torque"], "applyTorque payload"); finite(payload.torque, "applyTorque torque"); return;
 		case ItemEffectType.SpawnTrigger:
-			knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired", "resolvedTarget"]), "spawnTrigger payload"); requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
+			knownKeys(payload, new Set(["triggerId", "delayTurns", "structureId", "remainingTurns", "fired", "resolvedTarget", "resolvedPosition"]), "spawnTrigger payload"); requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
 			string(payload.triggerId, "spawnTrigger triggerId"); boundedDelayTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+			if (payload.structureId !== undefined) string(payload.structureId, "spawnTrigger structureId");
 			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
+			if (payload.resolvedPosition !== undefined) { const position = record(payload.resolvedPosition, "spawnTrigger resolvedPosition"); exactKeys(position, ["x", "y"], "spawnTrigger resolvedPosition"); finite(position.x, "spawnTrigger resolvedPosition x"); finite(position.y, "spawnTrigger resolvedPosition y"); }
 			optionalBoolean(payload.fired, "spawnTrigger fired"); return;
 		case ItemEffectType.DelayedEffect:
 			knownKeys(payload, new Set(["effectType", "effectValue", "nestedEffect", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["delayTicks"], "delayedEffect payload");
@@ -119,7 +122,7 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 function validateModifySetting(payload: Record<string, unknown>): void {
 	exactKeys(payload, ["operation", "key", "value"], "ModifySetting payload");
 	if (payload.operation !== SettingOperation.Set && payload.operation !== SettingOperation.Add && payload.operation !== SettingOperation.Remove) throw new Error("ModifySetting operation is invalid");
-	if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key as PlayerSettingKey)) throw new Error("ModifySetting key is not allowlisted");
+	if (typeof payload.key !== "string" || (!PLAYER_SETTING_KEYS.has(payload.key as PlayerSettingKey) && !STRUCTURE_SETTING_KEYS.has(payload.key))) throw new Error("ModifySetting key is not allowlisted");
 	validateSettingValue(payload.key as PlayerSettingKey, payload.value);
 }
 
@@ -127,6 +130,7 @@ function validateSettingValue(key: PlayerSettingKey, value: unknown): void {
 	if (value === undefined) return;
 	if (["hp", "mass", "size", "friction"].includes(key)) { finite(value, `ModifySetting ${key}`); return; }
 	if (["position", "velocity"].includes(key)) { const vector = record(value, `ModifySetting ${key}`); exactKeys(vector, ["x", "y"], `ModifySetting ${key}`); finite(vector.x, `${key} x`); finite(vector.y, `${key} y`); return; }
+	if (["physicsEnabled", "drawingEnabled"].includes(key)) { if (typeof value !== "boolean") throw new Error(`ModifySetting ${key} requires a boolean`); return; }
 	if (key === "team") { if (!Array.isArray(value) || !value.every(team => Number.isSafeInteger(team) && team >= 0)) throw new Error("ModifySetting team requires non-negative integer teams"); return; }
 	if (typeof value !== "boolean") throw new Error(`ModifySetting ${key} requires a boolean`);
 }
