@@ -6,7 +6,7 @@ class EffectModifySetting {
   apply(entity, override) {
     if (!isSettingMutable(entity))
       return;
-    const settings = override ?? this.settings;
+    const settings = isModifySettingValue(override) ? override : this.settings;
     switch (settings.operation) {
       case "set":
         entity.setSetting(settings.key, settings.value);
@@ -28,6 +28,9 @@ class EffectModifySetting {
       typeValue: { ...this.settings }
     };
   }
+}
+function isModifySettingValue(value) {
+  return typeof value === "object" && value !== null && "operation" in value && "key" in value && "value" in value;
 }
 function isSettingMutable(entity) {
   return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
@@ -733,6 +736,11 @@ function createPositionResolvedTarget(position) {
   validateResolvedEffectTarget(target);
   return structuredClone(target);
 }
+function createStructureResolvedTarget(structureId) {
+  const target = { schemaVersion: 1, type: "structure", structureId };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
 function validateResolvedEffectTarget(value) {
   const target = record(value, "Resolved Effect target");
   if (target.schemaVersion !== 1)
@@ -748,6 +756,11 @@ function validateResolvedEffectTarget(value) {
     exactKeys(position, ["x", "y"], "Resolved position");
     finite(position.x, "Resolved position x");
     finite(position.y, "Resolved position y");
+    return;
+  }
+  if (target.type === "structure") {
+    exactKeys(target, ["schemaVersion", "type", "structureId"], "Resolved structure target");
+    string(target.structureId, "Resolved structure target structureId");
     return;
   }
   throw new Error(`Unsupported resolved Effect target type '${String(target.type)}'`);
@@ -779,6 +792,7 @@ var CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
 var FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
 var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "dead", "physicsEnabled"]);
+var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
 var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
 function validateEffectSettings(value) {
@@ -870,12 +884,20 @@ function validateRuntimeItemEffectSettings(value) {
       finite2(payload.torque, "applyTorque torque");
       return;
     case "spawnTrigger" /* SpawnTrigger */:
-      knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired", "resolvedTarget"]), "spawnTrigger payload");
+      knownKeys(payload, new Set(["triggerId", "delayTurns", "structureId", "remainingTurns", "fired", "resolvedTarget", "resolvedPosition"]), "spawnTrigger payload");
       requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
       string2(payload.triggerId, "spawnTrigger triggerId");
       boundedDelayTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+      if (payload.structureId !== undefined)
+        string2(payload.structureId, "spawnTrigger structureId");
       if (payload.resolvedTarget !== undefined)
         validateResolvedEffectTarget(payload.resolvedTarget);
+      if (payload.resolvedPosition !== undefined) {
+        const position = record2(payload.resolvedPosition, "spawnTrigger resolvedPosition");
+        exactKeys2(position, ["x", "y"], "spawnTrigger resolvedPosition");
+        finite2(position.x, "spawnTrigger resolvedPosition x");
+        finite2(position.y, "spawnTrigger resolvedPosition y");
+      }
       optionalBoolean(payload.fired, "spawnTrigger fired");
       return;
     case "delayedEffect" /* DelayedEffect */:
@@ -955,7 +977,7 @@ function validateModifySetting(payload) {
   exactKeys2(payload, ["operation", "key", "value"], "ModifySetting payload");
   if (payload.operation !== "set" /* Set */ && payload.operation !== "add" /* Add */ && payload.operation !== "remove" /* Remove */)
     throw new Error("ModifySetting operation is invalid");
-  if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key))
+  if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key) && !STRUCTURE_SETTING_KEYS.has(payload.key))
     throw new Error("ModifySetting key is not allowlisted");
   validateSettingValue(payload.key, payload.value);
 }
@@ -971,6 +993,11 @@ function validateSettingValue(key, value) {
     exactKeys2(vector, ["x", "y"], `ModifySetting ${key}`);
     finite2(vector.x, `${key} x`);
     finite2(vector.y, `${key} y`);
+    return;
+  }
+  if (["physicsEnabled", "drawingEnabled"].includes(key)) {
+    if (typeof value !== "boolean")
+      throw new Error(`ModifySetting ${key} requires a boolean`);
     return;
   }
   if (key === "team") {
@@ -2943,11 +2970,13 @@ class EffectShield {
 class EffectSpawnTrigger {
   triggerId;
   delayTurns;
+  structureId;
   resolvedTarget;
+  resolvedPosition;
   remainingTurns;
   fired;
   constructor(settings) {
-    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false, resolvedTarget } = settings.typeValue;
+    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false, resolvedTarget, structureId, resolvedPosition } = settings.typeValue;
     if (typeof triggerId !== "string" || triggerId.length === 0)
       throw new Error("spawnTrigger requires a non-empty triggerId");
     if (!Number.isSafeInteger(delayTurns) || delayTurns < 0)
@@ -2960,9 +2989,15 @@ class EffectSpawnTrigger {
       throw new Error("A fired spawnTrigger must have zero remaining turns");
     this.triggerId = triggerId;
     this.delayTurns = delayTurns;
+    if (structureId !== undefined && (typeof structureId !== "string" || structureId.length === 0))
+      throw new Error("spawnTrigger structureId must be a non-empty string");
+    this.structureId = structureId;
     this.remainingTurns = remainingTurns;
     this.fired = fired;
     this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
+    if (resolvedPosition !== undefined && (!Number.isFinite(resolvedPosition.x) || !Number.isFinite(resolvedPosition.y)))
+      throw new Error("spawnTrigger resolvedPosition must be finite");
+    this.resolvedPosition = resolvedPosition === undefined ? undefined : { ...resolvedPosition };
   }
   advanceTurn() {
     if (this.fired)
@@ -2986,7 +3021,9 @@ class EffectSpawnTrigger {
       typeValue: {
         triggerId: this.triggerId,
         delayTurns: this.delayTurns,
+        ...this.structureId === undefined ? {} : { structureId: this.structureId },
         ...this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) },
+        ...this.resolvedPosition === undefined ? {} : { resolvedPosition: { ...this.resolvedPosition } },
         remainingTurns: this.remainingTurns,
         fired: this.fired
       }
@@ -3103,7 +3140,7 @@ function createRuntimeItemEffect(settings) {
     case "shield" /* Shield */:
       return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
     case "spawnTrigger" /* SpawnTrigger */:
-      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
+      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
     case "delayedEffect" /* DelayedEffect */: {
       const nested = value.effectValue ?? value.effect;
       return new EffectDelayed({ typeValue: { ...value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested } : { nestedEffect: value.nestedEffect }, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
@@ -3623,6 +3660,8 @@ class Player {
       case "physicsEnabled":
         if (typeof value === "boolean")
           this.setPhysicsEnabled(value);
+        break;
+      case "drawingEnabled":
         break;
     }
   }
@@ -5563,19 +5602,19 @@ var IceMap = {
   background: { type: "image", url: 2 /* slipStirkeMapIceJPG */ },
   drift: 0,
   mapBoundarys: [
-    { type: 2 /* RECTANGLE */, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] }
+    { id: "ice.wall.left", type: 2 /* RECTANGLE */, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-left", type: 2 /* RECTANGLE */, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-right", type: 2 /* RECTANGLE */, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-left", type: 2 /* RECTANGLE */, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-right", type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.right", type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.center", type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.hazard.top-left", type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+    { id: "ice.hazard.top-right", type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+    { id: "ice.hazard.bottom-right", type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+    { id: "ice.hazard.bottom-left", type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+    { id: "ice.hazard.center-top", type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
+    { id: "ice.hazard.center-bottom", type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] }
   ]
 };
 var iceMap_default = { createPlayerStartPoints, IceMap };
@@ -5657,6 +5696,9 @@ function validateGameSettings(settings) {
     throw new Error("Invalid background settings");
   if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary2))
     throw new Error("Invalid map boundary settings");
+  const structureIds = settings.mapBoundarys.flatMap((boundary) => boundary.id === undefined ? [] : [boundary.id]);
+  if (new Set(structureIds).size !== structureIds.length)
+    throw new Error("Structure IDs must be unique");
   if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect))
     throw new Error("Invalid effect settings");
   if (!Array.isArray(settings.items))
@@ -5721,6 +5763,12 @@ function isEffect(value) {
 }
 function isBoundary2(value) {
   if (!isRecord6(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
+    return false;
+  if (value.id !== undefined && (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id)))
+    return false;
+  if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
+    return false;
+  if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean")
     return false;
   if (value.role !== undefined && !isStructureCollisionRole(value.role))
     return false;
@@ -5810,6 +5858,16 @@ function arrangeInGrid(players, rect, padding = 0) {
   });
 }
 
+function deriveStructureId(settings) {
+  if (settings.id !== undefined)
+    return settings.id;
+  const canonical = JSON.stringify(settings);
+  let hash = 2166136261;
+  for (let index = 0;index < canonical.length; index++)
+    hash = Math.imul(hash ^ canonical.charCodeAt(index), 16777619) >>> 0;
+  return `structure-${hash.toString(16).padStart(8, "0")}`;
+}
+
 class StructureCircle {
   position;
   r;
@@ -5819,12 +5877,15 @@ class StructureCircle {
   bounce;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   friction;
   collisionEffects = [];
   alwaysEffects = [];
   roundEffects = [];
   collisionRole;
-  constructor(x2, y2, r, color, effects, role) {
+  constructor(x2, y2, r, color, effects, role, id, physicsEnabled, drawingEnabled) {
     this.position = { x: x2, y: y2 };
     this.r = r;
     this.shape = 0 /* CIRCLE */;
@@ -5832,6 +5893,10 @@ class StructureCircle {
     this.bounce = Infinity;
     this.vel = { x: 0, y: 0 };
     this.collisionRole = role;
+    this.id = id ?? deriveStructureId({ type: 0 /* CIRCLE */, x: x2, y: y2, r, color, effects, role });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
@@ -5851,7 +5916,7 @@ class StructureCircle {
     this.toSettings();
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.push();
     ctx.setFillColor(this.color);
@@ -5909,6 +5974,32 @@ class StructureCircle {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
   }
   setColor(color) {
     this.color = color;
@@ -5934,6 +6025,11 @@ class StructureCircle {
     };
     if (this.collisionRole !== undefined)
       out.role = this.collisionRole;
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
     return out;
   }
   getType() {
@@ -5956,9 +6052,12 @@ class StructureLine {
   color;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   effects = [];
   friction;
-  constructor(x2, y2, x22, y22, color, effects = []) {
+  constructor(x2, y2, x22, y22, color, effects = [], id, physicsEnabled, drawingEnabled) {
     if (!Number.isFinite(x2) || !Number.isFinite(y2) || !Number.isFinite(x22) || !Number.isFinite(y22)) {
       throw new Error("Line structures must have finite coordinates");
     }
@@ -5972,6 +6071,10 @@ class StructureLine {
     this.shape = 1 /* LINE */;
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
+    this.id = id ?? deriveStructureId({ type: 1 /* LINE */, x: x2, y: y2, x2: x22, y2: y22, color, effects: [] });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
     this.effects = [];
     for (const effect of effects) {
       switch (effect.type) {
@@ -5981,7 +6084,7 @@ class StructureLine {
     }
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.setFillColor(this.color);
     ctx.setStrokeColor(this.color);
@@ -6030,6 +6133,32 @@ class StructureLine {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
   }
   setColor(color) {
     this.color = color;
@@ -6038,7 +6167,13 @@ class StructureLine {
     return;
   }
   toSettings() {
-    return { type: 1 /* LINE */, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+    const out = { type: 1 /* LINE */, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
+    return out;
   }
   getEffects() {
     return [];
@@ -6070,9 +6205,12 @@ class StructureRectangle {
   color;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   collisionRole;
   friction;
-  constructor(x2, y2, w, h, color, effects = [], role) {
+  constructor(x2, y2, w, h, color, effects = [], role, id, physicsEnabled, drawingEnabled) {
     this.x = x2;
     this.y = y2;
     this.w = w;
@@ -6082,6 +6220,10 @@ class StructureRectangle {
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
     this.collisionRole = role;
+    this.id = id ?? deriveStructureId({ type: 2 /* RECTANGLE */, x: x2, y: y2, w, h, color, effects, role });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
@@ -6100,7 +6242,7 @@ class StructureRectangle {
     }
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.push();
     ctx.setFillColor(this.color);
@@ -6154,6 +6296,32 @@ class StructureRectangle {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
   }
   setColor(color) {
     this.color = color;
@@ -6180,6 +6348,11 @@ class StructureRectangle {
     };
     if (this.collisionRole !== undefined)
       out.role = this.collisionRole;
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
     return out;
   }
   getType() {
@@ -6197,13 +6370,13 @@ class FullStructure {
   constructor(str) {
     switch (str.type) {
       case 0 /* CIRCLE */:
-        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role);
+        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled);
         break;
       case 2 /* RECTANGLE */:
-        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role);
+        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled);
         break;
       case 1 /* LINE */:
-        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects);
+        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled);
         break;
     }
   }
@@ -6215,6 +6388,24 @@ class FullStructure {
   }
   draw(ctx) {
     this.str.draw(ctx);
+  }
+  getId() {
+    return this.str.getId();
+  }
+  drawingEnabled() {
+    return this.str.drawingEnabled();
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.str.setDrawingEnabled(drawingEnabled);
+  }
+  setSetting(key, value) {
+    this.str.setSetting(key, value);
+  }
+  addSetting(key, value) {
+    this.str.addSetting(key, value);
+  }
+  removeSetting(key, value) {
+    this.str.removeSetting(key, value);
   }
   getFriction() {
     return this.str.getFriction();
@@ -6762,6 +6953,10 @@ var GHOST_MODE_DURATION_TURNS = 2;
 var MAGNET_RANGE = 200;
 var MAGNET_FORCE = 2;
 var FALLTUER_RADIUS = 25;
+var FALLTUER_DURATION_TURNS = 2;
+var FALLTUER_STRUCTURE_ID = "falltuer-slot-0";
+var FALLTUER_ACTIVATE_TRIGGER_ID = "falltuer.activate";
+var FALLTUER_DEACTIVATE_TRIGGER_ID = "falltuer.deactivate";
 var POWER_DASH_FACTOR = 1.5;
 var DELAYED_MINE_DELAY_TICKS = 3;
 var DELAYED_MINE_RADIUS = 60;
@@ -6812,14 +7007,43 @@ var magnetItem = createItem({
 var falltuerItem = createItem({
   id: "falltuer",
   name: "Falltür",
-  description: "Spawns a kill zone at a selected position.",
+  description: "Activates a kill zone at a selected position.",
   type: "trap",
-  effects: [{ type: "spawnTrigger", value: { triggerId: "falltuer-kill-zone", delayTurns: 0, radius: FALLTUER_RADIUS } }],
+  effects: [
+    { type: "spawnTrigger", value: { triggerId: FALLTUER_ACTIVATE_TRIGGER_ID, delayTurns: 0, structureId: FALLTUER_STRUCTURE_ID } },
+    { type: "spawnTrigger", value: { triggerId: FALLTUER_DEACTIVATE_TRIGGER_ID, delayTurns: FALLTUER_DURATION_TURNS, structureId: FALLTUER_STRUCTURE_ID } }
+  ],
   targetType: "position",
-  duration: { type: "turns", value: 1 },
+  duration: { type: "turns", value: FALLTUER_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 1 },
   targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 }
 });
+var falltuerDeathCollision = {
+  trigger: "EffectTrigger.Collision" /* Collision */,
+  triggerValue: [],
+  ...new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "dead", value: true } }).toSettings()
+};
+var falltuerStructure = {
+  id: FALLTUER_STRUCTURE_ID,
+  type: 0 /* CIRCLE */,
+  x: 0,
+  y: 0,
+  r: FALLTUER_RADIUS,
+  color: "#7c3aed",
+  role: "solid",
+  physicsEnabled: false,
+  drawingEnabled: false,
+  effects: [falltuerDeathCollision]
+};
+var falltuerPosition = { type: "EffectType.Position" /* Position */, typeValue: { x: 0, y: 0 } };
+var falltuerEnablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: true } }).toSettings();
+var falltuerEnableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: true } }).toSettings();
+var falltuerDisablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings();
+var falltuerDisableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings();
+var falltuerTriggerDefinitions = [
+  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { type: "EffectType.Multi" /* Multi */, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
+  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { type: "EffectType.Multi" /* Multi */, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } }
+];
 var powerDashItem = createItem({
   id: "power-dash",
   name: "Power-Dash",
@@ -7155,6 +7379,8 @@ class AuthoritativeGameplayRenderer {
       this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
   }
   drawStructure(renderer, structure) {
+    if (structure.drawingEnabled === false)
+      return;
     const role = structure.role;
     const color = structure.color ?? "#64748b";
     if (role !== "containment") {
@@ -8746,7 +8972,12 @@ class GameHandler {
         throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
       if (effect instanceof EffectSpawnTrigger) {
         this.triggerDefinitions.require(effect.triggerId);
-        if (delayedTarget?.type !== "entity")
+        if (effect.structureId !== undefined) {
+          if (!this.context.structures.some((structure) => structure.getId() === effect.structureId))
+            throw new Error(`Unknown structure target '${effect.structureId}'`);
+          if (delayedTarget?.type !== "position")
+            throw new Error("Structure spawnTrigger requires a position target");
+        } else if (delayedTarget?.type !== "entity")
           throw new Error("spawnTrigger requires an entity or self target");
       }
     }
@@ -8771,10 +9002,11 @@ class GameHandler {
         const delayedSettings = effect.toSettings();
         actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
       } else if (effect instanceof EffectSpawnTrigger) {
-        if (!delayedTarget || delayedTarget.type !== "entity")
-          throw new Error("spawnTrigger requires an entity or self target");
+        if (!delayedTarget)
+          throw new Error("spawnTrigger requires a resolved target");
         const triggerSettings = effect.toSettings();
-        actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+        const resolvedTarget = effect.structureId === undefined ? delayedTarget : createStructureResolvedTarget(effect.structureId);
+        actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...delayedTarget.type === "position" ? { resolvedPosition: { ...delayedTarget.position } } : {} } }, { itemId: item.id, order: itemOrder(item) });
       } else if (effect instanceof EffectMagnet && targetEntity)
         targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()));
       else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
@@ -8829,6 +9061,8 @@ class GameHandler {
     }
     if (!(nested instanceof EffectMagnet))
       return;
+    if (target.type !== "position")
+      return;
     for (const entity of this.entityManager.getEntities()) {
       if (entity.isDead())
         continue;
@@ -8840,15 +9074,23 @@ class GameHandler {
       return;
     const value = scheduled.typeValue;
     const target = value.resolvedTarget;
+    const definition = this.triggerDefinitions.get(String(value.triggerId));
+    if (!definition)
+      return;
+    const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+    if (target?.type === "structure") {
+      const structure = this.context.structures.find((candidate) => candidate.getId() === target.structureId);
+      if (!structure)
+        throw new Error(`Unknown structure target '${target.structureId}'`);
+      const position = value.resolvedPosition;
+      dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(structure, position) });
+      return;
+    }
     if (!target || target.type !== "entity")
       return;
     const entity = this.entityManager.getEntityById(target.entityId);
     if (!entity || entity.isDead())
       return;
-    const definition = this.triggerDefinitions.get(String(value.triggerId));
-    if (!definition)
-      return;
-    const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
     dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
   }
   mysteryBoxRewardOptions(actorId) {
@@ -9166,7 +9408,7 @@ function loadMapDocument(map, template) {
     worldSize: { ...map.worldSize },
     friction: { ...map.friction },
     drift: map.drift,
-    mapBoundarys: [
+    mapBoundarys: assignStableStructureIds([
       ...map.arenaGeometry.map((boundary) => ({
         ...boundary,
         color: boundary.color ?? (boundary.role === "containment" ? undefined : DEFAULT_MAP_STRUCTURE_COLOR),
@@ -9174,11 +9416,14 @@ function loadMapDocument(map, template) {
       })),
       ...map.hazards.map(hazardToBoundary),
       ...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary)
-    ],
+    ]),
     environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined
   };
 }
 var DEFAULT_MAP_STRUCTURE_COLOR = "#315b7d";
+function assignStableStructureIds(boundaries) {
+  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+}
 function isMapHazard(value) {
   if (!isRecord9(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord9(value.trigger) || value.trigger.type !== "collision" || !isRecord9(value.config))
     return false;

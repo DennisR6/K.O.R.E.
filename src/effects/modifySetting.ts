@@ -15,7 +15,7 @@ export class EffectModifySetting implements Effect {
 
 	public apply(entity: IPhysics<SHAPE>, override?: ModifySettingValue): void {
 		if (!isSettingMutable(entity)) return
-		const settings = isModifySettingValue(override) ? override : this.settings
+		const settings = override === undefined ? this.settings : (isModifySettingValue(override) ? override : this.settings)
 		switch (settings.operation) {
 			case "set": entity.setSetting(settings.key, settings.value); break
 			case "add": entity.addSetting(settings.key, settings.value); break
