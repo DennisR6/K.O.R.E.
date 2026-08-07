@@ -39,7 +39,7 @@ test("generic system registry resolves deterministic capabilities, optional syst
 
 test("KORE SDK composes generic framework metadata through the canonical entry point", () => {
 	expect(kore.engine.createWorld({ id: "extension", worldSize: { x: 1, y: 1 } }).build().id).toBe("extension");
-	expect(kore.createDefaultFramework().systemOrder).toEqual(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+	expect(kore.createDefaultFramework().systemOrder).toEqual(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 	const handler = kore.createHandler(createDefaultGameSettings(2, 1));
 	expect(handler.getSystems().map(system => (system as { systemId?: string }).systemId)).toEqual(kore.createDefaultFramework().systemOrder);
 });

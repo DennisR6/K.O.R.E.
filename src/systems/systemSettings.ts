@@ -8,6 +8,7 @@ import { GameStateManager } from "./GameStateManager.js";
 import { MatchStateIndicator } from "./MatchStateIndicator.js";
 import { PlaybackSystem } from "./PlayBackSystem.js";
 import { PhysicsSystem } from "./PhysicsSystem.js";
+import { MovementSystem } from "./MovementSystem.js";
 import { RoundPlayerSystem } from "./RoundSystem.js";
 import { Simulator } from "./Simulator.js";
 import { WinningSystem } from "./WinningSystem.js";
@@ -43,7 +44,8 @@ export function validateSystemSettingsList(settings: unknown, order: unknown): a
 export function createSystemFromSettings(settings: SystemSettings, restored: ReadonlyMap<string, ISerializableSystem> = new Map()): ISerializableSystem {
 	validateSystemSettings(settings)
 	const state = settings.state as Record<string, unknown>
-	switch (settings.systemId) {
+		switch (settings.systemId) {
+		case "core.movement": if (Object.keys(state).length) throw new Error("Malformed movement settings"); return new MovementSystem()
 		case "core.playback": {
 			const system = new PlaybackSystem()
 			if (!Number.isSafeInteger(state.remainingFrames) || typeof state.syncPending !== "boolean" || typeof state.completionPending !== "boolean" || !(state.finalState === null || Array.isArray(state.finalState))) throw new Error("Malformed playback settings")

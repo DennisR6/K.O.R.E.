@@ -427,22 +427,32 @@ Movement is the preferred pilot because it is deterministic, runs every tick,
 has a clear current interpreter, and has clear inputs/outputs. Physics and
 collision should not be migrated in the same change.
 
-- [ ] Add characterization tests for current movement behavior, stacked Effects,
-  ordering, snapshots, replay where relevant, no-Effect behavior, and edge
-  values. This is a test-only atomic commit.
-- [ ] Declare the appropriate movement capabilities and connect Movement
-  Effects to the capability contract without changing runtime interpretation.
-- [ ] Introduce or adapt a trusted internal MovementSystem that interprets the
-  typed movement state/Effects and applies controlled deterministic mutations.
-- [ ] Remove the old duplicate movement interpreter from Player only after the
-  new path is fully tested and there is one authoritative interpreter.
-- [ ] Run movement, Effect, snapshot, replay, local-match, relevant browser,
-  and TypeScript regression checks before continuing.
+- [x] Add characterization tests for current movement behavior, stacked Effects,
+   ordering, snapshots, replay where relevant, no-Effect behavior, and edge
+   values. This is a test-only atomic commit.
+- [x] Declare the appropriate movement capabilities and connect Movement
+   Effects to the capability contract without changing runtime interpretation.
+- [x] Introduce or adapt a trusted internal MovementSystem that interprets the
+   typed movement state/Effects and applies controlled deterministic mutations.
+- [x] Remove the old duplicate movement interpreter from Player only after the
+   new path is fully tested and there is one authoritative interpreter.
+- [x] Run movement, Effect, snapshot, replay, local-match, relevant browser,
+   and TypeScript regression checks before continuing.
+
+#### Phase 5 Completion Evidence
+
+`core.movement` is a trusted serializable system with a pre-entity tick hook so
+Movement Effects retain their historical ordering before Player friction. The
+generic Engine SDK publishes the `movement.integrate` Effect contract and its
+`movement.state` capability; runtime interpretation remains internal. Movement
+characterization, capability, snapshot/replay, local-match, fast-suite, browser
+smoke, build, SDK bundle, and TypeScript verification pass. Collision and
+friction remain outside the migrated MovementSystem.
 
 ### Phase 6: Trigger Architecture
 
-- [ ] Inventory current Always, Round, Collision, delayed, environmental,
-  item-runtime, rule, Player, Structure, Physics, and Handler trigger behavior.
+- [x] Inventory current Always, Round, Collision, delayed, environmental,
+   item-runtime, rule, Player, Structure, Physics, and Handler trigger behavior.
 - [ ] Define only the typed, versioned Trigger contracts supported cleanly by
   current runtime behavior; do not add speculative trigger categories.
 - [ ] Separate Trigger activation from the Effect it activates while retaining
@@ -450,6 +460,28 @@ collision should not be migrated in the same change.
 - [ ] Define deterministic ordering for simultaneous triggers, same-tick versus
   next-tick Effects, nested triggers, snapshots, and recursion limits.
 - [ ] Reject or bound recursive Trigger/Effect chains deterministically.
+
+#### Phase 6.1 Trigger Inventory
+
+| Trigger source | Current activation boundary | Ordering / timing | Snapshot state | Current limitation |
+|---|---|---|---|---|
+| Handler `Always` | `GameHandler.tick()` applies handler-level Always Effects before system pre-ticks and entity ticks. | Handler declaration order, once per tick. | Effect definitions serialize in handler settings. | No independent trigger event or recursion budget. |
+| Player `Always` | `MovementSystem.preTick()` handles Movement; `Player.tick()` handles Physics. | Movement pre-entity, then entity-local Physics, preserving legacy order. | Player Effect lists serialize by trigger. | Other Always Effect types remain outside a centralized trigger dispatcher. |
+| Player `Collision` | `Player.onCollision()` applies the Player collision list when PhysicsSystem reports a collision entry. | Physics solver contact lifecycle controls entry callbacks; list declaration order is retained. | Player Effect list serializes; contact lifecycle serializes in PhysicsSystem. | Trigger payload is currently always `[]`; activation is coupled to runtime collision callbacks. |
+| Structure `Collision` | Circle/rectangle `onCollision()` applies collision Effects; lines have no collision interpreter. | Physics solver contact-entry lifecycle and structure iteration order. | Structure Effects serialize with geometry. | Handler-level collision Effects are stored but not dispatched. |
+| `Round` | Player, Structure, and Handler Round lists are loaded and serialized but have no complete runtime dispatcher. | No authoritative execution order exists. | Definitions serialize; no activation cursor exists. | This is the primary Phase 6 migration gap. |
+| Item scheduled effects | `spawnTrigger` and `delayedEffect` are advanced through item runtime state at turn/tick boundaries where the owning item path invokes them. | Installed item `order`, then declaration order for ties; remaining counters are state. | Remaining turns/ticks and fired state serialize in `itemEffects`. | These are item-runtime schedules, not shared core Trigger contracts. |
+| Map pickups | `MapPickupSystem.ticker()` checks active-team occupancy after gameplay systems. | Pickup index order; collection and occupant state update in one tick. | `itemPickupState` serializes. | Pickup entry is a domain-specific trigger, not a core Effect trigger. |
+| Environmental zones | `EnvironmentalSystem.ticker()` increments deterministic tick state and evaluates triggered zones before structure enablement. | Mechanic declaration order; activation/cooldown counters are explicit. | Lifecycle arrays serialize through system settings. | Zone activation currently changes structures, not a general Effect queue. |
+| Rule/item phases | `RuleInterpreter` and `GameHandler` advance phase/turn state; item uses reset and persistent item Effects advance when turn changes. | Data-defined phase order and active-team progression. | `ruleState`, turn, and item counters serialize. | Rule transitions are not represented as generic Trigger activations. |
+| Physics contacts | `PhysicsSystem` resolves collision/depenetration and tracks active contact keys. | Bounded solver iterations and entry-only collision callbacks. | Active contact pairs serialize at completed tick boundaries. | Collision callbacks can directly mutate entities; no queued same-tick/next-tick Effect model exists. |
+
+The inventory establishes that only Always and collision-entry paths have a
+complete core runtime interpretation today. Phase 6 must separate activation
+from Effect execution without changing those deterministic boundaries, define
+explicit Round and scheduled-event semantics only where current behavior can
+support them, and reject recursive chains rather than introducing unrestricted
+callbacks.
 
 ### Phase 7: Declarative Commands
 

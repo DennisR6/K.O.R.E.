@@ -550,11 +550,12 @@ function stableAuthoringHash(value: unknown): string {
 /** KORE's deterministic default runtime profile expressed through the generic framework selector. */
 export function createDefaultKoreFramework(): EngineFrameworkSettings {
 	const registry = new EngineSystemRegistry()
+		.register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] })
 		.register({ id: "core.playback", provides: ["playback"] })
 		.register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] })
 		.register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] })
 		.register({ id: "core.game-state-manager", after: ["core.boundary"] });
-	return registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+	return registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 
 /**

@@ -4,6 +4,7 @@ import { Player } from "../src/entity/Player.ts";
 import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { SettingOperation, EffectTrigger, EffectType } from "../src/effects/types.ts";
+import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 
 test("current entity state is canonical and is serialized separately from a setting request", () => {
 	const player = new Player(createPlayerSettings({ hp: 10 }));
@@ -21,7 +22,7 @@ test("persistent behavior retains its Effect definition while current position r
 	const movement = new EffectMove({ typeValue: { deltaTime: 1, x: 2, y: 0 } });
 	const player = new Player(createPlayerSettings({ effects: [{ ...movement.toSettings(), trigger: EffectTrigger.Always, triggerValue: [] }] }));
 
-	player.tick(1, 1);
+	new GameHandlerBuilder().defaultSystems().addPlayer(player).build().tick(1);
 	const settings = player.toSettings();
 
 	expect(settings.position).toEqual({ x: 2, y: 0 });

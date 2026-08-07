@@ -224,9 +224,11 @@ After every change, check whether this guide still reflects the implementation a
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator
   contracts.
+- `src/systems/MovementSystem.ts`: trusted pre-entity movement-effect
+  interpreter using typed movement state.
 - `src/systems/PhysicsSystem.ts`: entity/entity and entity/structure collision
-  iteration; movement and friction are currently entity effects, not this
-  system.
+  iteration; friction remains an entity effect and position integration for
+  collisions remains in this system's CCD solver.
 - `src/systems/UiSystem.ts`: converts mouse drag into actor, angle, and power;
   only permits selection by the active team.
 - `src/systems/Emitter.ts`: sends completed input through an `IInputEmitter`.
@@ -608,15 +610,16 @@ engine state, turn number, and active team when given `EngineSettings`.
 
 1. Pre-tickers.
 2. Handler-level always effects on every entity.
-3. Every entity's `tick()`.
-4. Systems in registration order.
-5. Structure ticks.
-6. Post-tickers.
+3. Registered systems' optional pre-entity ticks.
+4. Every entity's `tick()`.
+5. Systems in registration order.
+6. Structure ticks.
+7. Post-tickers.
 
-`Player.tick()` delegates movement to `EffectMove` and friction to
-`EffectPhysics`. `PhysicsSystem` resolves collisions and zeros very low
-speeds; despite its comments, it does not integrate positions or apply
-friction itself.
+`MovementSystem` delegates Always-triggered movement to `EffectMove` through
+the typed movement-state boundary. `Player.tick()` retains the entity-local
+friction `EffectPhysics` path. `PhysicsSystem` resolves collisions and zeros
+very low speeds; despite its comments, it does not apply friction itself.
 
 ### Input, simulation, and playback
 

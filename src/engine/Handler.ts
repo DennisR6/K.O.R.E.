@@ -21,6 +21,7 @@ import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
+import { MovementSystem } from "../systems/MovementSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
@@ -153,6 +154,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			currTurn: 0,
 			activeTeam: 0,
 			myTeamNumber: 0,
+			drift: DEFAULT_DRIFT,
 			finishMatch: (result) => this.finishMatch(result),
 		}
 		this.entityManager = em;
@@ -295,6 +297,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
 		for (const e of this.entityManager.getEntities()) { this.effectAlways.forEach(eff => { eff.apply(e) }) }
 		const drift = this.settings?.drift ?? DEFAULT_DRIFT
+		this.context.drift = drift
+		this.systems.forEach(s => s.preTick?.(this.context, dt, this.physicsStrategy.getFriction()))
 		for (const e of this.entityManager.getEntities()) { e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold()) }
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
 		this.mapPickupSystem.ticker(this.context, dt, this.physicsStrategy.getFriction())
@@ -844,6 +848,7 @@ export class GameHandlerBuilder {
 
 		this
 			.addPhysics(physics)
+			.addSystem(new MovementSystem())
 			.addSystem(new PlaybackSystem())
 			.addSystem(physicsSystem)
 			.addSystem(new BoundarySystem())

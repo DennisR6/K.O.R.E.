@@ -108,10 +108,9 @@ export class Player implements IEntity {
 		 * Integriert die Geschwindigkeit in die Position basierend auf der vergangenen Zeit.
 		 * @param deltaTime - Zeit seit dem letzten Physik-Schritt.
 		 */
-	public tick(deltaTime: number, _globalFriction: number, drift: number = 0, stopThreshold: number = 0) {
+	public tick(_deltaTime: number, _globalFriction: number, _drift: number = 0, _stopThreshold: number = 0) {
 		if (this.dead || !this.isPhysicsEnabled) return
 		this.effectAlways.forEach(effect => {
-			if (effect.getType() == EffectType.Movement) effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime, drift, rotation: this.rotation, stopThreshold })
 			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
 		})
 	}
@@ -252,6 +251,7 @@ export class Player implements IEntity {
 	public getInventory(): InventoryItem[] { return this.items.map(item => ({ ...item })) }
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
+	public getAlwaysEffects(): Effect[] { return [...this.effectAlways] }
 	public addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void {
 		this.itemEffects.push({ ...effect, ...(source ?? {}), typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings)
 		this.itemEffects = orderInstalledEffects(this.itemEffects)

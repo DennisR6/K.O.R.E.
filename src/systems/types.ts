@@ -40,6 +40,7 @@ export interface IGameContext {
 	currTurn: number
 	activeTeam: number
 	myTeamNumber: number
+	drift?: number
 	/**
 	 * Atomically completes the match with the given result.
 	 *
@@ -58,6 +59,9 @@ export interface IGameContext {
  * damit der GameLoop sie einheitlich aufrufen kann.
  */
 export interface ISystem {
+	/** Optional deterministic phase before entity-local ticks. */
+	preTick?(ctx: IGameContext, dt: number, friction: number): void;
+
 	/**
 	 * Wird in jedem Frame aufgerufen, um die Logik zu berechnen.
 	 * @param ctx - Der aktuelle Spielkontext (Datenquelle).

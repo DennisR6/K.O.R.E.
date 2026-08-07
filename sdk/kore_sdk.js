@@ -3167,12 +3167,10 @@ class Player {
     ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
     ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
   }
-  tick(deltaTime, _globalFriction, drift = 0, stopThreshold = 0) {
+  tick(_deltaTime, _globalFriction, _drift = 0, _stopThreshold = 0) {
     if (this.dead || !this.isPhysicsEnabled)
       return;
     this.effectAlways.forEach((effect) => {
-      if (effect.getType() == "EffectType.Movement" /* Movement */)
-        effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime, drift, rotation: this.rotation, stopThreshold });
       if (effect.getType() == "EffectType.Physics" /* Physics */)
         effect.apply(this, 12);
     });
@@ -3441,6 +3439,9 @@ class Player {
   }
   getEffects() {
     return [...this.effectAlways, ...this.effectCollision];
+  }
+  getAlwaysEffects() {
+    return [...this.effectAlways];
   }
   addItemEffect(effect, source) {
     this.itemEffects.push({ ...effect, ...source ?? {}, typeValue: structuredClone(effect.typeValue) });
@@ -4540,6 +4541,28 @@ class PhysicsSystem {
   }
 }
 
+class MovementSystem {
+  systemId = "core.movement";
+  preTick(ctx, dt) {
+    for (const entity of ctx.entities.getEntities()) {
+      if (entity.isDead() || !entity.physicsEnabled())
+        continue;
+      const settings = entity.toSettings();
+      let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
+      for (const effect of entity.getAlwaysEffects()) {
+        if (effect.getType() !== "EffectType.Movement" /* Movement */)
+          continue;
+        effect.apply(entity, { x: movement.velocity.x, y: movement.velocity.y, deltaTime: dt, rotation: settings.rotation, drift: ctx.drift ?? 0, stopThreshold: ctx.physics.getStopThreshold() });
+        movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
+      }
+    }
+  }
+  ticker(_ctx, _dt, _friction) {}
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+}
+
 var currentTurnMode = {
   id: "current-turn",
   phases: ["physics" /* Physics */],
@@ -5098,6 +5121,10 @@ function createSystemFromSettings(settings, restored = new Map) {
   validateSystemSettings(settings);
   const state = settings.state;
   switch (settings.systemId) {
+    case "core.movement":
+      if (Object.keys(state).length)
+        throw new Error("Malformed movement settings");
+      return new MovementSystem;
     case "core.playback": {
       const system = new PlaybackSystem;
       if (!Number.isSafeInteger(state.remainingFrames) || typeof state.syncPending !== "boolean" || typeof state.completionPending !== "boolean" || !(state.finalState === null || Array.isArray(state.finalState)))
@@ -7742,6 +7769,7 @@ class GameHandler {
       currTurn: 0,
       activeTeam: 0,
       myTeamNumber: 0,
+      drift: DEFAULT_DRIFT,
       finishMatch: (result) => this.finishMatch(result)
     };
     this.entityManager = em;
@@ -7849,6 +7877,8 @@ class GameHandler {
       });
     }
     const drift = this.settings?.drift ?? DEFAULT_DRIFT;
+    this.context.drift = drift;
+    this.systems.forEach((s) => s.preTick?.(this.context, dt, this.physicsStrategy.getFriction()));
     for (const e of this.entityManager.getEntities()) {
       e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold());
     }
@@ -8456,7 +8486,7 @@ class GameHandlerBuilder {
     const physics = new defaultPhysics(friction2);
     const physicsSystem = new PhysicsSystem(physics);
     this.engine.attachFeedbackToPhysics(physicsSystem);
-    this.addPhysics(physics).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
+    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
     return this;
   }
   fromSettings(gameSettings) {
@@ -8755,8 +8785,8 @@ function validateGameMode(mode) {
 function createMatchSystemProfile(teamCount) {
   if (!Number.isSafeInteger(teamCount) || teamCount < 1)
     throw new Error("A match system profile requires at least one team");
-  const registry = new EngineSystemRegistry().register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
-  const framework = registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"]);
+  const registry = new EngineSystemRegistry().register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
+  const framework = registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"]);
   assertJsonValue(framework.systems);
   return framework;
 }
@@ -9514,8 +9544,8 @@ function stableAuthoringHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function createDefaultKoreFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
-  return registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+  const registry = new EngineSystemRegistry().register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
+  return registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 var kore = {
   engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
