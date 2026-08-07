@@ -51,11 +51,13 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 		ctx.push();
 		const backgroundDrawn = this.callbacks.drawBackground?.(ctx) ?? false;
 		if (!backgroundDrawn) ctx.drawImage(AssetList.slipstrikeTitelbildschirmPNG);
-		// Keep the background/preview visible while giving the menu a consistent
-		// dark translucent backdrop for its gray controls and text.
-		ctx.noStroke();
-		ctx.setFillColor("#000000", 0.45);
-		ctx.drawRect(0, 0, 800, 450);
+		// Keep the landing artwork bright; the dark translucent backdrop is only
+		// needed once the actual menu controls are visible.
+		if (this.runtime.getActiveScreen() !== KoreMenuScreen.Landing) {
+			ctx.noStroke();
+			ctx.setFillColor("#000000", 0.45);
+			ctx.drawRect(0, 0, 800, 450);
+		}
 
 		// Nutzt den modernisierten Theme-Renderer für das Canvas-Viewport
 		this.runtime.draw(new KoreMenuRenderer(ctx));
