@@ -11,6 +11,7 @@ import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
+import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 
 /**
  * Section 13.3 - zero-distance circle/circle contacts.
@@ -394,9 +395,10 @@ describe("Zero-distance circle/circle regression integration (13.3)", () => {
 	test("a player exactly at the center of a collision circle no longer bypasses collision handling", () => {
 		const player = new Player(createPlayerSettings({ position: { x: 0, y: 0 } }));
 		const killCircle = new DeadlyObstacleCirle(0, 0, 10, undefined, []);
+		const handler = new GameHandlerBuilder().defaultSystems().addPlayer(player).addStructure(killCircle).build();
 		const killPosBefore = killCircle.getPos();
 
-		physics.handleCollision(player as never, killCircle as never);
+		handler.getPhysics().handleCollision(player as never, killCircle as never);
 
 		// The kill contact fires: hp drops below zero.
 		expect(player.getHP()).toBeLessThan(0);
@@ -410,17 +412,11 @@ describe("Zero-distance circle/circle regression integration (13.3)", () => {
 		expect(player.getPos().y).toBe(0);
 	});
 
-	test("the exact-center kill fixture dies through the handler physics tick", () => {
+		test("the exact-center kill fixture dies through the handler physics tick", () => {
 		const player = new Player(createPlayerSettings({ position: { x: 100, y: 100 } }));
 		const killCircle = new DeadlyObstacleCirle(100, 100, 10, undefined, []);
-
-		const strategy = new defaultPhysics();
-		const system = new PhysicsSystem(strategy);
-		const ctx = {
-			entities: { getEntities: () => [player] },
-			structures: [killCircle],
-		} as never;
-		system.ticker(ctx, 1, 0);
+		const handler = new GameHandlerBuilder().defaultSystems().addPlayer(player).addStructure(killCircle).build();
+		handler.tick();
 
 		expect(player.getHP()).toBeLessThan(0);
 		expect(Math.hypot(player.getPos().x - 100, player.getPos().y - 100)).toBeGreaterThan(0);

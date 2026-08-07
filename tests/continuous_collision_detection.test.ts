@@ -9,6 +9,10 @@ import { StructureLine } from "../src/structures/structureLine.js";
 import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.js";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
 import type { IGameContext } from "../src/systems/types.js";
+import { NumericSystem } from "../src/systems/NumericSystem.js";
+import { MovementSystem } from "../src/systems/MovementSystem.js";
+import { ParticipationSystem } from "../src/systems/ParticipationSystem.js";
+import { dispatchPredefinedEffect } from "../src/systems/predefinedEffectDispatcher.js";
 
 /**
  * Task 13.6: Continuous Collision Detection (CCD) Verification
@@ -17,7 +21,7 @@ import type { IGameContext } from "../src/systems/types.js";
  */
 
 function createGameContext(entities: EntityManager, structures: any[] = []): IGameContext {
-	return {
+	const ctx = {
 		entities,
 		structures,
 		state: {} as any,
@@ -30,7 +34,10 @@ function createGameContext(entities: EntityManager, structures: any[] = []): IGa
 		currTurn: 0,
 		activeTeamNumber: 0,
 		myTeamNumber: 0,
-	};
+	} as IGameContext;
+	const systems = [new NumericSystem(), new MovementSystem(), new ParticipationSystem()];
+	for (const entity of entities.getEntities()) entity.setNumericEffectDispatcher(effect => dispatchPredefinedEffect({ ctx, systems, effect }));
+	return ctx;
 }
 
 function advanceMovement(player: Player, dt: number) {
