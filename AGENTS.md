@@ -252,6 +252,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/systems/CounterSystem.ts`: trusted deterministic interpreter for generic
   numeric counter mutations; it mutates canonical context state but owns no
   persistent counter values or feature-specific meaning.
+- `src/systems/predefinedEffectDispatcher.ts`: trusted predefined-System host;
+  resolves stable counter/entity targets and routes each current Engine Effect
+  to exactly one installed interpreter. It does not load executable content.
 - `src/systems/PhysicsSystem.ts`: entity/entity and entity/structure collision
   iteration; friction remains an entity effect and position integration for
   collisions remains in this system's CCD solver.

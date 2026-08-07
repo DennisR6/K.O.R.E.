@@ -549,7 +549,7 @@ typed payload, schema version, target schema, capability, deterministic
 semantics, ordering semantics, serialization behavior, and tests.
 
 - [x] Transform commands: generic absolute set-position and set-rotation contracts are registered through the Engine SDK; teleport remains the set-position semantic rather than a separate speculative primitive. Runtime interpretation remains deferred until a generic runtime host exists.
-- [x] Movement commands: generic set-velocity, add-velocity, and non-negative speed-scaling contracts are registered through the Engine SDK; impulse remains deferred because it requires an explicit mass/impulse semantic. Runtime interpretation remains deferred until a generic runtime host exists.
+- [x] Movement commands: generic set-velocity, add-velocity, and non-negative speed-scaling contracts are registered through the Engine SDK and interpreted through the predefined runtime host; impulse remains deferred because it requires an explicit mass/impulse semantic.
 - [ ] Lifecycle commands such as spawn, destroy, enable, disable, and reset,
   only after lifecycle state has a stable canonical contract.
 - [x] Generic counter state and commands are Engine concepts; numeric counter
@@ -589,26 +589,25 @@ runtime implementation, snapshot round trip, replay/network regression, and
 only the authoring-safe SDK exports. Each capability is an atomic change or
 small coherent sequence of commits.
 
-Phase 8 is **partially qualified** through `CounterSystem`, but the generic
-predefined-System runtime path is not yet complete. Counter proves a real
-engine-neutral interpreter: typed current-schema commands are capability
-registered, validated, applied deterministically to world-owned canonical
-state, restored through the system snapshot factory, and replayed from a
-canonical origin. Its evidence is `tests/engine_counter_state.test.ts`,
-`tests/engine_counter_capability.test.ts`,
-`tests/counter_system_composition.test.ts`, `tests/counter_runtime.test.ts`,
-and `tests/counter_replay.test.ts`.
+Phase 8 is **qualified through two real consumers**: `CounterSystem` and the
+generic command family interpreted by `MovementSystem`. The trusted
+`dispatchPredefinedEffect()` host resolves one stable target, selects exactly
+one installed interpreter, rejects missing or ambiguous interpreters, and
+routes both families without consumer-specific Handler semantics. Runtime
+Systems use the same canonical command-ID sets as their capability metadata;
+Counter mutates world-owned `CounterState`, while Movement uses Runtime Object
+`setVel()` APIs. Existing `EffectType.Movement` pre-tick integration remains a
+separate legacy gameplay concern rather than being rewritten for command host
+qualification.
 
-The remaining missing Phase 8 criterion is a generic predefined-System host and
-dispatcher. `EngineSystemRegistry` still selects and validates metadata only;
-it does not instantiate runtime systems or dispatch Engine Effects by
-capability. `GameHandler.applyCounterEffect()` locates `CounterSystem` through
-an explicit runtime adapter, and `ReplayPlayer` has an explicit counter-action
-branch. Those paths are deterministic and not score-specific, but they are not
-yet the generic Handler/runtime orchestration path required by Phase 8. Do not
-add more generic Systems until that host boundary has a concrete consumer and
-contract. Arbitrary custom executable Systems remain a separate future trusted
-extension concern.
+Qualification evidence includes `tests/predefined_effect_dispatcher.test.ts`,
+`tests/predefined_system_metadata.test.ts`, the Counter state/capability/
+composition/runtime/replay tests, `tests/movement_capability.test.ts`,
+`tests/movement_characterization.test.ts`, and the existing Effect/Trigger
+contract suites. `EngineSystemRegistry` remains the data-only framework
+selector; arbitrary executable Systems and user callbacks are not supported.
+The current network protocol has no generic Effect transport, so network
+dispatch remains explicitly unsupported rather than silently emulated.
 
 ### Phase 9: Pong External Qualification
 
