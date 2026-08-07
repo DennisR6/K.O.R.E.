@@ -281,7 +281,10 @@ After every change, check whether this guide still reflects the implementation a
   sizes independent of render dimensions. Magma Cradle uses loaded force and
   kill-zone collision hazards.
 - `src/ui/Background.ts` and `CustomDrawableBackground.ts`: backgrounds.
-- `src/scenes/matchPipeline.ts`: the single offline-match pipeline.
+- `src/scenes/matchPipeline.ts`: the single offline-match pipeline. It accepts
+  validated content packages for local and AI test launches, converting the
+  package's first map through `loadMapDocument()` and carrying its items and
+  mode into the canonical match settings.
   `createMatchHandler` builds the canonical match for every mode (`hotseat`,
   `human-vs-ai`, `ai-battle`), installs the `WinningSystem` and the `GameEmitter`
   recorder (hotseat seeds `12345` for legacy reproducibility; AI modes draw a
