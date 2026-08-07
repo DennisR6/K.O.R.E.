@@ -589,12 +589,26 @@ runtime implementation, snapshot round trip, replay/network regression, and
 only the authoring-safe SDK exports. Each capability is an atomic change or
 small coherent sequence of commits.
 
-Phase 8 generic system implementation is currently deferred. The Engine SDK is
-metadata-only and has no generic runtime host or entity-component execution
-boundary. Existing Movement, Input, Physics, Boundary, and Trigger
-interpreters are authoritative KORE runtime systems; adding parallel generic
-interpreters for the Phase 7 contracts would duplicate behavior without a
-consumer, runtime state contract, or migration target.
+Phase 8 is **partially qualified** through `CounterSystem`, but the generic
+predefined-System runtime path is not yet complete. Counter proves a real
+engine-neutral interpreter: typed current-schema commands are capability
+registered, validated, applied deterministically to world-owned canonical
+state, restored through the system snapshot factory, and replayed from a
+canonical origin. Its evidence is `tests/engine_counter_state.test.ts`,
+`tests/engine_counter_capability.test.ts`,
+`tests/counter_system_composition.test.ts`, `tests/counter_runtime.test.ts`,
+and `tests/counter_replay.test.ts`.
+
+The remaining missing Phase 8 criterion is a generic predefined-System host and
+dispatcher. `EngineSystemRegistry` still selects and validates metadata only;
+it does not instantiate runtime systems or dispatch Engine Effects by
+capability. `GameHandler.applyCounterEffect()` locates `CounterSystem` through
+an explicit runtime adapter, and `ReplayPlayer` has an explicit counter-action
+branch. Those paths are deterministic and not score-specific, but they are not
+yet the generic Handler/runtime orchestration path required by Phase 8. Do not
+add more generic Systems until that host boundary has a concrete consumer and
+contract. Arbitrary custom executable Systems remain a separate future trusted
+extension concern.
 
 ### Phase 9: Pong External Qualification
 

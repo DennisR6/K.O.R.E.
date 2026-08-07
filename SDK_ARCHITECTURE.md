@@ -101,6 +101,11 @@ state-manager profile through that selector. The current KORE runtime factory
 continues to use `GameHandlerBuilder.defaultSystems()` so existing behavior and
 serialized system contracts remain unchanged.
 
+`CounterSystem` is the current reference interpreter for a generic numeric
+state family, but its runtime application is still an explicit KORE Handler
+adapter. It qualifies typed state/effect/system semantics without claiming that
+the Engine SDK already provides a generic runtime host.
+
 Another game can register its own system definitions and build a framework
 without importing KORE. A future generic runtime host may consume the same
 framework snapshot to instantiate actual systems through a game-provided
