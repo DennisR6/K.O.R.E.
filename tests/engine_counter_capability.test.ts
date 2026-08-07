@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineEffectRegistry, EngineSystemRegistry, COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, registerCounterCommands, validateCounterEffectSettings } from "../src/engine/sdk/index.ts";
+import { EngineEffectRegistry, EngineSystemRegistry, COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, registerCounterCommands, validateCounterEffectSettings, validateCounterTriggerBinding } from "../src/engine/sdk/index.ts";
 
 const target = { type: "counter" as const, counterId: "coins" };
 
@@ -16,6 +16,14 @@ test("counter commands register with generic capability metadata", () => {
 	}
 	expect(() => new EngineSystemRegistry().register({ id: "core.counter", provides: [COUNTER_CAPABILITY], acceptsEffects: [COUNTER_ADD_EFFECT_ID] }).select(["core.counter"])).not.toThrow();
 	 expect(framework.systemOrder).toEqual(["core.counter"]);
+});
+
+test("counter trigger bindings use existing trigger vocabulary", () => {
+	validateCounterTriggerBinding({
+		trigger: "round.start",
+		effect: { schemaVersion: 1, type: COUNTER_ADD_EFFECT_ID, target, typeValue: { amount: 1 } },
+	});
+	expect(() => validateCounterTriggerBinding({ trigger: "unknown", effect: { schemaVersion: 1, type: COUNTER_ADD_EFFECT_ID, target, typeValue: { amount: 1 } } })).toThrow();
 });
 
 test("counter commands reject invalid targets and payloads", () => {

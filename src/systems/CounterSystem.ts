@@ -1,5 +1,6 @@
 import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
-import { validateCounterEffectSettings, type CounterEffectSettings } from "../engine/sdk/counterCapability.js";
+import { counterTriggerMatches, validateCounterEffectSettings, type CounterEffectSettings, type CounterTriggerBinding } from "../engine/sdk/counterCapability.js";
+import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /** Trusted interpreter for declarative numeric counter mutations. */
@@ -17,10 +18,23 @@ export class CounterSystem implements ISerializableSystem<SystemSettings> {
 		validateCounterEffectSettings(effect);
 		const counter = ctx.counters.find(candidate => candidate.id === effect.target.counterId);
 		if (!counter) throw new Error(`Unknown counter target '${effect.target.counterId}'`);
-		if (effect.type === "counter.set") counter.value = effect.typeValue.value;
-		else if (effect.type === "counter.add") counter.value += effect.typeValue.amount;
-		else counter.value = 0;
-		if (!Number.isFinite(counter.value)) throw new Error("Counter mutation produced a non-finite value");
+		const nextValue = effect.type === "counter.set"
+			? effect.typeValue.value
+			: effect.type === "counter.add"
+				? counter.value + effect.typeValue.amount
+				: 0;
+		if (!Number.isFinite(nextValue)) throw new Error("Counter mutation produced a non-finite value");
+		counter.value = nextValue;
+	}
+
+	/** Applies an ordered declarative family, equivalent to a generic MultiEffect. */
+	public applyEffects(ctx: IGameContext, effects: readonly CounterEffectSettings[]): void {
+		effects.forEach(effect => this.apply(ctx, effect));
+	}
+
+	/** Applies only bindings whose declarative trigger matches the validated event. */
+	public applyTriggered(ctx: IGameContext, bindings: readonly CounterTriggerBinding[], event: EngineTriggerEvent): void {
+		bindings.forEach(binding => { if (counterTriggerMatches(binding, event)) this.apply(ctx, binding.effect); });
 	}
 
 	/** Returns detached canonical state for a stable counter identity. */

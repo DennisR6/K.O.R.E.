@@ -1,6 +1,8 @@
 import type { JsonValue } from "../contracts/systemSettings.js";
 import { COUNTER_SCHEMA_VERSION, type CounterState } from "../contracts/counterState.js";
 import type { EngineEffectRegistry, EngineEffectSettings } from "./effectRegistry.js";
+import type { EngineTriggerEvent, EngineTriggerType } from "./trigger.js";
+import { validateTriggerEvent } from "./trigger.js";
 
 export const COUNTER_CAPABILITY = "counter.state" as const;
 export const COUNTER_SET_EFFECT_ID = "counter.set" as const;
@@ -15,6 +17,11 @@ export interface CounterTarget {
 export interface CounterSetPayload { value: number }
 export interface CounterAddPayload { amount: number }
 export type CounterResetPayload = Record<string, never>;
+
+export interface CounterTriggerBinding {
+	trigger: EngineTriggerType;
+	effect: CounterEffectSettings;
+}
 
 export type CounterEffectSettings =
 	| { schemaVersion: typeof COUNTER_SCHEMA_VERSION; type: typeof COUNTER_SET_EFFECT_ID; target: CounterTarget; typeValue: CounterSetPayload }
@@ -43,6 +50,18 @@ export function validateCounterEffectSettings(value: unknown): asserts value is 
 
 export function validateCounterTarget(target: unknown): asserts target is CounterTarget {
 	validateCounterTargetValue(target as JsonValue);
+}
+
+export function validateCounterTriggerBinding(value: unknown): asserts value is CounterTriggerBinding {
+	const binding = record(value, "Counter trigger binding");
+	if (typeof binding.trigger !== "string" || !["tick", "collision.enter", "round.start", "environment.activation", "schedule.due"].includes(binding.trigger)) throw new Error("Counter trigger binding has an unknown trigger");
+	validateCounterEffectSettings(binding.effect);
+}
+
+export function counterTriggerMatches(binding: CounterTriggerBinding, event: EngineTriggerEvent): boolean {
+	validateCounterTriggerBinding(binding);
+	validateTriggerEvent(event);
+	return binding.trigger === event.type;
 }
 
 function validateCounterTargetValue(target: JsonValue): void {
