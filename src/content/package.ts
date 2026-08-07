@@ -1,8 +1,9 @@
 import { validateAnimationSettings, validatePresentationEvent, type AnimationSettings, type PresentationEvent } from "../engine/presentation-sdk/index.js";
-import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
+import { loadMapDocument, validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { ItemValidator } from "../item/validate.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
+import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 
 export const CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 export const CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
@@ -80,6 +81,18 @@ export function loadContentPackage(value: unknown): LoadedContentPackage {
 	validateContentPackage(value);
 	const detached = normalize(value) as ContentPackage;
 	return { package: structuredClone(detached), hash: hashCanonicalJson(canonicalize(detached)) };
+}
+
+/**
+ * Resolves a validated map document into engine settings by overlaying its
+ * world size, physics, geometry, spawn regions, hazards, and environmental
+ * mechanics on a canonical template roster. The template is never mutated;
+ * the returned settings are fully detached.
+ */
+export function resolveMapDocument(map: MapDocument, template: GameSettings): GameSettings {
+	validateMapDocument(map);
+	validateGameSettings(template);
+	return loadMapDocument(map, structuredClone(template));
 }
 
 /** Canonical JSON uses sorted object keys and ID-sorted package collections. */
