@@ -14,6 +14,7 @@ import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
+import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
 
 
 /**
@@ -51,6 +52,7 @@ export class Player implements IEntity {
 	private isDrawingEnabled: boolean = true
 	private items: InventoryItem[] = []
 	private itemEffects: ItemEffectSettings[] = []
+	private numericThresholds: NumericThresholdBinding[] = []
 
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
@@ -90,6 +92,8 @@ export class Player implements IEntity {
 		this.items = settings.inventory.map(item => ({ ...item }))
 		for (const effect of settings.itemEffects ?? []) validateRuntimeItemEffectSettings(effect)
 		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
+		validateNumericThresholdBindings(settings.numericThresholds ?? [])
+		this.numericThresholds = structuredClone(settings.numericThresholds ?? [])
 		this.effectAlways = []
 		this.effectCollision = []
 		this.effectRound = []
@@ -145,6 +149,21 @@ export class Player implements IEntity {
 		if (this.hp <= 0) this.setIsDead(true);
 	}
 	public getHP(): number { return this.hp }
+	public getNumericValue(stateId: string): number {
+		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
+		return this.hp
+	}
+	public setNumericValue(stateId: string, value: number): void {
+		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
+		if (!Number.isFinite(value)) throw new Error("Numeric state value must be finite")
+		this.hp = value
+	}
+	public getNumericResetValue(stateId: string): number | undefined {
+		return this.numericThresholds.find(binding => binding.id === stateId)?.resetValue
+	}
+	public getNumericThresholds(stateId: string): NumericThresholdBinding[] {
+		return this.numericThresholds.filter(binding => binding.id === stateId).map(binding => structuredClone(binding))
+	}
 	public setColor(color: string): void { this.color = color }
 	public getColor(): string { return this.color }
 	public setPlayerIcon(icon: AssetList): void { this.playericon = icon; }
@@ -247,6 +266,7 @@ export class Player implements IEntity {
 			],
 			inventory: this.items.map(item => ({ ...item })),
 			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
+			...(this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}),
 		}
 	}
 	public setTeam(team: number[]) { this.team = team }

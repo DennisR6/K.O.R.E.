@@ -8,13 +8,21 @@ export function dispatchPredefinedEffect(options: {
 	systems: readonly ISystem[];
 	effect: unknown;
 	positionOverride?: { x: number; y: number };
+	depth?: number;
 }): void {
+	if ((options.depth ?? 0) > 32) throw new Error("Predefined effect follow-up depth exceeded");
 	const effect = validateEnvelope(options.effect);
 	const interpreters = options.systems.filter(isPredefinedEffectSystem).filter(system => system.acceptsEffect(effect.type));
 	if (interpreters.length === 0) throw new Error(`No predefined system accepts effect '${effect.type}'`);
 	if (interpreters.length > 1) throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
 	const target = resolveTarget(options.ctx, effect.target, options.positionOverride);
-	interpreters[0]!.applyEffect(options.ctx, effect, target);
+	const followUps = interpreters[0]!.applyEffect(options.ctx, effect, target);
+	for (const followUp of followUps ?? []) {
+		const bound = followUp.target === undefined
+			? { ...followUp, target: targetReference(target) }
+			: followUp;
+		dispatchPredefinedEffect({ ...options, effect: bound, depth: (options.depth ?? 0) + 1 });
+	}
 }
 
 /** Dispatches an ordered current command composition through the same host. */
@@ -43,6 +51,13 @@ function resolveTarget(ctx: IGameContext, value: unknown, positionOverride?: { x
 		if (!entity) throw new Error(`Unknown entity target '${target.entityId}'`);
 		return { type: "entity", entity };
 	}
+	if (target.type === "numeric") {
+		if (typeof target.entityId !== "string" || target.entityId.length === 0) throw new Error("Numeric target requires a non-empty entityId");
+		if (typeof target.stateId !== "string" || target.stateId.length === 0) throw new Error("Numeric target requires a non-empty stateId");
+		const entity = ctx.entities.getEntityById(target.entityId);
+		if (!entity) throw new Error(`Unknown numeric entity target '${target.entityId}'`);
+		return { type: "numeric", entity, stateId: target.stateId };
+	}
 	if (target.type === "structure") {
 		if (typeof target.structureId !== "string" || target.structureId.length === 0) throw new Error("Structure target requires a non-empty structureId");
 		const structure = ctx.structures.find(candidate => candidate.getId() === target.structureId);
@@ -50,6 +65,13 @@ function resolveTarget(ctx: IGameContext, value: unknown, positionOverride?: { x
 		return { type: "structure", structure, ...(positionOverride ? { positionOverride: { ...positionOverride } } : {}) };
 	}
 	throw new Error(`Unknown predefined target type '${String(target.type)}'`);
+}
+
+function targetReference(target: ResolvedPredefinedTarget): Record<string, string> {
+	if (target.type === "entity") return { type: "entity", entityId: String(target.entity.getId()) };
+	if (target.type === "numeric") return { type: "entity", entityId: String(target.entity.getId()) };
+	if (target.type === "structure") return { type: "structure", structureId: String(target.structure.getId()) };
+	throw new Error("Counter targets cannot receive relative follow-up effects");
 }
 
 function validateEnvelope(value: unknown): EngineEffectSettings {

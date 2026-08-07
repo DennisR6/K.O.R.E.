@@ -13,6 +13,7 @@ export type { SystemSettings } from "../engine/contracts/systemSettings.js";
 export type ResolvedPredefinedTarget =
 	| { type: "counter"; counter: CounterState }
 	| { type: "entity"; entity: IEntity }
+	| { type: "numeric"; entity: IEntity; stateId: string }
 	| { type: "structure"; structure: IStructure; positionOverride?: Vector2D };
 
 /** Versioned, data-only identity of a registered engine system. */
@@ -29,7 +30,7 @@ export interface ISerializableSystem<T extends SystemSettings = SystemSettings> 
 /** Trusted runtime interpreter contract for Engine-owned predefined systems. */
 export interface IPredefinedEffectSystem extends ISerializableSystem {
 	acceptsEffect(effectId: string): boolean;
-	applyEffect(ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): void;
+	applyEffect(ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): EngineEffectSettings[] | void;
 }
 
 /**

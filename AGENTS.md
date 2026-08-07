@@ -252,6 +252,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/systems/CounterSystem.ts`: trusted deterministic interpreter for generic
   numeric counter mutations; it mutates canonical context state but owns no
   persistent counter values or feature-specific meaning.
+- `src/systems/NumericSystem.ts`: trusted interpreter for typed entity-owned
+  numeric mutations. It derives threshold crossings from previous/current
+  values and returns relative follow-up Effects through the shared dispatcher;
+  it owns no numeric values or threshold configuration.
 - `src/systems/predefinedEffectDispatcher.ts`: trusted predefined-System host;
   resolves stable counter/entity targets and routes each current Engine Effect
   to exactly one installed interpreter. It does not load executable content.
@@ -283,6 +287,12 @@ After every change, check whether this guide still reflects the implementation a
   numeric CounterState plus typed `counter.set`, `counter.add`, and
   `counter.reset` commands. Counter IDs are stable targets; score, kills,
   coins, and other meanings remain content-layer semantics.
+- `src/engine/contracts/numericState.ts` and
+  `src/engine/sdk/numericCapability.ts`: generic version-one entity-owned
+  numeric targets with declarative threshold crossings and typed
+  `numeric.set`, `numeric.add`, and empty-payload `numeric.reset` commands.
+  Reset values belong to canonical per-state bindings and are never carried
+  in reset Effect payloads.
 - `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
   menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
   no browser loop/listeners, and must not import KORE/game or browser domains.

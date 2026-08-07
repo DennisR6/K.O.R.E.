@@ -7,6 +7,7 @@ import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect, ItemEffectSettings } from "../effects/types.js";
 import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
+import type { NumericStateOwner } from "../engine/contracts/numericState.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -18,7 +19,7 @@ import type { InventoryItem, ItemDocument } from "../item/types.js";
  * 2. **Logik (ITicker)**: Das Objekt reagiert auf den Lauf der Zeit (Bewegung).
  * 3. **Physik (IPhysicsCircle)**: Das Objekt hat eine physische Form für Kollisionen.
  */
-export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, ISettingsSerialize<PlayerSettings> {
+export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKillable, IInventory, NumericStateOwner, ISettingsSerialize<PlayerSettings> {
 	/**
 	 * Gibt die aktuelle Position der Entity zurück.
 	 * @returns {Vector2D} Ein Vektor mit den aktuellen x- und y-Koordinaten in Welt-Einheiten.

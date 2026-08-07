@@ -34,6 +34,8 @@ export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_R
 export type { TransformSetPositionPayload, TransformSetRotationPayload } from "./transformCapability.js";
 export { COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_EFFECT_IDS, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, counterSystemDefinition, registerCounterCommands, registerCounterSystem, validateCounterEffectSettings, validateCounterTarget } from "./counterCapability.js";
 export { PARTICIPATION_CAPABILITY, PARTICIPATION_EFFECT_IDS, PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID, participationSystemDefinition, registerParticipationCommands, registerParticipationSystem } from "./participationCapability.js";
+export { NUMERIC_ADD_EFFECT_ID, NUMERIC_CAPABILITY, NUMERIC_EFFECT_IDS, NUMERIC_RESET_EFFECT_ID, NUMERIC_SET_EFFECT_ID, numericSystemDefinition, registerNumericCommands, registerNumericSystem, validateNumericEffectSettings, validateNumericTarget } from "./numericCapability.js";
+export type { NumericAddPayload, NumericEffectSettings, NumericResetPayload, NumericSetPayload, NumericTarget } from "./numericCapability.js";
 export { ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION, ENGINE_EFFECT_COMPOSITION_TYPE, createEngineEffectComposition, validateEngineEffectComposition } from "./composition.js";
 export type { EngineEffectComposition } from "./composition.js";
 export { counterTriggerMatches, validateCounterTriggerBinding } from "./counterCapability.js";
@@ -45,4 +47,6 @@ export { createMovementState, createTransformState, validateMovementState, valid
 export type { EngineMovementState, EngineTransformState } from "./entityState.js";
 export { COUNTER_SCHEMA_VERSION, canonicalizeCounterStates, createCounterState, validateCounterState } from "../contracts/counterState.js";
 export type { CounterState } from "../contracts/counterState.js";
+export { NUMERIC_STATE_SCHEMA_VERSION, NUMERIC_THRESHOLD_COMPARATORS, validateNumericThreshold, validateNumericThresholdBinding, validateNumericThresholdBindings } from "../contracts/numericState.js";
+export type { NumericThreshold, NumericThresholdBinding, NumericThresholdComparator, NumericThresholdEffect } from "../contracts/numericState.js";
 export type { EngineFrameworkSettings, EngineSystemDefinition, EngineWorldSettings };
