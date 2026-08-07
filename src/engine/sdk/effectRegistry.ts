@@ -4,6 +4,7 @@ export type EngineEffectSettings = {
 	type: string;
 	schemaVersion?: 1;
 	typeValue: JsonValue;
+	target?: JsonValue;
 };
 
 export interface EngineEffectDefinition {
@@ -14,6 +15,8 @@ export interface EngineEffectDefinition {
 	lifecycleCategory?: string;
 	/** Runtime-only validation; never included in serialized descriptors. */
 	validatePayload?: (payload: JsonValue) => void;
+	/** Runtime-only target validation; never included in serialized descriptors. */
+	validateTarget?: (target: JsonValue) => void;
 }
 
 export type EngineEffectDescriptor = Omit<EngineEffectDefinition, "validatePayload">;
@@ -39,6 +42,8 @@ export class EngineEffectRegistry {
 		if (value.schemaVersion !== undefined && value.schemaVersion !== 1) throw new Error(`Unsupported effect schema version for '${value.type}'`);
 		assertJsonValue(value.typeValue);
 		this.definitions.get(value.type)!.validatePayload?.(value.typeValue);
+		if (value.target !== undefined) assertJsonValue(value.target);
+		this.definitions.get(value.type)!.validateTarget?.(value.target as JsonValue);
 	}
 
 	/** Returns a detached descriptor without runtime validator functions. */
@@ -59,4 +64,5 @@ function validateDefinition(definition: EngineEffectDefinition): void {
 	for (const value of [definition.targetType, definition.lifecycleCategory]) if (value !== undefined && (typeof value !== "string" || value.length === 0)) throw new Error(`Invalid effect definition '${definition.id}'`);
 	if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some(value => typeof value !== "string" || value.length === 0))) throw new Error(`Invalid effect capabilities for '${definition.id}'`);
 	if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function") throw new Error(`Invalid effect validator for '${definition.id}'`);
+	if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function") throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }

@@ -32,6 +32,8 @@ export { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_I
 export type { MovementScaleSpeedPayload, MovementVelocityPayload } from "./movementCapability.js";
 export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, registerTransformEffects } from "./transformCapability.js";
 export type { TransformSetPositionPayload, TransformSetRotationPayload } from "./transformCapability.js";
+export { COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, registerCounterCommands, validateCounterEffectSettings, validateCounterTarget } from "./counterCapability.js";
+export type { CounterAddPayload, CounterEffectSettings, CounterResetPayload, CounterSetPayload, CounterTarget } from "./counterCapability.js";
 export { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createScheduleDueTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "./trigger.js";
 export type { EngineCollisionEnterTriggerEvent, EngineEnvironmentActivationTriggerEvent, EngineRoundStartTriggerEvent, EngineScheduleDueTriggerEvent, EngineTickTriggerEvent, EngineTriggerActivation, EngineTriggerEvent, EngineTriggerType } from "./trigger.js";
 export type { EngineEffectDefinition, EngineEffectDescriptor, EngineEffectSettings } from "./effectRegistry.js";
