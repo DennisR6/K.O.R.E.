@@ -191,7 +191,7 @@ export interface KoreMapOptions {
 export interface KoreWorldEffects {
     effects: EffectInput[];
     trigger?: any;
-    triggerValue?: unknown;
+    triggerValue?: [];
 }
 export interface KoreHazardZone {
     id: string;

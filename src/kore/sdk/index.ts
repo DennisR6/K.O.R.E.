@@ -4,7 +4,7 @@ import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
-import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue, type TriggerPayloadMap } from "../../effects/types.js";
+import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
@@ -83,7 +83,7 @@ export interface KoreMapOptions {
 export interface KoreWorldEffects {
 	effects: EffectInput[];
 	trigger?: EffectTrigger;
-	triggerValue?: TriggerPayloadMap[EffectTrigger];
+	triggerValue?: [];
 }
 
 export interface KoreHazardZone {
@@ -494,7 +494,7 @@ function arrangePlayers(players: PlayerSettings[], region: KoreSpawnSettings): v
 	});
 }
 
-function toFullEffectSettings(input: EffectInput, trigger: EffectTrigger, triggerValue: TriggerPayloadMap[EffectTrigger]): FullEffectSettings {
+function toFullEffectSettings(input: EffectInput, trigger: EffectTrigger, triggerValue: []): FullEffectSettings {
 	const settings = "toSettings" in input ? input.toSettings() : input;
 	if (isFullEffectSettings(settings)) return clone(settings);
 	return { ...clone(settings), trigger, triggerValue: clone(triggerValue) };

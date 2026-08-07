@@ -686,7 +686,305 @@ class EffectPhysics {
 }
 
 function createRuntimeEffect(settings) {
-  return new MetaEffect(settings);
+  return new MetaEffect({ type: settings.type, typeValue: settings.typeValue });
+}
+
+function assertJsonValue(value) {
+  if (value === null || typeof value === "string" || typeof value === "boolean")
+    return;
+  if (typeof value === "number") {
+    if (Number.isFinite(value))
+      return;
+    throw new Error("System settings must contain finite JSON numbers");
+  }
+  if (Array.isArray(value)) {
+    value.forEach(assertJsonValue);
+    return;
+  }
+  if (typeof value === "object") {
+    for (const child of Object.values(value))
+      assertJsonValue(child);
+    return;
+  }
+  throw new Error("System settings must contain JSON data only");
+}
+
+var TRIGGER_KEYS = new Set(["trigger", "triggerValue"]);
+function validateTriggerSettings(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error("Trigger settings must be an object");
+  const trigger = value;
+  for (const key of Object.keys(trigger))
+    if (!TRIGGER_KEYS.has(key))
+      throw new Error(`Trigger settings contain unknown field '${key}'`);
+  if (trigger.trigger !== "EffectTrigger.Always" /* Always */ && trigger.trigger !== "EffectTrigger.Collision" /* Collision */ && trigger.trigger !== "EffectTrigger.Round" /* Round */)
+    throw new Error(`Unknown effect trigger '${String(trigger.trigger)}'`);
+  if (!Array.isArray(trigger.triggerValue) || trigger.triggerValue.length !== 0)
+    throw new Error(`Trigger '${String(trigger.trigger)}' requires an empty payload`);
+}
+
+var CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
+var FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
+var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
+var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "dead", "physicsEnabled"]);
+var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
+function validateEffectSettings(value) {
+  const effect = record(value, "Effect settings");
+  knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
+  if (!CORE_EFFECT_TYPES.includes(effect.type))
+    throw new Error(`Unknown effect type "${String(effect.type)}"`);
+  if (effect.type === "EffectType.Multi" /* Multi */) {
+    if (!Array.isArray(effect.typeValue))
+      throw new Error("EffectType.Multi requires a typeValue array of effect settings");
+    effect.typeValue.forEach(validateEffectSettings);
+    return;
+  }
+  const payload = record(effect.typeValue, `Effect '${String(effect.type)}' payload`);
+  switch (effect.type) {
+    case "EffectType.Physics" /* Physics */:
+      exactKeys(payload, ["friction", "linearDrag", "stopThreshold"], "Physics payload");
+      finite(payload.friction, "Physics friction");
+      finite(payload.linearDrag, "Physics linearDrag");
+      finite(payload.stopThreshold, "Physics stopThreshold");
+      return;
+    case "EffectType.Damage" /* Damage */:
+      exactKeys(payload, ["damage"], "Damage payload");
+      finiteNonNegative(payload.damage, "Damage amount");
+      return;
+    case "EffectType.Movement" /* Movement */:
+      exactKeys(payload, ["deltaTime", "x", "y"], "Movement payload");
+      finite(payload.deltaTime, "Movement deltaTime");
+      finite(payload.x, "Movement x");
+      finite(payload.y, "Movement y");
+      return;
+    case "EffectType.ModifyMass" /* ModifyMass */:
+      exactKeys(payload, ["mass"], "Mass payload");
+      finitePositive(payload.mass, "Mass");
+      return;
+    case "EffectType.ModifySize" /* ModifySize */:
+      exactKeys(payload, ["size"], "Size payload");
+      finitePositive(payload.size, "Size");
+      return;
+    case "EffectType.Position" /* Position */:
+    case "EffectType.Velocity" /* Velocity */:
+      exactKeys(payload, ["x", "y"], `${String(effect.type)} payload`);
+      finite(payload.x, "Vector x");
+      finite(payload.y, "Vector y");
+      return;
+    case "EffectType.Team" /* Team */:
+      exactKeys(payload, ["team"], "Team payload");
+      if (!Array.isArray(payload.team) || !payload.team.every((team) => Number.isSafeInteger(team) && team >= 0))
+        throw new Error("Team payload requires non-negative integer teams");
+      return;
+    case "EffectType.ModifySetting" /* ModifySetting */:
+      validateModifySetting(payload);
+      return;
+    default:
+      throw new Error(`Unsupported effect type '${String(effect.type)}'`);
+  }
+}
+function validateFullEffectSettings(value) {
+  const full = record(value, "Full effect settings");
+  knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
+  validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
+  validateEffectSettings({ type: full.type, typeValue: full.typeValue });
+}
+function validateRuntimeItemEffectSettings(value) {
+  const effect = record(value, "Item effect settings");
+  knownKeys(effect, ITEM_EFFECT_KEYS, "Item effect settings");
+  if (effect.itemId !== undefined && (typeof effect.itemId !== "string" || effect.itemId.length === 0))
+    throw new Error("Item effect itemId must be a non-empty string");
+  if (effect.order !== undefined && !Number.isSafeInteger(effect.order))
+    throw new Error("Item effect order must be a safe integer");
+  if (!ITEM_EFFECT_TYPES.includes(effect.type))
+    throw new Error(`Unknown item effect type '${String(effect.type)}'`);
+  const payload = record(effect.typeValue, `Item effect '${String(effect.type)}' payload`);
+  switch (effect.type) {
+    case "modifyForce" /* ModifyForce */:
+      exactKeys(payload, ["factor"], "modifyForce payload");
+      finiteNonNegative(payload.factor, "modifyForce factor");
+      return;
+    case "modifyRotation" /* ModifyRotation */:
+      exactKeys(payload, ["degrees"], "modifyRotation payload");
+      finite(payload.degrees, "modifyRotation degrees");
+      return;
+    case "lockRotation" /* LockRotation */:
+    case "selectionLock" /* SelectionLock */:
+      validateTurns(payload, String(effect.type));
+      return;
+    case "applyTorque" /* ApplyTorque */:
+      exactKeys(payload, ["torque"], "applyTorque payload");
+      finite(payload.torque, "applyTorque torque");
+      return;
+    case "spawnTrigger" /* SpawnTrigger */:
+      knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired"]), "spawnTrigger payload");
+      requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
+      string(payload.triggerId, "spawnTrigger triggerId");
+      boundedTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+      optionalBoolean(payload.fired, "spawnTrigger fired");
+      return;
+    case "delayedEffect" /* DelayedEffect */:
+      knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired"]), "delayedEffect payload");
+      requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
+      string(payload.effectType, "delayedEffect effectType");
+      boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
+      if (payload.effectValue !== undefined)
+        assertJsonValue(payload.effectValue);
+      optionalBoolean(payload.fired, "delayedEffect fired");
+      return;
+    case "shield" /* Shield */:
+      knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload");
+      requiredKeys(payload, ["capacity"], "shield payload");
+      finitePositive(payload.capacity, "shield capacity");
+      if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity))
+        throw new Error("shield remainingCapacity is outside capacity");
+      optionalBoolean(payload.blocksCollision, "shield blocksCollision");
+      return;
+    case "freeze" /* Freeze */:
+      knownKeys(payload, new Set(["speedFactor", "durationTurns", "remainingTurns"]), "freeze payload");
+      requiredKeys(payload, ["speedFactor", "durationTurns"], "freeze payload");
+      finiteRange(payload.speedFactor, 0, 1, "freeze speedFactor");
+      boundedTurns(payload.durationTurns, payload.remainingTurns, "freeze");
+      return;
+    case "swapPosition" /* SwapPosition */:
+      exactKeys(payload, [], "swapPosition payload");
+      return;
+    case "temporaryWall" /* TemporaryWall */:
+      knownKeys(payload, new Set(["wallId", "x", "y", "w", "h", "color", "durationTurns", "remainingTurns", "active"]), "temporaryWall payload");
+      requiredKeys(payload, ["wallId", "x", "y", "w", "h", "durationTurns"], "temporaryWall payload");
+      string(payload.wallId, "temporaryWall wallId");
+      finite(payload.x, "temporaryWall x");
+      finite(payload.y, "temporaryWall y");
+      finitePositive(payload.w, "temporaryWall w");
+      finitePositive(payload.h, "temporaryWall h");
+      if (payload.color !== undefined)
+        string(payload.color, "temporaryWall color");
+      boundedTurns(payload.durationTurns, payload.remainingTurns, "temporaryWall");
+      optionalBoolean(payload.active, "temporaryWall active");
+      return;
+    case "ghostMode" /* GhostMode */:
+      knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload");
+      requiredKeys(payload, ["durationTurns"], "ghostMode payload");
+      boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode");
+      return;
+    case "magnet" /* Magnet */:
+      exactKeys(payload, ["mode", "force", "range"], "magnet payload");
+      if (payload.mode !== "attract" && payload.mode !== "repel")
+        throw new Error("magnet mode must be attract or repel");
+      finiteNonNegative(payload.force, "magnet force");
+      finitePositive(payload.range, "magnet range");
+      return;
+    case "aimVariance" /* AimVariance */:
+      knownKeys(payload, new Set(["maxVarianceDegrees", "seed", "randomState"]), "aimVariance payload");
+      requiredKeys(payload, ["maxVarianceDegrees"], "aimVariance payload");
+      finiteNonNegative(payload.maxVarianceDegrees, "aimVariance maxVarianceDegrees");
+      optionalSafeInteger(payload.seed, "aimVariance seed");
+      optionalSafeInteger(payload.randomState, "aimVariance randomState");
+      return;
+  }
+}
+function validateModifySetting(payload) {
+  exactKeys(payload, ["operation", "key", "value"], "ModifySetting payload");
+  if (payload.operation !== "set" /* Set */ && payload.operation !== "add" /* Add */ && payload.operation !== "remove" /* Remove */)
+    throw new Error("ModifySetting operation is invalid");
+  if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key))
+    throw new Error("ModifySetting key is not allowlisted");
+  validateSettingValue(payload.key, payload.value);
+}
+function validateSettingValue(key, value) {
+  if (value === undefined)
+    return;
+  if (["hp", "mass", "size", "friction"].includes(key)) {
+    finite(value, `ModifySetting ${key}`);
+    return;
+  }
+  if (["position", "velocity"].includes(key)) {
+    const vector = record(value, `ModifySetting ${key}`);
+    exactKeys(vector, ["x", "y"], `ModifySetting ${key}`);
+    finite(vector.x, `${key} x`);
+    finite(vector.y, `${key} y`);
+    return;
+  }
+  if (key === "team") {
+    if (!Array.isArray(value) || !value.every((team) => Number.isSafeInteger(team) && team >= 0))
+      throw new Error("ModifySetting team requires non-negative integer teams");
+    return;
+  }
+  if (typeof value !== "boolean")
+    throw new Error(`ModifySetting ${key} requires a boolean`);
+}
+function validateTurns(payload, label) {
+  knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), `${label} payload`);
+  requiredKeys(payload, ["durationTurns"], `${label} payload`);
+  boundedTurns(payload.durationTurns, payload.remainingTurns, label);
+}
+function boundedTurns(duration, remaining, label) {
+  if (!Number.isSafeInteger(duration) || duration < 1)
+    throw new Error(`${label} durationTurns must be a positive integer`);
+  if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
+    throw new Error(`${label} remainingTurns is outside durationTurns`);
+}
+function boundedTicks(duration, remaining, label) {
+  if (!Number.isSafeInteger(duration) || duration < 0)
+    throw new Error(`${label} delayTicks must be a non-negative integer`);
+  if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
+    throw new Error(`${label} remainingTicks is outside delayTicks`);
+}
+function record(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function knownKeys(value, allowed, label) {
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+}
+function exactKeys(value, allowed, label) {
+  const set = new Set(allowed);
+  for (const key of Object.keys(value))
+    if (!set.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of allowed)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function requiredKeys(value, required, label) {
+  for (const key of required)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+function finitePositive(value, label) {
+  finite(value, label);
+  if (value <= 0)
+    throw new Error(`${label} must be positive`);
+}
+function finiteNonNegative(value, label) {
+  finite(value, label);
+  if (value < 0)
+    throw new Error(`${label} must be non-negative`);
+}
+function finiteRange(value, min, max, label) {
+  finite(value, label);
+  if (value < min || value > max)
+    throw new Error(`${label} is outside range`);
+}
+function string(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function optionalBoolean(value, label) {
+  if (value !== undefined && typeof value !== "boolean")
+    throw new Error(`${label} must be boolean`);
+}
+function optionalSafeInteger(value, label) {
+  if (value !== undefined && !Number.isSafeInteger(value))
+    throw new Error(`${label} must be a safe integer`);
 }
 
 class MultiEffect {
@@ -712,6 +1010,7 @@ class MultiEffect {
 class MetaEffect {
   eff;
   constructor(effect) {
+    validateEffectSettings(effect);
     switch (effect.type) {
       case "EffectType.Damage" /* Damage */:
         this.eff = new EffectDamage(effect);
@@ -757,26 +1056,6 @@ class MetaEffect {
   toSettings() {
     return this.eff.toSettings();
   }
-}
-
-function assertJsonValue(value) {
-  if (value === null || typeof value === "string" || typeof value === "boolean")
-    return;
-  if (typeof value === "number") {
-    if (Number.isFinite(value))
-      return;
-    throw new Error("System settings must contain finite JSON numbers");
-  }
-  if (Array.isArray(value)) {
-    value.forEach(assertJsonValue);
-    return;
-  }
-  if (typeof value === "object") {
-    for (const child of Object.values(value))
-      assertJsonValue(child);
-    return;
-  }
-  throw new Error("System settings must contain JSON data only");
 }
 
 class EngineSystemRegistry {
@@ -2742,6 +3021,8 @@ class Player {
     this.isPhysicsEnabled = settings.isPhysicsEnabled;
     this.dead = settings.isDead;
     this.items = settings.inventory.map((item) => ({ ...item }));
+    for (const effect of settings.itemEffects ?? [])
+      validateRuntimeItemEffectSettings(effect);
     this.itemEffects = (settings.itemEffects ?? []).map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
     this.effectAlways = [];
     this.effectCollision = [];
@@ -4620,26 +4901,26 @@ function validateEnvironmentalMechanics(value) {
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function finite(value) {
+function finite2(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
 function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 function isVector3(value) {
-  return isRecord5(value) && finite(value.x) && finite(value.y);
+  return isRecord5(value) && finite2(value.x) && finite2(value.y);
 }
 function isZone(value) {
-  return isRecord5(value) && finite(value.x) && finite(value.y) && finite(value.r) && value.r > 0;
+  return isRecord5(value) && finite2(value.x) && finite2(value.y) && finite2(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord5(value) || !finite(value.x) || !finite(value.y) || !Array.isArray(value.effects))
+  if (!isRecord5(value) || !finite2(value.x) || !finite2(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
-    return finite(value.r) && value.r > 0;
+    return finite2(value.r) && value.r > 0;
   if (value.type === 2 /* RECTANGLE */)
-    return finite(value.w) && finite(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && finite(value.x2) && finite(value.y2);
+    return finite2(value.w) && finite2(value.h) && value.w > 0 && value.h > 0;
+  return value.type === 1 /* LINE */ && finite2(value.x2) && finite2(value.y2);
 }
 
 function validateSystemSettings(value) {
@@ -4881,9 +5162,12 @@ function isTeam(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 function isEffect(value) {
-  const types = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-  const triggers = ["EffectTrigger.Always" /* Always */, "EffectTrigger.Collision" /* Collision */, "EffectTrigger.Round" /* Round */];
-  return isRecord6(value) && types.includes(value.type) && triggers.includes(value.trigger);
+  try {
+    validateFullEffectSettings(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 function isBoundary2(value) {
   if (!isRecord6(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
@@ -5001,13 +5285,13 @@ class StructureCircle {
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
-          this.collisionEffects.push(new MetaEffect(eff));
+          this.collisionEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Round" /* Round */:
-          this.roundEffects.push(new MetaEffect(eff));
+          this.roundEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Always" /* Always */:
-          this.alwaysEffects.push(new MetaEffect(eff));
+          this.alwaysEffects.push(createRuntimeEffect(eff));
           continue;
         default:
           console.trace("this is not implemted yet");
@@ -5251,13 +5535,13 @@ class StructureRectangle {
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
-          this.collisionEffects.push(new MetaEffect(eff));
+          this.collisionEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Round" /* Round */:
-          this.roundEffects.push(new MetaEffect(eff));
+          this.roundEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Always" /* Always */:
-          this.alwaysEffects.push(new MetaEffect(eff));
+          this.alwaysEffects.push(createRuntimeEffect(eff));
           continue;
         default:
           console.log("this is not implemted yet");
@@ -8669,9 +8953,9 @@ function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record = value;
-  const metadata = record.metadata;
-  return String(record.id ?? metadata?.id ?? "");
+  const record2 = value;
+  const metadata = record2.metadata;
+  return String(record2.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
