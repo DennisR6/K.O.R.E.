@@ -7,5 +7,7 @@ test("kill-zone hazards use shared player elimination", () => {
 	const player = new Player(createPlayerSettings({ velocity: { x: 3, y: -2 } }));
 	applyKillZoneHazard(player);
 	expect(player.isDead()).toBe(true);
+	expect(player.physicsEnabled()).toBe(false);
+	expect(player.drawingEnabled()).toBe(false);
 	expect(player.getVel()).toEqual({ x: 0, y: 0 });
 });
