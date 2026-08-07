@@ -242,7 +242,7 @@ strongly than their payload shapes. This is the primary constraint for Phase 1.
 
 ### Phase 1: Strongly Typed Effect Contracts
 
-- [ ] Inventory every Effect type, payload, target, trigger, lifecycle,
+- [x] Inventory every Effect type, payload, target, trigger, lifecycle,
   interpreter, serialization path, and validation path.
 - [ ] Introduce a typed mapping between Effect identity and payload without
   unnecessarily changing the existing serialized shape.
@@ -252,6 +252,54 @@ strongly than their payload shapes. This is the primary constraint for Phase 1.
 
 Do not migrate every Effect simultaneously. Each change requires focused tests
 and an atomic commit.
+
+#### Phase 1.1 Effect Inventory
+
+Core `EffectType` settings use `{ type, typeValue }` and become
+`FullEffectSettings` when attached to an `Always`, `Collision`, or `Round`
+trigger. Core effects target physics-capable entities or structures, except
+`ModifySetting`, which targets the allowlisted mutable Player settings.
+
+| Effect | Payload | Category | Current interpreter | Persistence |
+|---|---|---|---|---|
+| `Physics` | friction, linear drag, stop threshold | Modifier | `Player.tick()` | Player effects and snapshots |
+| `Damage` | damage amount | Command | `EffectDamage` → Player HP/death | Player/handler/structure settings |
+| `Movement` | delta time and x/y displacement | Modifier | `Player.tick()` | Player effects and snapshots |
+| `Multi` | ordered core Effect settings | Command/composition | `MultiEffect` | Nested settings |
+| `ModifyMass` | mass | Modifier | runtime Effect → physics object | Attached settings |
+| `ModifySize` | size | Modifier | runtime Effect → resizable entity | Attached settings |
+| `Position` | x/y position | Command | runtime Effect → physics object | Attached settings |
+| `Velocity` | x/y velocity | Command | runtime Effect → physics object | Attached settings |
+| `Team` | team number array | Command | runtime Effect → team-capable entity | Attached settings |
+| `ModifySetting` | set/add/remove, allowlisted key, typed value | Command | `Player.setSetting()` | Handler/player/structure settings |
+| `RespawningPosition` | no active runtime factory case | Planned/unsupported | rejected by `MetaEffect` | No valid runtime path |
+
+Item effects use `{ type, typeValue }` with optional `itemId` and `order` source
+metadata. They are validated as item content, constructed by
+`src/kore/sdk/itemRuntime.ts`, and persistent instances are stored in
+`PlayerSettings.itemEffects`.
+
+| Item effect | Payload/state | Category | Current interpreter | Persistence |
+|---|---|---|---|---|
+| `modifyForce` | factor | Modifier | item runtime / force application | Item effect state |
+| `modifyRotation` | degrees | Modifier | item runtime / force application | Item effect state |
+| `lockRotation` | duration and remaining turns | Status | Player/item turn advancement | Item effect state |
+| `applyTorque` | torque | Modifier | item runtime angular application | Item effect state |
+| `spawnTrigger` | trigger ID, delay, fired state | Scheduled action | item runtime / turn advancement | Item effect state |
+| `delayedEffect` | nested effect ID/payload, delay, fired state | Scheduled action | item runtime / fixed ticks | Item effect state |
+| `shield` | capacity, remaining capacity, collision blocking | Status | item runtime / collision and damage adapters | Item effect state |
+| `freeze` | speed factor, duration, remaining turns | Status | item runtime / velocity adapter | Item effect state |
+| `swapPosition` | empty payload; validated targets are runtime input | Command | `GameHandler.useItem()` | Action/replay, not persistent state |
+| `temporaryWall` | wall geometry, lifetime, active state | Status/command | item runtime / structure lifecycle | Item effect state |
+| `ghostMode` | duration and remaining turns | Status | item runtime / collision filtering | Item effect state |
+| `magnet` | attract/repel mode, force, range | Modifier/command | `GameHandler.useItem()` | Item action/effect state |
+| `selectionLock` | duration and remaining turns | Status | UI/item target validation | Item effect state |
+| `aimVariance` | variance and seeded random state | Modifier | item runtime / force application | Item effect state |
+
+The inventory confirms that core effect payloads can be strongly typed without
+merging them with item lifecycle payloads. It also records the existing gap:
+`settings.ts` validates core Effect identities and triggers, but does not yet
+validate each payload shape at the document boundary.
 
 ### Phase 2: Effect Lifecycle Semantics
 
