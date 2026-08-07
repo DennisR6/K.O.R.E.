@@ -1,6 +1,5 @@
 import { assertJsonValue } from "../engine/contracts/systemSettings.js";
 import {
-	EffectTrigger,
 	EffectType,
 	ItemEffectType,
 	SettingOperation,
@@ -9,6 +8,7 @@ import {
 	type ItemEffectSettings,
 	type PlayerSettingKey,
 } from "./types.js";
+import { validateTriggerSettings } from "./triggerValidation.js";
 
 const CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
 const FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
@@ -58,8 +58,7 @@ export function validateEffectSettings(value: unknown): asserts value is EffectS
 export function validateFullEffectSettings(value: unknown): asserts value is FullEffectSettings {
 	const full = record(value, "Full effect settings");
 	knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
-	if (full.trigger !== EffectTrigger.Always && full.trigger !== EffectTrigger.Collision && full.trigger !== EffectTrigger.Round) throw new Error(`Unknown effect trigger '${String(full.trigger)}'`);
-	assertJsonValue(full.triggerValue);
+	validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
 	validateEffectSettings({ type: full.type, typeValue: full.typeValue });
 }
 

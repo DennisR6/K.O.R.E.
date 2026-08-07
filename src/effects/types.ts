@@ -37,6 +37,17 @@ export const enum EffectTrigger {
 	Round = "EffectTrigger.Round"
 }
 
+/** Payloads owned by Trigger contracts, independent of any Effect type. */
+export interface TriggerPayloadMap {
+	[EffectTrigger.Always]: [];
+	[EffectTrigger.Collision]: [];
+	[EffectTrigger.Round]: [];
+}
+
+export type TriggerSettings = {
+	[K in EffectTrigger]: { trigger: K; triggerValue: TriggerPayloadMap[K] }
+}[EffectTrigger];
+
 export interface EffectMovePayload extends Vector2D {
 	deltaTime: number;
 }
@@ -144,10 +155,8 @@ export type TypedItemEffectSettings = {
 	}
 	}[ItemEffectType];
 
-export type FullEffectSettings = EffectSettings & {
-	trigger: EffectTrigger,
-	triggerValue: unknown,
-}
+/** Composition boundary for independent Effect and Trigger contracts. */
+export type FullEffectSettings = EffectSettings & TriggerSettings;
 export interface ForceInput {
 	angle: number;
 	power: number;
