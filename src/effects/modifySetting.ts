@@ -16,6 +16,10 @@ export class EffectModifySetting implements Effect {
 	public apply(entity: IPhysics<SHAPE>, override?: ModifySettingValue): void {
 		if (!isSettingMutable(entity)) return
 		const settings = override === undefined ? this.settings : (isModifySettingValue(override) ? override : this.settings)
+		if (settings.operation === "add" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+			entity.dispatchNumericAdd("hp", settings.value)
+			return
+		}
 		switch (settings.operation) {
 			case "set": entity.setSetting(settings.key, settings.value); break
 			case "add": entity.addSetting(settings.key, settings.value); break

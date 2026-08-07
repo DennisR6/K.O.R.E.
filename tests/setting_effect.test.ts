@@ -11,6 +11,7 @@ import { SHAPE } from "../src/physics/physics.ts";
 
 test("setting effects mutate and serialize set, add, and remove operations", () => {
 	const player = new Player(createPlayerSettings({ hp: 30, position: { x: 0, y: 0 } }))
+	const handler = new GameHandlerBuilder().defaultSystems().addPlayer(player).build()
 	const damage = new EffectModifySetting({ typeValue: { operation: SettingOperation.Add, key: "hp", value: -10 } })
 	damage.apply(player)
 	expect(player.getHP()).toBe(20)
