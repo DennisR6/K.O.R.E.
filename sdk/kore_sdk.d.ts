@@ -223,7 +223,7 @@ export interface KorePlayerInput {
     playericon?: any;
     hoop?: any;
     isPhysicsEnabled?: boolean;
-    isDead?: boolean;
+    isDrawingEnabled?: boolean;
     effects?: any[];
     inventory?: any[];
 }

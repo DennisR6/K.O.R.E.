@@ -166,12 +166,49 @@ function clone(value) {
   return structuredClone(value);
 }
 
+var COUNTER_SCHEMA_VERSION = 1;
+function createCounterState(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState(state);
+  return state;
+}
+function validateCounterState(value) {
+  if (!isRecord(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 class EngineWorldBuilder {
   id;
   worldSize;
   entities = [];
   structures = [];
   effects = [];
+  counters = [];
   background;
   framework;
   constructor(id, worldSize) {
@@ -200,12 +237,16 @@ class EngineWorldBuilder {
     this.effects.push(clone2(effect));
     return this;
   }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates([counter]));
+    return this;
+  }
   useFramework(framework) {
     this.framework = clone2(framework);
     return this;
   }
   build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), ...this.framework ? { framework: clone2(this.framework) } : {} };
+    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), counters: canonicalizeCounterStates(this.counters), ...this.framework ? { framework: clone2(this.framework) } : {} };
   }
   buildJson(space = 2) {
     return JSON.stringify(this.build(), null, space);
@@ -240,6 +281,9 @@ class EngineEffectRegistry {
       throw new Error(`Unsupported effect schema version for '${value.type}'`);
     assertJsonValue(value.typeValue);
     this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    this.definitions.get(value.type).validateTarget?.(value.target);
   }
   describe() {
     return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
@@ -263,6 +307,8 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect capabilities for '${definition.id}'`);
   if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
     throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 
 function createTransformState(input) {
@@ -601,6 +647,71 @@ function finiteNonNegative(value, label) {
     throw new Error(`${label} must be a finite non-negative number`);
 }
 
+var COUNTER_CAPABILITY = "counter.state";
+var COUNTER_SET_EFFECT_ID = "counter.set";
+var COUNTER_ADD_EFFECT_ID = "counter.add";
+var COUNTER_RESET_EFFECT_ID = "counter.reset";
+function registerCounterCommands(registry) {
+  return registry.register({ id: COUNTER_SET_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload(payload, "Counter set", "value"), validateTarget: validateCounterTargetValue }).register({ id: COUNTER_ADD_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload(payload, "Counter add", "amount"), validateTarget: validateCounterTargetValue }).register({ id: COUNTER_RESET_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => exactKeys5(record5(payload, "Counter reset payload"), [], "Counter reset payload"), validateTarget: validateCounterTargetValue });
+}
+function validateCounterEffectSettings(value) {
+  const effect = record5(value, "Counter effect");
+  exactKeys5(effect, ["schemaVersion", "type", "target", "typeValue"], "Counter effect");
+  if (effect.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter effect schema version");
+  validateCounterTargetValue(effect.target);
+  if (effect.type === COUNTER_SET_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter set", "value");
+  else if (effect.type === COUNTER_ADD_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter add", "amount");
+  else if (effect.type === COUNTER_RESET_EFFECT_ID)
+    exactKeys5(record5(effect.typeValue, "Counter reset payload"), [], "Counter reset payload");
+  else
+    throw new Error(`Unknown counter effect '${String(effect.type)}'`);
+}
+function validateCounterTarget(target) {
+  validateCounterTargetValue(target);
+}
+function validateCounterTriggerBinding(value) {
+  const binding = record5(value, "Counter trigger binding");
+  if (typeof binding.trigger !== "string" || !["tick", "collision.enter", "round.start", "environment.activation", "schedule.due"].includes(binding.trigger))
+    throw new Error("Counter trigger binding has an unknown trigger");
+  validateCounterEffectSettings(binding.effect);
+}
+function counterTriggerMatches(binding, event) {
+  validateCounterTriggerBinding(binding);
+  validateTriggerEvent(event);
+  return binding.trigger === event.type;
+}
+function validateCounterTargetValue(target) {
+  const value = record5(target, "Counter target");
+  exactKeys5(value, ["type", "counterId"], "Counter target");
+  if (value.type !== "counter")
+    throw new Error("Counter target type must be 'counter'");
+  if (typeof value.counterId !== "string" || value.counterId.length === 0)
+    throw new Error("Counter target requires a non-empty counterId");
+}
+function validateNumericPayload(payload, label, key) {
+  const value = record5(payload, `${label} payload`);
+  exactKeys5(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record5(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys5(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unexpected fields`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -613,6 +724,9 @@ var engine = {
   },
   createTransformState,
   createMovementState,
+  createCounterState,
+  canonicalizeCounterStates,
+  validateCounterState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);
@@ -637,9 +751,14 @@ export {
   validateTriggerActivation,
   validateTransformState,
   validateMovementState,
+  validateCounterTriggerBinding,
+  validateCounterTarget,
+  validateCounterState,
+  validateCounterEffectSettings,
   registerTransformEffects,
   registerMovementEffect,
   registerMovementCommands,
+  registerCounterCommands,
   engine,
   createTriggerActivation,
   createTransformState,
@@ -648,7 +767,10 @@ export {
   createRoundStartTriggerEvent,
   createMovementState,
   createEnvironmentActivationTriggerEvent,
+  createCounterState,
   createCollisionEnterTriggerEvent,
+  counterTriggerMatches,
+  canonicalizeCounterStates,
   TRANSFORM_SET_ROTATION_EFFECT_ID,
   TRANSFORM_SET_POSITION_EFFECT_ID,
   TRANSFORM_CAPABILITY,
@@ -660,5 +782,10 @@ export {
   EngineWorldBuilder,
   EngineTriggerActivationQueue,
   EngineSystemRegistry,
-  EngineEffectRegistry
+  EngineEffectRegistry,
+  COUNTER_SET_EFFECT_ID,
+  COUNTER_SCHEMA_VERSION,
+  COUNTER_RESET_EFFECT_ID,
+  COUNTER_CAPABILITY,
+  COUNTER_ADD_EFFECT_ID
 };

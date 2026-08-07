@@ -166,12 +166,49 @@ function clone(value) {
   return structuredClone(value);
 }
 
+var COUNTER_SCHEMA_VERSION = 1;
+function createCounterState(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState(state);
+  return state;
+}
+function validateCounterState(value) {
+  if (!isRecord(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 class EngineWorldBuilder {
   id;
   worldSize;
   entities = [];
   structures = [];
   effects = [];
+  counters = [];
   background;
   framework;
   constructor(id, worldSize) {
@@ -200,12 +237,16 @@ class EngineWorldBuilder {
     this.effects.push(clone2(effect));
     return this;
   }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates([counter]));
+    return this;
+  }
   useFramework(framework) {
     this.framework = clone2(framework);
     return this;
   }
   build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), ...this.framework ? { framework: clone2(this.framework) } : {} };
+    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), counters: canonicalizeCounterStates(this.counters), ...this.framework ? { framework: clone2(this.framework) } : {} };
   }
   buildJson(space = 2) {
     return JSON.stringify(this.build(), null, space);
@@ -240,6 +281,9 @@ class EngineEffectRegistry {
       throw new Error(`Unsupported effect schema version for '${value.type}'`);
     assertJsonValue(value.typeValue);
     this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    this.definitions.get(value.type).validateTarget?.(value.target);
   }
   describe() {
     return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
@@ -263,6 +307,8 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect capabilities for '${definition.id}'`);
   if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
     throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 
 function createTransformState(input) {
@@ -330,6 +376,9 @@ var engine = {
   },
   createTransformState,
   createMovementState,
+  createCounterState,
+  canonicalizeCounterStates,
+  validateCounterState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);

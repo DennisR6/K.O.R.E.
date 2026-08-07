@@ -1,3 +1,5 @@
+var EFFECT_SCHEMA_VERSION = 1;
+
 class EffectModifySetting {
   settings;
   constructor({ typeValue }) {
@@ -24,6 +26,7 @@ class EffectModifySetting {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.ModifySetting" /* ModifySetting */,
       typeValue: { ...this.settings }
     };
@@ -51,7 +54,7 @@ class EffectDamage {
     new EffectModifySetting({ typeValue: { operation: "add" /* Add */, key: "hp", value: -dmg } }).apply(entity);
   }
   toSettings() {
-    return { typeValue: { damage: this.damage }, type: "EffectType.Damage" /* Damage */ };
+    return { schemaVersion: 1, typeValue: { damage: this.damage }, type: "EffectType.Damage" /* Damage */ };
   }
 }
 
@@ -72,6 +75,7 @@ class EffectModifyMass {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.ModifyMass" /* ModifyMass */,
       typeValue: { mass: this.mass }
     };
@@ -99,6 +103,7 @@ class EffectModifyPosition {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Position" /* Position */,
       typeValue: {
         x: this.x,
@@ -132,6 +137,7 @@ class EffectModifySize {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.ModifySize" /* ModifySize */,
       typeValue: {
         size: this.size
@@ -164,6 +170,7 @@ class EffectModifyTeam {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Team" /* Team */,
       typeValue: {
         team: this.team
@@ -193,6 +200,7 @@ class EffectModifyVelocity {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Velocity" /* Velocity */,
       typeValue: {
         x: this.x,
@@ -270,7 +278,7 @@ class EffectMove {
     return "EffectType.Movement" /* Movement */;
   }
   toSettings() {
-    return { type: "EffectType.Movement" /* Movement */, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } };
+    return { schemaVersion: 1, type: "EffectType.Movement" /* Movement */, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } };
   }
 }
 
@@ -678,6 +686,7 @@ class EffectPhysics {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Physics" /* Physics */,
       typeValue: {
         friction: this.friction,
@@ -689,7 +698,7 @@ class EffectPhysics {
 }
 
 function createRuntimeEffect(settings) {
-  return new MetaEffect({ type: settings.type, typeValue: settings.typeValue });
+  return new MetaEffect({ schemaVersion: settings.schemaVersion, type: settings.type, typeValue: settings.typeValue });
 }
 
 function assertJsonValue(value) {
@@ -788,16 +797,18 @@ function finite(value, label) {
     throw new Error(`${label} must be finite`);
 }
 
-var CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
-var FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
+var CORE_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue"]);
+var FULL_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue", "trigger", "triggerValue"]);
 var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
-var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "dead", "physicsEnabled"]);
+var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
 var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
+  if (effect.schemaVersion !== EFFECT_SCHEMA_VERSION)
+    throw new Error(`Unsupported Effect schema version: ${String(effect.schemaVersion)}`);
   if (!CORE_EFFECT_TYPES.includes(effect.type))
     throw new Error(`Unknown effect type "${String(effect.type)}"`);
   if (effect.type === "EffectType.Multi" /* Multi */) {
@@ -854,7 +865,7 @@ function validateFullEffectSettings(value) {
   const full = record2(value, "Full effect settings");
   knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
   validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
-  validateEffectSettings({ type: full.type, typeValue: full.typeValue });
+  validateEffectSettings({ schemaVersion: full.schemaVersion, type: full.type, typeValue: full.typeValue });
 }
 function validateRuntimeItemEffectSettings(value) {
   const effect = record2(value, "Item effect settings");
@@ -1110,7 +1121,7 @@ class MultiEffect {
     return "EffectType.Multi" /* Multi */;
   }
   toSettings() {
-    return { type: "EffectType.Multi" /* Multi */, typeValue: this.children.map((child) => child.toSettings()) };
+    return { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: this.children.map((child) => child.toSettings()) };
   }
 }
 
@@ -1313,12 +1324,49 @@ function clone(value) {
   return structuredClone(value);
 }
 
+var COUNTER_SCHEMA_VERSION = 1;
+function createCounterState(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState(state);
+  return state;
+}
+function validateCounterState(value) {
+  if (!isRecord(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 class EngineWorldBuilder {
   id;
   worldSize;
   entities = [];
   structures = [];
   effects = [];
+  counters = [];
   background;
   framework;
   constructor(id, worldSize) {
@@ -1347,12 +1395,16 @@ class EngineWorldBuilder {
     this.effects.push(clone2(effect));
     return this;
   }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates([counter]));
+    return this;
+  }
   useFramework(framework) {
     this.framework = clone2(framework);
     return this;
   }
   build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), ...this.framework ? { framework: clone2(this.framework) } : {} };
+    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), counters: canonicalizeCounterStates(this.counters), ...this.framework ? { framework: clone2(this.framework) } : {} };
   }
   buildJson(space = 2) {
     return JSON.stringify(this.build(), null, space);
@@ -1387,6 +1439,9 @@ class EngineEffectRegistry {
       throw new Error(`Unsupported effect schema version for '${value.type}'`);
     assertJsonValue(value.typeValue);
     this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    this.definitions.get(value.type).validateTarget?.(value.target);
   }
   describe() {
     return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
@@ -1410,6 +1465,8 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect capabilities for '${definition.id}'`);
   if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
     throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 
 function createTransformState(input) {
@@ -1513,6 +1570,11 @@ function createCollisionEnterTriggerEvent(input) {
   };
   validateTriggerEvent(event);
   return structuredClone(event);
+}
+function createTriggerActivation(input) {
+  const activation = { schemaVersion: 1, effectId: input.effectId, event: structuredClone(input.event) };
+  validateTriggerActivation(activation);
+  return structuredClone(activation);
 }
 function createRoundStartTriggerEvent(input) {
   const event = {
@@ -1626,6 +1688,64 @@ function finiteNonNegative2(value, label) {
     throw new Error(`${label} must be a finite non-negative number`);
 }
 
+var COUNTER_SET_EFFECT_ID = "counter.set";
+var COUNTER_ADD_EFFECT_ID = "counter.add";
+var COUNTER_RESET_EFFECT_ID = "counter.reset";
+function validateCounterEffectSettings(value) {
+  const effect = record5(value, "Counter effect");
+  exactKeys5(effect, ["schemaVersion", "type", "target", "typeValue"], "Counter effect");
+  if (effect.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter effect schema version");
+  validateCounterTargetValue(effect.target);
+  if (effect.type === COUNTER_SET_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter set", "value");
+  else if (effect.type === COUNTER_ADD_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter add", "amount");
+  else if (effect.type === COUNTER_RESET_EFFECT_ID)
+    exactKeys5(record5(effect.typeValue, "Counter reset payload"), [], "Counter reset payload");
+  else
+    throw new Error(`Unknown counter effect '${String(effect.type)}'`);
+}
+function validateCounterTriggerBinding(value) {
+  const binding = record5(value, "Counter trigger binding");
+  if (typeof binding.trigger !== "string" || !["tick", "collision.enter", "round.start", "environment.activation", "schedule.due"].includes(binding.trigger))
+    throw new Error("Counter trigger binding has an unknown trigger");
+  validateCounterEffectSettings(binding.effect);
+}
+function counterTriggerMatches(binding, event) {
+  validateCounterTriggerBinding(binding);
+  validateTriggerEvent(event);
+  return binding.trigger === event.type;
+}
+function validateCounterTargetValue(target) {
+  const value = record5(target, "Counter target");
+  exactKeys5(value, ["type", "counterId"], "Counter target");
+  if (value.type !== "counter")
+    throw new Error("Counter target type must be 'counter'");
+  if (typeof value.counterId !== "string" || value.counterId.length === 0)
+    throw new Error("Counter target requires a non-empty counterId");
+}
+function validateNumericPayload(payload, label, key) {
+  const value = record5(payload, `${label} payload`);
+  exactKeys5(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record5(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys5(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unexpected fields`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -1638,6 +1758,9 @@ var engine = {
   },
   createTransformState,
   createMovementState,
+  createCounterState,
+  canonicalizeCounterStates,
+  validateCounterState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);
@@ -2220,7 +2343,7 @@ function isTextInputElement(value) {
 function positive(value) {
   return Number.isFinite(value) && value > 0;
 }
-function isRecord(value) {
+function isRecord2(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 function clone3(value) {
@@ -2294,12 +2417,12 @@ function validateUiSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     throw new Error("Invalid UI settings");
   const value = settings;
-  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
+  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord2(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
     throw new Error("Invalid UI settings");
   const screenIds = new Set;
   const seenScreens = new WeakSet;
   for (const screen of value.screens) {
-    if (!isRecord(screen))
+    if (!isRecord2(screen))
       throw new Error("Invalid UI screen");
     if (typeof screen.id !== "string" || screen.id.length === 0 || screenIds.has(screen.id))
       throw new Error("Invalid UI screen");
@@ -2329,14 +2452,14 @@ function validateUiSettings(settings) {
     throw new Error("UI navigation history references an unknown screen");
   if (value.theme !== undefined)
     assertJsonValue(value.theme);
-  if (!value.framework || !isRecord(value.framework))
+  if (!value.framework || !isRecord2(value.framework))
     throw new Error("UI framework is required");
   const expected = createDefaultUiFramework().systemOrder;
   if (!Array.isArray(value.framework.systemOrder) || value.framework.systemOrder.join("|") !== expected.join("|"))
     throw new Error("Unsupported UI framework order");
 }
 function validateElement(value, ids, screenIds, path, ancestors, requireScreenTargets) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "malformed element");
   if (ancestors.has(value))
     throw invalidElement(path, "cyclic element tree");
@@ -2391,7 +2514,7 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
   }
 }
 function validateLayout(value, path) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid layout");
   if (typeof value.type !== "string" || !LAYOUT_TYPES.has(value.type))
     throw invalidElement(path, "invalid layout type");
@@ -2415,7 +2538,7 @@ function validatePadding(value, path) {
       return;
     throw invalidElement(path, "invalid padding");
   }
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid padding");
   for (const key of Object.keys(value))
     if (!PADDING_KEYS.has(key))
@@ -2425,7 +2548,7 @@ function validatePadding(value, path) {
       throw invalidElement(path, "invalid padding");
 }
 function validateRect(value, path) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid rect");
   for (const key of Object.keys(value))
     if (!RECT_KEYS.has(key))
@@ -2618,7 +2741,7 @@ function createPlayerSettings(overrides = {}) {
     shape: 0 /* CIRCLE */,
     hoop: overrides.hoop ?? 17 /* pictureReifenPNG */,
     isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
-    isDead: overrides.isDead ?? false,
+    isDrawingEnabled: overrides.isDrawingEnabled ?? true,
     effects: (overrides.effects ?? []).map((effect) => ({ ...effect })),
     inventory: (overrides.inventory ?? []).map((item) => ({ ...item })),
     ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}
@@ -3128,31 +3251,31 @@ function createRuntimeItemEffect(settings) {
   const value = settings.typeValue;
   switch (settings.type) {
     case "modifyForce" /* ModifyForce */:
-      return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor", "multiplier") } });
+      return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
     case "freeze" /* Freeze */:
-      return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor", "factor", 0.25), durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
+      return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor"), durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "ghostMode" /* GhostMode */:
       return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "magnet" /* Magnet */:
-      return new EffectMagnet({ typeValue: { mode: value.mode === undefined ? "attract" : value.mode, force: numberValue(value, "force", "strength"), range: numberValue(value, "range") } });
+      return new EffectMagnet({ typeValue: { mode: value.mode, force: numberValue(value, "force"), range: numberValue(value, "range") } });
     case "selectionLock" /* SelectionLock */:
       return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "shield" /* Shield */:
       return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
     case "spawnTrigger" /* SpawnTrigger */:
-      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
+      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
     case "delayedEffect" /* DelayedEffect */: {
-      const nested = value.effectValue ?? value.effect;
+      const nested = value.effectValue;
       return new EffectDelayed({ typeValue: { ...value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested } : { nestedEffect: value.nestedEffect }, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
     }
     case "temporaryWall" /* TemporaryWall */:
       return new EffectTemporaryWall({ typeValue: {
         wallId: stringValue(value, "wallId"),
-        x: numberValue(value, "x", undefined, 0),
-        y: numberValue(value, "y", undefined, 0),
-        w: numberValue(value, "w", undefined, 1),
-        h: numberValue(value, "h", undefined, 1),
-        durationTurns: integerValue(value, "durationTurns", "lifetimeTurns"),
+        x: numberValue(value, "x"),
+        y: numberValue(value, "y"),
+        w: numberValue(value, "w"),
+        h: numberValue(value, "h"),
+        durationTurns: integerValue(value, "durationTurns"),
         ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") },
         ...value.active === undefined ? {} : { active: value.active }
       } });
@@ -3200,20 +3323,20 @@ function advanceRuntimeItemEffectTick(effect) {
 function applyRuntimeForceEffects(force, effects) {
   return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
 }
-function numberValue(value, key, alias, fallback) {
-  const raw = value[key] ?? (alias ? value[alias] : undefined) ?? fallback;
+function numberValue(value, key) {
+  const raw = value[key];
   if (typeof raw !== "number")
     throw new Error(`Item effect requires numeric ${key}`);
   return raw;
 }
-function integerValue(value, key, alias, fallback) {
-  const raw = numberValue(value, key, alias, fallback);
+function integerValue(value, key) {
+  const raw = numberValue(value, key);
   if (!Number.isSafeInteger(raw))
     throw new Error(`Item effect requires integer ${key}`);
   return raw;
 }
-function stringValue(value, key, alias) {
-  const raw = value[key] ?? (alias ? value[alias] : undefined);
+function stringValue(value, key) {
+  const raw = value[key];
   if (typeof raw !== "string" || raw.length === 0)
     throw new Error(`Item effect requires non-empty ${key}`);
   return raw;
@@ -3458,7 +3581,7 @@ class Player {
   shape = 0 /* CIRCLE */;
   hoop;
   isPhysicsEnabled = true;
-  dead = false;
+  isDrawingEnabled = true;
   items = [];
   itemEffects = [];
   effectAlways = [];
@@ -3492,7 +3615,7 @@ class Player {
     this.shape = settings.shape;
     this.hoop = settings.hoop;
     this.isPhysicsEnabled = settings.isPhysicsEnabled;
-    this.dead = settings.isDead;
+    this.isDrawingEnabled = settings.isDrawingEnabled;
     this.items = settings.inventory.map((item) => ({ ...item }));
     for (const effect of settings.itemEffects ?? [])
       validateRuntimeItemEffectSettings(effect);
@@ -3504,13 +3627,13 @@ class Player {
       this.addEffect(effect.trigger, createRuntimeEffect(effect));
   }
   draw(ctx) {
-    if (this.dead)
+    if (!this.isDrawingEnabled)
       return;
     ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
     ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
   }
   tick(_deltaTime, _globalFriction, _drift = 0, _stopThreshold = 0) {
-    if (this.dead || !this.isPhysicsEnabled)
+    if (!this.isPhysicsEnabled)
       return;
     if (this.effectAlways.length === 0)
       return;
@@ -3609,13 +3732,19 @@ class Player {
     return this.team;
   }
   isActive() {
-    return !this.dead;
+    return this.isPhysicsEnabled && this.isDrawingEnabled;
   }
   physicsEnabled() {
     return this.isPhysicsEnabled;
   }
   setHP(hp) {
     this.hp = hp;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
@@ -3653,15 +3782,13 @@ class Player {
         if (Array.isArray(value) && value.every(Number.isFinite))
           this.setTeam([...value]);
         break;
-      case "dead":
-        if (typeof value === "boolean")
-          this.setIsDead(value);
-        break;
       case "physicsEnabled":
         if (typeof value === "boolean")
           this.setPhysicsEnabled(value);
         break;
       case "drawingEnabled":
+        if (typeof value === "boolean")
+          this.setDrawingEnabled(value);
         break;
     }
   }
@@ -3716,10 +3843,10 @@ class Player {
     }
     if (key === "team" && Array.isArray(value) && value.every(Number.isFinite))
       this.team = this.team.filter((team) => !value.includes(team));
-    if (key === "dead")
-      this.setIsDead(false);
     if (key === "physicsEnabled")
       this.setPhysicsEnabled(false);
+    if (key === "drawingEnabled")
+      this.setDrawingEnabled(false);
   }
   toSettings() {
     const sett0 = this.effectAlways.map((x) => {
@@ -3748,7 +3875,7 @@ class Player {
       friction: this.friction,
       shape: this.shape,
       isPhysicsEnabled: this.isPhysicsEnabled,
-      isDead: this.dead,
+      isDrawingEnabled: this.isDrawingEnabled,
       effects: [
         ...sett0,
         ...sett1,
@@ -3768,7 +3895,8 @@ class Player {
     this.bouncyness = bouncyness;
   }
   setIsDead(dead) {
-    this.dead = dead;
+    this.setPhysicsEnabled(!dead);
+    this.setDrawingEnabled(!dead);
     if (dead)
       this.setVel({ x: 0, y: 0 });
   }
@@ -3785,7 +3913,7 @@ class Player {
     return this.items.map((item) => ({ ...item }));
   }
   isDead() {
-    return this.dead;
+    return !this.isActive();
   }
   getEffects() {
     return [...this.effectAlways, ...this.effectCollision];
@@ -3794,7 +3922,7 @@ class Player {
     return [...this.effectAlways];
   }
   onRound(event) {
-    if (this.dead)
+    if (!this.isActive())
       return;
     dispatchTriggeredEffects({ effects: this.effectRound, event, apply: (effect) => effect.apply(this) });
   }
@@ -3982,12 +4110,12 @@ var DEFAULT_ITEM_ECONOMY = {
   mapPickups: []
 };
 function validateItemEconomySettings(settings) {
-  if (!isRecord2(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
+  if (!isRecord3(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
     throw new Error("Item economy requires fixed loadouts and map pickups arrays");
   }
   const teams = new Set;
   for (const loadout of settings.fixedLoadouts) {
-    if (!isRecord2(loadout))
+    if (!isRecord3(loadout))
       throw new Error("Item loadouts require a non-negative team and items array");
     const team = loadout.team;
     const items = loadout.items;
@@ -3998,7 +4126,7 @@ function validateItemEconomySettings(settings) {
       throw new Error("Item economy allows only one loadout per team");
     teams.add(team);
     for (const item of items) {
-      if (!isRecord2(item))
+      if (!isRecord3(item))
         throw new Error("Fixed loadout items require an id and positive use count");
       const itemId = item.itemId;
       const uses = item.uses;
@@ -4011,7 +4139,7 @@ function validateItemEconomySettings(settings) {
     validateItemPickup(pickup);
   if (settings.randomDraw !== undefined) {
     const draw = settings.randomDraw;
-    if (!isRecord2(draw))
+    if (!isRecord3(draw))
       throw new Error("Seeded item draws require a safe seed, non-empty item pool, and positive draws per turn");
     const seed = draw.seed;
     const itemIds = draw.itemIds;
@@ -4022,7 +4150,7 @@ function validateItemEconomySettings(settings) {
   }
   if (settings.mysteryBox !== undefined) {
     const box = settings.mysteryBox;
-    if (!isRecord2(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
+    if (!isRecord3(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
       throw new Error("Mystery box rewards require a non-empty candidate pool");
     }
     if (box.allowMysteryBoxReward !== undefined && typeof box.allowMysteryBoxReward !== "boolean") {
@@ -4030,7 +4158,7 @@ function validateItemEconomySettings(settings) {
     }
   }
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -4137,10 +4265,10 @@ class HardAi {
             const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power);
             for (const pSnapshot of sim.finalState) {
               if (pSnapshot.team.includes(aiSettings.team)) {
-                if (pSnapshot.isDead)
+                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
                   score -= 1e4;
               } else {
-                if (pSnapshot.isDead)
+                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
                   score += 5000;
               }
             }
@@ -4233,11 +4361,11 @@ class MediumAi {
   }
 }
 
-function isRecord3(value) {
+function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function validateAiSettings(settings) {
-  if (!isRecord3(settings)) {
+  if (!isRecord4(settings)) {
     throw new Error("AI settings must be an object");
   }
   if (settings.difficulty !== "easy" && settings.difficulty !== "medium" && settings.difficulty !== "hard") {
@@ -4250,7 +4378,7 @@ function validateAiSettings(settings) {
     throw new Error("AI team must be a non-negative integer");
   }
   if (settings.decisionLimits !== undefined) {
-    if (!isRecord3(settings.decisionLimits)) {
+    if (!isRecord4(settings.decisionLimits)) {
       throw new Error("AI decision limits must be an object");
     }
     const { maxSimulations, maxAngleSamples, maxForceSamples } = settings.decisionLimits;
@@ -5141,7 +5269,7 @@ var KoreInputAction;
   KoreInputAction2["ItemUse"] = "itemUse";
 })(KoreInputAction ||= {});
 function validateKoreInputMessage(value) {
-  if (!isRecord4(value) || typeof value.command !== "string" || !isRecord4(value.payload))
+  if (!isRecord5(value) || typeof value.command !== "string" || !isRecord5(value.payload))
     throw new Error("Invalid KORE input command");
   const payload = value.payload;
   if (value.command === "kore.input.action-pressed" /* ActionPressed */) {
@@ -5166,7 +5294,7 @@ function validateKoreInputMessage(value) {
   }
   throw new Error(`Unknown KORE input command '${value.command}'`);
 }
-function isRecord4(value) {
+function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isJsonValue(value) {
@@ -5176,7 +5304,7 @@ function isJsonValue(value) {
     return Number.isFinite(value);
   if (Array.isArray(value))
     return value.every(isJsonValue);
-  return isRecord4(value) && Object.values(value).every(isJsonValue);
+  return isRecord5(value) && Object.values(value).every(isJsonValue);
 }
 
 class UiSystem {
@@ -5394,13 +5522,58 @@ function isBoolean(value) {
   return typeof value === "boolean";
 }
 
+class CounterSystem {
+  systemId = "core.counter";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  apply(ctx, effect) {
+    validateCounterEffectSettings(effect);
+    const counter = ctx.counters.find((candidate) => candidate.id === effect.target.counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${effect.target.counterId}'`);
+    const nextValue = effect.type === "counter.set" ? effect.typeValue.value : effect.type === "counter.add" ? counter.value + effect.typeValue.amount : 0;
+    if (!Number.isFinite(nextValue))
+      throw new Error("Counter mutation produced a non-finite value");
+    counter.value = nextValue;
+  }
+  applyEffects(ctx, effects) {
+    effects.forEach((effect) => this.apply(ctx, effect));
+  }
+  applyTriggered(ctx, bindings, event) {
+    const queue = new EngineTriggerActivationQueue(Math.max(1, bindings.length));
+    bindings.forEach((binding, index) => {
+      if (counterTriggerMatches(binding, event))
+        queue.enqueue(createTriggerActivation({ effectId: `counter-binding-${index}`, event }));
+    });
+    queue.process((activation) => {
+      const index = Number(activation.effectId.slice("counter-binding-".length));
+      const binding = bindings[index];
+      if (!binding)
+        throw new Error("Counter trigger activation binding is out of range");
+      this.apply(ctx, binding.effect);
+    });
+  }
+  read(ctx, counterId) {
+    const counter = ctx.counters.find((candidate) => candidate.id === counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${counterId}'`);
+    return { ...counter };
+  }
+  normalize(ctx) {
+    const counters = canonicalizeCounterStates(ctx.counters);
+    ctx.counters.splice(0, ctx.counters.length, ...counters);
+  }
+}
+
 var ENVIRONMENT_SCHEMA_VERSION = 1;
 function validateEnvironmentalMechanics(value) {
   if (!Array.isArray(value))
     throw new Error("Invalid environmental mechanics");
   const ids = new Set;
   for (const mechanic of value) {
-    if (!isRecord5(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
+    if (!isRecord6(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
       throw new Error("Invalid environmental mechanic identity");
     ids.add(mechanic.id);
     if (!isBoundary(mechanic.structure) || !Array.isArray(mechanic.effects ?? []))
@@ -5423,7 +5596,7 @@ function validateEnvironmentalMechanics(value) {
           throw new Error("Invalid moving structure path");
         break;
       case "environmental-cycle":
-        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord5(phase) || !positiveInteger(phase.durationTicks) || typeof phase.enabled !== "boolean"))
+        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord6(phase) || !positiveInteger(phase.durationTicks) || typeof phase.enabled !== "boolean"))
           throw new Error("Invalid environmental cycle");
         break;
       default:
@@ -5431,7 +5604,7 @@ function validateEnvironmentalMechanics(value) {
     }
   }
 }
-function isRecord5(value) {
+function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function finite4(value) {
@@ -5441,13 +5614,13 @@ function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 function isVector3(value) {
-  return isRecord5(value) && finite4(value.x) && finite4(value.y);
+  return isRecord6(value) && finite4(value.x) && finite4(value.y);
 }
 function isZone(value) {
-  return isRecord5(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
+  return isRecord6(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord5(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
+  if (!isRecord6(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
     return finite4(value.r) && value.r > 0;
@@ -5579,6 +5752,10 @@ function createSystemFromSettings(settings, restored = new Map) {
         throw new Error("Malformed environmental lifecycle state");
       return new EnvironmentalSystem(state.mechanics, lifecycle, state.structureIndexes);
     }
+    case "core.counter":
+      if (Object.keys(state).length)
+        throw new Error("Malformed counter settings");
+      return new CounterSystem;
     default:
       throw new Error(`Unknown system ID '${settings.systemId}'`);
   }
@@ -5594,7 +5771,10 @@ function createPlayerStartPoints(team, players) {
 }
 var friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
 var defaultEffects = [{ trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }];
-var deadly = { trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], ...new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "dead", value: true } }).toSettings() };
+var deadly = { schemaVersion: 1, trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.Multi" /* Multi */, typeValue: [
+  new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings(),
+  new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings()
+] };
 var IceMap = {
   schemaVersion: 1,
   screenResolution: { x, y },
@@ -5646,20 +5826,20 @@ class TriggerDefinitionCatalog {
   }
 }
 function validateTriggerDefinition(value) {
-  const definition = record5(value, "Trigger definition");
-  exactKeys5(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  const definition = record6(value, "Trigger definition");
+  exactKeys6(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
   if (definition.schemaVersion !== 1)
     throw new Error("Unsupported trigger definition schema version");
   if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
     throw new Error("Invalid trigger definition ID");
   validateEffectSettings(definition.effect);
 }
-function record5(value, label) {
+function record6(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys5(value, keys, label) {
+function exactKeys6(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -5680,17 +5860,17 @@ function validateFigureCounts(playerCount, figuresPerPlayer) {
   }
 }
 function validateGameSettings(settings) {
-  if (!isRecord6(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
+  if (!isRecord7(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
     throw new Error("Invalid game settings document");
   if (!isVector4(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
     throw new Error("Invalid screen resolution");
-  if (!isRecord6(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
+  if (!isRecord7(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
     throw new Error("Invalid friction settings");
   validateDrift(settings.drift);
   validateFigureCounts(settings.playerCount, settings.figuresPerPlayer);
   if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam))
     throw new Error("Invalid team settings");
-  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord6(player) && isVector4(player.position) && isVector4(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
+  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord7(player) && isVector4(player.position) && isVector4(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
     throw new Error("Invalid player settings");
   if (!isBackground(settings.background))
     throw new Error("Invalid background settings");
@@ -5727,15 +5907,17 @@ function validateGameSettings(settings) {
     validateEnvironmentalMechanics(settings.environmentalMechanics);
   if (settings.triggerDefinitions !== undefined)
     settings.triggerDefinitions.forEach(validateTriggerDefinition);
+  if (settings.counters !== undefined)
+    canonicalizeCounterStates(settings.counters);
 }
-function isRecord6(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null;
 }
 function isVector4(value) {
-  return isRecord6(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
+  return isRecord7(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isBackground(value) {
-  if (!isRecord6(value))
+  if (!isRecord7(value))
     return false;
   if (value.type === "color")
     return typeof value.color === "string";
@@ -5762,9 +5944,9 @@ function isEffect(value) {
   }
 }
 function isBoundary2(value) {
-  if (!isRecord6(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
+  if (!isRecord7(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
     return false;
-  if (value.id !== undefined && (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id)))
+  if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))
     return false;
   if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
     return false;
@@ -5878,7 +6060,6 @@ class StructureCircle {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
-  dead = false;
   id;
   serializeState;
   friction;
@@ -5977,19 +6158,6 @@ class StructureCircle {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
   }
-  isDead() {
-    return this.dead;
-  }
-  setDead(dead) {
-    this.dead = dead;
-    if (dead) {
-      this.setPhysicsEnabled(false);
-      this.setDrawingEnabled(false);
-    } else {
-      this.setPhysicsEnabled(true);
-      this.setDrawingEnabled(true);
-    }
-  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -6067,7 +6235,6 @@ class StructureLine {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
-  dead = false;
   id;
   serializeState;
   effects = [];
@@ -6150,19 +6317,6 @@ class StructureLine {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
   }
-  isDead() {
-    return this.dead;
-  }
-  setDead(dead) {
-    this.dead = dead;
-    if (dead) {
-      this.setPhysicsEnabled(false);
-      this.setDrawingEnabled(false);
-    } else {
-      this.setPhysicsEnabled(true);
-      this.setDrawingEnabled(true);
-    }
-  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -6234,7 +6388,6 @@ class StructureRectangle {
   vel;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
-  dead = false;
   id;
   serializeState;
   collisionRole;
@@ -6327,19 +6480,6 @@ class StructureRectangle {
     this.isPhysicsEnabled = physicsEnabled;
     this.serializeState = true;
   }
-  isDead() {
-    return this.dead;
-  }
-  setDead(dead) {
-    this.dead = dead;
-    if (dead) {
-      this.setPhysicsEnabled(false);
-      this.setDrawingEnabled(false);
-    } else {
-      this.setPhysicsEnabled(true);
-      this.setDrawingEnabled(true);
-    }
-  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -6410,6 +6550,8 @@ class StructureRectangle {
 class FullStructure {
   str;
   constructor(str) {
+    if (str.id === undefined)
+      throw new Error("Runtime structures require an explicit canonical ID");
     switch (str.type) {
       case 0 /* CIRCLE */:
         this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled);
@@ -6439,12 +6581,6 @@ class FullStructure {
   }
   setDrawingEnabled(drawingEnabled) {
     this.str.setDrawingEnabled(drawingEnabled);
-  }
-  isDead() {
-    return this.str.isDead();
-  }
-  setDead(dead) {
-    this.str.setDead(dead);
   }
   setSetting(key, value) {
     this.str.setSetting(key, value);
@@ -6509,6 +6645,40 @@ class FullStructure {
   isPhysicsObj() {
     return typeof this.str.getShape() === "function";
   }
+}
+
+function migrateStructureSettings(boundaries) {
+  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+}
+
+function migrateEffectSettings(value) {
+  if (!isRecord8(value))
+    throw new Error("Effect migration requires an object");
+  if (value.schemaVersion !== undefined && value.schemaVersion !== EFFECT_SCHEMA_VERSION)
+    throw new Error(`Unsupported historical Effect schema version: ${String(value.schemaVersion)}`);
+  const effect = { schemaVersion: EFFECT_SCHEMA_VERSION, type: value.type, typeValue: structuredClone(value.typeValue) };
+  if (effect.type === "EffectType.Multi" && Array.isArray(effect.typeValue))
+    effect.typeValue = effect.typeValue.map(migrateEffectSettings);
+  return effect;
+}
+function migrateFullEffectSettings(value) {
+  if (!isRecord8(value))
+    throw new Error("Full Effect migration requires an object");
+  return { ...migrateEffectSettings(value), trigger: value.trigger, triggerValue: structuredClone(value.triggerValue) };
+}
+function migrateGameSettingsEffects(settings) {
+  const copy = structuredClone(settings);
+  copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
+  copy.players = copy.players.map((player) => ({ ...player, effects: (player.effects ?? []).map(migrateFullEffectSettings) }));
+  copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
+  if (copy.triggerDefinitions)
+    copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: migrateEffectSettings(definition.effect) }));
+  if (copy.environmentalMechanics)
+    copy.environmentalMechanics = copy.environmentalMechanics.map((mechanic) => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
+  return copy;
+}
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function getBackgoundSystem(settings) {
@@ -6662,7 +6832,7 @@ var ALLOW_ALL_TARGETS = {
 };
 function validateItemTarget(item, target, context) {
   const validation = item.targetValidation ?? ALLOW_ALL_TARGETS;
-  if (!isRecord7(target) || typeof target.type !== "string") {
+  if (!isRecord9(target) || typeof target.type !== "string") {
     throw new Error("Item target must be an object with a valid type");
   }
   if (target.type !== item.targetType) {
@@ -6745,11 +6915,11 @@ function validateWorldPosition(position, worldSize) {
 function sharesTeam(first, second) {
   return first.getTeam().some((team) => second.getTeam().includes(team));
 }
-function isRecord7(value) {
+function isRecord9(value) {
   return typeof value === "object" && value !== null;
 }
 function isVector5(value) {
-  return isRecord7(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
+  return isRecord9(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
 }
 
 function itemInteractionMode(item, otherItemId) {
@@ -7067,9 +7237,14 @@ var falltuerItem = createItem({
   targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 }
 });
 var falltuerDeathCollision = {
+  schemaVersion: 1,
   trigger: "EffectTrigger.Collision" /* Collision */,
   triggerValue: [],
-  ...new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "dead", value: true } }).toSettings()
+  type: "EffectType.Multi" /* Multi */,
+  typeValue: [
+    new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings(),
+    new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings()
+  ]
 };
 var falltuerStructure = {
   id: FALLTUER_STRUCTURE_ID,
@@ -7083,14 +7258,14 @@ var falltuerStructure = {
   drawingEnabled: false,
   effects: [falltuerDeathCollision]
 };
-var falltuerPosition = { type: "EffectType.Position" /* Position */, typeValue: { x: 0, y: 0 } };
+var falltuerPosition = { schemaVersion: 1, type: "EffectType.Position" /* Position */, typeValue: { x: 0, y: 0 } };
 var falltuerEnablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: true } }).toSettings();
 var falltuerEnableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: true } }).toSettings();
 var falltuerDisablePhysics = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings();
 var falltuerDisableDrawing = new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings();
 var falltuerTriggerDefinitions = [
-  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { type: "EffectType.Multi" /* Multi */, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
-  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { type: "EffectType.Multi" /* Multi */, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } }
+  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
+  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } }
 ];
 var powerDashItem = createItem({
   id: "power-dash",
@@ -7478,7 +7653,7 @@ class AuthoritativeGameplayRenderer {
   drawPlayer(renderer, player, activeTeam) {
     const position = player.position;
     renderer.push();
-    if (player.isDead) {
+    if (!player.isPhysicsEnabled && !player.isDrawingEnabled) {
       renderer.setFillColor("#64748b");
       renderer.setStrokeColor("#cbd5e1");
       renderer.drawCircle(position.x, position.y, player.size);
@@ -8034,14 +8209,14 @@ function clone5(value) {
 }
 
 function validateAnimationSettings(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
+  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
     throw new Error("Malformed animation settings");
   assertKeys(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
   validateId2(value.id, "animation ID");
   validateId2(value.channel, "animation channel");
   const ids = new Set;
   for (const track of value.tracks) {
-    if (!isRecord8(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
+    if (!isRecord10(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
       throw new Error("Malformed animation track");
     assertKeys(track, ["id", "keyframes"], "animation track");
     validateId2(track.id, "animation track ID");
@@ -8050,7 +8225,7 @@ function validateAnimationSettings(value) {
     ids.add(track.id);
     let previous = -1;
     for (const keyframe of track.keyframes) {
-      if (!isRecord8(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
+      if (!isRecord10(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
         throw new Error("Invalid animation keyframe");
       assertKeys(keyframe, ["tick", "value"], "animation keyframe");
       assertJsonValue(keyframe.value);
@@ -8062,7 +8237,7 @@ function validateAnimationSettings(value) {
   assertJsonValue(value);
 }
 function validatePresentationEvent(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
+  if (!isRecord10(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
     throw new Error("Malformed presentation event");
   assertKeys(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
   validateId2(value.eventId, "presentation event ID");
@@ -8083,12 +8258,12 @@ function validatePresentationEvent(value) {
   assertJsonValue(value);
 }
 function validatePresentationRuntimeSettings(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
+  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
     throw new Error("Malformed presentation runtime settings");
   assertKeys(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
   validateId2(value.runtimeId, "presentation runtime ID");
   for (const active of value.active) {
-    if (!isRecord8(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
+    if (!isRecord10(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
       throw new Error("Malformed active animation");
     assertKeys(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
     validateId2(active.instanceId, "presentation instance ID");
@@ -8229,7 +8404,7 @@ function assertKeys(value, allowed, name) {
     if (!keys.has(key))
       throw new Error(`Unknown ${name} field '${key}'`);
 }
-function isRecord8(value) {
+function isRecord10(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 function integer(value) {
@@ -8448,6 +8623,7 @@ class GameHandler {
       currTurn: 0,
       activeTeam: 0,
       myTeamNumber: 0,
+      counters: [],
       drift: DEFAULT_DRIFT,
       finishMatch: (result) => this.finishMatch(result)
     };
@@ -8502,7 +8678,7 @@ class GameHandler {
         continue;
       if (player.hp < previous.hp)
         this.feedback.record("damage" /* Damage */, this.getTurnNumber(), { targetIds: [player.id], data: { amount: previous.hp - player.hp } });
-      if (player.isDead && !previous.isDead)
+      if ((!player.isPhysicsEnabled || !player.isDrawingEnabled) && previous.isPhysicsEnabled && previous.isDrawingEnabled)
         this.feedback.record("elimination" /* Elimination */, this.getTurnNumber(), { targetIds: [player.id] });
     }
     this.feedback.record("turn" /* Turn */, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
@@ -8661,6 +8837,21 @@ class GameHandler {
   }
   getContext() {
     return { ...this.context };
+  }
+  getCounters() {
+    return this.context.counters.map((counter) => ({ ...counter }));
+  }
+  getCounter(counterId) {
+    const system = this.systems.find((candidate) => candidate instanceof CounterSystem);
+    if (!system)
+      throw new Error("Counter system is not installed");
+    return system.read(this.context, counterId);
+  }
+  applyCounterEffect(effect) {
+    const system = this.systems.find((candidate) => candidate instanceof CounterSystem);
+    if (!system)
+      throw new Error("Counter system is not installed");
+    system.apply(this.context, effect);
   }
   addSystem(system) {
     this.systems.push(system);
@@ -8907,6 +9098,7 @@ class GameHandler {
       effects,
       items: this.items.map((item) => ({ ...item })),
       players: this.entityManager.toSettings(),
+      counters: canonicalizeCounterStates(this.context.counters),
       minPlayers: this.settings?.minPlayers ?? 0,
       maxPlayers: this.settings?.maxPlayers ?? 0,
       allTeamSize: this.teamSize,
@@ -9285,6 +9477,9 @@ class GameHandlerBuilder {
     return this;
   }
   fromSettings(gameSettings) {
+    gameSettings = migrateGameSettingsEffects(gameSettings);
+    const counters = canonicalizeCounterStates(gameSettings.counters ?? []);
+    gameSettings = { ...gameSettings, counters };
     const drift = gameSettings.drift ?? DEFAULT_DRIFT;
     validateDrift(drift);
     const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1);
@@ -9299,6 +9494,7 @@ class GameHandlerBuilder {
     this.engine.setId(gameSettings.id);
     this.engine.setTickRate(gameSettings.tickRate ?? 1);
     this.engine.setWorldSize(worldSize);
+    this.engine.getContext().counters.splice(0, this.engine.getContext().counters.length, ...counters);
     this.engine.setPhysics(new defaultPhysics(gameSettings.friction));
     const snapshot = gameSettings;
     if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
@@ -9376,9 +9572,9 @@ function createRuntimeHandler(settings, systems, systemOrder) {
 
 var DOCUMENT_SCHEMA_VERSION = 1;
 function validateMapDocument(document) {
-  if (!isRecord9(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
+  if (!isRecord11(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
     throw new Error("Invalid map schema version");
-  if (!isRecord9(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
+  if (!isRecord11(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
     throw new Error("Invalid map metadata");
   if (!isVector6(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
     throw new Error("Invalid map world size");
@@ -9393,20 +9589,20 @@ function validateMapDocument(document) {
   if (document.environmentalMechanics !== undefined)
     validateEnvironmentalMechanics(document.environmentalMechanics);
 }
-function isRecord9(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null;
 }
 function isVector6(value) {
-  return isRecord9(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
+  return isRecord11(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isFriction(value) {
-  return isRecord9(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
+  return isRecord11(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
 }
 function isSpawnRegion(value) {
-  return isRecord9(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
+  return isRecord11(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
 }
 function isArenaGeometry(value) {
-  if (!isRecord9(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
+  if (!isRecord11(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
     return typeof value.r === "number" && value.r > 0;
@@ -9473,7 +9669,7 @@ function assignStableStructureIds(boundaries) {
   return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
 }
 function isMapHazard(value) {
-  if (!isRecord9(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord9(value.trigger) || value.trigger.type !== "collision" || !isRecord9(value.config))
+  if (!isRecord11(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord11(value.trigger) || value.trigger.type !== "collision" || !isRecord11(value.config))
     return false;
   if (!isHazardZone(value.config))
     return false;
@@ -9498,11 +9694,15 @@ function hazardToBoundary(hazard) {
 }
 function hazardEffect(hazard) {
   if (hazard.type === "kill-zone") {
-    return { trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "dead", value: true } };
+    return { schemaVersion: 1, trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.Multi" /* Multi */, typeValue: [
+      { schemaVersion: 1, type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } },
+      { schemaVersion: 1, type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }
+    ] };
   }
   const config = hazard.config;
   const radians = config.angle * Math.PI / 180;
   return {
+    schemaVersion: 1,
     trigger: "EffectTrigger.Collision" /* Collision */,
     triggerValue: [],
     type: "EffectType.ModifySetting" /* ModifySetting */,
@@ -9648,7 +9848,7 @@ function createMatchDefinition(options) {
   return structuredClone(definition);
 }
 function validateKoreMatchDefinition(value) {
-  if (!isRecord10(value))
+  if (!isRecord12(value))
     throw new Error("Malformed match definition");
   if (value.schemaVersion !== KORE_MATCH_DEFINITION_VERSION)
     throw new Error("Unsupported match definition version");
@@ -9664,7 +9864,7 @@ function validateKoreMatchDefinition(value) {
     throw new Error("A match definition requires systems and systemOrder arrays");
   const ids = new Set;
   for (const system of value.systems) {
-    if (!isRecord10(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord10(system.state)) {
+    if (!isRecord12(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord12(system.state)) {
       throw new Error("Malformed system settings in match definition");
     }
     if (ids.has(system.systemId))
@@ -9680,7 +9880,7 @@ function createRuntimeMatch(definition) {
   validateKoreMatchDefinition(definition);
   return createRuntimeHandler(definition.settings, definition.systems, definition.systemOrder);
 }
-function isRecord10(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -9777,7 +9977,7 @@ function hashContentPackage(value) {
   return hashCanonicalJson(JSON.parse(canonicalizeContentPackage(value)));
 }
 function validateManifest(value) {
-  if (!isRecord11(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
+  if (!isRecord13(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
     throw new Error("Malformed content package manifest");
   assertKeys2(value, ["id", "name", "version", "dependencies"], "manifest");
   const dependencies = arrayOf(value.dependencies, "manifest dependencies");
@@ -9785,7 +9985,7 @@ function validateManifest(value) {
     throw new Error("Content package has too many dependencies");
   const seen = new Set;
   for (const dependency of dependencies) {
-    if (!isRecord11(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
+    if (!isRecord13(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
       throw new Error("Malformed content package dependency");
     if (seen.has(dependency.id))
       throw new Error(`Duplicate dependency '${dependency.id}'`);
@@ -9793,7 +9993,7 @@ function validateManifest(value) {
   }
 }
 function validateMode(value) {
-  if (!isRecord11(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
+  if (!isRecord13(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
     throw new Error("Malformed content package mode");
   assertKeys2(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
   if (value.phases.length === 0 || !value.phases.every((phase) => typeof phase === "string"))
@@ -9801,32 +10001,32 @@ function validateMode(value) {
   validateItemEconomySettings(value.itemEconomy);
 }
 function validateUi(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed UI metadata");
   assertKeys2(value, ["labels", "icons", "menu"], "UI metadata");
   for (const key of ["labels", "icons"])
-    if (value[key] !== undefined && (!isRecord11(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
+    if (value[key] !== undefined && (!isRecord13(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
       throw new Error("UI metadata must contain string maps");
   if (value.menu !== undefined) {
     for (const entry of arrayOf(value.menu, "UI menu"))
-      if (!isRecord11(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
+      if (!isRecord13(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
         throw new Error("Malformed UI menu entry");
   }
 }
 function validateAudio(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed audio declarations");
   assertKeys2(value, ["sounds", "music"], "audio declarations");
   for (const key of ["sounds", "music"])
     if (value[key] !== undefined)
       for (const [id, declaration] of Object.entries(value[key])) {
-        if (!validId2(id) || !isRecord11(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
+        if (!validId2(id) || !isRecord13(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
           throw new Error("Malformed audio declaration");
         assertKeys2(declaration, ["asset", "bus"], "audio declaration");
       }
 }
 function validatePresentation(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed presentation declarations");
   assertKeys2(value, ["animations", "events"], "presentation declarations");
   for (const animation2 of arrayOf(value.animations, "animations"))
@@ -9851,14 +10051,14 @@ function normalize(value) {
   for (const key of ["maps", "items", "modes"])
     if (Array.isArray(copy[key]))
       copy[key] = [...copy[key]].sort((a, b) => collectionId(a).localeCompare(collectionId(b)));
-  if (isRecord11(copy.manifest) && Array.isArray(copy.manifest.dependencies))
+  if (isRecord13(copy.manifest) && Array.isArray(copy.manifest.dependencies))
     copy.manifest.dependencies = [...copy.manifest.dependencies].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   return copy;
 }
 function canonicalize(value) {
   if (Array.isArray(value))
     return value.map(canonicalize);
-  if (isRecord11(value))
+  if (isRecord13(value))
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
   return value;
 }
@@ -9874,7 +10074,7 @@ function assertJson(value, path) {
     value.forEach((entry, index) => assertJson(entry, `${path}[${index}]`));
     return;
   }
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error(`Malformed JSON value at ${path}`);
   for (const [key, entry] of Object.entries(value)) {
     if (EXECUTABLE_KEYS.has(key.toLowerCase()) || key.includes("/") || key.includes("\\"))
@@ -9908,13 +10108,13 @@ function validVersion(value) {
 function safeAsset(value) {
   return value.length <= 512 && !MODULE_SCHEMES.test(value) && !/[<>\s]/.test(value) && !value.toLowerCase().startsWith("data:");
 }
-function isRecord11(value) {
+function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record6 = value;
-  const metadata = record6.metadata;
-  return String(record6.id ?? metadata?.id ?? "");
+  const record7 = value;
+  const metadata = record7.metadata;
+  return String(record7.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
@@ -9977,7 +10177,7 @@ function createPlayer(input = {}) {
     ...input.playericon !== undefined ? { playericon: input.playericon } : {},
     ...input.hoop !== undefined ? { hoop: input.hoop } : {},
     ...input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {},
-    ...input.isDead !== undefined ? { isDead: input.isDead } : {},
+    ...input.isDrawingEnabled !== undefined ? { isDrawingEnabled: input.isDrawingEnabled } : {},
     ...input.effects !== undefined ? { effects: input.effects.map((e) => ({ ...e })) } : {},
     ...input.inventory !== undefined ? { inventory: input.inventory.map((i) => ({ ...i })) } : {}
   });
@@ -10015,7 +10215,7 @@ class KoreMapBuilder {
     this.options = options;
     this.world = engine.createWorld({ id: options.id, worldSize: options.worldSize });
     this.world.setBackground(toJson(this.background));
-    const containment = { type: 2 /* RECTANGLE */, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
+    const containment = { id: `${options.id}.containment`, type: 2 /* RECTANGLE */, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
     this.structures.push(containment);
     this.world.addStructure(toJson(containment));
   }
@@ -10072,8 +10272,9 @@ class KoreMapBuilder {
   }
   addStructure(structure) {
     const settings = "toSettings" in structure ? structure.toSettings() : structure;
-    this.structures.push(clone8(settings));
-    this.world.addStructure(toJson(settings));
+    const canonical = { ...settings, id: settings.id ?? `${this.options.id}.structure.${this.structures.length}` };
+    this.structures.push(clone8(canonical));
+    this.world.addStructure(toJson(canonical));
     this.built = undefined;
     return this;
   }
@@ -10087,7 +10288,7 @@ class KoreMapBuilder {
     this.assertHazardZone(settings);
     this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
     const structureIndex = this.structures.length;
-    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: "set" /* Set */, key: "dead", value: true })] });
+    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.multi(kore.effects.modifySetting({ operation: "set" /* Set */, key: "physicsEnabled", value: false }), kore.effects.modifySetting({ operation: "set" /* Set */, key: "drawingEnabled", value: false }))] });
     this.generatedHazardStructureIndexes.add(structureIndex);
     return this;
   }
@@ -10413,26 +10614,26 @@ var kore = {
     size(size) {
       if (!Number.isFinite(size) || size <= 0)
         throw new Error("Size must be a finite positive number");
-      return { type: "EffectType.ModifySize" /* ModifySize */, typeValue: { size } };
+      return { schemaVersion: 1, type: "EffectType.ModifySize" /* ModifySize */, typeValue: { size } };
     },
     position(position) {
       if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
         throw new Error("Position coordinates must be finite numbers");
-      return { type: "EffectType.Position" /* Position */, typeValue: { ...position } };
+      return { schemaVersion: 1, type: "EffectType.Position" /* Position */, typeValue: { ...position } };
     },
     velocity(velocity) {
       if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y))
         throw new Error("Velocity components must be finite numbers");
-      return { type: "EffectType.Velocity" /* Velocity */, typeValue: { ...velocity } };
+      return { schemaVersion: 1, type: "EffectType.Velocity" /* Velocity */, typeValue: { ...velocity } };
     },
     team(team) {
-      return { type: "EffectType.Team" /* Team */, typeValue: { team: [...team] } };
+      return { schemaVersion: 1, type: "EffectType.Team" /* Team */, typeValue: { team: [...team] } };
     },
     modifySetting(values) {
       return new EffectModifySetting({ typeValue: values });
     },
     multi(...effects) {
-      return new MultiEffect({ type: "EffectType.Multi" /* Multi */, typeValue: effects.map((effect) => ("toSettings" in effect) ? effect.toSettings() : effect) });
+      return new MultiEffect({ schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: effects.map((effect) => ("toSettings" in effect) ? effect.toSettings() : effect) });
     },
     itemEffect(type, typeValue = {}) {
       return { type, typeValue: clone8(typeValue) };

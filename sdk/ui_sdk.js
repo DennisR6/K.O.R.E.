@@ -188,6 +188,9 @@ class EngineEffectRegistry {
       throw new Error(`Unsupported effect schema version for '${value.type}'`);
     assertJsonValue(value.typeValue);
     this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    this.definitions.get(value.type).validateTarget?.(value.target);
   }
   describe() {
     return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
@@ -211,6 +214,8 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect capabilities for '${definition.id}'`);
   if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
     throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 class UiRuntime {
   settings;
