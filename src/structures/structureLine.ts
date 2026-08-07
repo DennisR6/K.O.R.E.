@@ -29,7 +29,6 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true;
 	private isDrawingEnabled: boolean = true;
-	private dead = false
 	private readonly id: string
 	private serializeState: boolean
 
@@ -115,8 +114,6 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public getShape(): SHAPE.LINE { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled; this.serializeState = true }
-	public isDead(): boolean { return this.dead }
-	public setDead(dead: boolean): void { this.dead = dead; if (dead) { this.setPhysicsEnabled(false); this.setDrawingEnabled(false); } else { this.setPhysicsEnabled(true); this.setDrawingEnabled(true); } }
 	public drawingEnabled(): boolean { return this.isDrawingEnabled }
 	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled; this.serializeState = true }
 	public getId(): string { return this.id }

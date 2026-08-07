@@ -23,8 +23,6 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 	public getId(): string { return this.str.getId() }
 	public drawingEnabled(): boolean { return this.str.drawingEnabled() }
 	public setDrawingEnabled(drawingEnabled: boolean): void { this.str.setDrawingEnabled(drawingEnabled) }
-	public isDead(): boolean { return this.str.isDead() }
-	public setDead(dead: boolean): void { this.str.setDead(dead) }
 	public setSetting(key: SettingKey, value: SettingValue): void { this.str.setSetting(key, value) }
 	public addSetting(key: SettingKey, value: SettingValue): void { this.str.addSetting(key, value) }
 	public removeSetting(key: SettingKey, value: SettingValue): void { this.str.removeSetting(key, value) }
