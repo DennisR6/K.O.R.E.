@@ -749,3 +749,17 @@ contract.
 Verification: focused architecture tests passed (`38 pass`, `0 fail`),
 `npx tsc --noEmit` passed, SDK generation passed, and the fast suite passed
 (`861 pass`, `3 skip`, `0 fail`). The worktree was clean after the commit.
+
+## Current Roadmap Stop
+
+The remaining unchecked Phase 7 items are evidence-based deferrals, not
+unfinished runtime work:
+
+- Lifecycle commands remain deferred because Engine has no canonical allocation,
+  identity, active/destroyed, or snapshot/replay lifecycle contract.
+- Generic score/counter commands remain deferred because no engine-neutral
+  consumer or canonical ownership exists; scoring belongs to KORE rules.
+
+There is currently no safe next implementation item. Reopen either item only
+when a concrete consumer supplies the missing canonical contract; otherwise the
+next work would be speculative architecture.
