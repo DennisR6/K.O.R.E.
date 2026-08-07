@@ -136,6 +136,9 @@ class SandboxRenderer implements UiRenderer {
 		this.renderer.setFillColor(element.focused ? "#fef3c7" : "#e2e8f0"); this.renderer.drawRect(element.rect.x + this.offset.x, element.rect.y + this.offset.y, element.rect.width, element.rect.height);
 		this.renderer.setFillColor("#0f172a"); this.renderer.drawText(element.text ?? "", element.rect.x + this.offset.x + 6, element.rect.y + this.offset.y + 22, 14);
 	}
+	public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void {
+		if (element.source) this.renderer.drawImage(element.source, element.rect.x + this.offset.x, element.rect.y + this.offset.y, element.rect.width, element.rect.height);
+	}
 }
 
 /** Starts the p5 host loop; the UI runtimes remain passive and are ticked/drawn explicitly here. */

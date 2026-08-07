@@ -20,7 +20,7 @@ test("KORE HUD composition builds JSON-safe enum-backed canonical settings", () 
 test("HUD projection is idempotent, draw is pure, and item command routes through typed payload", () => {
 	const commands: unknown[] = []; const hud = createKoreGameHudSurface({ handle: command => commands.push(command) });
 	hud.applyProjection(projection()); const before = hud.toSettings(); hud.applyProjection(projection());
-	hud.getRuntime().draw({ drawText() {}, drawButton() {}, drawTextInput() {} });
+	hud.getRuntime().draw({ drawText() {}, drawButton() {}, drawTextInput() {}, drawImage() {} });
 	expect(hud.toSettings()).toEqual(before);
 	hud.updateMouse(530, 85); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "freeze-shot", target: { type: "self" } } }]);

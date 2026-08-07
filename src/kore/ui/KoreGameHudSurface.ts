@@ -102,7 +102,8 @@ class KoreHudRenderer implements UiRenderer {
 	public constructor(private readonly renderer: RenderContext) { }
 	public drawText(element: Parameters<UiRenderer["drawText"]>[0]): void { if (!element.text) return; this.renderer.setFillColor(element.style === KoreHudStyle.Rejection ? KoreHudColor.Danger : KoreHudColor.Ink); this.renderer.drawText(element.text, element.rect.x, element.rect.y + (element.style === KoreHudStyle.ResultTitle ? 32 : 16), element.style === KoreHudStyle.Status ? 16 : element.style === KoreHudStyle.ResultTitle ? 28 : 14); }
 	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
-	public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
+  public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
+  public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void { if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); }
 }
 
 export function createKoreGameHudSurface(port: KoreHudCommandPort, gameplayInput?: IMouse, settings: KoreGameHudSettings | undefined = undefined, capabilities: KoreGameHudCapabilities = {}, language: LanguageCatalog = createEnglishLanguage()): KoreGameHudSurface {

@@ -67,6 +67,7 @@ class StatusRenderer implements UiRenderer {
 		this.renderer.drawText(element.text ?? "", element.rect.x + 12, element.rect.y + 27, 16);
 	}
 	public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
+	public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void { if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); }
 }
 
 export function createKoreStatusSurface(language: LanguageCatalog, onRetry: () => void, onBack: () => void): KoreStatusSurface {

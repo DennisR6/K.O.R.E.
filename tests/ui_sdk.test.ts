@@ -48,6 +48,24 @@ test("draw is pure, capability systems skip unsupported elements, and semantic c
 	expect(runtime.drainCommands()).toEqual([{ command: "save-name" }]);
 });
 
+test("icon buttons remain serializable and are exposed to the host renderer", () => {
+	const menu = ui.createMenu({ id: "icons", size: { width: 200, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [
+			ui.button({ id: "settings", text: "Settings", icon: "settings", rect: { x: 0, y: 0, width: 120, height: 30 } }),
+			ui.image({ id: "logo", source: "logo.png", rect: { x: 0, y: 40, width: 80, height: 40 } }),
+		] }))
+		.build();
+	const runtime = ui.fromSettings(JSON.parse(JSON.stringify(menu)));
+	let icon: string | undefined;
+	let source: string | undefined;
+	runtime.draw({ drawText() {}, drawTextInput() {}, drawImage(element) { source = element.source; }, drawButton(element) { icon = element.icon; } });
+	expect(icon).toBe("settings");
+	expect(source).toBe("logo.png");
+	expect(runtime.toSettings().screens[0]!.elements[0]).toMatchObject({ icon: "settings" });
+	expect(runtime.toSettings().screens[0]!.elements[1]).toMatchObject({ kind: "image", source: "logo.png" });
+	expect(() => ui.validate({ ...menu, screens: [{ ...menu.screens[0], elements: [{ ...menu.screens[0]!.elements[0], icon: 42 }] }] })).toThrow();
+});
+
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {
 	const framework = ui.createDefaultFramework();
 	expect(framework.systemOrder).toEqual(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
@@ -74,5 +92,6 @@ function renderer(commands: string[] = []): UiRenderer {
 		drawText(element) { commands.push(`text:${element.id}`); },
 		drawButton(element) { commands.push(`button:${element.id}`); },
 		drawTextInput(element) { commands.push(`input:${element.id}`); },
+		drawImage(element) { commands.push(`image:${element.id}`); },
 	};
 }

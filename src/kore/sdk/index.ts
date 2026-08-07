@@ -8,6 +8,7 @@ import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type Effec
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
+import { ui as engineUi } from "../../engine/ui-sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import { applyRuntimeForceEffects, createRuntimeItemEffect, resolveRuntimeItemEffects } from "./itemRuntime.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
@@ -608,6 +609,8 @@ export function createDefaultKoreFramework(): EngineFrameworkSettings {
 export const kore = {
 	/** Deliberately selected generic primitives for KORE authors who need custom framework metadata. */
 	engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
+	/** KORE-facing JSON-safe UI builder, including standalone images and icon buttons. */
+	ui: engineUi,
 	/** Creates a reusable serializable team definition. */
 	createTeam(settings: KoreTeamSettings): KoreTeam { return new TeamBuilder(settings); },
 	/** Authors a detached, canonical `PlayerSettings` snapshot with KORE defaults and structural validation. */
