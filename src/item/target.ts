@@ -1,6 +1,7 @@
 import type { IEntity } from "../entity/Entity.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { ItemDocument, ItemTargetValidation } from "./types.js";
+import { createEntityResolvedTarget, createPositionResolvedTarget, type ResolvedEffectTarget } from "./resolvedTarget.js";
 
 export type ItemTarget =
 	| { type: "self" }
@@ -49,6 +50,16 @@ export function validateItemTarget(
 			return;
 		default:
 			throw new Error("Item target has an unsupported type");
+	}
+}
+
+/** Resolves an already validated item target into detached scheduled-effect data. */
+export function resolveEffectTarget(target: ItemTarget, context: Pick<ItemTargetContext, "actor">): ResolvedEffectTarget {
+	switch (target.type) {
+		case "self": return createEntityResolvedTarget(String(context.actor.getId()));
+		case "entity": return createEntityResolvedTarget(target.entityId);
+		case "position": return createPositionResolvedTarget(target.position);
+		case "zone": throw new Error("Delayed Effects do not support zone targets without a stable zone contract");
 	}
 }
 

@@ -723,6 +723,58 @@ function validateTriggerSettings(value) {
     throw new Error(`Trigger '${String(trigger.trigger)}' requires an empty payload`);
 }
 
+function createEntityResolvedTarget(entityId) {
+  const target = { schemaVersion: 1, type: "entity", entityId };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
+function createPositionResolvedTarget(position) {
+  const target = { schemaVersion: 1, type: "position", position: { ...position } };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
+function validateResolvedEffectTarget(value) {
+  const target = record(value, "Resolved Effect target");
+  if (target.schemaVersion !== 1)
+    throw new Error("Unsupported resolved Effect target schema version");
+  if (target.type === "entity") {
+    exactKeys(target, ["schemaVersion", "type", "entityId"], "Resolved entity target");
+    string(target.entityId, "Resolved entity target entityId");
+    return;
+  }
+  if (target.type === "position") {
+    exactKeys(target, ["schemaVersion", "type", "position"], "Resolved position target");
+    const position = record(target.position, "Resolved position target position");
+    exactKeys(position, ["x", "y"], "Resolved position");
+    finite(position.x, "Resolved position x");
+    finite(position.y, "Resolved position y");
+    return;
+  }
+  throw new Error(`Unsupported resolved Effect target type '${String(target.type)}'`);
+}
+function record(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function string(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function finite(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+
 var CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
 var FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
 var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
@@ -730,7 +782,7 @@ var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position",
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
 var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
 function validateEffectSettings(value) {
-  const effect = record(value, "Effect settings");
+  const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
   if (!CORE_EFFECT_TYPES.includes(effect.type))
     throw new Error(`Unknown effect type "${String(effect.type)}"`);
@@ -740,40 +792,40 @@ function validateEffectSettings(value) {
     effect.typeValue.forEach(validateEffectSettings);
     return;
   }
-  const payload = record(effect.typeValue, `Effect '${String(effect.type)}' payload`);
+  const payload = record2(effect.typeValue, `Effect '${String(effect.type)}' payload`);
   switch (effect.type) {
     case "EffectType.Physics" /* Physics */:
-      exactKeys(payload, ["friction", "linearDrag", "stopThreshold"], "Physics payload");
-      finite(payload.friction, "Physics friction");
-      finite(payload.linearDrag, "Physics linearDrag");
-      finite(payload.stopThreshold, "Physics stopThreshold");
+      exactKeys2(payload, ["friction", "linearDrag", "stopThreshold"], "Physics payload");
+      finite2(payload.friction, "Physics friction");
+      finite2(payload.linearDrag, "Physics linearDrag");
+      finite2(payload.stopThreshold, "Physics stopThreshold");
       return;
     case "EffectType.Damage" /* Damage */:
-      exactKeys(payload, ["damage"], "Damage payload");
+      exactKeys2(payload, ["damage"], "Damage payload");
       finiteNonNegative(payload.damage, "Damage amount");
       return;
     case "EffectType.Movement" /* Movement */:
-      exactKeys(payload, ["deltaTime", "x", "y"], "Movement payload");
-      finite(payload.deltaTime, "Movement deltaTime");
-      finite(payload.x, "Movement x");
-      finite(payload.y, "Movement y");
+      exactKeys2(payload, ["deltaTime", "x", "y"], "Movement payload");
+      finite2(payload.deltaTime, "Movement deltaTime");
+      finite2(payload.x, "Movement x");
+      finite2(payload.y, "Movement y");
       return;
     case "EffectType.ModifyMass" /* ModifyMass */:
-      exactKeys(payload, ["mass"], "Mass payload");
+      exactKeys2(payload, ["mass"], "Mass payload");
       finitePositive(payload.mass, "Mass");
       return;
     case "EffectType.ModifySize" /* ModifySize */:
-      exactKeys(payload, ["size"], "Size payload");
+      exactKeys2(payload, ["size"], "Size payload");
       finitePositive(payload.size, "Size");
       return;
     case "EffectType.Position" /* Position */:
     case "EffectType.Velocity" /* Velocity */:
-      exactKeys(payload, ["x", "y"], `${String(effect.type)} payload`);
-      finite(payload.x, "Vector x");
-      finite(payload.y, "Vector y");
+      exactKeys2(payload, ["x", "y"], `${String(effect.type)} payload`);
+      finite2(payload.x, "Vector x");
+      finite2(payload.y, "Vector y");
       return;
     case "EffectType.Team" /* Team */:
-      exactKeys(payload, ["team"], "Team payload");
+      exactKeys2(payload, ["team"], "Team payload");
       if (!Array.isArray(payload.team) || !payload.team.every((team) => Number.isSafeInteger(team) && team >= 0))
         throw new Error("Team payload requires non-negative integer teams");
       return;
@@ -785,13 +837,13 @@ function validateEffectSettings(value) {
   }
 }
 function validateFullEffectSettings(value) {
-  const full = record(value, "Full effect settings");
+  const full = record2(value, "Full effect settings");
   knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
   validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
   validateEffectSettings({ type: full.type, typeValue: full.typeValue });
 }
 function validateRuntimeItemEffectSettings(value) {
-  const effect = record(value, "Item effect settings");
+  const effect = record2(value, "Item effect settings");
   knownKeys(effect, ITEM_EFFECT_KEYS, "Item effect settings");
   if (effect.itemId !== undefined && (typeof effect.itemId !== "string" || effect.itemId.length === 0))
     throw new Error("Item effect itemId must be a non-empty string");
@@ -799,38 +851,40 @@ function validateRuntimeItemEffectSettings(value) {
     throw new Error("Item effect order must be a safe integer");
   if (!ITEM_EFFECT_TYPES.includes(effect.type))
     throw new Error(`Unknown item effect type '${String(effect.type)}'`);
-  const payload = record(effect.typeValue, `Item effect '${String(effect.type)}' payload`);
+  const payload = record2(effect.typeValue, `Item effect '${String(effect.type)}' payload`);
   switch (effect.type) {
     case "modifyForce" /* ModifyForce */:
-      exactKeys(payload, ["factor"], "modifyForce payload");
+      exactKeys2(payload, ["factor"], "modifyForce payload");
       finiteNonNegative(payload.factor, "modifyForce factor");
       return;
     case "modifyRotation" /* ModifyRotation */:
-      exactKeys(payload, ["degrees"], "modifyRotation payload");
-      finite(payload.degrees, "modifyRotation degrees");
+      exactKeys2(payload, ["degrees"], "modifyRotation payload");
+      finite2(payload.degrees, "modifyRotation degrees");
       return;
     case "lockRotation" /* LockRotation */:
     case "selectionLock" /* SelectionLock */:
       validateTurns(payload, String(effect.type));
       return;
     case "applyTorque" /* ApplyTorque */:
-      exactKeys(payload, ["torque"], "applyTorque payload");
-      finite(payload.torque, "applyTorque torque");
+      exactKeys2(payload, ["torque"], "applyTorque payload");
+      finite2(payload.torque, "applyTorque torque");
       return;
     case "spawnTrigger" /* SpawnTrigger */:
       knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired"]), "spawnTrigger payload");
       requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
-      string(payload.triggerId, "spawnTrigger triggerId");
+      string2(payload.triggerId, "spawnTrigger triggerId");
       boundedTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
       optionalBoolean(payload.fired, "spawnTrigger fired");
       return;
     case "delayedEffect" /* DelayedEffect */:
-      knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired"]), "delayedEffect payload");
+      knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload");
       requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
-      string(payload.effectType, "delayedEffect effectType");
+      string2(payload.effectType, "delayedEffect effectType");
       boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
       if (payload.effectValue !== undefined)
         assertJsonValue(payload.effectValue);
+      if (payload.resolvedTarget !== undefined)
+        validateResolvedEffectTarget(payload.resolvedTarget);
       optionalBoolean(payload.fired, "delayedEffect fired");
       return;
     case "shield" /* Shield */:
@@ -848,18 +902,18 @@ function validateRuntimeItemEffectSettings(value) {
       boundedTurns(payload.durationTurns, payload.remainingTurns, "freeze");
       return;
     case "swapPosition" /* SwapPosition */:
-      exactKeys(payload, [], "swapPosition payload");
+      exactKeys2(payload, [], "swapPosition payload");
       return;
     case "temporaryWall" /* TemporaryWall */:
       knownKeys(payload, new Set(["wallId", "x", "y", "w", "h", "color", "durationTurns", "remainingTurns", "active"]), "temporaryWall payload");
       requiredKeys(payload, ["wallId", "x", "y", "w", "h", "durationTurns"], "temporaryWall payload");
-      string(payload.wallId, "temporaryWall wallId");
-      finite(payload.x, "temporaryWall x");
-      finite(payload.y, "temporaryWall y");
+      string2(payload.wallId, "temporaryWall wallId");
+      finite2(payload.x, "temporaryWall x");
+      finite2(payload.y, "temporaryWall y");
       finitePositive(payload.w, "temporaryWall w");
       finitePositive(payload.h, "temporaryWall h");
       if (payload.color !== undefined)
-        string(payload.color, "temporaryWall color");
+        string2(payload.color, "temporaryWall color");
       boundedTurns(payload.durationTurns, payload.remainingTurns, "temporaryWall");
       optionalBoolean(payload.active, "temporaryWall active");
       return;
@@ -869,7 +923,7 @@ function validateRuntimeItemEffectSettings(value) {
       boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode");
       return;
     case "magnet" /* Magnet */:
-      exactKeys(payload, ["mode", "force", "range"], "magnet payload");
+      exactKeys2(payload, ["mode", "force", "range"], "magnet payload");
       if (payload.mode !== "attract" && payload.mode !== "repel")
         throw new Error("magnet mode must be attract or repel");
       finiteNonNegative(payload.force, "magnet force");
@@ -885,7 +939,7 @@ function validateRuntimeItemEffectSettings(value) {
   }
 }
 function validateModifySetting(payload) {
-  exactKeys(payload, ["operation", "key", "value"], "ModifySetting payload");
+  exactKeys2(payload, ["operation", "key", "value"], "ModifySetting payload");
   if (payload.operation !== "set" /* Set */ && payload.operation !== "add" /* Add */ && payload.operation !== "remove" /* Remove */)
     throw new Error("ModifySetting operation is invalid");
   if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key))
@@ -896,14 +950,14 @@ function validateSettingValue(key, value) {
   if (value === undefined)
     return;
   if (["hp", "mass", "size", "friction"].includes(key)) {
-    finite(value, `ModifySetting ${key}`);
+    finite2(value, `ModifySetting ${key}`);
     return;
   }
   if (["position", "velocity"].includes(key)) {
-    const vector = record(value, `ModifySetting ${key}`);
-    exactKeys(vector, ["x", "y"], `ModifySetting ${key}`);
-    finite(vector.x, `${key} x`);
-    finite(vector.y, `${key} y`);
+    const vector = record2(value, `ModifySetting ${key}`);
+    exactKeys2(vector, ["x", "y"], `ModifySetting ${key}`);
+    finite2(vector.x, `${key} x`);
+    finite2(vector.y, `${key} y`);
     return;
   }
   if (key === "team") {
@@ -931,7 +985,7 @@ function boundedTicks(duration, remaining, label) {
   if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
     throw new Error(`${label} remainingTicks is outside delayTicks`);
 }
-function record(value, label) {
+function record2(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
@@ -941,7 +995,7 @@ function knownKeys(value, allowed, label) {
     if (!allowed.has(key))
       throw new Error(`${label} contains unknown field '${key}'`);
 }
-function exactKeys(value, allowed, label) {
+function exactKeys2(value, allowed, label) {
   const set = new Set(allowed);
   for (const key of Object.keys(value))
     if (!set.has(key))
@@ -955,26 +1009,26 @@ function requiredKeys(value, required, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
-function finite(value, label) {
+function finite2(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
 function finitePositive(value, label) {
-  finite(value, label);
+  finite2(value, label);
   if (value <= 0)
     throw new Error(`${label} must be positive`);
 }
 function finiteNonNegative(value, label) {
-  finite(value, label);
+  finite2(value, label);
   if (value < 0)
     throw new Error(`${label} must be non-negative`);
 }
 function finiteRange(value, min, max, label) {
-  finite(value, label);
+  finite2(value, label);
   if (value < min || value > max)
     throw new Error(`${label} is outside range`);
 }
-function string(value, label) {
+function string2(value, label) {
   if (typeof value !== "string" || value.length === 0)
     throw new Error(`${label} must be a non-empty string`);
 }
@@ -1323,35 +1377,35 @@ function createMovementState(input) {
   return structuredClone(state);
 }
 function validateTransformState(value) {
-  const state = record2(value, "Transform state");
-  exactKeys2(state, ["schemaVersion", "position", "rotation"], "Transform state");
+  const state = record3(value, "Transform state");
+  exactKeys3(state, ["schemaVersion", "position", "rotation"], "Transform state");
   if (state.schemaVersion !== 1)
     throw new Error("Unsupported Transform state schema version");
   validateVector(state.position, "Transform position");
-  finite2(state.rotation, "Transform rotation");
+  finite3(state.rotation, "Transform rotation");
 }
 function validateMovementState(value) {
-  const state = record2(value, "Movement state");
-  exactKeys2(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
+  const state = record3(value, "Movement state");
+  exactKeys3(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
   if (state.schemaVersion !== 1)
     throw new Error("Unsupported Movement state schema version");
   validateVector(state.velocity, "Movement velocity");
-  finite2(state.angularVelocity, "Movement angularVelocity");
+  finite3(state.angularVelocity, "Movement angularVelocity");
   if (typeof state.enabled !== "boolean")
     throw new Error("Movement enabled must be boolean");
 }
 function validateVector(value, label) {
-  const vector = record2(value, label);
-  exactKeys2(vector, ["x", "y"], label);
-  finite2(vector.x, `${label} x`);
-  finite2(vector.y, `${label} y`);
+  const vector = record3(value, label);
+  exactKeys3(vector, ["x", "y"], label);
+  finite3(vector.x, `${label} x`);
+  finite3(vector.y, `${label} y`);
 }
-function record2(value, label) {
+function record3(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys2(value, keys, label) {
+function exactKeys3(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -1360,7 +1414,7 @@ function exactKeys2(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
-function finite2(value, label) {
+function finite3(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
@@ -1437,46 +1491,46 @@ function createEnvironmentActivationTriggerEvent(input) {
   return structuredClone(event);
 }
 function validateTriggerActivation(value) {
-  const activation = record3(value, "Trigger activation");
-  exactKeys3(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+  const activation = record4(value, "Trigger activation");
+  exactKeys4(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
   if (activation.schemaVersion !== 1)
     throw new Error("Unsupported Trigger activation schema version");
-  string2(activation.effectId, "Trigger activation effectId");
+  string3(activation.effectId, "Trigger activation effectId");
   validateTriggerEvent(activation.event);
 }
 function validateTriggerEvent(value) {
-  const event = record3(value, "Trigger event");
-  exactKeys3(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
+  const event = record4(value, "Trigger event");
+  exactKeys4(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
   if (event.schemaVersion !== 1)
     throw new Error("Unsupported Trigger event schema version");
-  string2(event.sourceId, "Trigger event sourceId");
+  string3(event.sourceId, "Trigger event sourceId");
   safeSequence(event.sequence, "Trigger event sequence");
   if (event.type === "tick") {
-    const payload = record3(event.payload, "Tick trigger payload");
-    exactKeys3(payload, ["dt"], "Tick trigger payload");
+    const payload = record4(event.payload, "Tick trigger payload");
+    exactKeys4(payload, ["dt"], "Tick trigger payload");
     finiteNonNegative2(payload.dt, "Tick trigger dt");
     return;
   }
   if (event.type === "collision.enter") {
-    const payload = record3(event.payload, "Collision trigger payload");
-    exactKeys3(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
-    string2(payload.entityId, "Collision trigger entityId");
-    string2(payload.otherId, "Collision trigger otherId");
-    string2(payload.contactKey, "Collision trigger contactKey");
+    const payload = record4(event.payload, "Collision trigger payload");
+    exactKeys4(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
+    string3(payload.entityId, "Collision trigger entityId");
+    string3(payload.otherId, "Collision trigger otherId");
+    string3(payload.contactKey, "Collision trigger contactKey");
     return;
   }
   if (event.type === "round.start") {
-    const payload = record3(event.payload, "Round trigger payload");
-    exactKeys3(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+    const payload = record4(event.payload, "Round trigger payload");
+    exactKeys4(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
     safeSequence(payload.turnNumber, "Round trigger turnNumber");
     safeSequence(payload.activeTeam, "Round trigger activeTeam");
-    string2(payload.phase, "Round trigger phase");
+    string3(payload.phase, "Round trigger phase");
     return;
   }
   if (event.type === "environment.activation") {
-    const payload = record3(event.payload, "Environment activation payload");
-    exactKeys3(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
-    string2(payload.mechanicId, "Environment activation mechanicId");
+    const payload = record4(event.payload, "Environment activation payload");
+    exactKeys4(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
+    string3(payload.mechanicId, "Environment activation mechanicId");
     safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
     safeSequence(payload.tick, "Environment activation tick");
     if (typeof payload.active !== "boolean")
@@ -1485,12 +1539,12 @@ function validateTriggerEvent(value) {
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
 }
-function record3(value, label) {
+function record4(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys3(value, keys, label) {
+function exactKeys4(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -1499,7 +1553,7 @@ function exactKeys3(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
-function string2(value, label) {
+function string3(value, label) {
   if (typeof value !== "string" || value.length === 0)
     throw new Error(`${label} must be a non-empty string`);
 }
@@ -2584,10 +2638,11 @@ class EffectDelayed {
   effectType;
   effectValue;
   delayTicks;
+  resolvedTarget;
   remainingTicks;
   fired;
   constructor(settings) {
-    const { effectType, effectValue, delayTicks, remainingTicks = delayTicks, fired = false } = settings.typeValue;
+    const { effectType, effectValue, delayTicks, remainingTicks = delayTicks, fired = false, resolvedTarget } = settings.typeValue;
     if (typeof effectType !== "string" || effectType.length === 0)
       throw new Error("delayedEffect requires a non-empty effectType");
     if (!Number.isSafeInteger(delayTicks) || delayTicks < 0)
@@ -2600,6 +2655,7 @@ class EffectDelayed {
       throw new Error("A fired delayedEffect must have zero remaining ticks");
     this.effectType = effectType;
     this.effectValue = effectValue === undefined ? undefined : structuredClone(effectValue);
+    this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
     this.delayTicks = delayTicks;
     this.remainingTicks = remainingTicks;
     this.fired = fired;
@@ -2627,6 +2683,7 @@ class EffectDelayed {
         effectType: this.effectType,
         effectValue: this.effectValue === undefined ? undefined : structuredClone(this.effectValue),
         delayTicks: this.delayTicks,
+        ...this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) },
         remainingTicks: this.remainingTicks,
         fired: this.fired
       }
@@ -3009,7 +3066,7 @@ function createRuntimeItemEffect(settings) {
       return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired } } });
     case "delayedEffect" /* DelayedEffect */: {
       const nested = value.effectValue ?? value.effect;
-      return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested, delayTicks: integerValue(value, "delayTicks") } });
+      return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
     }
     case "temporaryWall" /* TemporaryWall */:
       return new EffectTemporaryWall({ typeValue: {
@@ -5256,26 +5313,26 @@ function validateEnvironmentalMechanics(value) {
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function finite3(value) {
+function finite4(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
 function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 function isVector3(value) {
-  return isRecord5(value) && finite3(value.x) && finite3(value.y);
+  return isRecord5(value) && finite4(value.x) && finite4(value.y);
 }
 function isZone(value) {
-  return isRecord5(value) && finite3(value.x) && finite3(value.y) && finite3(value.r) && value.r > 0;
+  return isRecord5(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord5(value) || !finite3(value.x) || !finite3(value.y) || !Array.isArray(value.effects))
+  if (!isRecord5(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
-    return finite3(value.r) && value.r > 0;
+    return finite4(value.r) && value.r > 0;
   if (value.type === 2 /* RECTANGLE */)
-    return finite3(value.w) && finite3(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && finite3(value.x2) && finite3(value.y2);
+    return finite4(value.w) && finite4(value.h) && value.w > 0 && value.h > 0;
+  return value.type === 1 /* LINE */ && finite4(value.x2) && finite4(value.y2);
 }
 
 function validateSystemSettings(value) {
@@ -8920,7 +8977,6 @@ function hazardEffect(hazard) {
 function environmentalMechanicToBoundary(mechanic) {
   return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
 }
-
 var KORE_AUDIO_ASSETS = {
   "kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
   "kore.music.match": "/public/audio/CM_02_Moon_Shadows.mp3",
@@ -9321,9 +9377,9 @@ function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record4 = value;
-  const metadata = record4.metadata;
-  return String(record4.id ?? metadata?.id ?? "");
+  const record5 = value;
+  const metadata = record5.metadata;
+  return String(record5.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
@@ -9889,7 +9945,7 @@ var kore = {
     delayedEffect(delayTicks, effect) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
         throw new Error("Delay ticks must be a non-negative integer");
-      return { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, effect: clone8(effect) } };
+      return { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, effectType: effect.type, effectValue: clone8(effect.typeValue) } };
     },
     spawnTrigger(delayTicks, triggerType) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
@@ -9924,11 +9980,14 @@ var kore = {
   }
 };
 export {
+  validateResolvedEffectTarget,
   resolveRuntimeItemEffects,
   kore,
   createRuntimeItemEffect,
+  createPositionResolvedTarget,
   createPlayer,
   createItem,
+  createEntityResolvedTarget,
   createDefaultKoreFramework,
   composeItemEffects,
   applyRuntimeForceEffects,

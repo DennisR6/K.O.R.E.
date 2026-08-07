@@ -15,6 +15,8 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
+export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
 import { validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
@@ -692,7 +694,7 @@ export const kore = {
 		},
 		delayedEffect(delayTicks: number, effect: ItemEffectSettings): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
-			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effect: clone(effect) } };
+			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effectType: effect.type, effectValue: clone(effect.typeValue) } };
 		},
 		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");

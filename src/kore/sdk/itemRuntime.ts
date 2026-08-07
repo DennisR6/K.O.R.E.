@@ -47,7 +47,7 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }) } });
 		case ItemEffectType.DelayedEffect: {
 			const nested = value.effectValue ?? value.effect;
-			return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined, delayTicks: integerValue(value, "delayTicks") } });
+			return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined, delayTicks: integerValue(value, "delayTicks"), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
 		}
 		case ItemEffectType.TemporaryWall:
 			return new EffectTemporaryWall({ typeValue: {

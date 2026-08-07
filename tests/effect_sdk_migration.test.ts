@@ -133,7 +133,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			const delayed = kore.effects.delayedEffect(10, inner);
 			expect(delayed).toEqual({
 				type: ItemEffectType.DelayedEffect,
-				typeValue: { delayTicks: 10, effect: inner },
+				typeValue: { delayTicks: 10, effectType: inner.type, effectValue: inner.typeValue },
 			});
 		});
 	});

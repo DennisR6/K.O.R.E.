@@ -9,6 +9,7 @@ import {
 	type PlayerSettingKey,
 } from "./types.js";
 import { validateTriggerSettings } from "./triggerValidation.js";
+import { validateResolvedEffectTarget } from "../item/resolvedTarget.js";
 
 const CORE_EFFECT_KEYS = new Set(["type", "typeValue"]);
 const FULL_EFFECT_KEYS = new Set(["type", "typeValue", "trigger", "triggerValue"]);
@@ -80,9 +81,11 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			knownKeys(payload, new Set(["triggerId", "delayTurns", "remainingTurns", "fired"]), "spawnTrigger payload"); requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
 			string(payload.triggerId, "spawnTrigger triggerId"); boundedTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger"); optionalBoolean(payload.fired, "spawnTrigger fired"); return;
 		case ItemEffectType.DelayedEffect:
-			knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired"]), "delayedEffect payload"); requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
+			knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
 			string(payload.effectType, "delayedEffect effectType"); boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
-			if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue); optionalBoolean(payload.fired, "delayedEffect fired"); return;
+			if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
+			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
+			optionalBoolean(payload.fired, "delayedEffect fired"); return;
 		case ItemEffectType.Shield:
 			knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload"); requiredKeys(payload, ["capacity"], "shield payload"); finitePositive(payload.capacity, "shield capacity");
 			if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity)) throw new Error("shield remainingCapacity is outside capacity");
