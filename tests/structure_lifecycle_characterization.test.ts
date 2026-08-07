@@ -95,3 +95,15 @@ test("structures preserve all four independent physics/drawing states", () => {
 		expect(structure.toSettings()).toMatchObject({ physicsEnabled, drawingEnabled });
 	}
 });
+
+test("structure dead is a convenience operation and not the inverse of dormant flags", () => {
+	const structure = new FullStructure({ id: "dead-convenience", type: SHAPE.CIRCLE, x: 10, y: 10, r: 5, effects: [], physicsEnabled: false, drawingEnabled: false });
+	expect(structure.isDead()).toBe(false);
+	structure.setDead(true);
+	expect(structure.isDead()).toBe(true);
+	expect(structure.physicsEnabled()).toBe(false);
+	expect(structure.drawingEnabled()).toBe(false);
+	structure.setDead(false);
+	expect(structure.physicsEnabled()).toBe(true);
+	expect(structure.drawingEnabled()).toBe(true);
+});

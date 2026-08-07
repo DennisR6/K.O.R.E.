@@ -41,6 +41,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true
 	private isDrawingEnabled: boolean = true
+	private dead = false
 	private readonly id: string
 	private serializeState: boolean
 	private collisionRole: StructureCollisionRole | undefined
@@ -127,6 +128,8 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	public getShape(): SHAPE.RECTANGLE { return this.shape }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
 	public setPhysicsEnabled(physicsEnabled: boolean) { this.isPhysicsEnabled = physicsEnabled; this.serializeState = true }
+	public isDead(): boolean { return this.dead }
+	public setDead(dead: boolean): void { this.dead = dead; if (dead) { this.setPhysicsEnabled(false); this.setDrawingEnabled(false); } else { this.setPhysicsEnabled(true); this.setDrawingEnabled(true); } }
 	public drawingEnabled(): boolean { return this.isDrawingEnabled }
 	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled; this.serializeState = true }
 	public getId(): string { return this.id }

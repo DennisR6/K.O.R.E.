@@ -39,6 +39,8 @@ export interface IStructure extends
 	setBounceFactor(bounce: number): void;
 	physicsEnabled(): boolean;
 	setPhysicsEnabled(physicsEnabled: boolean): void;
+	isDead(): boolean;
+	setDead(dead: boolean): void;
 	drawingEnabled(): boolean;
 	setDrawingEnabled(drawingEnabled: boolean): void;
 	setSetting(key: SettingKey, value: SettingValue): void;
