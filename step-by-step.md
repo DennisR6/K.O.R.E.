@@ -632,7 +632,7 @@ contracts unless a concrete Engine-neutral consumer exists.
 | `[ ]` | `Multi` | B | Ordered KORE composition primitive; preserve declaration order and migrate children independently. |
 | `[ ]` | `ModifyMass` | A/D | Direct entity mass mutation; candidate for a future object-state command only with a concrete host consumer. |
 | `[ ]` | `ModifySize` | A/D | Direct entity size mutation; candidate for a future object-state command only with a concrete host consumer. |
-| `[ ]` | `Position` | A | Absolute transform mutation; real Falltür consumer, but requires a Transform predefined interpreter. |
+| `[x]` | `Position` | A | Falltür now uses `transform.set-position` through the structure-targeted predefined host; the legacy Position implementation remains only for other legacy/test/authoring references until separately qualified. |
 | `[ ]` | `Velocity` | A/E | Absolute velocity mutation maps to `movement.set-velocity`, but current production references are authoring-only. |
 | `[ ]` | `Team` | D | KORE team-membership mutation with no current generic ownership contract. |
 | `[ ]` | `ModifySetting` | B/D | Allowlisted KORE state mutation and composition primitive for HP, participation, position, velocity, and other settings. |
@@ -670,6 +670,12 @@ contracts unless a concrete Engine-neutral consumer exists.
 Each `[ ]` entry requires its own characterization, migration or explicit
 retention/deletion decision, focused verification, and atomic commit. No two
 unrelated Effect semantics may share a behavior-migration commit.
+
+Falltür activation and deactivation are the first completed convergence slice.
+Their ordered current composition uses Transform and Participation commands,
+captures the resolved position once, persists pending scheduling state, and
+re-enters the shared predefined host at due time. The legacy collision Damage
+composition remains intentionally unchanged and is a separate future semantic.
 
 ### Phase 9: Pong External Qualification
 

@@ -25,6 +25,10 @@ test("the canonical Falltür structure starts dormant and remains addressable", 
 	expect(structure.physicsEnabled()).toBe(false);
 	expect(structure.drawingEnabled()).toBe(false);
 	expect(handler.toSettings().mapBoundarys[0]).toMatchObject({ id: FALLTUER_STRUCTURE_ID, physicsEnabled: false, drawingEnabled: false });
+	for (const definition of falltuerTriggerDefinitions) {
+		expect(definition.effect.type).toBe("effect.composition");
+		expect((definition.effect as { effects: Array<{ type: string }> }).effects.every(effect => !effect.type.startsWith("EffectType."))).toBe(true);
+	}
 });
 
 test("Falltür captures its position once, activates through ordered MultiEffects, and deactivates once", () => {
@@ -96,7 +100,7 @@ test("structure-targeted spawnTrigger rejects an unknown canonical structure bef
 		targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true },
 	});
 	settings.items = [item];
-	settings.triggerDefinitions = [{ schemaVersion: 1, id: "structure.test", effect: { type: EffectType.Multi, typeValue: [] } }];
+	settings.triggerDefinitions = [{ schemaVersion: 1, id: "structure.test", effect: { schemaVersion: 1, type: EffectType.Multi, typeValue: [] } }];
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
 	const actor = handler.getEntityManager().getEntities()[0]!;
 	actor.setInventory([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);

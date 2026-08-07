@@ -3,11 +3,14 @@ import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
 import { createItem } from "./sdkItemFactory.js";
-import { EffectType, EffectTrigger, SettingOperation, type EffectSettings, type FullEffectSettings } from "../effects/types.js";
+import { EffectType, EffectTrigger, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { EffectModifySetting } from "../effects/modifySetting.js";
 import { SHAPE } from "../physics/physics.js";
 import type { MapBoundarySettingsCircle } from "../settings/settings.js";
 import type { TriggerDefinition } from "./triggerDefinitions.js";
+import { createEngineEffectComposition } from "../engine/sdk/composition.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
+import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -112,16 +115,16 @@ export const falltuerStructure: MapBoundarySettingsCircle = {
 	effects: [falltuerDeathCollision],
 };
 
-const falltuerPosition: EffectSettings = { schemaVersion: 1, type: EffectType.Position, typeValue: { x: 0, y: 0 } };
-const falltuerEnablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: true } }).toSettings();
-const falltuerEnableDrawing: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: true } }).toSettings();
-const falltuerDisablePhysics: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings();
-const falltuerDisableDrawing: EffectSettings = new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings();
+const falltuerPosition = { schemaVersion: 1 as const, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };
+const falltuerEnablePhysics = { schemaVersion: 1 as const, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+const falltuerEnableDrawing = { schemaVersion: 1 as const, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+const falltuerDisablePhysics = { schemaVersion: 1 as const, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+const falltuerDisableDrawing = { schemaVersion: 1 as const, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
 
 /** Data-only trigger catalog entries used by the official Falltür item. */
 export const falltuerTriggerDefinitions: TriggerDefinition[] = [
-	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: EffectType.Multi, typeValue: [falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing] } },
-	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: { schemaVersion: 1, type: EffectType.Multi, typeValue: [falltuerDisablePhysics, falltuerDisableDrawing] } },
+	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing]) },
+	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerDisablePhysics, falltuerDisableDrawing]) },
 ];
 
 export const powerDashItem: ItemDocument = createItem({
