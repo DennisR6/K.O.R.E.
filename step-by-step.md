@@ -244,11 +244,11 @@ strongly than their payload shapes. This is the primary constraint for Phase 1.
 
 - [x] Inventory every Effect type, payload, target, trigger, lifecycle,
   interpreter, serialization path, and validation path.
-- [ ] Introduce a typed mapping between Effect identity and payload without
+- [x] Introduce a typed mapping between Effect identity and payload without
   unnecessarily changing the existing serialized shape.
-- [ ] Add per-Effect payload validators for required fields, finite numbers,
+- [x] Add per-Effect payload validators for required fields, finite numbers,
   supported values, executable values, and unexpected structures.
-- [ ] Type Trigger payloads independently from Effect payloads.
+- [x] Type Trigger payloads independently from Effect payloads.
 
 Do not migrate every Effect simultaneously. Each change requires focused tests
 and an atomic commit.
@@ -300,6 +300,18 @@ The inventory confirms that core effect payloads can be strongly typed without
 merging them with item lifecycle payloads. It also records the existing gap:
 `settings.ts` validates core Effect identities and triggers, but does not yet
 validate each payload shape at the document boundary.
+
+#### Phase 1 Completion Evidence
+
+Phase 1 preserves the existing `{ type, typeValue, trigger, triggerValue }`
+wire shape while replacing the core `typeValue: any` contract with a
+discriminated `EffectPayloadMap`. Item runtime payloads have a separate typed
+mapping for validation while the existing item authoring input remains
+transitional. `validateEffectSettings()` is trigger-independent;
+`validateTriggerSettings()` is Effect-independent; `validateFullEffectSettings()`
+is the only composition validator. The unused `RespawningPosition` identifier
+and empty movement-payload compatibility path were removed because no legacy
+serialized games require them.
 
 ### Phase 2: Effect Lifecycle Semantics
 
