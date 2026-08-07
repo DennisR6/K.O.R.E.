@@ -24,7 +24,7 @@ function canonicalMode(): GameModeSettings {
 
 test("createGameMode authors validated, detached rule configuration", () => {
 	const mode = canonicalMode();
-	expect(mode).toEqual({ id: "match-sdk-test", phases: [RulePhase.Item, RulePhase.Physics], maxItemsPerTurn: 1, winCondition: WinCondition.LastTeamStanding, itemEconomy: { fixedLoadouts: [], mapPickups: [] } });
+	expect(mode).toEqual({ schemaVersion: 1, id: "match-sdk-test", phases: [RulePhase.Item, RulePhase.Physics], maxItemsPerTurn: 1, winCondition: WinCondition.LastTeamStanding, itemEconomy: { fixedLoadouts: [], mapPickups: [] } });
 	expect(() => createGameMode({ id: "bad", phases: [] })).toThrow("at least one rule phase");
 	expect(() => createGameMode({ id: "bad", phases: [RulePhase.Physics], maxItemsPerTurn: 1 })).toThrow("Item allowance");
 	expect(() => createGameMode({ id: "bad", phases: [RulePhase.Item, RulePhase.Physics], maxItemsPerTurn: 0 })).toThrow("positive item allowance");

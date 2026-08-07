@@ -104,13 +104,13 @@ export class AuthoritativeGameplayRenderer {
       // renderer.setStroke(2);
       // renderer.drawCircle(position.x, position.y, player.size);
     }
-    // player.effects.forEach((effect, index) => {
-    // renderer.setNoFill();
-    // renderer.setStrokeColor("#a78bfa");
-    // renderer.drawCircle(position.x, position.y, player.size + 7 + index * 3);
-    // renderer.setFillColor("#4c1d95");
-    // renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
-    // });
+		player.effects.forEach((effect, index) => {
+			renderer.setNoFill();
+			renderer.setStrokeColor("#a78bfa");
+			renderer.drawCircle(position.x, position.y, player.size + 7 + index * 3);
+			renderer.setFillColor("#4c1d95");
+			renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
+		});
     renderer.pop();
   }
 }

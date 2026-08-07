@@ -9,7 +9,7 @@ describe("Section 15.2 shipped gameplay inventory", () => {
 		expect(GAMEPLAY_CONTENT_REGISTRY.maps.map(map => map.id)).toEqual([
 			"ice-map-v1", "cue-clash", "frostbite-arena", "magma-cradle",
 		]);
-		expect(GAMEPLAY_CONTENT_REGISTRY.modes.map(mode => mode.id)).toEqual(["local-ice-duel-v1", "current-turn"]);
+		expect(GAMEPLAY_CONTENT_REGISTRY.modes.map(mode => mode.id)).toEqual(["quick-slip-v1", "power-rush-v1", "local-ice-duel-v1", "current-turn"]);
 		expect(GAMEPLAY_CONTENT_REGISTRY.ai.difficulties).toEqual(["easy", "medium", "hard"]);
 		expect(GAMEPLAY_CONTENT_REGISTRY.items.ids).toHaveLength(11);
 		expect(GAMEPLAY_CONTENT_REGISTRY.items.ids).toContain("vodka-zero");
