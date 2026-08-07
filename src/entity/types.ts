@@ -105,6 +105,24 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
 		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
-		...(overrides.numericThresholds ? { numericThresholds: structuredClone(overrides.numericThresholds) } : {}),
+		numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings()),
 	};
+}
+
+/** Canonical KORE HP depletion reaction; order preserves MovementSystem's active-target invariant. */
+export function createDefaultNumericThresholdBindings(): NumericThresholdBinding[] {
+	return [{
+		schemaVersion: 1,
+		id: "hp",
+		thresholds: [{
+			schemaVersion: 1,
+			comparator: "below-or-equal",
+			value: 0,
+			effects: [
+				{ schemaVersion: 1, type: "movement.set-velocity", typeValue: { x: 0, y: 0 } },
+				{ schemaVersion: 1, type: "participation.set-physics", typeValue: { enabled: false } },
+				{ schemaVersion: 1, type: "participation.set-drawing", typeValue: { enabled: false } },
+			],
+		}],
+	}];
 }

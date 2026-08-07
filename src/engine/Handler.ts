@@ -37,6 +37,7 @@ import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../syst
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import { TransformSystem } from "../systems/TransformSystem.js";
 import { ParticipationSystem } from "../systems/ParticipationSystem.js";
+import { NumericSystem } from "../systems/NumericSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
@@ -597,7 +598,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setPaused(paused: boolean): void { this.paused = paused }
 	public isPaused(): boolean { return this.paused }
 	public getActiveTeam(): number { return this.context.activeTeam }
-	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
+	public start(state?: GameState): this {
+		this.context.state = state ?? GameState.Your_turn;
+		for (const entity of this.entityManager.getEntities()) entity.setNumericEffectDispatcher(effect => this.dispatchEngineEffect(effect));
+		return this;
+	}
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
 		this.context.structures.push(structure)
 		// if ("getShape" in structure) this.physicsStrategy.addToQueue(PhysicsLevel.Map, structure)
@@ -977,6 +982,8 @@ export class GameHandlerBuilder {
 		this.engine.attachFeedbackToPhysics(physicsSystem)
 
 		this
+			.addSystem(new NumericSystem())
+			.addSystem(new ParticipationSystem())
 			.addPhysics(physics)
 			.addSystem(new MovementSystem())
 			.addSystem(new PlaybackSystem())
@@ -1033,7 +1040,6 @@ export class GameHandlerBuilder {
 		this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? [])
 		if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some(definition => "effects" in definition.effect)) {
 			this.engine.addSystem(new TransformSystem())
-			this.engine.addSystem(new ParticipationSystem())
 		}
 
 		// Player

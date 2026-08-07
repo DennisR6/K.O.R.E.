@@ -8,6 +8,7 @@ import type { Effect, ItemEffectSettings } from "../effects/types.js";
 import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { NumericStateOwner } from "../engine/contracts/numericState.js";
+import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -55,6 +56,8 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	advanceItemEffectsTurn(): ItemEffectSettings[]
 	advanceItemEffectsTick(): ItemEffectSettings[]
 	getItemEffects(): ItemEffectSettings[]
+	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
+	dispatchNumericAdd(stateId: string, amount: number): void;
 }
 export interface IInventory {
 	AddItem(item: InventoryItem): void

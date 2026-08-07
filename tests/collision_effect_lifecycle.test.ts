@@ -10,12 +10,16 @@ import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
+import { NumericSystem } from "../src/systems/NumericSystem.ts";
+import { MovementSystem } from "../src/systems/MovementSystem.ts";
+import { ParticipationSystem } from "../src/systems/ParticipationSystem.ts";
+import { dispatchPredefinedEffect } from "../src/systems/predefinedEffectDispatcher.ts";
 import type { IGameContext } from "../src/systems/types.ts";
 
 function context(entities: Player[], structures: any[] = []): IGameContext {
 	const manager = new EntityManager();
 	manager.addEntity(entities);
-	return {
+	const ctx = {
 		entities: manager,
 		structures,
 		state: {} as any,
@@ -29,6 +33,9 @@ function context(entities: Player[], structures: any[] = []): IGameContext {
 		activeTeamNumber: 0,
 		myTeamNumber: 0,
 	};
+	const systems = [new NumericSystem(), new MovementSystem(), new ParticipationSystem()];
+	for (const entity of entities) entity.setNumericEffectDispatcher(effect => dispatchPredefinedEffect({ ctx, systems, effect }));
+	return ctx;
 }
 
 function collisionDamage(damage: number) {

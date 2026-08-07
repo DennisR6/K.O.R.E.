@@ -2,7 +2,7 @@ import type { UUID } from "crypto";
 import type { RenderContext } from "../engine/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
-import { createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
+import { createDefaultNumericThresholdBindings, createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
@@ -15,6 +15,7 @@ import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
+import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 
 
 /**
@@ -53,6 +54,7 @@ export class Player implements IEntity {
 	private items: InventoryItem[] = []
 	private itemEffects: ItemEffectSettings[] = []
 	private numericThresholds: NumericThresholdBinding[] = []
+	private numericEffectDispatcher: ((effect: EngineEffectSettings) => void) | undefined
 
 	private effectAlways: Effect[] = []
 	private effectCollision: Effect[] = []
@@ -93,7 +95,7 @@ export class Player implements IEntity {
 		for (const effect of settings.itemEffects ?? []) validateRuntimeItemEffectSettings(effect)
 		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
 		validateNumericThresholdBindings(settings.numericThresholds ?? [])
-		this.numericThresholds = structuredClone(settings.numericThresholds ?? [])
+		this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings())
 		this.effectAlways = []
 		this.effectCollision = []
 		this.effectRound = []
@@ -157,6 +159,12 @@ export class Player implements IEntity {
 		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
 		if (!Number.isFinite(value)) throw new Error("Numeric state value must be finite")
 		this.hp = value
+	}
+	public setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void { this.numericEffectDispatcher = dispatcher }
+	public dispatchNumericAdd(stateId: string, amount: number): void {
+		if (stateId !== "hp") throw new Error(`Unknown numeric state '${stateId}'`)
+		if (!this.numericEffectDispatcher) throw new Error("Numeric effect dispatcher is not attached")
+		this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.add", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { amount } })
 	}
 	public getNumericResetValue(stateId: string): number | undefined {
 		return this.numericThresholds.find(binding => binding.id === stateId)?.resetValue

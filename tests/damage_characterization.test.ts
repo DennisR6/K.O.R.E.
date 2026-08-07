@@ -18,11 +18,16 @@ function player(hp = 30): Player {
 	return new Player(createPlayerSettings({ hp, velocity: { x: 4, y: -2 } }));
 }
 
+function applyDamage(target: Player, amount: number): void {
+	new GameHandlerBuilder().defaultSystems().addPlayer(target).build();
+	damage(amount).apply(target);
+}
+
 describe("legacy Damage observable contract", () => {
 	test("damage below remaining HP only mutates HP", () => {
 		const target = player();
 
-		damage(10).apply(target);
+		applyDamage(target, 10);
 
 		expect(target.getHP()).toBe(20);
 		expect(target.isDead()).toBe(false);
@@ -37,7 +42,7 @@ describe("legacy Damage observable contract", () => {
 	])("damage at or beyond HP depletion preserves raw HP and eliminates immediately", (amount, expectedHp) => {
 		const target = player();
 
-		damage(amount).apply(target);
+		applyDamage(target, amount);
 
 		expect(target.getHP()).toBe(expectedHp);
 		expect(target.isDead()).toBe(true);
@@ -48,9 +53,9 @@ describe("legacy Damage observable contract", () => {
 
 	test("repeated damage after elimination continues raw HP mutation and remains eliminated", () => {
 		const target = player();
-		damage(30).apply(target);
+		applyDamage(target, 30);
 
-		damage(5).apply(target);
+		applyDamage(target, 5);
 
 		expect(target.getHP()).toBe(-5);
 		expect(target.isDead()).toBe(true);
@@ -60,11 +65,11 @@ describe("legacy Damage observable contract", () => {
 
 	test("partial and eliminated HP round-trip through PlayerSettings", () => {
 		const partial = player();
-		damage(10).apply(partial);
+		applyDamage(partial, 10);
 		const partialRestored = new Player(partial.toSettings());
 
 		const eliminated = player();
-		damage(40).apply(eliminated);
+		applyDamage(eliminated, 40);
 		const eliminatedRestored = new Player(eliminated.toSettings());
 
 		expect(partialRestored.toSettings()).toEqual(partial.toSettings());

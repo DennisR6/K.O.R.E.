@@ -1,6 +1,5 @@
 import type { IPhysics, SHAPE } from "../physics/physics.js";
-import { EffectType, SettingOperation, type Effect, type EffectSettings } from "./types.js";
-import { EffectModifySetting } from "./modifySetting.js";
+import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
 export interface EffectDamageType {
 	damage: number
@@ -15,7 +14,9 @@ export class EffectDamage implements Effect {
 	apply(entity: IPhysics<SHAPE>, override?: EffectDamageType): void {
 		let dmg = this.damage
 		if (override) dmg = override.damage
-		new EffectModifySetting({ typeValue: { operation: SettingOperation.Add, key: "hp", value: -dmg } }).apply(entity)
+		if (!("getNumericValue" in entity)) return
+		if (!("dispatchNumericAdd" in entity) || typeof entity.dispatchNumericAdd !== "function") throw new Error("Damage requires an attached numeric effect dispatcher")
+		entity.dispatchNumericAdd("hp", -dmg)
 	}
 	toSettings(): EffectSettings { return { schemaVersion: 1, typeValue: { damage: this.damage }, type: EffectType.Damage } }
 }
