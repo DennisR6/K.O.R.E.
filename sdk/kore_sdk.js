@@ -9086,6 +9086,52 @@ function hazardEffect(hazard) {
 function environmentalMechanicToBoundary(mechanic) {
   return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
 }
+class TriggerDefinitionCatalog {
+  definitions = new Map;
+  register(definition) {
+    validateTriggerDefinition(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate trigger definition '${definition.id}'`);
+    this.definitions.set(definition.id, structuredClone(definition));
+    return this;
+  }
+  get(id) {
+    const definition = this.definitions.get(id);
+    return definition === undefined ? undefined : structuredClone(definition);
+  }
+  require(id) {
+    const definition = this.get(id);
+    if (!definition)
+      throw new Error(`Unknown trigger definition '${id}'`);
+    return definition;
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
+  }
+}
+function validateTriggerDefinition(value) {
+  const definition = record5(value, "Trigger definition");
+  exactKeys5(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  if (definition.schemaVersion !== 1)
+    throw new Error("Unsupported trigger definition schema version");
+  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid trigger definition ID");
+  validateEffectSettings(definition.effect);
+}
+function record5(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys5(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
 var KORE_AUDIO_ASSETS = {
   "kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
   "kore.music.match": "/public/audio/CM_02_Moon_Shadows.mp3",
@@ -9486,9 +9532,9 @@ function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record5 = value;
-  const metadata = record5.metadata;
-  return String(record5.id ?? metadata?.id ?? "");
+  const record6 = value;
+  const metadata = record6.metadata;
+  return String(record6.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
@@ -10089,6 +10135,7 @@ var kore = {
   }
 };
 export {
+  validateTriggerDefinition,
   validateResolvedEffectTarget,
   resolveRuntimeItemEffects,
   kore,
@@ -10100,5 +10147,6 @@ export {
   createDefaultKoreFramework,
   composeItemEffects,
   applyRuntimeForceEffects,
+  TriggerDefinitionCatalog,
   KoreMapBuilder
 };

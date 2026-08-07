@@ -19,6 +19,8 @@ export { createEntityResolvedTarget, createPositionResolvedTarget, validateResol
 export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
 import { validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
+export { TriggerDefinitionCatalog, validateTriggerDefinition } from "../../item/triggerDefinitions.js";
+export type { TriggerDefinition, TriggerDefinitionDescriptor } from "../../item/triggerDefinitions.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
 import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
