@@ -2,7 +2,7 @@ import { ItemLoader } from "./loader.js";
 import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
-import { createItem } from "../kore/sdk/index.js";
+import { createItem } from "./sdkItemFactory.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
