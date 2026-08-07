@@ -455,11 +455,11 @@ friction remain outside the migrated MovementSystem.
    item-runtime, rule, Player, Structure, Physics, and Handler trigger behavior.
 - [x] Define only the typed, versioned Trigger contracts supported cleanly by
    current runtime behavior; do not add speculative trigger categories.
-- [ ] Separate Trigger activation from the Effect it activates while retaining
-  compatibility adapters where necessary.
-- [ ] Define deterministic ordering for simultaneous triggers, same-tick versus
-  next-tick Effects, nested triggers, snapshots, and recursion limits.
-- [ ] Reject or bound recursive Trigger/Effect chains deterministically.
+- [x] Separate Trigger activation from the Effect it activates while retaining
+   compatibility adapters where necessary.
+- [x] Define deterministic ordering for simultaneous triggers, same-tick versus
+   next-tick Effects, nested triggers, snapshots, and recursion limits.
+- [x] Reject or bound recursive Trigger/Effect chains deterministically.
 
 #### Phase 6.1 Trigger Inventory
 
@@ -490,6 +490,14 @@ callbacks.
 sequence numbers, and no executable fields. Round, item-runtime, environmental,
 pickup, and rule-specific activations are intentionally not represented as
 generic Engine triggers yet.
+
+The same module separates trigger events from Effect identity through a
+versioned activation envelope and provides a trusted-host FIFO activation queue.
+The queue clones records, preserves insertion order, and rejects recursive
+chains after a bounded activation budget. Existing KORE trigger fields remain
+compatible; migration adapters for the legacy Player/Structure callback paths
+are intentionally the next integration task rather than being hidden in this
+contract change.
 
 ### Phase 7: Declarative Commands
 

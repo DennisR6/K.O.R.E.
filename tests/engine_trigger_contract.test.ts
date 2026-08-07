@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createCollisionEnterTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
 
 test("typed trigger events are versioned, detached, and JSON-safe", () => {
 	const tick = createTickTriggerEvent({ sourceId: "world", sequence: 4, dt: 0.016 });
@@ -24,4 +24,19 @@ test("activation pairs a trigger event with data-only Effect identity", () => {
 	expect(() => validateTriggerActivation({ ...activation, effectId: "" })).toThrow(/effectId/);
 	const detached = createTriggerActivation({ effectId: activation.effectId, event });
 	expect(detached.event).not.toBe(event);
+});
+
+test("activation dispatch is FIFO and bounded against recursive chains", () => {
+	const queue = new EngineTriggerActivationQueue(3);
+	const event = createTickTriggerEvent({ sourceId: "world", sequence: 1, dt: 1 });
+	const activation = createTriggerActivation({ effectId: "movement.integrate", event });
+	const seen: number[] = [];
+	queue.enqueue(activation);
+
+	expect(() => queue.process(current => {
+		seen.push(current.event.sequence);
+		if (current.event.type === "tick") queue.enqueue({ ...current, event: { ...current.event, sequence: current.event.sequence + 1 } });
+	})).toThrow(/budget/);
+	expect(seen).toEqual([1, 2, 3]);
+	expect(() => queue.enqueue(activation)).toThrow(/budget/);
 });

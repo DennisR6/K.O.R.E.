@@ -338,6 +338,37 @@ function registerMovementEffect(registry) {
     }
   });
 }
+class EngineTriggerActivationQueue {
+  maxActivations;
+  pending = [];
+  processed = 0;
+  constructor(maxActivations = 1024) {
+    this.maxActivations = maxActivations;
+    if (!Number.isSafeInteger(maxActivations) || maxActivations < 1)
+      throw new Error("Trigger activation budget must be a positive safe integer");
+  }
+  enqueue(activation) {
+    validateTriggerActivation(activation);
+    if (this.pending.length + this.processed >= this.maxActivations)
+      throw new Error("Trigger activation budget exceeded");
+    this.pending.push(structuredClone(activation));
+  }
+  process(dispatch) {
+    if (typeof dispatch !== "function")
+      throw new Error("Trigger dispatcher must be a function");
+    let processedNow = 0;
+    while (this.pending.length > 0) {
+      const activation = this.pending.shift();
+      this.processed++;
+      processedNow++;
+      dispatch(structuredClone(activation));
+    }
+    return processedNow;
+  }
+  pendingCount() {
+    return this.pending.length;
+  }
+}
 function createTickTriggerEvent(input) {
   const event = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
   validateTriggerEvent(event);
@@ -463,6 +494,7 @@ export {
   MOVEMENT_EFFECT_ID,
   MOVEMENT_CAPABILITY,
   EngineWorldBuilder,
+  EngineTriggerActivationQueue,
   EngineSystemRegistry,
   EngineEffectRegistry
 };

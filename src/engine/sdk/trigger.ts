@@ -26,6 +26,36 @@ export interface EngineTriggerActivation {
 	event: EngineTriggerEvent;
 }
 
+export class EngineTriggerActivationQueue {
+	private readonly pending: EngineTriggerActivation[] = [];
+	private processed = 0;
+
+	public constructor(private readonly maxActivations: number = 1024) {
+		if (!Number.isSafeInteger(maxActivations) || maxActivations < 1) throw new Error("Trigger activation budget must be a positive safe integer");
+	}
+
+	public enqueue(activation: EngineTriggerActivation): void {
+		validateTriggerActivation(activation);
+		if (this.pending.length + this.processed >= this.maxActivations) throw new Error("Trigger activation budget exceeded");
+		this.pending.push(structuredClone(activation));
+	}
+
+	/** Processes FIFO activations through trusted host code, never content callbacks. */
+	public process(dispatch: (activation: EngineTriggerActivation) => void): number {
+		if (typeof dispatch !== "function") throw new Error("Trigger dispatcher must be a function");
+		let processedNow = 0;
+		while (this.pending.length > 0) {
+			const activation = this.pending.shift()!;
+			this.processed++;
+			processedNow++;
+			dispatch(structuredClone(activation));
+		}
+		return processedNow;
+	}
+
+	public pendingCount(): number { return this.pending.length; }
+}
+
 export function createTickTriggerEvent(input: { sourceId: string; sequence: number; dt: number }): EngineTickTriggerEvent {
 	const event: EngineTickTriggerEvent = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
 	validateTriggerEvent(event);
