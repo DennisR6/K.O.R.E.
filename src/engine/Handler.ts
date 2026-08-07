@@ -16,7 +16,7 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
-import { createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
+import { createRoundStartEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
@@ -500,6 +500,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.setTurnNumber(ruleState.turnNumber)
 		this.setActiveTeam(ruleState.activeTeam)
 		this.setRuleState(ruleState)
+		const event = createRoundStartEvent(String(this.id), ruleState.turnNumber, ruleState.activeTeam, ruleState.phase)
+		for (const entity of this.entityManager.getEntities()) {
+			entity.onRound(event)
+			if (this.effectRound.length > 0) dispatchTriggeredEffects({ effects: this.effectRound, event, apply: effect => effect.apply(entity) })
+		}
 		this.drawItemsForActiveTeam()
 	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }

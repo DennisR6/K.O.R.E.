@@ -500,6 +500,11 @@ Player Always/Collision, MovementSystem tick, and circle/rectangle structure
 collision callbacks through that queue without changing serialized settings or
 legacy declaration order.
 
+Round activation now uses the same bridge at `GameHandler.startTurn()`, with a
+typed `round.start` event carrying turn, team, and phase context. Handler and
+Player Round Effects execute once per started turn; snapshot restoration does
+not re-run the activation.
+
 ### Phase 7: Declarative Commands
 
 Add command families only for real authoring use cases. Every family requires a

@@ -1414,6 +1414,17 @@ function createCollisionEnterTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createRoundStartTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "round.start",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { turnNumber: input.turnNumber, activeTeam: input.activeTeam, phase: input.phase }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record3(value, "Trigger activation");
   exactKeys3(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -1441,6 +1452,14 @@ function validateTriggerEvent(value) {
     string2(payload.entityId, "Collision trigger entityId");
     string2(payload.otherId, "Collision trigger otherId");
     string2(payload.contactKey, "Collision trigger contactKey");
+    return;
+  }
+  if (event.type === "round.start") {
+    const payload = record3(event.payload, "Round trigger payload");
+    exactKeys3(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+    safeSequence(payload.turnNumber, "Round trigger turnNumber");
+    safeSequence(payload.activeTeam, "Round trigger activeTeam");
+    string2(payload.phase, "Round trigger phase");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -3053,6 +3072,9 @@ function createTickEvent(sourceId, dt) {
 function createCollisionEnterEvent(sourceId, entityId, otherId, contactKey) {
   return createCollisionEnterTriggerEvent({ sourceId, sequence: 0, entityId, otherId, contactKey });
 }
+function createRoundStartEvent(sourceId, turnNumber, activeTeam, phase) {
+  return createRoundStartTriggerEvent({ sourceId, sequence: turnNumber, turnNumber, activeTeam, phase });
+}
 
 function createItemDocument(overrides = {}) {
   return {
@@ -3583,6 +3605,11 @@ class Player {
   }
   getAlwaysEffects() {
     return [...this.effectAlways];
+  }
+  onRound(event) {
+    if (this.dead)
+      return;
+    dispatchTriggeredEffects({ effects: this.effectRound, event, apply: (effect) => effect.apply(this) });
   }
   addItemEffect(effect, source) {
     this.itemEffects.push({ ...effect, ...source ?? {}, typeValue: structuredClone(effect.typeValue) });
@@ -8199,6 +8226,12 @@ class GameHandler {
     this.setTurnNumber(ruleState.turnNumber);
     this.setActiveTeam(ruleState.activeTeam);
     this.setRuleState(ruleState);
+    const event = createRoundStartEvent(String(this.id), ruleState.turnNumber, ruleState.activeTeam, ruleState.phase);
+    for (const entity of this.entityManager.getEntities()) {
+      entity.onRound(event);
+      if (this.effectRound.length > 0)
+        dispatchTriggeredEffects({ effects: this.effectRound, event, apply: (effect) => effect.apply(entity) });
+    }
     this.drawItemsForActiveTeam();
   }
   getMatchResult() {

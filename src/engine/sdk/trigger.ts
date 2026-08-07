@@ -1,6 +1,6 @@
 export const ENGINE_TRIGGER_SCHEMA_VERSION = 1 as const;
 
-export type EngineTriggerType = "tick" | "collision.enter";
+export type EngineTriggerType = "tick" | "collision.enter" | "round.start";
 
 export interface EngineTickTriggerEvent {
 	schemaVersion: 1;
@@ -18,7 +18,15 @@ export interface EngineCollisionEnterTriggerEvent {
 	payload: { entityId: string; otherId: string; contactKey: string };
 }
 
-export type EngineTriggerEvent = EngineTickTriggerEvent | EngineCollisionEnterTriggerEvent;
+export interface EngineRoundStartTriggerEvent {
+	schemaVersion: 1;
+	type: "round.start";
+	sourceId: string;
+	sequence: number;
+	payload: { turnNumber: number; activeTeam: number; phase: string };
+}
+
+export type EngineTriggerEvent = EngineTickTriggerEvent | EngineCollisionEnterTriggerEvent | EngineRoundStartTriggerEvent;
 
 export interface EngineTriggerActivation {
 	schemaVersion: 1;
@@ -85,6 +93,18 @@ export function createTriggerActivation(input: { effectId: string; event: Engine
 	return structuredClone(activation);
 }
 
+export function createRoundStartTriggerEvent(input: { sourceId: string; sequence: number; turnNumber: number; activeTeam: number; phase: string }): EngineRoundStartTriggerEvent {
+	const event: EngineRoundStartTriggerEvent = {
+		schemaVersion: 1,
+		type: "round.start",
+		sourceId: input.sourceId,
+		sequence: input.sequence,
+		payload: { turnNumber: input.turnNumber, activeTeam: input.activeTeam, phase: input.phase },
+	};
+	validateTriggerEvent(event);
+	return structuredClone(event);
+}
+
 export function validateTriggerActivation(value: unknown): asserts value is EngineTriggerActivation {
 	const activation = record(value, "Trigger activation");
 	exactKeys(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -111,6 +131,14 @@ export function validateTriggerEvent(value: unknown): asserts value is EngineTri
 		string(payload.entityId, "Collision trigger entityId");
 		string(payload.otherId, "Collision trigger otherId");
 		string(payload.contactKey, "Collision trigger contactKey");
+		return;
+	}
+	if (event.type === "round.start") {
+		const payload = record(event.payload, "Round trigger payload");
+		exactKeys(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+		safeSequence(payload.turnNumber, "Round trigger turnNumber");
+		safeSequence(payload.activeTeam, "Round trigger activeTeam");
+		string(payload.phase, "Round trigger phase");
 		return;
 	}
 	throw new Error(`Unknown Trigger event type '${String(event.type)}'`);

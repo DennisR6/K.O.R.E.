@@ -136,6 +136,7 @@ After every change, check whether this guide still reflects the implementation a
   size/team/velocity modifiers.
 - `src/effects/triggerDispatcher.ts`: internal validated activation bridge for
   handler, Player, MovementSystem, and circle/rectangle structure trigger paths;
+  it also dispatches typed `round.start` activations at `GameHandler.startTurn()`;
   it does not alter serialized Effect settings.
 - `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
   item actions, with deterministic stacking.

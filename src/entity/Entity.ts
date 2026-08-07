@@ -5,6 +5,7 @@ import type { ISettingsSerialize } from "../engine/types.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
 import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect, ItemEffectSettings } from "../effects/types.js";
+import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 
 /**
@@ -45,6 +46,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	setRotation(rotation: number): void
 	getEffects(): Effect[]
 	getAlwaysEffects(): Effect[]
+	onRound(event: EngineTriggerEvent): void
 	addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void
 	removeItemEffects(itemIds: ReadonlySet<string>): void
 	advanceItemEffectsTurn(): void

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, createTriggerActivation, validateTriggerActivation, validateTriggerEvent } from "../src/engine/sdk/index.ts";
 
 test("typed trigger events are versioned, detached, and JSON-safe", () => {
 	const tick = createTickTriggerEvent({ sourceId: "world", sequence: 4, dt: 0.016 });
@@ -11,9 +11,16 @@ test("typed trigger events are versioned, detached, and JSON-safe", () => {
 });
 
 test("trigger validation rejects unknown kinds, fields, and invalid timing", () => {
-	expect(() => validateTriggerEvent({ schemaVersion: 1, type: "round.start", sourceId: "rules", sequence: 0, payload: {} })).toThrow(/Unknown Trigger event type/);
+	expect(() => validateTriggerEvent({ schemaVersion: 1, type: "round.start", sourceId: "rules", sequence: 0, payload: {} })).toThrow(/missing/);
 	expect(() => validateTriggerEvent({ schemaVersion: 1, type: "tick", sourceId: "world", sequence: 0, payload: { dt: -1 } })).toThrow(/dt/);
 	expect(() => validateTriggerEvent({ schemaVersion: 1, type: "collision.enter", sourceId: "physics", sequence: 0, payload: { entityId: "a", otherId: "b", contactKey: "c", extra: true } })).toThrow(/unknown field/);
+});
+
+test("round-start trigger events carry deterministic turn context", () => {
+	const event = createRoundStartTriggerEvent({ sourceId: "rules", sequence: 3, turnNumber: 3, activeTeam: 1, phase: "physics" });
+
+	expect(event.payload).toEqual({ turnNumber: 3, activeTeam: 1, phase: "physics" });
+	expect(() => validateTriggerEvent({ ...event, payload: { ...event.payload, activeTeam: -1 } })).toThrow(/activeTeam/);
 });
 
 test("activation pairs a trigger event with data-only Effect identity", () => {

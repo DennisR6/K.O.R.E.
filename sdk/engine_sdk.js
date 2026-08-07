@@ -393,6 +393,17 @@ function createTriggerActivation(input) {
   validateTriggerActivation(activation);
   return structuredClone(activation);
 }
+function createRoundStartTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "round.start",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { turnNumber: input.turnNumber, activeTeam: input.activeTeam, phase: input.phase }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record2(value, "Trigger activation");
   exactKeys2(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -420,6 +431,14 @@ function validateTriggerEvent(value) {
     string(payload.entityId, "Collision trigger entityId");
     string(payload.otherId, "Collision trigger otherId");
     string(payload.contactKey, "Collision trigger contactKey");
+    return;
+  }
+  if (event.type === "round.start") {
+    const payload = record2(event.payload, "Round trigger payload");
+    exactKeys2(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+    safeSequence(payload.turnNumber, "Round trigger turnNumber");
+    safeSequence(payload.activeTeam, "Round trigger activeTeam");
+    string(payload.phase, "Round trigger phase");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -492,6 +511,7 @@ export {
   createTriggerActivation,
   createTransformState,
   createTickTriggerEvent,
+  createRoundStartTriggerEvent,
   createMovementState,
   createCollisionEnterTriggerEvent,
   MOVEMENT_EFFECT_ID,

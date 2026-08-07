@@ -1,4 +1,4 @@
-import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "../engine/sdk/trigger.js";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createRoundStartTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { Effect } from "./types.js";
 
 /** Internal bridge from legacy trigger lists to detached, bounded activations. */
@@ -32,4 +32,8 @@ export function createTickEvent(sourceId: string, dt: number): EngineTriggerEven
 
 export function createCollisionEnterEvent(sourceId: string, entityId: string, otherId: string, contactKey: string): EngineTriggerEvent {
 	return createCollisionEnterTriggerEvent({ sourceId, sequence: 0, entityId, otherId, contactKey });
+}
+
+export function createRoundStartEvent(sourceId: string, turnNumber: number, activeTeam: number, phase: string): EngineTriggerEvent {
+	return createRoundStartTriggerEvent({ sourceId, sequence: turnNumber, turnNumber, activeTeam, phase });
 }

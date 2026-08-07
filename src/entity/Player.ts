@@ -9,6 +9,7 @@ import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { orderInstalledEffects } from "../effects/ordering.js";
 import { advanceRuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { createCollisionEnterEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
+import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
@@ -260,6 +261,10 @@ export class Player implements IEntity {
 	public isDead(): boolean { return this.dead }
 	public getEffects(): Effect[] { return [...this.effectAlways, ...this.effectCollision] }
 	public getAlwaysEffects(): Effect[] { return [...this.effectAlways] }
+	public onRound(event: EngineTriggerEvent): void {
+		if (this.dead) return;
+		dispatchTriggeredEffects({ effects: this.effectRound, event, apply: effect => effect.apply(this) });
+	}
 	public addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void {
 		this.itemEffects.push({ ...effect, ...(source ?? {}), typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings)
 		this.itemEffects = orderInstalledEffects(this.itemEffects)
