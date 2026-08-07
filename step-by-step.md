@@ -603,6 +603,11 @@ For every unsupported concept, decide whether it is a reusable Engine capability
 or Pong-specific. Add only the smallest reusable capability, with tests and an
 atomic commit, then rerun the external qualification.
 
+Phase 9 remains deferred because the repository has no standalone Pong authoring
+target or external qualification harness. The current KORE game is not a valid
+Pong substitute, and inventing a Pong-specific example would not establish the
+intended external expressiveness evidence.
+
 ### Phase 10: Serialization Hardening
 
 - [ ] Version public Effect schemas, Trigger schemas, and component/state
