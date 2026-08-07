@@ -15,7 +15,7 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
-import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
+import { EffectTrigger, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
@@ -700,7 +700,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		}
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
 		if (!targetEntity) throw new Error("Item target entity not found")
-		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) }))
+		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
 		const inventory = actor.getInventory()
 		// Validate and reserve the use before applying effects. The live inventory
 		// is committed only after all effect constructors and target checks pass.

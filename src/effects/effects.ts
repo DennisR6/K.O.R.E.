@@ -46,7 +46,7 @@ export class MetaEffect implements Effect {
 			default: {
 				// Never silently substitute a wrong behavior for an unknown
 				// effect: a rejected effect fails loudly at the boundary.
-				throw new Error(`Unknown effect type "${String(effect.type)}"`)
+				throw new Error(`Unknown effect type "${String((effect as { type?: unknown }).type)}"`)
 			}
 		}
 	}

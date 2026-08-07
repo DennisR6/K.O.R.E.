@@ -321,7 +321,7 @@ function isDefaultEditorAi(ai: EditorAi): boolean {
 }
 
 function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
-	const effect = hazard.type === "push_zone"
+	const effect: FullEffectSettings = hazard.type === "push_zone"
 		? pushZoneEffect(hazard)
 		: { trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } }
 	return {

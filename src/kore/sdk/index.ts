@@ -655,7 +655,7 @@ export const kore = {
 
 		// Item Effect Authoring Helpers
 		itemEffect(type: ItemEffectType, typeValue: Record<string, unknown> = {}): ItemEffectSettings {
-			return { type, typeValue: clone(typeValue) };
+			return { type, typeValue: clone(typeValue) } as ItemEffectSettings;
 		},
 		shield(capacity: number): ItemEffectSettings {
 			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");

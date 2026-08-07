@@ -64,18 +64,18 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 }
 
 export function resolveRuntimeItemEffects(effects: readonly { type: string; value?: Record<string, unknown> }[]): RuntimeItemEffect[] {
-	return effects.map(effect => createRuntimeItemEffect({ type: effect.type as ItemEffectType, typeValue: structuredClone(effect.value ?? {}) }));
+	return effects.map(effect => createRuntimeItemEffect({ type: effect.type as ItemEffectType, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings));
 }
 
 /** Advances turn-scoped item primitives and drops effects at their boundary. */
 export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffectSettings | undefined {
-	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (advance) advance.call(runtime);
 	const next = runtime.toSettings();
 	const value = next.typeValue as Record<string, unknown>;
 	if (value.remainingTurns === 0 || value.active === false || value.fired === true) return undefined;
-	return { ...effect, typeValue: structuredClone(value) };
+	return { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings;
 }
 
 export function applyRuntimeForceEffects(force: ForceInput, effects: readonly RuntimeItemEffect[]): ForceInput {
