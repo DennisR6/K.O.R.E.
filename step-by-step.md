@@ -615,6 +615,62 @@ selector; arbitrary executable Systems and user callbacks are not supported.
 The current network protocol has no generic Effect transport, so network
 dispatch remains explicitly unsupported rather than silently emulated.
 
+### Legacy Effect Convergence
+
+The Effect inventory is classified by semantic ownership before migration. Core
+Effects remain serialized through `EffectType` until their individual migration
+or retention decision is complete; item-runtime Effects remain KORE/content
+contracts unless a concrete Engine-neutral consumer exists.
+
+#### Core Effect Inventory
+
+| Status | Effect | Classification | Current semantic / boundary |
+|---|---|---|---|
+| `[ ]` | `Physics` | D | Entity friction/drag tick behavior owned by `Player`; overlaps physics rather than a generic command. |
+| `[ ]` | `Damage` | D | KORE collision damage and elimination semantics; depends on HP/participation and winning behavior. |
+| `[ ]` | `Movement` | D / special | Temporal pre-tick integration with drift and ordering; distinct from movement set/add/scale commands. |
+| `[ ]` | `Multi` | B | Ordered KORE composition primitive; preserve declaration order and migrate children independently. |
+| `[ ]` | `ModifyMass` | A/D | Direct entity mass mutation; candidate for a future object-state command only with a concrete host consumer. |
+| `[ ]` | `ModifySize` | A/D | Direct entity size mutation; candidate for a future object-state command only with a concrete host consumer. |
+| `[ ]` | `Position` | A | Absolute transform mutation; real Falltür consumer, but requires a Transform predefined interpreter. |
+| `[ ]` | `Velocity` | A/E | Absolute velocity mutation maps to `movement.set-velocity`, but current production references are authoring-only. |
+| `[ ]` | `Team` | D | KORE team-membership mutation with no current generic ownership contract. |
+| `[ ]` | `ModifySetting` | B/D | Allowlisted KORE state mutation and composition primitive for HP, participation, position, velocity, and other settings. |
+
+#### Item Runtime Effect Inventory
+
+| Status | Effect | Classification | Current semantic / boundary |
+|---|---|---|---|
+| `[ ]` | `modifyForce` | D | Pure outgoing-shot modifier used by Anker and Power-Dash; retain as KORE item semantics. |
+| `[ ]` | `modifyRotation` | E/incomplete | Validated and authored but omitted from the runtime factory; no current production consumer. |
+| `[ ]` | `lockRotation` | E/incomplete | Turn-counted contract authored and validated but no runtime factory or live selection consumer. |
+| `[ ]` | `applyTorque` | E/incomplete | Serializable angular primitive with no current production consumer or runtime factory path. |
+| `[ ]` | `spawnTrigger` | D | Active KORE scheduled trigger with persisted targets, definitions, and due-turn handling. |
+| `[ ]` | `delayedEffect` | D | Active KORE fixed-tick scheduling with persisted nested effects and resolved targets. |
+| `[ ]` | `shield` | D | KORE collision/damage status; capacity is persisted, but general damage interception remains KORE-owned. |
+| `[ ]` | `freeze` | D | KORE turn-scoped movement status with persisted remaining turns. |
+| `[ ]` | `swapPosition` | D | KORE two-entity immediate command with resolved target ownership rules. |
+| `[ ]` | `temporaryWall` | D | KORE structural lifecycle effect; depends on dormant structure identity and cleanup. |
+| `[ ]` | `ghostMode` | D | KORE collision-participation status; generic collision filtering ownership is not established. |
+| `[ ]` | `magnet` | D | KORE force command over entity or resolved position targets. |
+| `[ ]` | `selectionLock` | E/incomplete | Persisted item status with no current UI selection consumer. |
+| `[ ]` | `aimVariance` | D | KORE seeded outgoing-shot modifier; runtime helper exists but normal shot integration is incomplete. |
+
+#### Migration Order
+
+1. Classify and retain or remove orphaned item contracts without inventing Engine semantics.
+2. Add the smallest Transform interpreter for the real `Position`/Falltür consumer, then migrate `Position` alone.
+3. Evaluate `Velocity` against the existing Movement host only if a production consumer is established.
+4. Migrate direct object commands one semantic at a time (`ModifyMass`, `ModifySize`, then `Team`) only when their generic target/state owners are concrete.
+5. Reconcile `Damage` and HP/participation composition after object-state ownership is explicit.
+6. Preserve `Movement` as a separate temporal integration decision; do not equate it with velocity commands.
+7. Keep `Multi` as ordered composition and migrate children independently.
+8. Leave active KORE item scheduling, status, structural, and target-sensitive Effects in the KORE layer unless a concrete generic consumer proves otherwise.
+
+Each `[ ]` entry requires its own characterization, migration or explicit
+retention/deletion decision, focused verification, and atomic commit. No two
+unrelated Effect semantics may share a behavior-migration commit.
+
 ### Phase 9: Pong External Qualification
 
 **Status: deferred.**
