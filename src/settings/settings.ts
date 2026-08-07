@@ -15,6 +15,7 @@ import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/ty
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { validateFullEffectSettings } from "../effects/validate.js";
 import { validateTriggerDefinition, type TriggerDefinition } from "../item/triggerDefinitions.js";
+import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -48,6 +49,8 @@ export interface GameSettings {
 	environmentalMechanics?: EnvironmentalMechanic[]
 	/** Optional data-only named trigger definitions for scheduled item triggers. */
 	triggerDefinitions?: TriggerDefinition[]
+	/** Optional authoring input; runtime snapshots always materialize this collection. */
+	counters?: CounterState[]
 }
 
 export interface SettingsScreenResolution {
@@ -158,6 +161,7 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (settings.ai !== undefined) validateAiSettings(settings.ai)
 	if (settings.environmentalMechanics !== undefined) validateEnvironmentalMechanics(settings.environmentalMechanics)
 	if (settings.triggerDefinitions !== undefined) settings.triggerDefinitions.forEach(validateTriggerDefinition)
+	if (settings.counters !== undefined) canonicalizeCounterStates(settings.counters)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }

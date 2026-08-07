@@ -19,6 +19,7 @@ import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type F
 import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { migrateGameSettingsEffects } from "../migrations/effects.js";
+import { canonicalizeCounterStates, type CounterState } from "./contracts/counterState.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
@@ -32,6 +33,7 @@ import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
+import { CounterSystem } from "../systems/CounterSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
@@ -161,6 +163,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			currTurn: 0,
 			activeTeam: 0,
 			myTeamNumber: 0,
+			counters: [],
 			drift: DEFAULT_DRIFT,
 			finishMatch: (result) => this.finishMatch(result),
 		}
@@ -450,6 +453,17 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// ENGINE KONTROLLE
 
 	public getContext(): IGameContext { return { ...this.context }; }
+	public getCounters(): CounterState[] { return this.context.counters.map(counter => ({ ...counter })); }
+	public getCounter(counterId: string): CounterState {
+		const system = this.systems.find(candidate => candidate instanceof CounterSystem) as CounterSystem | undefined;
+		if (!system) throw new Error("Counter system is not installed");
+		return system.read(this.context, counterId);
+	}
+	public applyCounterEffect(effect: import("../engine/sdk/counterCapability.js").CounterEffectSettings): void {
+		const system = this.systems.find(candidate => candidate instanceof CounterSystem) as CounterSystem | undefined;
+		if (!system) throw new Error("Counter system is not installed");
+		system.apply(this.context, effect);
+	}
 	public addSystem(system: ISystem) { this.systems.push(system) }
 	/** Snapshot-only inspection; callers must not mutate the returned systems. */
 	public getSystems(): readonly ISystem[] { return this.systems }
@@ -641,6 +655,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			effects,
 			items: this.items.map(item => ({ ...item })),
 			players: this.entityManager.toSettings(),
+			counters: canonicalizeCounterStates(this.context.counters),
 			minPlayers: this.settings?.minPlayers ?? 0,
 			maxPlayers: this.settings?.maxPlayers ?? 0,
 			allTeamSize: this.teamSize,
@@ -969,6 +984,8 @@ export class GameHandlerBuilder {
 
 	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
 		gameSettings = migrateGameSettingsEffects(gameSettings)
+		const counters = canonicalizeCounterStates((gameSettings as GameSettings).counters ?? [])
+		gameSettings = { ...gameSettings, counters }
 		const drift = gameSettings.drift ?? DEFAULT_DRIFT
 		validateDrift(drift)
 		const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1)
@@ -982,6 +999,7 @@ export class GameHandlerBuilder {
 		this.engine.setId(gameSettings.id)
 		this.engine.setTickRate((gameSettings as EngineSettings).tickRate ?? 1)
 		this.engine.setWorldSize(worldSize)
+		this.engine.getContext().counters.splice(0, this.engine.getContext().counters.length, ...counters)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
 		const snapshot = gameSettings as EngineSettings
 		if (snapshot.systems !== undefined && snapshot.systems.length > 0) {

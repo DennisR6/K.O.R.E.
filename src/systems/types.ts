@@ -5,6 +5,7 @@ import type { MatchResult } from "../rules/types.js";
 import type { IStructure } from "../structures/types.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
+import type { CounterState } from "../engine/contracts/counterState.js";
 export type { SystemSettings } from "../engine/contracts/systemSettings.js";
 
 /** Versioned, data-only identity of a registered engine system. */
@@ -40,6 +41,8 @@ export interface IGameContext {
 	currTurn: number
 	activeTeam: number
 	myTeamNumber: number
+	/** Canonical world-level numeric facts; systems may interpret, never own, them. */
+	counters: CounterState[]
 	drift?: number
 	/**
 	 * Atomically completes the match with the given result.

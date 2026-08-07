@@ -8,6 +8,7 @@ import type { MatchResult } from "../rules/types.js";
 import type { ItemTarget } from "../item/target.js";
 import type { ItemPickupState } from "../item/types.js";
 import type { PhysicsContactState } from "../physics/physics.js";
+import type { CounterState } from "./contracts/counterState.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -162,6 +163,7 @@ export interface ISettingsSerialize<T> {
 }
 
 export interface EngineSettings extends GameSettings {
+	counters: CounterState[]
 	state: GameState
 	turnNumber: number
 	activeTeam: number

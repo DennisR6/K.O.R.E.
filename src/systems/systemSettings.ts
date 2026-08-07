@@ -14,6 +14,7 @@ import { Simulator } from "./Simulator.js";
 import { WinningSystem } from "./WinningSystem.js";
 import { UiSystem } from "./UiSystem.js";
 import { EnvironmentalSystem } from "./EnvironmentalSystem.js";
+import { CounterSystem } from "./CounterSystem.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type EnvironmentalState } from "../environment/environmental.js";
 import type { ISerializableSystem, SystemSettings } from "./types.js";
 
@@ -96,6 +97,7 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 			if (!Number.isSafeInteger(lifecycle.tick) || !Array.isArray(lifecycle.active) || !Array.isArray(lifecycle.triggerUntil) || !Array.isArray(lifecycle.cooldownUntil) || !Array.isArray(lifecycle.cyclePhase)) throw new Error("Malformed environmental lifecycle state")
 			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIndexes as number[])
 		}
+		case "core.counter": if (Object.keys(state).length) throw new Error("Malformed counter settings"); return new CounterSystem()
 		default: throw new Error(`Unknown system ID '${settings.systemId}'`)
 	}
 }
