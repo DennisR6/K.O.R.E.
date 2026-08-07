@@ -30,6 +30,9 @@ export declare function validateMovementState(value: unknown): asserts value is 
 export declare const MOVEMENT_SET_VELOCITY_EFFECT_ID: "movement.set-velocity";
 export declare const MOVEMENT_ADD_VELOCITY_EFFECT_ID: "movement.add-velocity";
 export declare const MOVEMENT_SCALE_SPEED_EFFECT_ID: "movement.scale-speed";
+export declare const MOVEMENT_COMMAND_EFFECT_IDS: readonly ["movement.set-velocity", "movement.add-velocity", "movement.scale-speed"];
+export declare function movementSystemDefinition(): EngineSystemDefinition;
+export declare function registerMovementSystem(registry: EngineSystemRegistry): EngineSystemRegistry;
 export interface MovementVelocityPayload { x: number; y: number; }
 export interface MovementScaleSpeedPayload { factor: number; }
 export declare const TRANSFORM_CAPABILITY: "transform.state";
@@ -90,6 +93,9 @@ export declare const COUNTER_CAPABILITY: "counter.state";
 export declare const COUNTER_SET_EFFECT_ID: "counter.set";
 export declare const COUNTER_ADD_EFFECT_ID: "counter.add";
 export declare const COUNTER_RESET_EFFECT_ID: "counter.reset";
+export declare const COUNTER_EFFECT_IDS: readonly ["counter.set", "counter.add", "counter.reset"];
+export declare function counterSystemDefinition(): EngineSystemDefinition;
+export declare function registerCounterSystem(registry: EngineSystemRegistry): EngineSystemRegistry;
 export interface CounterTarget { type: "counter"; counterId: string; }
 export interface CounterSetPayload { value: number; }
 export interface CounterAddPayload { amount: number; }

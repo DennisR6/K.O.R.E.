@@ -1,5 +1,5 @@
 import { assertJsonValue, type SystemSettings } from "../../engine/contracts/systemSettings.js";
-import { EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
+import { EngineSystemRegistry, registerMovementSystem, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
 import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
 import { RuleInterpreter } from "../../rules/RuleInterpreter.js";
 import { RulePhase, validateItemEconomySettings, WinCondition, type GameModeSettings, type ItemEconomySettings } from "../../rules/types.js";
@@ -96,8 +96,7 @@ function validateGameMode(mode: GameModeSettings): void {
  */
 export function createMatchSystemProfile(teamCount: number): EngineFrameworkSettings {
 	if (!Number.isSafeInteger(teamCount) || teamCount < 1) throw new Error("A match system profile requires at least one team");
-	const registry = new EngineSystemRegistry()
-		.register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] })
+	const registry = registerMovementSystem(new EngineSystemRegistry())
 		.register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } })
 		.register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } })
 		.register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] })

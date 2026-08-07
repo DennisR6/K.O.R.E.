@@ -1521,6 +1521,18 @@ function finite3(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
+
+var MOVEMENT_CAPABILITY = "movement.state";
+var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
+var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
+var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID];
+function movementSystemDefinition() {
+  return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
+}
+function registerMovementSystem(registry) {
+  return registry.register(movementSystemDefinition());
+}
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -1691,6 +1703,7 @@ function finiteNonNegative2(value, label) {
 var COUNTER_SET_EFFECT_ID = "counter.set";
 var COUNTER_ADD_EFFECT_ID = "counter.add";
 var COUNTER_RESET_EFFECT_ID = "counter.reset";
+var COUNTER_EFFECT_IDS = [COUNTER_SET_EFFECT_ID, COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID];
 function validateCounterEffectSettings(value) {
   const effect = record5(value, "Counter effect");
   exactKeys5(effect, ["schemaVersion", "type", "target", "typeValue"], "Counter effect");
@@ -5062,6 +5075,40 @@ class MovementSystem {
     }
   }
   ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return MOVEMENT_COMMAND_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (target.type !== "entity")
+      throw new Error("Movement effect requires an entity target");
+    if (!target.entity.physicsEnabled())
+      throw new Error(`Movement target '${target.entity.getId()}' is inactive`);
+    const payload = effect.typeValue;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      throw new Error("Movement command requires an object payload");
+    const value = payload;
+    if (effect.type === MOVEMENT_SET_VELOCITY_EFFECT_ID) {
+      if (typeof value.x !== "number" || !Number.isFinite(value.x) || typeof value.y !== "number" || !Number.isFinite(value.y) || Object.keys(value).length !== 2)
+        throw new Error("Movement set-velocity payload is invalid");
+      target.entity.setVel({ x: value.x, y: value.y });
+      return;
+    }
+    if (effect.type === MOVEMENT_ADD_VELOCITY_EFFECT_ID) {
+      if (typeof value.x !== "number" || !Number.isFinite(value.x) || typeof value.y !== "number" || !Number.isFinite(value.y) || Object.keys(value).length !== 2)
+        throw new Error("Movement add-velocity payload is invalid");
+      const velocity = target.entity.getVel();
+      target.entity.setVel({ x: velocity.x + value.x, y: velocity.y + value.y });
+      return;
+    }
+    if (effect.type === MOVEMENT_SCALE_SPEED_EFFECT_ID) {
+      if (typeof value.factor !== "number" || !Number.isFinite(value.factor) || value.factor < 0 || Object.keys(value).length !== 1)
+        throw new Error("Movement scale-speed payload is invalid");
+      const velocity = target.entity.getVel();
+      target.entity.setVel({ x: velocity.x * value.factor, y: velocity.y * value.factor });
+      return;
+    }
+    throw new Error(`Unknown movement effect '${effect.type}'`);
+  }
   toSettings() {
     return { systemId: this.systemId, schemaVersion: 1, state: {} };
   }
@@ -5528,6 +5575,14 @@ class CounterSystem {
     return { systemId: this.systemId, schemaVersion: 1, state: {} };
   }
   ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return COUNTER_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(ctx, effect, target) {
+    if (target.type !== "counter")
+      throw new Error("Counter effect requires a counter target");
+    this.apply(ctx, effect);
+  }
   apply(ctx, effect) {
     validateCounterEffectSettings(effect);
     const counter = ctx.counters.find((candidate) => candidate.id === effect.target.counterId);
@@ -6823,6 +6878,56 @@ function clonePickupState(state) {
     turnNumber: state.turnNumber,
     pickups: state.pickups.map((pickup) => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown } }))
   };
+}
+
+function dispatchPredefinedEffect(options) {
+  const effect = validateEnvelope(options.effect);
+  const interpreters = options.systems.filter(isPredefinedEffectSystem).filter((system) => system.acceptsEffect(effect.type));
+  if (interpreters.length === 0)
+    throw new Error(`No predefined system accepts effect '${effect.type}'`);
+  if (interpreters.length > 1)
+    throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
+  const target = resolveTarget(options.ctx, effect.target);
+  interpreters[0].applyEffect(options.ctx, effect, target);
+}
+function resolveTarget(ctx, value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Engine effect requires a target");
+  const target = value;
+  if (target.type === "counter") {
+    if (typeof target.counterId !== "string" || target.counterId.length === 0)
+      throw new Error("Counter target requires a non-empty counterId");
+    const counter = ctx.counters.find((candidate) => candidate.id === target.counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${target.counterId}'`);
+    return { type: "counter", counter };
+  }
+  if (target.type === "entity") {
+    if (typeof target.entityId !== "string" || target.entityId.length === 0)
+      throw new Error("Entity target requires a non-empty entityId");
+    const entity = ctx.entities.getEntityById(target.entityId);
+    if (!entity)
+      throw new Error(`Unknown entity target '${target.entityId}'`);
+    return { type: "entity", entity };
+  }
+  throw new Error(`Unknown predefined target type '${String(target.type)}'`);
+}
+function validateEnvelope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed Engine effect");
+  const effect = value;
+  if (typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Engine effect requires a type");
+  if (effect.schemaVersion !== undefined && effect.schemaVersion !== 1)
+    throw new Error("Unsupported Engine effect schema version");
+  if (!("typeValue" in effect))
+    throw new Error("Engine effect requires a payload");
+  if (!("target" in effect))
+    throw new Error("Engine effect requires a target");
+  return structuredClone(effect);
+}
+function isPredefinedEffectSystem(system) {
+  return "acceptsEffect" in system && typeof system.acceptsEffect === "function" && "applyEffect" in system && typeof system.applyEffect === "function";
 }
 
 var ALLOW_ALL_TARGETS = {
@@ -8842,16 +8947,13 @@ class GameHandler {
     return this.context.counters.map((counter) => ({ ...counter }));
   }
   getCounter(counterId) {
-    const system = this.systems.find((candidate) => candidate instanceof CounterSystem);
-    if (!system)
-      throw new Error("Counter system is not installed");
-    return system.read(this.context, counterId);
+    const counter = this.context.counters.find((candidate) => candidate.id === counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${counterId}'`);
+    return { ...counter };
   }
-  applyCounterEffect(effect) {
-    const system = this.systems.find((candidate) => candidate instanceof CounterSystem);
-    if (!system)
-      throw new Error("Counter system is not installed");
-    system.apply(this.context, effect);
+  dispatchEngineEffect(effect) {
+    dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect });
   }
   addSystem(system) {
     this.systems.push(system);
@@ -9783,7 +9885,7 @@ function validateGameMode(mode) {
 function createMatchSystemProfile(teamCount) {
   if (!Number.isSafeInteger(teamCount) || teamCount < 1)
     throw new Error("A match system profile requires at least one team");
-  const registry = new EngineSystemRegistry().register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
+  const registry = registerMovementSystem(new EngineSystemRegistry).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
   const framework = registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"]);
   assertJsonValue(framework.systems);
   return framework;

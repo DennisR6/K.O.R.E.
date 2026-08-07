@@ -1,6 +1,7 @@
 import type { JsonValue } from "../contracts/systemSettings.js";
 import { COUNTER_SCHEMA_VERSION, type CounterState } from "../contracts/counterState.js";
 import type { EngineEffectRegistry, EngineEffectSettings } from "./effectRegistry.js";
+import type { EngineSystemDefinition, EngineSystemRegistry } from "./systemRegistry.js";
 import type { EngineTriggerEvent, EngineTriggerType } from "./trigger.js";
 import { validateTriggerEvent } from "./trigger.js";
 
@@ -8,6 +9,15 @@ export const COUNTER_CAPABILITY = "counter.state" as const;
 export const COUNTER_SET_EFFECT_ID = "counter.set" as const;
 export const COUNTER_ADD_EFFECT_ID = "counter.add" as const;
 export const COUNTER_RESET_EFFECT_ID = "counter.reset" as const;
+export const COUNTER_EFFECT_IDS = [COUNTER_SET_EFFECT_ID, COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID] as const;
+
+export function counterSystemDefinition(): EngineSystemDefinition {
+	return { id: "core.counter", provides: [COUNTER_CAPABILITY], acceptsEffects: [...COUNTER_EFFECT_IDS] };
+}
+
+export function registerCounterSystem(registry: EngineSystemRegistry): EngineSystemRegistry {
+	return registry.register(counterSystemDefinition());
+}
 
 export interface CounterTarget {
 	type: "counter";

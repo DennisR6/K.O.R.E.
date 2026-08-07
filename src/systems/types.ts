@@ -6,7 +6,13 @@ import type { IStructure } from "../structures/types.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
 import type { CounterState } from "../engine/contracts/counterState.js";
+import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import type { IEntity } from "../entity/Entity.js";
 export type { SystemSettings } from "../engine/contracts/systemSettings.js";
+
+export type ResolvedPredefinedTarget =
+	| { type: "counter"; counter: CounterState }
+	| { type: "entity"; entity: IEntity };
 
 /** Versioned, data-only identity of a registered engine system. */
 type SystemSettings = CanonicalSystemSettings;
@@ -17,6 +23,12 @@ type SystemSettings = CanonicalSystemSettings;
  */
 export interface ISerializableSystem<T extends SystemSettings = SystemSettings> extends ISystem, ISettingsSerialize<T> {
 	readonly systemId: string;
+}
+
+/** Trusted runtime interpreter contract for Engine-owned predefined systems. */
+export interface IPredefinedEffectSystem extends ISerializableSystem {
+	acceptsEffect(effectId: string): boolean;
+	applyEffect(ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): void;
 }
 
 /**

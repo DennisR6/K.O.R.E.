@@ -369,6 +369,13 @@ var MOVEMENT_EFFECT_ID = "movement.integrate";
 var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
 var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
 var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID];
+function movementSystemDefinition() {
+  return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
+}
+function registerMovementSystem(registry) {
+  return registry.register(movementSystemDefinition());
+}
 function registerMovementEffect(registry) {
   return registry.register({
     id: MOVEMENT_EFFECT_ID,
@@ -651,6 +658,13 @@ var COUNTER_CAPABILITY = "counter.state";
 var COUNTER_SET_EFFECT_ID = "counter.set";
 var COUNTER_ADD_EFFECT_ID = "counter.add";
 var COUNTER_RESET_EFFECT_ID = "counter.reset";
+var COUNTER_EFFECT_IDS = [COUNTER_SET_EFFECT_ID, COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID];
+function counterSystemDefinition() {
+  return { id: "core.counter", provides: [COUNTER_CAPABILITY], acceptsEffects: [...COUNTER_EFFECT_IDS] };
+}
+function registerCounterSystem(registry) {
+  return registry.register(counterSystemDefinition());
+}
 function registerCounterCommands(registry) {
   return registry.register({ id: COUNTER_SET_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload(payload, "Counter set", "value"), validateTarget: validateCounterTargetValue }).register({ id: COUNTER_ADD_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload(payload, "Counter add", "amount"), validateTarget: validateCounterTargetValue }).register({ id: COUNTER_RESET_EFFECT_ID, requiresCapability: [COUNTER_CAPABILITY], targetType: "counter", lifecycleCategory: "command", validatePayload: (payload) => exactKeys5(record5(payload, "Counter reset payload"), [], "Counter reset payload"), validateTarget: validateCounterTargetValue });
 }
@@ -756,9 +770,12 @@ export {
   validateCounterState,
   validateCounterEffectSettings,
   registerTransformEffects,
+  registerMovementSystem,
   registerMovementEffect,
   registerMovementCommands,
+  registerCounterSystem,
   registerCounterCommands,
+  movementSystemDefinition,
   engine,
   createTriggerActivation,
   createTransformState,
@@ -770,6 +787,7 @@ export {
   createCounterState,
   createCollisionEnterTriggerEvent,
   counterTriggerMatches,
+  counterSystemDefinition,
   canonicalizeCounterStates,
   TRANSFORM_SET_ROTATION_EFFECT_ID,
   TRANSFORM_SET_POSITION_EFFECT_ID,
@@ -777,6 +795,7 @@ export {
   MOVEMENT_SET_VELOCITY_EFFECT_ID,
   MOVEMENT_SCALE_SPEED_EFFECT_ID,
   MOVEMENT_EFFECT_ID,
+  MOVEMENT_COMMAND_EFFECT_IDS,
   MOVEMENT_CAPABILITY,
   MOVEMENT_ADD_VELOCITY_EFFECT_ID,
   EngineWorldBuilder,
@@ -786,6 +805,7 @@ export {
   COUNTER_SET_EFFECT_ID,
   COUNTER_SCHEMA_VERSION,
   COUNTER_RESET_EFFECT_ID,
+  COUNTER_EFFECT_IDS,
   COUNTER_CAPABILITY,
   COUNTER_ADD_EFFECT_ID
 };

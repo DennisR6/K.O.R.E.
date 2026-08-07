@@ -2,10 +2,12 @@ import { canonicalizeCounterStates, type CounterState } from "../engine/contract
 import { counterTriggerMatches, validateCounterEffectSettings, type CounterEffectSettings, type CounterTriggerBinding } from "../engine/sdk/counterCapability.js";
 import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import { EngineTriggerActivationQueue, createTriggerActivation } from "../engine/sdk/trigger.js";
-import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
+import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import { COUNTER_EFFECT_IDS } from "../engine/sdk/counterCapability.js";
+import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, SystemSettings } from "./types.js";
 
 /** Trusted interpreter for declarative numeric counter mutations. */
-export class CounterSystem implements ISerializableSystem<SystemSettings> {
+export class CounterSystem implements IPredefinedEffectSystem {
 	public readonly systemId = "core.counter";
 
 	public toSettings(): SystemSettings {
@@ -13,6 +15,11 @@ export class CounterSystem implements ISerializableSystem<SystemSettings> {
 	}
 
 	public ticker(_ctx: IGameContext, _dt: number, _friction: number): void { }
+	public acceptsEffect(effectId: string): boolean { return COUNTER_EFFECT_IDS.includes(effectId as typeof COUNTER_EFFECT_IDS[number]); }
+	public applyEffect(ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): void {
+		if (target.type !== "counter") throw new Error("Counter effect requires a counter target");
+		this.apply(ctx, effect as unknown as CounterEffectSettings);
+	}
 
 	/** Applies one validated command to the canonical world counter collection. */
 	public apply(ctx: IGameContext, effect: CounterEffectSettings): void {

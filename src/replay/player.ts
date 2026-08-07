@@ -52,7 +52,7 @@ export class ReplayPlayer {
 		if (this.handler.getState() === GameState.Playing || this.actionIndex >= this.replay.actions.length) return false;
 		const action = this.replay.actions[this.actionIndex++]!;
 		if (action.type === "counter") {
-			this.handler.applyCounterEffect(action.effect);
+			this.handler.dispatchEngineEffect(action.effect);
 			return true;
 		}
 		if (action.type === "itemUse") {

@@ -1,10 +1,20 @@
 import type { EngineEffectRegistry } from "./effectRegistry.js";
+import type { EngineSystemDefinition, EngineSystemRegistry } from "./systemRegistry.js";
 
 export const MOVEMENT_CAPABILITY = "movement.state" as const;
 export const MOVEMENT_EFFECT_ID = "movement.integrate" as const;
 export const MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity" as const;
 export const MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity" as const;
 export const MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed" as const;
+export const MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID] as const;
+
+export function movementSystemDefinition(): EngineSystemDefinition {
+	return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
+}
+
+export function registerMovementSystem(registry: EngineSystemRegistry): EngineSystemRegistry {
+	return registry.register(movementSystemDefinition());
+}
 
 export interface MovementVelocityPayload {
 	x: number;

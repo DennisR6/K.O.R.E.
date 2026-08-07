@@ -33,7 +33,7 @@ import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
-import { CounterSystem } from "../systems/CounterSystem.js";
+import { dispatchPredefinedEffect } from "../systems/predefinedEffectDispatcher.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
@@ -455,15 +455,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getContext(): IGameContext { return { ...this.context }; }
 	public getCounters(): CounterState[] { return this.context.counters.map(counter => ({ ...counter })); }
 	public getCounter(counterId: string): CounterState {
-		const system = this.systems.find(candidate => candidate instanceof CounterSystem) as CounterSystem | undefined;
-		if (!system) throw new Error("Counter system is not installed");
-		return system.read(this.context, counterId);
+		const counter = this.context.counters.find(candidate => candidate.id === counterId);
+		if (!counter) throw new Error(`Unknown counter target '${counterId}'`);
+		return { ...counter };
 	}
-	public applyCounterEffect(effect: import("../engine/sdk/counterCapability.js").CounterEffectSettings): void {
-		const system = this.systems.find(candidate => candidate instanceof CounterSystem) as CounterSystem | undefined;
-		if (!system) throw new Error("Counter system is not installed");
-		system.apply(this.context, effect);
-	}
+	public dispatchEngineEffect(effect: unknown): void { dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect }); }
 	public addSystem(system: ISystem) { this.systems.push(system) }
 	/** Snapshot-only inspection; callers must not mutate the returned systems. */
 	public getSystems(): readonly ISystem[] { return this.systems }
