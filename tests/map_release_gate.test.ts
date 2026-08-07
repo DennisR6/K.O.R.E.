@@ -103,8 +103,9 @@ describe("Section 17.10 map release gate", () => {
 
 	test("completed delivery record summarizes map qualification", () => {
 		const checklist = read("step-by-step.md");
-		expect(checklist).toContain("## 17. Qualified Map Production And Verification");
-		expect(checklist).toContain("map qualification matrix");
+		expect(checklist).toContain("| 17 | `[x]`");
+		expect(checklist).toContain("steps/17-qualified_map_production_and_verification.md");
+		expect(checklist).toContain("Map catalog, qualification matrix");
 	});
 
 	test("map qualification rules are strictly followed", () => {
