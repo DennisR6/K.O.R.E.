@@ -85,11 +85,6 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 
 
 	public setPos(pos: Vector2D): void {
-		if (
-			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
-			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
-		) { console.error("STRUCTURE: Position weicht massiv ab!"); }
-
 		this.position.x = pos.x
 		this.position.y = pos.y
 	}
