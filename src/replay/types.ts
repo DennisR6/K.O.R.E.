@@ -2,6 +2,7 @@ import { DOCUMENT_SCHEMA_VERSION, migrateDocument } from "../contracts/documents
 import type { ReplayDocument, ReplayAction } from "../contracts/documents.js";
 import type { EngineSettings } from "../engine/types.js";
 import type { MatchResult } from "../rules/types.js";
+import { validateCounterEffectSettings } from "../engine/sdk/counterCapability.js";
 
 export type { ReplayDocument, ReplayAction };
 /** Immutable authoritative artifact intentionally separate from a live match. */
@@ -10,6 +11,7 @@ export { DOCUMENT_SCHEMA_VERSION, migrateDocument };
 
 const SHOOT_ACTION_KEYS = ["type", "actorId", "input"] as const;
 const ITEM_USE_ACTION_KEYS = ["type", "actorId", "itemId", "target"] as const;
+const COUNTER_ACTION_KEYS = ["type", "effect"] as const;
 const SHOOT_INPUT_KEYS = ["angle", "power"] as const;
 
 export function validateReplayDocument(document: unknown): asserts document is ReplayDocument {
@@ -65,7 +67,10 @@ export function validateFrozenReplayDocument(document: unknown): asserts documen
 function validateReplayAction(action: unknown): void {
 	if (!isRecord(action)) throw new Error("Replay actions must be objects");
 	if (action.type !== "shoot" && action.type !== "itemUse") {
-		throw new Error(`Unknown replay action type '${String(action.type)}'`);
+		if (action.type !== "counter") throw new Error(`Unknown replay action type '${String(action.type)}'`);
+		for (const key of Object.keys(action)) if (!(COUNTER_ACTION_KEYS as readonly string[]).includes(key)) throw new Error(`Unknown replay counter action field '${key}'`);
+		validateCounterEffectSettings(action.effect);
+		return;
 	}
 	if (typeof action.actorId !== "string" || action.actorId.length === 0) {
 		throw new Error("Replay actions require a non-empty actorId");

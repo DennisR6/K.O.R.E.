@@ -5,6 +5,7 @@ import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBounda
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { deriveStructureId } from "../structures/identity.js";
+import type { CounterEffectSettings } from "../engine/sdk/counterCapability.js";
 
 
 
@@ -19,7 +20,7 @@ export interface HazardTrigger {
 }
 export type HazardDocument = VersionedDocument & { id: string; type: string; trigger: HazardTrigger; config: Record<string, unknown> };
 export type AiDocument = VersionedDocument & { id: string; difficulty: string };
-export type ReplayAction = { type: "shoot" | "itemUse"; actorId: string; input?: { angle: number; power: number }; itemId?: string; target?: unknown };
+export type ReplayAction = { type: "shoot" | "itemUse"; actorId: string; input?: { angle: number; power: number }; itemId?: string; target?: unknown } | { type: "counter"; effect: CounterEffectSettings };
 export type ReplayDocument = VersionedDocument & { initialSettings: GameSettings; seed: number; actions: ReplayAction[]; turns?: TurnPacket[] };
 export type SaveSlotDocument = VersionedDocument & { id: string; name: string; timestamp: number; settings: GameSettings; snapshot: Record<string, unknown> };
 export type GameSettingsExport = VersionedDocument & { exportedAt: number; settings: GameSettings };
