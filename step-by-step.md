@@ -627,7 +627,7 @@ contracts unless a concrete Engine-neutral consumer exists.
 | Status | Effect | Classification | Current semantic / boundary |
 |---|---|---|---|
 | `[ ]` | `Physics` | D | Entity friction/drag tick behavior owned by `Player`; overlaps physics rather than a generic command. |
-| `[ ]` | `Damage` | D | KORE collision damage and elimination semantics; depends on HP/participation and winning behavior. |
+| `[ ]` | `Damage` | C / KORE | Legacy collision damage combines raw HP subtraction with immediate KORE participation elimination when HP reaches zero; generic health mutation and KORE elimination are not yet safely separable at the existing trigger boundary. |
 | `[ ]` | `Movement` | D / special | Temporal pre-tick integration with drift and ordering; distinct from movement set/add/scale commands. |
 | `[ ]` | `Multi` | B | Ordered KORE composition primitive; preserve declaration order and migrate children independently. |
 | `[ ]` | `ModifyMass` | A/D | Direct entity mass mutation; candidate for a future object-state command only with a concrete host consumer. |
@@ -676,6 +676,60 @@ Their ordered current composition uses Transform and Participation commands,
 captures the resolved position once, persists pending scheduling state, and
 re-enters the shared predefined host at due time. The legacy collision Damage
 composition remains intentionally unchanged and is a separate future semantic.
+
+### Damage Ownership Decision
+
+Damage was characterized before any production migration. Current HP is a
+single unbounded finite-number field, `PlayerSettings.hp`, owned at runtime by
+`Player`; there is no maximum, clamping, integer restriction, or Health
+component on generic Engine world state. `EffectDamage` subtracts the payload
+through `Player.addSetting("hp", -amount)`, which immediately invokes the
+Player depletion path. The `DeadlyObstacleCirle` runtime bypasses serialized
+Damage entirely and calls `addHP(-100)`, so it is a separate KORE hazard path.
+
+The current transition is:
+
+| Condition | HP | Physics | Drawing | Team-alive | Match |
+|---|---:|---|---|---|---|
+| Active target before depletion | positive | enabled | enabled | counted by `WinningSystem` | ongoing unless another terminal condition exists |
+| Damage below remaining HP | raw subtraction | unchanged | unchanged | counted | unchanged |
+| Exact zero or overkill | zero or negative, not clamped | disabled immediately | disabled immediately | excluded through `isDead()` projection | `WinningSystem` may finalize after authoritative playback flush |
+| Repeated Damage after elimination | further raw subtraction | remains disabled | remains disabled | excluded | unchanged after completion |
+
+The canonical owner therefore remains `PlayerSettings.hp` plus the runtime
+`Player` object for this migration slice. A generic Health state with
+`maximum`, healing, or clamping is not justified by current consumers. A
+future generic mutation command could target an Entity capability and perform
+only raw health subtraction, but the current Damage contract also requires a
+conditional same-contact transition to KORE participation and velocity state.
+No existing generic conditional/event primitive represents that transition.
+
+The ownership split is consequently explicit: Health mutation is the narrow
+candidate Engine operation; depletion/elimination, participation flags, team
+membership, and winning remain KORE concerns. `WinningSystem` observes
+`IEntity.isDead()` and independently evaluates living teams; it does not own
+HP arithmetic. Collision Damage is currently classified as a KORE-specific
+composition (`health mutation` plus `elimination`), not migrated to a generic
+`health.damage` command yet.
+
+Replay records shots and replays collision Damage as an emergent result of the
+authoritative physics path; it does not record transient Damage activations.
+Snapshots already contain the complete HP and participation truth in each
+`PlayerSettings`, and restored partial/depleted states continue identically.
+No SDK surface changes are justified at this boundary.
+
+Characterization evidence: `tests/damage_characterization.test.ts` covers
+partial damage, exact-zero, overkill, repeated damage after elimination,
+PlayerSettings round trips, and replayed collision Damage. Existing collision,
+physics-contact, winning, and AI replay tests cover contact entry timing,
+snapshot continuity, playback flush, and match-result determinism.
+
+The smallest safe next slice is a separately qualified target capability and
+depletion transition contract. It must let a generic health interpreter report
+the mutation result without owning KORE elimination. Implementing that would
+be new conditional transition infrastructure, so Damage production migration
+is intentionally deferred until that boundary is either established from an
+existing primitive or explicitly approved as new shared infrastructure.
 
 ### Phase 9: Pong External Qualification
 

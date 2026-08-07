@@ -33,6 +33,7 @@ function context(entities: Player[], structures: any[] = []): IGameContext {
 
 function collisionDamage(damage: number) {
 	return [{
+		schemaVersion: 1 as const,
 		type: EffectType.Damage,
 		typeValue: { damage },
 		trigger: EffectTrigger.Collision,
