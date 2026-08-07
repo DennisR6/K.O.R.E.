@@ -27,7 +27,9 @@ interfaces live in `src/physics/physics.ts`.
 - A body has: `position: Vector2D`, `velocity: Vector2D` (world units per
   tick), `bounds` (circle: `{x: radius, y: radius}`; rectangle: `{x: w, y: h}`;
   line: `{x: endX, y: endY}` relative endpoint), `mass`, `bounceFactor`
-  (restitution), `friction`, `physicsEnabled`, and a `SHAPE`.
+  (restitution), `friction`, `physicsEnabled`, and a `SHAPE`. Canonical map
+  structures additionally carry stable IDs and independent `drawingEnabled`
+  state; rendering never infers presentation participation from physics state.
 - Circle bounds are always square (`x === y === radius`).
 
 ## 3. Mass And Immovable Bodies

@@ -509,8 +509,10 @@ not re-run the activation.
 queue when a mechanic changes active state. Structure enablement remains the
 authoritative mutation and environmental lifecycle snapshots are unchanged.
 `delayedEffect` now has explicit target and due-activation semantics. `spawnTrigger`
-uses the separate named TriggerDefinition catalog for the supported entity-target
-path; official item-specific triggers remain explicit unsupported/special paths.
+uses the separate named TriggerDefinition catalog for entity and stable structure
+targets. Position-targeted structure triggers persist the selected position
+separately from the canonical structure ID; Falltür activation and timeout remain
+data-only trigger definitions.
 
 ## Scheduled Item Semantics
 
@@ -529,11 +531,16 @@ install supported persistent item effects or apply Magnet immediately; position
 targets currently support Magnet only. Structural, swap, and nested scheduled
 item Effects are rejected rather than interpreted generically.
 
-`spawnTrigger` persists its entity/self target and turn countdown. At the next
-turn boundary it resolves `triggerId` through `GameSettings.triggerDefinitions`,
-emits one transient `schedule.due` activation, and executes the validated core
-Effect or MultiEffect against the persisted entity. Unknown definitions,
-position targets, and recursive scheduled definitions reject before mutation.
+`spawnTrigger` persists its entity or stable structure target and turn countdown.
+At the next turn boundary it resolves `triggerId` through
+`GameSettings.triggerDefinitions`, emits one transient `schedule.due` activation,
+and executes the validated core Effect or MultiEffect against the persisted target.
+Structure triggers may also carry the position captured at item use. Unknown
+definitions, unknown structure IDs, and recursive scheduled definitions reject
+before mutation. Falltür uses one dormant canonical structure slot: activation
+enables both physics and drawing through an ordered MultiEffect, while a second
+scheduled trigger disables both flags without allocating or removing a runtime
+structure.
 
 ### Phase 7: Declarative Commands
 
