@@ -325,7 +325,7 @@ persistent Effect definition are serialized independently when applicable.
 
 ### Phase 2: Effect Lifecycle Semantics
 
-- [ ] Add explicit metadata for `modifier`, `command`, `reaction`, `status`,
+- [x] Add explicit metadata for `modifier`, `command`, `reaction`, `status`,
   and `scheduled` semantics without forcing a new hierarchy on all existing
   runtime classes.
 - [x] Document and test ownership: entity/component state owns current state;
@@ -343,6 +343,15 @@ existing per-trigger insertion lists and canonical serialization grouping;
 this phase does not introduce a new cross-trigger execution order. These rules
 are implemented by `src/effects/ordering.ts` and covered by
 `tests/effect_ordering.test.ts`.
+
+#### Phase 2 Completion Evidence
+
+`src/effects/lifecycle.ts` provides static metadata for every supported core
+and item runtime Effect. The metadata is not serialized and does not alter
+runtime class hierarchies. Canonical state ownership is covered by
+`tests/effect_state_ownership.test.ts`; deterministic item ordering, Multi
+Effect declaration order, and existing trigger-list grouping are covered by
+`tests/effect_ordering.test.ts` and the existing snapshot/item suites.
 
 ### Phase 3: Capability-Aware Effect Metadata
 
