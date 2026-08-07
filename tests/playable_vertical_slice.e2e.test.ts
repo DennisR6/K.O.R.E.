@@ -75,7 +75,7 @@ test("menu to canonical match to result and back through the application surface
 	const mainMenuText: string[] = [];
 	router.getHandler().drawWorld(renderer(mainMenuText));
 	expect(mainMenuText).toEqual(expect.arrayContaining(["Play", "Local", "Game"]));
-	click(router, 551, 368);
+	click(router, 463, 368);
 
 	const match = router.getHandler();
 	const mapText: string[] = [];

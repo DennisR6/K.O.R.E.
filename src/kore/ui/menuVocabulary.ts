@@ -32,6 +32,12 @@ export enum KoreMenuCommand {
 	OpenLocalMaps = "kore.menu.open-local-maps",
 	SelectMap = "kore.menu.select-map",
 	OpenAiMaps = "kore.menu.open-ai-maps",
+	OpenMods = "kore.menu.open-mods",
+	ImportModFile = "kore.menu.import-mod-file",
+	ImportModPaste = "kore.menu.import-mod-paste",
+	ValidateMod = "kore.menu.validate-mod",
+	LaunchMod1v1 = "kore.menu.launch-mod-1v1",
+	LaunchModAiBattle = "kore.menu.launch-mod-ai-battle",
 }
 
 export enum KoreMenuScreen {
@@ -44,6 +50,9 @@ export enum KoreMenuScreen {
 	MapAiEasy = "map-ai-easy",
 	MapAiMedium = "map-ai-medium",
 	MapAiHard = "map-ai-hard",
+	Mods = "mods",
+	ModImport = "mod-import",
+	ModResult = "mod-result",
 }
 
 export enum KoreMenuElement {
@@ -56,9 +65,25 @@ export enum KoreMenuElement {
 	MainOnline = "main-online",
 	MainLocal = "main-local",
 	MainMaps = "main-maps",
+	MainMods = "main-mods",
 	MapOnlineNote = "map-online-note",
 	DifficultyTitle = "difficulty-title",
 	DifficultyBack = "difficulty-back",
+	ModsTitle = "mods-title",
+	ModsLoadFile = "mods-load-file",
+	ModsPaste = "mods-paste",
+	ModsStatus = "mods-status",
+	ModsBack = "mods-back",
+	ModImportTitle = "mod-import-title",
+	ModImportHint = "mod-import-hint",
+	ModImportInput = "mod-import-input",
+	ModImportValidate = "mod-import-validate",
+	ModImportBack = "mod-import-back",
+	ModResultTitle = "mod-result-title",
+	ModResultSummary = "mod-result-summary",
+	ModResult1v1 = "mod-result-1v1",
+	ModResultBattle = "mod-result-battle",
+	ModResultBack = "mod-result-back",
 }
 
 export enum KoreMenuStyle {
@@ -95,6 +120,21 @@ export const KoreMenuText = {
 	Back: LANGUAGE_KEYS.MenuBackButton,
 	ChooseAiDifficulty: LANGUAGE_KEYS.MenuDifficultyTitle,
 	Ki: LANGUAGE_KEYS.MenuKiLabel,
+	Mods: LANGUAGE_KEYS.ModsButton,
+	ModsTitle: LANGUAGE_KEYS.ModsTitle,
+	ModsLoadFile: LANGUAGE_KEYS.ModsLoadFile,
+	ModsPasteJson: LANGUAGE_KEYS.ModsPasteJson,
+	ModsStatusEmpty: LANGUAGE_KEYS.ModsStatusEmpty,
+	ModImportTitle: LANGUAGE_KEYS.ModImportTitle,
+	ModImportHint: LANGUAGE_KEYS.ModImportHint,
+	ModImportValidate: LANGUAGE_KEYS.ModImportValidate,
+	ModResultTitle: LANGUAGE_KEYS.ModResultTitle,
+	ModResultName: LANGUAGE_KEYS.ModResultName,
+	ModResultId: LANGUAGE_KEYS.ModResultId,
+	ModResultMeta: LANGUAGE_KEYS.ModResultMeta,
+	ModTest1v1: LANGUAGE_KEYS.ModTest1v1,
+	ModTestBattle: LANGUAGE_KEYS.ModTestBattle,
+	ModError: LANGUAGE_KEYS.ModError,
 } as const;
 
 const COMMANDS = new Set<string>(Object.values(KoreMenuCommand));
@@ -108,6 +148,12 @@ export type KoreMenuCommandMessage =
 	| { type: KoreMenuCommand.StartLocal; payload: undefined }
 	| { type: KoreMenuCommand.OpenLocalMaps; payload: undefined }
 	| { type: KoreMenuCommand.OpenAiMaps; payload: { difficulty: KoreMenuDifficulty } }
+	| { type: KoreMenuCommand.OpenMods; payload: undefined }
+	| { type: KoreMenuCommand.ImportModFile; payload: undefined }
+	| { type: KoreMenuCommand.ImportModPaste; payload: undefined }
+	| { type: KoreMenuCommand.ValidateMod; payload: undefined }
+	| { type: KoreMenuCommand.LaunchMod1v1; payload: undefined }
+	| { type: KoreMenuCommand.LaunchModAiBattle; payload: undefined }
 	| { type: KoreMenuCommand.SelectMap; payload: { intent: KoreMenuMapIntent; mapId: string; difficulty?: KoreMenuDifficulty; modeId?: string } };
 
 export function isKoreMenuCommand(value: string): value is KoreMenuCommand { return COMMANDS.has(value); }

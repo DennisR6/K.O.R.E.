@@ -39,7 +39,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		const menu = menuWithCallbacks(recorder);
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		// Choose Map is the fifth button in the centered bottom action row.
-		pressAt(menu, 701, 368);
+		pressAt(menu, 589, 368);
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y);
 		expect(recorder.local).toEqual([firstMapId]);
 		expect(recorder.battle).toEqual([]);
@@ -51,7 +51,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		pressAt(menu, 400, 100); // landing page -> main menu page
 		pressAt(menu, 249, 368); // KI vs KI opens the map page (pending battle)
 		pressAt(menu, BATTLE_BACK.x, BATTLE_BACK.y); // Back -> main menu, pending intent cleared
-		pressAt(menu, 701, 368); // Choose Map now opens the map page (pending local)
+		pressAt(menu, 589, 368); // Choose Map now opens the map page (pending local)
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y);
 		expect(recorder.local).toEqual([firstMapId]);
 		expect(recorder.battle).toEqual([]);
@@ -76,7 +76,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		// Non-terminating maps (e.g. symmetric-duel) stay selectable for
 		// human local play on the local path.
 		pressAt(menu, 400, 100); // landing -> menu
-		pressAt(menu, 701, 368); // Choose Map (local mode, all 6 rows)
+		pressAt(menu, 589, 368); // Choose Map (local mode, all 6 rows)
 		pressAt(menu, 400, 100); // first row: ice-map-v1
 		expect(recorder.local).toEqual(["ice-map-v1"]);
 	});

@@ -73,6 +73,15 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 			case KoreMenuCommand.StartLocal: this.confirm(command.type); this.callbacks.onPlayLocal?.(); return;
 			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
 			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;
+			case KoreMenuCommand.OpenMods: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Mods }); return;
+			case KoreMenuCommand.ImportModFile:
+			case KoreMenuCommand.ImportModPaste:
+			case KoreMenuCommand.ValidateMod:
+			case KoreMenuCommand.LaunchMod1v1:
+			case KoreMenuCommand.LaunchModAiBattle:
+				// Mod flow wiring (file picker, clipboard, validation, test launch) lands in the mod step.
+				this.confirm(command.type);
+				return;
 		}
 	}
 	private selectMap(value: Extract<KoreMenuCommandMessage, { type: KoreMenuCommand.SelectMap }>["payload"]): void {
