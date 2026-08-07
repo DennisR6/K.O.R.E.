@@ -883,6 +883,9 @@ function validateRuntimeItemEffectSettings(value) {
       boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
       if (payload.effectValue !== undefined)
         assertJsonValue(payload.effectValue);
+      if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */)
+        throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+      validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
       if (payload.resolvedTarget !== undefined)
         validateResolvedEffectTarget(payload.resolvedTarget);
       optionalBoolean(payload.fired, "delayedEffect fired");
@@ -1490,6 +1493,11 @@ function createEnvironmentActivationTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createScheduleDueTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "schedule.due", sourceId: input.sourceId, sequence: input.sequence, payload: { scheduleId: input.scheduleId, clock: input.clock, value: input.value } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record4(value, "Trigger activation");
   exactKeys4(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -1535,6 +1543,15 @@ function validateTriggerEvent(value) {
     safeSequence(payload.tick, "Environment activation tick");
     if (typeof payload.active !== "boolean")
       throw new Error("Environment activation active must be boolean");
+    return;
+  }
+  if (event.type === "schedule.due") {
+    const payload = record4(event.payload, "Schedule due payload");
+    exactKeys4(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
+    string3(payload.scheduleId, "Schedule due scheduleId");
+    if (payload.clock !== "tick" && payload.clock !== "turn")
+      throw new Error("Schedule due clock must be tick or turn");
+    safeSequence(payload.value, "Schedule due value");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -3101,6 +3118,21 @@ function advanceRuntimeItemEffect(effect) {
     return;
   return { ...effect, typeValue: structuredClone(value) };
 }
+function advanceRuntimeItemEffectTick(effect) {
+  const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+  const advance = runtime.advanceTick;
+  if (!advance)
+    return { next: structuredClone(effect), due: false };
+  if (runtime instanceof EffectDelayed && runtime.hasFired())
+    return { due: false };
+  if (advance.call(runtime) === true)
+    return { due: true };
+  const next = runtime.toSettings();
+  const value = next.typeValue;
+  if (value.fired === true)
+    return { due: false };
+  return { next: { ...effect, typeValue: structuredClone(value) }, due: false };
+}
 function applyRuntimeForceEffects(force, effects) {
   return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
 }
@@ -3155,6 +3187,9 @@ function createRoundStartEvent(sourceId, turnNumber, activeTeam, phase) {
 }
 function createEnvironmentActivationEvent(sourceId, sequence, mechanicId, mechanicIndex, tick, active) {
   return createEnvironmentActivationTriggerEvent({ sourceId, sequence, mechanicId, mechanicIndex, tick, active });
+}
+function createScheduleDueEvent(sourceId, sequence, scheduleId, clock, value) {
+  return createScheduleDueTriggerEvent({ sourceId, sequence, scheduleId, clock, value });
 }
 function dispatchTriggerActivation(options) {
   const queue = new TrustedTriggerActivationQueue(1);
@@ -3709,6 +3744,19 @@ class Player {
       const next = advanceRuntimeItemEffect(effect);
       return next ? [{ ...next, ...effect.itemId ? { itemId: effect.itemId } : {}, ...effect.order === undefined ? {} : { order: effect.order } }] : [];
     });
+  }
+  advanceItemEffectsTick() {
+    const due = [];
+    const next = [];
+    for (const effect of this.itemEffects) {
+      const result = advanceRuntimeItemEffectTick(effect);
+      if (result.due)
+        due.push(effect);
+      else if (result.next)
+        next.push(result.next);
+    }
+    this.itemEffects = next;
+    return due.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
   }
   getItemEffects() {
     return this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
@@ -6313,6 +6361,18 @@ function validateItemTarget(item, target, context) {
       throw new Error("Item target has an unsupported type");
   }
 }
+function resolveEffectTarget(target, context) {
+  switch (target.type) {
+    case "self":
+      return createEntityResolvedTarget(String(context.actor.getId()));
+    case "entity":
+      return createEntityResolvedTarget(target.entityId);
+    case "position":
+      return createPositionResolvedTarget(target.position);
+    case "zone":
+      throw new Error("Delayed Effects do not support zone targets without a stable zone contract");
+  }
+}
 function validateEntityTarget(target, validation, context) {
   if (typeof target.entityId !== "string" || target.entityId.length === 0) {
     throw new Error("Entity targets require a non-empty entityId");
@@ -8129,6 +8189,7 @@ class GameHandler {
     if (this.context.state === "GameState.Game_over" /* Game_over */ && !this.resolvingTurn)
       return;
     this.preTickers.forEach((t) => t.tick(dt, this.physicsStrategy.getFriction()));
+    this.advanceScheduledItemEffectsTick();
     for (const e of this.entityManager.getEntities()) {
       if (this.effectAlways.length === 0)
         continue;
@@ -8575,6 +8636,7 @@ class GameHandler {
     if (!item)
       throw new Error(`Item '${itemId}' is not declared for this game`);
     validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize });
+    const delayedTarget = item.effects.some((effect) => effect.type === "delayedEffect" /* DelayedEffect */) ? resolveEffectTarget(target, { actor }) : undefined;
     if (item.id === MYSTERY_BOX_ITEM_ID) {
       this.resolveMysteryBoxUse(actor, item);
       this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -8584,22 +8646,31 @@ class GameHandler {
     if (!targetEntity)
       throw new Error("Item target entity not found");
     const runtimeEffects = item.effects.map((effect) => createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
+    for (const effect of runtimeEffects) {
+      if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== "magnet" /* Magnet */)
+        throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
+    }
     const inventory = actor.getInventory();
     consumeInventoryItem(inventory, item);
     const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map((candidate) => [candidate.id, candidate])));
     targetEntity.removeItemEffects(combination.removeItemIds);
-    this.applyItemEffects(actor, target, runtimeEffects, item);
+    this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget);
     actor.setInventory(inventory);
     this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId] : [actorId], data: { itemId } });
     if (item.effects.some((effect) => effect.type === "shield"))
       this.feedback.record("shield" /* Shield */, this.getTurnNumber(), { actorId, data: { itemId } });
   }
-  applyItemEffects(actor, target, effects, item) {
+  applyItemEffects(actor, target, effects, item, delayedTarget) {
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
     if (target.type === "entity" && !targetEntity)
       throw new Error("Item target entity not found");
     for (const effect of effects) {
-      if (effect instanceof EffectMagnet && targetEntity)
+      if (effect instanceof EffectDelayed) {
+        if (!delayedTarget)
+          throw new Error("Delayed Effects require a resolved target");
+        const delayedSettings = effect.toSettings();
+        actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+      } else if (effect instanceof EffectMagnet && targetEntity)
         targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()));
       else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
         const actorPosition = actor.getPos();
@@ -8608,6 +8679,44 @@ class GameHandler {
       } else {
         (targetEntity ?? actor).addItemEffect(effect.toSettings(), { itemId: item.id, order: itemOrder(item) });
       }
+    }
+  }
+  advanceScheduledItemEffectsTick() {
+    for (const owner of this.entityManager.getEntities()) {
+      for (const scheduled of owner.advanceItemEffectsTick()) {
+        if (scheduled.type !== "delayedEffect" /* DelayedEffect */)
+          continue;
+        const value = scheduled.typeValue;
+        if (!value.resolvedTarget || typeof value.effectType !== "string")
+          continue;
+        const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${scheduled.itemId ?? "delayed"}`, "tick", 0);
+        dispatchTriggerActivation({ effectId: "item.delayedEffect", event, apply: () => this.executeDueDelayedEffect(owner, scheduled) });
+      }
+    }
+  }
+  executeDueDelayedEffect(owner, scheduled) {
+    const value = scheduled.typeValue;
+    const target = value.resolvedTarget;
+    if (!target)
+      return;
+    const nested = createRuntimeItemEffect({ type: value.effectType, typeValue: structuredClone(value.effectValue ?? {}) });
+    if (target.type === "entity") {
+      const entity = this.entityManager.getEntityById(target.entityId);
+      if (!entity || entity.isDead())
+        return;
+      if (nested instanceof EffectMagnet) {
+        entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
+        return;
+      }
+      entity.addItemEffect(nested.toSettings(), { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
+      return;
+    }
+    if (!(nested instanceof EffectMagnet))
+      return;
+    for (const entity of this.entityManager.getEntities()) {
+      if (entity.isDead())
+        continue;
+      entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
     }
   }
   mysteryBoxRewardOptions(actorId) {

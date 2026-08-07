@@ -512,6 +512,22 @@ authoritative mutation and environmental lifecycle snapshots are unchanged.
 schemas define countdown/fired state but not a general target or activation
 application contract.
 
+## Scheduled Item Semantics
+
+`delayedEffect` preserves the existing item-runtime nested-effect namespace and
+now captures a version-one resolved entity or position target at item use. Its
+remaining tick count is advanced only by `GameHandler.tick()`; a transition from
+`remainingTicks: 1` to zero emits one transient `schedule.due` activation in the
+same authoritative tick. Entity targets resolve by stable ID and missing/dead
+targets no-op; position targets use the persisted coordinates. Zones are
+rejected because no stable zone contract exists. Completed schedules are
+removed, and snapshot restoration resumes only remaining schedules.
+
+Current supported delayed target compatibility is explicit: entity targets may
+install supported persistent item effects or apply Magnet immediately; position
+targets currently support Magnet only. Structural, swap, and nested scheduled
+item Effects are rejected rather than interpreted generically.
+
 ### Phase 7: Declarative Commands
 
 Add command families only for real authoring use cases. Every family requires a

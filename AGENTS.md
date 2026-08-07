@@ -176,6 +176,8 @@ After every change, check whether this guide still reflects the implementation a
   entities inside their rectangular regions and preserves collected-turn state.
 - `src/item/target.ts`: validates declarative self, entity, position, and zone
   targets against ownership, activity, range, and world bounds.
+- `src/item/resolvedTarget.ts`: version-one detached entity/position targets for
+  scheduled item Effects; zone targets are explicitly unsupported.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
@@ -194,6 +196,10 @@ After every change, check whether this guide still reflects the implementation a
   effects through the public KORE item-runtime boundary, persisting installed
   effect state in player snapshots; the mystery-box reward remains the special
   inventory-grant path.
+- `GameHandler` is the authoritative owner of delayed item-effect tick
+  advancement. Due delayed effects emit transient `schedule.due` activations
+  and execute against their persisted resolved target; completed schedules are
+  removed from item state.
 
 ### AI drivers
 

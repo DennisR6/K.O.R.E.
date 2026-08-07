@@ -78,6 +78,18 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 	return { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings;
 }
 
+export function advanceRuntimeItemEffectTick(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
+	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
+	const advance = (runtime as unknown as { advanceTick?: () => unknown }).advanceTick;
+	if (!advance) return { next: structuredClone(effect), due: false };
+	if (runtime instanceof EffectDelayed && runtime.hasFired()) return { due: false };
+	if (advance.call(runtime) === true) return { due: true };
+	const next = runtime.toSettings();
+	const value = next.typeValue as Record<string, unknown>;
+	if (value.fired === true) return { due: false };
+	return { next: { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings, due: false };
+}
+
 export function applyRuntimeForceEffects(force: ForceInput, effects: readonly RuntimeItemEffect[]): ForceInput {
 	return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
 }

@@ -15,8 +15,8 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
-import { EffectTrigger, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
-import { createRoundStartEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
+import { EffectTrigger, ItemEffectType, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
+import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
@@ -33,10 +33,12 @@ import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
-import { validateItemTarget } from "../item/target.js";
+import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
+import type { ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
+import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectSwapPosition } from "../effects/swapPosition.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
 import type { AiSettings } from "../ai/types.js";
@@ -296,6 +298,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// the match mid-loop.
 		if (this.context.state === GameState.Game_over && !this.resolvingTurn) return
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
+		this.advanceScheduledItemEffectsTick();
 		for (const e of this.entityManager.getEntities()) {
 			if (this.effectAlways.length === 0) continue;
 			dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: effect => effect.apply(e) });
@@ -706,6 +709,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
+		const delayedTarget = item.effects.some(effect => effect.type === ItemEffectType.DelayedEffect) ? resolveEffectTarget(target, { actor }) : undefined
 		if (item.id === MYSTERY_BOX_ITEM_ID) {
 			this.resolveMysteryBoxUse(actor, item)
 			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -714,28 +718,70 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
 		if (!targetEntity) throw new Error("Item target entity not found")
 		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
+		for (const effect of runtimeEffects) {
+			if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== ItemEffectType.Magnet) throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
+		}
 		const inventory = actor.getInventory()
 		// Validate and reserve the use before applying effects. The live inventory
 		// is committed only after all effect constructors and target checks pass.
 		consumeInventoryItem(inventory, item)
 		const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
-		this.applyItemEffects(actor, target, runtimeEffects, item)
+		this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget)
 		actor.setInventory(inventory)
 		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
 		if (item.effects.some(effect => effect.type === "shield")) this.feedback.record(KoreGameplayFeedbackType.Shield, this.getTurnNumber(), { actorId, data: { itemId } });
 	}
 
-	private applyItemEffects(actor: IEntity, target: { type: string; entityId?: string; position?: { x: number; y: number } }, effects: RuntimeItemEffect[], item: ItemDocument): void {
+	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: RuntimeItemEffect[], item: ItemDocument, delayedTarget?: ResolvedEffectTarget): void {
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
 		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
 		for (const effect of effects) {
-			if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
+			if (effect instanceof EffectDelayed) {
+				if (!delayedTarget) throw new Error("Delayed Effects require a resolved target");
+				const delayedSettings = effect.toSettings();
+				actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+			}
+			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
 			} else {
 				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
 			}
+		}
+	}
+
+	private advanceScheduledItemEffectsTick(): void {
+		for (const owner of this.entityManager.getEntities()) {
+			for (const scheduled of owner.advanceItemEffectsTick()) {
+				if (scheduled.type !== ItemEffectType.DelayedEffect) continue;
+				const value = scheduled.typeValue;
+				if (!value.resolvedTarget || typeof value.effectType !== "string") continue;
+				const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${scheduled.itemId ?? "delayed"}`, "tick", 0);
+				dispatchTriggerActivation({ effectId: "item.delayedEffect", event, apply: () => this.executeDueDelayedEffect(owner, scheduled) });
+			}
+		}
+	}
+
+	private executeDueDelayedEffect(owner: IEntity, scheduled: ItemEffectSettings): void {
+		const value = scheduled.typeValue;
+		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
+		if (!target) return;
+		const nested = createRuntimeItemEffect({ type: value.effectType as ItemEffectType, typeValue: structuredClone(value.effectValue ?? {}) as Record<string, unknown> });
+		if (target.type === "entity") {
+			const entity = this.entityManager.getEntityById(target.entityId);
+			if (!entity || entity.isDead()) return;
+			if (nested instanceof EffectMagnet) {
+				entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
+				return;
+			}
+			entity.addItemEffect(nested.toSettings() as ItemEffectSettings, { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
+			return;
+		}
+		if (!(nested instanceof EffectMagnet)) return;
+		for (const entity of this.entityManager.getEntities()) {
+			if (entity.isDead()) continue;
+			entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
 		}
 	}
 

@@ -84,6 +84,8 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			knownKeys(payload, new Set(["effectType", "effectValue", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["effectType", "delayTicks"], "delayedEffect payload");
 			string(payload.effectType, "delayedEffect effectType"); boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
 			if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
+			if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+			validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
 			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
 			optionalBoolean(payload.fired, "delayedEffect fired"); return;
 		case ItemEffectType.Shield:

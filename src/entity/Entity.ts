@@ -50,6 +50,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void
 	removeItemEffects(itemIds: ReadonlySet<string>): void
 	advanceItemEffectsTurn(): void
+	advanceItemEffectsTick(): ItemEffectSettings[]
 	getItemEffects(): ItemEffectSettings[]
 }
 export interface IInventory {

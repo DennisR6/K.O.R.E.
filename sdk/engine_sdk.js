@@ -415,6 +415,11 @@ function createEnvironmentActivationTriggerEvent(input) {
   validateTriggerEvent(event);
   return structuredClone(event);
 }
+function createScheduleDueTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "schedule.due", sourceId: input.sourceId, sequence: input.sequence, payload: { scheduleId: input.scheduleId, clock: input.clock, value: input.value } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
 function validateTriggerActivation(value) {
   const activation = record2(value, "Trigger activation");
   exactKeys2(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -460,6 +465,15 @@ function validateTriggerEvent(value) {
     safeSequence(payload.tick, "Environment activation tick");
     if (typeof payload.active !== "boolean")
       throw new Error("Environment activation active must be boolean");
+    return;
+  }
+  if (event.type === "schedule.due") {
+    const payload = record2(event.payload, "Schedule due payload");
+    exactKeys2(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
+    string(payload.scheduleId, "Schedule due scheduleId");
+    if (payload.clock !== "tick" && payload.clock !== "turn")
+      throw new Error("Schedule due clock must be tick or turn");
+    safeSequence(payload.value, "Schedule due value");
     return;
   }
   throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
@@ -532,6 +546,7 @@ export {
   createTriggerActivation,
   createTransformState,
   createTickTriggerEvent,
+  createScheduleDueTriggerEvent,
   createRoundStartTriggerEvent,
   createMovementState,
   createEnvironmentActivationTriggerEvent,

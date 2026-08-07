@@ -1,6 +1,6 @@
 export const ENGINE_TRIGGER_SCHEMA_VERSION = 1 as const;
 
-export type EngineTriggerType = "tick" | "collision.enter" | "round.start" | "environment.activation";
+export type EngineTriggerType = "tick" | "collision.enter" | "round.start" | "environment.activation" | "schedule.due";
 
 export interface EngineTickTriggerEvent {
 	schemaVersion: 1;
@@ -34,7 +34,15 @@ export interface EngineEnvironmentActivationTriggerEvent {
 	payload: { mechanicId: string; mechanicIndex: number; tick: number; active: boolean };
 }
 
-export type EngineTriggerEvent = EngineTickTriggerEvent | EngineCollisionEnterTriggerEvent | EngineRoundStartTriggerEvent | EngineEnvironmentActivationTriggerEvent;
+export interface EngineScheduleDueTriggerEvent {
+	schemaVersion: 1;
+	type: "schedule.due";
+	sourceId: string;
+	sequence: number;
+	payload: { scheduleId: string; clock: "tick" | "turn"; value: number };
+}
+
+export type EngineTriggerEvent = EngineTickTriggerEvent | EngineCollisionEnterTriggerEvent | EngineRoundStartTriggerEvent | EngineEnvironmentActivationTriggerEvent | EngineScheduleDueTriggerEvent;
 
 export interface EngineTriggerActivation {
 	schemaVersion: 1;
@@ -125,6 +133,12 @@ export function createEnvironmentActivationTriggerEvent(input: { sourceId: strin
 	return structuredClone(event);
 }
 
+export function createScheduleDueTriggerEvent(input: { sourceId: string; sequence: number; scheduleId: string; clock: "tick" | "turn"; value: number }): EngineScheduleDueTriggerEvent {
+	const event: EngineScheduleDueTriggerEvent = { schemaVersion: 1, type: "schedule.due", sourceId: input.sourceId, sequence: input.sequence, payload: { scheduleId: input.scheduleId, clock: input.clock, value: input.value } };
+	validateTriggerEvent(event);
+	return structuredClone(event);
+}
+
 export function validateTriggerActivation(value: unknown): asserts value is EngineTriggerActivation {
 	const activation = record(value, "Trigger activation");
 	exactKeys(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
@@ -168,6 +182,14 @@ export function validateTriggerEvent(value: unknown): asserts value is EngineTri
 		safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
 		safeSequence(payload.tick, "Environment activation tick");
 		if (typeof payload.active !== "boolean") throw new Error("Environment activation active must be boolean");
+		return;
+	}
+	if (event.type === "schedule.due") {
+		const payload = record(event.payload, "Schedule due payload");
+		exactKeys(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
+		string(payload.scheduleId, "Schedule due scheduleId");
+		if (payload.clock !== "tick" && payload.clock !== "turn") throw new Error("Schedule due clock must be tick or turn");
+		safeSequence(payload.value, "Schedule due value");
 		return;
 	}
 	throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
