@@ -338,6 +338,71 @@ function registerMovementEffect(registry) {
     }
   });
 }
+function createTickTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createCollisionEnterTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "collision.enter",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { entityId: input.entityId, otherId: input.otherId, contactKey: input.contactKey }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function validateTriggerEvent(value) {
+  const event = record2(value, "Trigger event");
+  exactKeys2(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
+  if (event.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger event schema version");
+  string(event.sourceId, "Trigger event sourceId");
+  safeSequence(event.sequence, "Trigger event sequence");
+  if (event.type === "tick") {
+    const payload = record2(event.payload, "Tick trigger payload");
+    exactKeys2(payload, ["dt"], "Tick trigger payload");
+    finiteNonNegative(payload.dt, "Tick trigger dt");
+    return;
+  }
+  if (event.type === "collision.enter") {
+    const payload = record2(event.payload, "Collision trigger payload");
+    exactKeys2(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
+    string(payload.entityId, "Collision trigger entityId");
+    string(payload.otherId, "Collision trigger otherId");
+    string(payload.contactKey, "Collision trigger contactKey");
+    return;
+  }
+  throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
+}
+function record2(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys2(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function string(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function safeSequence(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0)
+    throw new Error(`${label} must be a non-negative safe integer`);
+}
+function finiteNonNegative(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error(`${label} must be a finite non-negative number`);
+}
 
 var engine = {
   createWorld(options) {
@@ -371,12 +436,15 @@ var engine = {
   }
 };
 export {
+  validateTriggerEvent,
   validateTransformState,
   validateMovementState,
   registerMovementEffect,
   engine,
   createTransformState,
+  createTickTriggerEvent,
   createMovementState,
+  createCollisionEnterTriggerEvent,
   MOVEMENT_EFFECT_ID,
   MOVEMENT_CAPABILITY,
   EngineWorldBuilder,

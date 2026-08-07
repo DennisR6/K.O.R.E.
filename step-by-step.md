@@ -453,8 +453,8 @@ friction remain outside the migrated MovementSystem.
 
 - [x] Inventory current Always, Round, Collision, delayed, environmental,
    item-runtime, rule, Player, Structure, Physics, and Handler trigger behavior.
-- [ ] Define only the typed, versioned Trigger contracts supported cleanly by
-  current runtime behavior; do not add speculative trigger categories.
+- [x] Define only the typed, versioned Trigger contracts supported cleanly by
+   current runtime behavior; do not add speculative trigger categories.
 - [ ] Separate Trigger activation from the Effect it activates while retaining
   compatibility adapters where necessary.
 - [ ] Define deterministic ordering for simultaneous triggers, same-tick versus
@@ -482,6 +482,14 @@ from Effect execution without changing those deterministic boundaries, define
 explicit Round and scheduled-event semantics only where current behavior can
 support them, and reject recursive chains rather than introducing unrestricted
 callbacks.
+
+#### Phase 6.2 Trigger Contract Evidence
+
+`src/engine/sdk/trigger.ts` defines detached schema-version-one `tick` and
+`collision.enter` events with exact payload validation, finite timing, safe
+sequence numbers, and no executable fields. Round, item-runtime, environmental,
+pickup, and rule-specific activations are intentionally not represented as
+generic Engine triggers yet.
 
 ### Phase 7: Declarative Commands
 
