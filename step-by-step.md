@@ -495,9 +495,10 @@ The same module separates trigger events from Effect identity through a
 versioned activation envelope and provides a trusted-host FIFO activation queue.
 The queue clones records, preserves insertion order, and rejects recursive
 chains after a bounded activation budget. Existing KORE trigger fields remain
-compatible; migration adapters for the legacy Player/Structure callback paths
-are intentionally the next integration task rather than being hidden in this
-contract change.
+compatible. `src/effects/triggerDispatcher.ts` now bridges handler Always,
+Player Always/Collision, MovementSystem tick, and circle/rectangle structure
+collision callbacks through that queue without changing serialized settings or
+legacy declaration order.
 
 ### Phase 7: Declarative Commands
 

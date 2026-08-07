@@ -1364,6 +1364,113 @@ function finite2(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
+class EngineTriggerActivationQueue {
+  maxActivations;
+  pending = [];
+  processed = 0;
+  constructor(maxActivations = 1024) {
+    this.maxActivations = maxActivations;
+    if (!Number.isSafeInteger(maxActivations) || maxActivations < 1)
+      throw new Error("Trigger activation budget must be a positive safe integer");
+  }
+  enqueue(activation) {
+    validateTriggerActivation(activation);
+    this.enqueueValidated(activation);
+  }
+  enqueueValidated(activation) {
+    if (this.pending.length + this.processed >= this.maxActivations)
+      throw new Error("Trigger activation budget exceeded");
+    this.pending.push(activation);
+  }
+  process(dispatch) {
+    if (typeof dispatch !== "function")
+      throw new Error("Trigger dispatcher must be a function");
+    let processedNow = 0;
+    while (this.pending.length > 0) {
+      const activation = this.pending.shift();
+      this.processed++;
+      processedNow++;
+      dispatch(structuredClone(activation));
+    }
+    return processedNow;
+  }
+  pendingCount() {
+    return this.pending.length;
+  }
+}
+function createTickTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createCollisionEnterTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "collision.enter",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { entityId: input.entityId, otherId: input.otherId, contactKey: input.contactKey }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function validateTriggerActivation(value) {
+  const activation = record3(value, "Trigger activation");
+  exactKeys3(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+  if (activation.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger activation schema version");
+  string2(activation.effectId, "Trigger activation effectId");
+  validateTriggerEvent(activation.event);
+}
+function validateTriggerEvent(value) {
+  const event = record3(value, "Trigger event");
+  exactKeys3(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
+  if (event.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger event schema version");
+  string2(event.sourceId, "Trigger event sourceId");
+  safeSequence(event.sequence, "Trigger event sequence");
+  if (event.type === "tick") {
+    const payload = record3(event.payload, "Tick trigger payload");
+    exactKeys3(payload, ["dt"], "Tick trigger payload");
+    finiteNonNegative2(payload.dt, "Tick trigger dt");
+    return;
+  }
+  if (event.type === "collision.enter") {
+    const payload = record3(event.payload, "Collision trigger payload");
+    exactKeys3(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
+    string2(payload.entityId, "Collision trigger entityId");
+    string2(payload.otherId, "Collision trigger otherId");
+    string2(payload.contactKey, "Collision trigger contactKey");
+    return;
+  }
+  throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
+}
+function record3(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys3(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function string2(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function safeSequence(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0)
+    throw new Error(`${label} must be a non-negative safe integer`);
+}
+function finiteNonNegative2(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error(`${label} must be a finite non-negative number`);
+}
 
 var engine = {
   createWorld(options) {
@@ -2919,6 +3026,34 @@ function stringValue(value, key, alias) {
   return raw;
 }
 
+function dispatchTriggeredEffects(options) {
+  if (options.effects.length === 0)
+    return;
+  const queue = new TrustedTriggerActivationQueue(Math.max(1, options.effects.length));
+  for (const [index2, effect] of options.effects.entries()) {
+    queue.enqueueTrusted({ schemaVersion: 1, effectId: `${effect.getType()}#${index2}`, event: options.event });
+  }
+  let index = 0;
+  queue.process((activation) => {
+    const effect = options.effects[index++];
+    if (!effect)
+      throw new Error("Trigger activation effect index is out of range");
+    options.apply(effect, activation.event);
+  });
+}
+
+class TrustedTriggerActivationQueue extends EngineTriggerActivationQueue {
+  enqueueTrusted(activation) {
+    this.enqueueValidated(activation);
+  }
+}
+function createTickEvent(sourceId, dt) {
+  return createTickTriggerEvent({ sourceId, sequence: 0, dt });
+}
+function createCollisionEnterEvent(sourceId, entityId, otherId, contactKey) {
+  return createCollisionEnterTriggerEvent({ sourceId, sequence: 0, entityId, otherId, contactKey });
+}
+
 function createItemDocument(overrides = {}) {
   return {
     schemaVersion: 1,
@@ -3170,10 +3305,12 @@ class Player {
   tick(_deltaTime, _globalFriction, _drift = 0, _stopThreshold = 0) {
     if (this.dead || !this.isPhysicsEnabled)
       return;
-    this.effectAlways.forEach((effect) => {
+    if (this.effectAlways.length === 0)
+      return;
+    dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), _deltaTime), apply: (effect) => {
       if (effect.getType() == "EffectType.Physics" /* Physics */)
         effect.apply(this, 12);
-    });
+    } });
   }
   setId(id) {
     this.id = id;
@@ -3255,7 +3392,11 @@ class Player {
     return this.shape;
   }
   onCollision({ entity }) {
-    this.effectCollision.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({
+      effects: this.effectCollision,
+      event: createCollisionEnterEvent(String(this.id), String(this.id), "collision", `${String(this.id)}:collision`),
+      apply: (effect) => effect.apply(entity)
+    });
   }
   getTeam() {
     return this.team;
@@ -4549,12 +4690,13 @@ class MovementSystem {
         continue;
       const settings = entity.toSettings();
       let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
-      for (const effect of entity.getAlwaysEffects()) {
-        if (effect.getType() !== "EffectType.Movement" /* Movement */)
-          continue;
+      const movementEffects = entity.getAlwaysEffects().filter((effect) => effect.getType() === "EffectType.Movement" /* Movement */);
+      if (movementEffects.length === 0)
+        continue;
+      dispatchTriggeredEffects({ effects: movementEffects, event: createTickEvent(String(entity.getId()), dt), apply: (effect) => {
         effect.apply(entity, { x: movement.velocity.x, y: movement.velocity.y, deltaTime: dt, rotation: settings.rotation, drift: ctx.drift ?? 0, stopThreshold: ctx.physics.getStopThreshold() });
         movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
-      }
+      } });
     }
   }
   ticker(_ctx, _dt, _friction) {}
@@ -5507,7 +5649,7 @@ class StructureCircle {
     return this.bounce;
   }
   onCollision({ entity }) {
-    this.collisionEffects.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.circle", "entity", "structure.circle", "structure.circle:collision"), apply: (effect) => effect.apply(entity) });
   }
   getColor() {
     return this.color;
@@ -5732,7 +5874,7 @@ class StructureRectangle {
     return this.vel;
   }
   onCollision({ entity }) {
-    this.collisionEffects.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.rectangle", "entity", "structure.rectangle", "structure.rectangle:collision"), apply: (effect) => effect.apply(entity) });
   }
   setVel(vel) {
     this.vel = vel;
@@ -7872,9 +8014,9 @@ class GameHandler {
       return;
     this.preTickers.forEach((t) => t.tick(dt, this.physicsStrategy.getFriction()));
     for (const e of this.entityManager.getEntities()) {
-      this.effectAlways.forEach((eff) => {
-        eff.apply(e);
-      });
+      if (this.effectAlways.length === 0)
+        continue;
+      dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: (effect) => effect.apply(e) });
     }
     const drift = this.settings?.drift ?? DEFAULT_DRIFT;
     this.context.drift = drift;
@@ -9114,9 +9256,9 @@ function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record3 = value;
-  const metadata = record3.metadata;
-  return String(record3.id ?? metadata?.id ?? "");
+  const record4 = value;
+  const metadata = record4.metadata;
+  return String(record4.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);

@@ -1,6 +1,7 @@
 import { EffectType } from "../effects/types.js";
 import { createMovementState } from "../engine/sdk/entityState.js";
 import type { ISerializableSystem, IGameContext, SystemSettings } from "./types.js";
+import { createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 
 /** Applies persistent Movement effects before entity-local physics effects. */
 export class MovementSystem implements ISerializableSystem<SystemSettings> {
@@ -11,11 +12,12 @@ export class MovementSystem implements ISerializableSystem<SystemSettings> {
 			if (entity.isDead() || !entity.physicsEnabled()) continue;
 			const settings = entity.toSettings();
 			let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
-			for (const effect of entity.getAlwaysEffects()) {
-				if (effect.getType() !== EffectType.Movement) continue;
+			const movementEffects = entity.getAlwaysEffects().filter(effect => effect.getType() === EffectType.Movement);
+			if (movementEffects.length === 0) continue;
+			dispatchTriggeredEffects({ effects: movementEffects, event: createTickEvent(String(entity.getId()), dt), apply: effect => {
 				effect.apply(entity, { x: movement.velocity.x, y: movement.velocity.y, deltaTime: dt, rotation: settings.rotation, drift: ctx.drift ?? 0, stopThreshold: ctx.physics.getStopThreshold() });
 				movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
-			}
+			} });
 		}
 	}
 

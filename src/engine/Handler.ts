@@ -16,6 +16,7 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
 import { EffectTrigger, type Effect, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
+import { createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
@@ -295,7 +296,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// the match mid-loop.
 		if (this.context.state === GameState.Game_over && !this.resolvingTurn) return
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
-		for (const e of this.entityManager.getEntities()) { this.effectAlways.forEach(eff => { eff.apply(e) }) }
+		for (const e of this.entityManager.getEntities()) {
+			if (this.effectAlways.length === 0) continue;
+			dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: effect => effect.apply(e) });
+		}
 		const drift = this.settings?.drift ?? DEFAULT_DRIFT
 		this.context.drift = drift
 		this.systems.forEach(s => s.preTick?.(this.context, dt, this.physicsStrategy.getFriction()))

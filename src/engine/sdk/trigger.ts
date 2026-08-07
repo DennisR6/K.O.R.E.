@@ -36,8 +36,13 @@ export class EngineTriggerActivationQueue {
 
 	public enqueue(activation: EngineTriggerActivation): void {
 		validateTriggerActivation(activation);
+		this.enqueueValidated(activation);
+	}
+
+	/** Internal fast path for activations already created by a validated event bridge. */
+	protected enqueueValidated(activation: EngineTriggerActivation): void {
 		if (this.pending.length + this.processed >= this.maxActivations) throw new Error("Trigger activation budget exceeded");
-		this.pending.push(structuredClone(activation));
+		this.pending.push(activation);
 	}
 
 	/** Processes FIFO activations through trusted host code, never content callbacks. */

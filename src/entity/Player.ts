@@ -8,6 +8,7 @@ import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { orderInstalledEffects } from "../effects/ordering.js";
 import { advanceRuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createCollisionEnterEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
@@ -110,9 +111,10 @@ export class Player implements IEntity {
 		 */
 	public tick(_deltaTime: number, _globalFriction: number, _drift: number = 0, _stopThreshold: number = 0) {
 		if (this.dead || !this.isPhysicsEnabled) return
-		this.effectAlways.forEach(effect => {
+		if (this.effectAlways.length === 0) return;
+		dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), _deltaTime), apply: effect => {
 			if (effect.getType() == EffectType.Physics) effect.apply(this, 12)
-		})
+		}});
 	}
 
 	public setId(id: UUID): void { this.id = id }
@@ -148,7 +150,13 @@ export class Player implements IEntity {
 	public setSize(size: number): void { this.size = size; }
 	public getShape(): SHAPE.CIRCLE { return this.shape }
 
-	public onCollision({ entity }: { entity: IPhysics<SHAPE>; }): void { this.effectCollision.forEach(effect => effect.apply(entity)) }
+	public onCollision({ entity }: { entity: IPhysics<SHAPE>; }): void {
+		dispatchTriggeredEffects({
+			effects: this.effectCollision,
+			event: createCollisionEnterEvent(String(this.id), String(this.id), "collision", `${String(this.id)}:collision`),
+			apply: effect => effect.apply(entity),
+		});
+	}
 	public getTeam(): number[] { return this.team }
 	public isActive(): boolean { return !this.dead }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }

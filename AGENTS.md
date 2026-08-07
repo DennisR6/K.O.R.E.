@@ -134,6 +134,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/effects/runtimeFactory.ts`: single KORE runtime effect factory boundary (`createRuntimeEffect`). Production code constructs runtime effects exclusively through this adapter.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
+- `src/effects/triggerDispatcher.ts`: internal validated activation bridge for
+  handler, Player, MovementSystem, and circle/rectangle structure trigger paths;
+  it does not alter serialized Effect settings.
 - `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
   item actions, with deterministic stacking.
 - `src/effects/modifyRotation.ts`: serializable additive rotation modifier for

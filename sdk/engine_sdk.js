@@ -349,9 +349,12 @@ class EngineTriggerActivationQueue {
   }
   enqueue(activation) {
     validateTriggerActivation(activation);
+    this.enqueueValidated(activation);
+  }
+  enqueueValidated(activation) {
     if (this.pending.length + this.processed >= this.maxActivations)
       throw new Error("Trigger activation budget exceeded");
-    this.pending.push(structuredClone(activation));
+    this.pending.push(activation);
   }
   process(dispatch) {
     if (typeof dispatch !== "function")

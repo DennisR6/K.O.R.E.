@@ -1,4 +1,5 @@
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { createCollisionEnterEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
@@ -102,7 +103,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		this.collisionEffects.forEach(effect => effect.apply(entity))
+		dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.circle", "entity", "structure.circle", "structure.circle:collision"), apply: effect => effect.apply(entity) })
 	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }

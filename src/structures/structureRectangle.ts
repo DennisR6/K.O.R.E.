@@ -1,4 +1,5 @@
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { createCollisionEnterEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
@@ -95,7 +96,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	public getVel(): Vector2D { return this.vel }
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		this.collisionEffects.forEach(effect => effect.apply(entity))
+		dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.rectangle", "entity", "structure.rectangle", "structure.rectangle:collision"), apply: effect => effect.apply(entity) })
 	}
 	public setVel(vel: Vector2D): void { this.vel = vel }
 
