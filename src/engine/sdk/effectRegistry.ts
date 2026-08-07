@@ -43,7 +43,7 @@ export class EngineEffectRegistry {
 		assertJsonValue(value.typeValue);
 		this.definitions.get(value.type)!.validatePayload?.(value.typeValue);
 		if (value.target !== undefined) assertJsonValue(value.target);
-		this.definitions.get(value.type)!.validateTarget?.(value.target as JsonValue);
+		if (value.target !== undefined) this.definitions.get(value.type)!.validateTarget?.(value.target as JsonValue);
 	}
 
 	/** Returns a detached descriptor without runtime validator functions. */

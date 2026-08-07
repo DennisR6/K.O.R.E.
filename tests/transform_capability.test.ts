@@ -9,7 +9,7 @@ test("transform commands declare a capability and validate typed absolute payloa
 	expect(() => effects.validate({ type: TRANSFORM_SET_POSITION_EFFECT_ID, typeValue: { x: 20, y: 40, extra: true } })).toThrow();
 	expect(() => effects.validate({ type: TRANSFORM_SET_ROTATION_EFFECT_ID, typeValue: { rotation: Number.NaN } })).toThrow();
 	expect(effects.describe()).toEqual([
-		{ id: TRANSFORM_SET_POSITION_EFFECT_ID, schemaVersion: 1, requiresCapability: [TRANSFORM_CAPABILITY], targetType: "entity", lifecycleCategory: "command" },
+		{ id: TRANSFORM_SET_POSITION_EFFECT_ID, schemaVersion: 1, requiresCapability: [TRANSFORM_CAPABILITY], targetType: "entity-or-structure", lifecycleCategory: "command" },
 		{ id: TRANSFORM_SET_ROTATION_EFFECT_ID, schemaVersion: 1, requiresCapability: [TRANSFORM_CAPABILITY], targetType: "entity", lifecycleCategory: "command" },
 	]);
 });
