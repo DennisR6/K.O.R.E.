@@ -6,6 +6,7 @@ import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectShield } from "../src/effects/shield.ts";
 import { MetaEffect, MultiEffect } from "../src/effects/effects.ts";
 import { EffectType, SettingOperation, type EffectSettings } from "../src/effects/types.ts";
+import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 
 /**
  * Task 12.11 - Harden The Effect Factory Against Unknown Types.
@@ -55,6 +56,7 @@ describe("effect factory hardening", () => {
 
 		// Both children execute: hp drops and the entity moves.
 		const player = new Player(createPlayerSettings({ hp: 10 }));
+		new GameHandlerBuilder().defaultSystems().addPlayer(player).build();
 		multi.apply(player);
 		expect(player.getHP()).toBe(5);
 		expect(player.getPos()).toEqual({ x: 2, y: 3 });
@@ -64,6 +66,7 @@ describe("effect factory hardening", () => {
 		const nestedMulti = new MetaEffect(nested);
 		expect(nestedMulti.toSettings()).toEqual(nested);
 		const fresh = new Player(createPlayerSettings({ hp: 10 }));
+		new GameHandlerBuilder().defaultSystems().addPlayer(fresh).build();
 		nestedMulti.apply(fresh);
 		expect(fresh.getHP()).toBe(0);
 	});

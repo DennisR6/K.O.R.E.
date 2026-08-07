@@ -982,10 +982,10 @@ export class GameHandlerBuilder {
 		this.engine.attachFeedbackToPhysics(physicsSystem)
 
 		this
-			.addSystem(new NumericSystem())
-			.addSystem(new ParticipationSystem())
 			.addPhysics(physics)
 			.addSystem(new MovementSystem())
+			.addSystem(new NumericSystem())
+			.addSystem(new ParticipationSystem())
 			.addSystem(new PlaybackSystem())
 			.addSystem(physicsSystem)
 			.addSystem(new BoundarySystem())

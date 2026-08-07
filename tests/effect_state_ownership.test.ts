@@ -9,6 +9,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 test("current entity state is canonical and is serialized separately from a setting request", () => {
 	const player = new Player(createPlayerSettings({ hp: 10 }));
 	const request = new EffectModifySetting({ typeValue: { operation: SettingOperation.Add, key: "hp", value: -3 } });
+	new GameHandlerBuilder().defaultSystems().addPlayer(player).build();
 
 	request.apply(player);
 	const settings = player.toSettings();
