@@ -320,7 +320,12 @@ After every change, check whether this guide still reflects the implementation a
   UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
   enum-backed KORE identifiers, commands, routes, styles, and parser;
   `KoreMainMenuSurface.ts` reconstructs that result as the KORE renderer/input/
-  audio adapter. Do not add parallel pages, manual hitboxes, or browser
+  audio adapter. The surface owns the mod-import flow: it forwards keyboard
+  input into the import text input, reads the clipboard through the injected
+  `onReadModClipboard` callback, opens the host file picker through
+  `onImportModFile`, validates JSON through the `src/mods/` pipeline, renders
+  the summary/error into the result screen, and emits launch callbacks with the
+  validated package. Do not add parallel pages, manual hitboxes, or browser
   resources to the composition.
 - `src/kore/ui/gameHud.ts` and `KoreGameHudSurface.ts`: authoritative
   SDK-authored gameplay HUD composition and KORE projection/input/audio adapter.

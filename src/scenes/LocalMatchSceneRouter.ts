@@ -2,6 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState } from "../engine/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
+import type { KoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
@@ -12,6 +13,8 @@ import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 import type { RenderContext } from "../engine/RenderContext.js";
+import { readClipboardText } from "../mods/browserClipboard.js";
+import { createModFileInput } from "../mods/browserFileInput.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -27,6 +30,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private battleSeed: number | undefined;
 	private menuPreview: MenuBattlePreview | undefined;
 	private hud: ReturnType<typeof installGameplayHud> | undefined;
+	private modFileInput: ReturnType<typeof createModFileInput> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
 	public readonly soundSourceId = "kore.scene-router";
 
@@ -187,7 +191,39 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.menuPreview?.dispose();
 		const preview = new MenuBattlePreview();
 		this.menuPreview = preview;
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId), drawBackground: renderer => preview.draw(renderer) }, createMainMenuComposition(this.language).build());
+		return createKoreMainMenuSurface({
+			onPlayLocal: () => this.startLocalMatch(),
+			onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId),
+			getStartError: () => this.error,
+			onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId),
+			onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId),
+			onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId),
+			drawBackground: renderer => preview.draw(renderer),
+			onImportModFile: () => this.pickModFile(),
+			onReadModClipboard: () => readClipboardText(),
+		}, createMainMenuComposition(this.language).build(), this.language);
+	}
+
+	/** Opens the hidden mod file picker; the picked text enters the menu surface import. */
+	private pickModFile(): void {
+		this.modFileInput?.dispose();
+		this.modFileInput = createModFileInput({
+			onText: (text, fileName) => {
+				const surface = this.menuSurface();
+				surface?.importModText(text, { kind: "file", fileName });
+			},
+			onError: error => {
+				const surface = this.menuSurface();
+				surface?.importModError(error, { kind: "file", fileName: "unknown" });
+			},
+		});
+		this.modFileInput.open();
+	}
+
+	private menuSurface(): KoreMainMenuSurface | undefined {
+		const mouse = this.handler.getMouseHandler();
+		if (!mouse || !("getRuntime" in mouse)) return undefined;
+		return mouse as KoreMainMenuSurface;
 	}
 }
 

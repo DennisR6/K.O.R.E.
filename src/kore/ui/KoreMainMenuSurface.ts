@@ -4,10 +4,15 @@ import type { RenderContext } from "../../engine/RenderContext.js";
 import { UiRuntime, type UiCommand, type UiRenderer } from "../../engine/ui-sdk/index.js";
 import { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import type { AiDifficulty } from "../../ai/types.js";
+import type { LoadedContentPackage } from "../../content/package.js";
 import { koreAudio } from "../audio.js";
 import { createMainMenuComposition, validateKoreMainMenuSettings, type KoreMainMenuSettings } from "./mainMenu.js";
-import { KoreMenuColor, KoreMenuCommand, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, asAiDifficulty, koreMenuMapScreen, parseKoreMenuCommand, type KoreMenuCommandMessage } from "./menuVocabulary.js";
+import { KoreMenuColor, KoreMenuCommand, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, KoreMenuText, asAiDifficulty, koreMenuMapScreen, parseKoreMenuCommand, type KoreMenuCommandMessage } from "./menuVocabulary.js";
 import { Canvas2DUiRenderer, type UiElementState } from "./koreUiTheme.js";
+import { importModText } from "../../mods/importMod.js";
+import { createEmptyModState, type ModDocumentState, type ModError, type ModSource } from "../../mods/types.js";
+import type { ReadClipboardResult } from "../../mods/browserClipboard.js";
+import { createEnglishLanguage, formatLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;
@@ -18,6 +23,14 @@ export interface KoreMainMenuCallbacks {
 	onPlayAiOpponent?: (difficulty: AiDifficulty, mapId: string) => void;
 	/** Draws an optional world layer underneath the menu UI. */
 	drawBackground?: (renderer: RenderContext) => boolean;
+	/** Host opens the hidden mod JSON file picker; picked text arrives through importModText. */
+	onImportModFile?: () => void;
+	/** Browser clipboard read; absent in non-browser hosts. */
+	onReadModClipboard?: () => Promise<ReadClipboardResult>;
+	/** Launches a canonical test match from a validated mod package. */
+	onLaunchMod1v1?: (mod: LoadedContentPackage) => void;
+	/** Launches a KI-vs-KI test battle from a validated mod package. */
+	onLaunchModAiBattle?: (mod: LoadedContentPackage) => void;
 }
 
 /** KORE controller/adapter around the SDK-authored canonical menu settings. */
@@ -26,10 +39,13 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 	private readonly sounds = new AudioEmitter(KoreMenuId.AudioSource);
 	private mouse = { x: 0, y: 0 };
 	private landingTicks = 0;
+	private readonly language: LanguageCatalog;
+	private mod: ModDocumentState = createEmptyModState();
 	public readonly soundSourceId = this.sounds.soundSourceId;
-	public constructor(private readonly callbacks: KoreMainMenuCallbacks = {}, private readonly initialSettings: KoreMainMenuSettings = createMainMenuComposition().build()) {
+	public constructor(private readonly callbacks: KoreMainMenuCallbacks = {}, private readonly initialSettings: KoreMainMenuSettings = createMainMenuComposition().build(), language: LanguageCatalog = createEnglishLanguage()) {
 		validateKoreMainMenuSettings(initialSettings);
 		this.runtime = UiRuntime.fromSettings(initialSettings.ui);
+		this.language = language;
 		for (const source of initialSettings.audio.persistentSources) this.sounds.emit(source.command);
 	}
 	public getRuntime(): UiRuntime { return this.runtime; }
@@ -39,6 +55,14 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 	public handleMousePressed(): void { this.runtime.tick({ pointer: { ...this.mouse, justPressed: true, pressed: true } }); this.handleCommands(this.runtime.drainCommands()); }
 	public handleMouseReleased(): void { this.runtime.tick({ pointer: { ...this.mouse, justReleased: true } }); this.handleCommands(this.runtime.drainCommands()); }
 	public handleMouseWheel(_event: WheelEvent): void { }
+	public handleKeyPressed(event: KeyboardEvent): void {
+		this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: event.key.length === 1 ? event.key : undefined } });
+		this.handleCommands(this.runtime.drainCommands());
+	}
+	/** Host-supplied mod text (file picker result) enters the same validated import pipeline. */
+	public importModText(text: string, source: ModSource): void { this.applyModImport(importModText(text, source)); }
+	/** Host-reported platform failure (file size, read error) renders like an invalid import. */
+	public importModError(error: ModError, source: ModSource): void { this.applyModImport({ ...createEmptyModState(), status: "invalid", source, error }); }
 	public tick(_deltaTime: number, _friction: number): void {
 		// Keep pointer state flowing through the SDK even when no button event
 		// occurred. This is what makes the renderer's hover state live.
@@ -74,14 +98,57 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
 			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;
 			case KoreMenuCommand.OpenMods: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Mods }); return;
-			case KoreMenuCommand.ImportModFile:
-			case KoreMenuCommand.ImportModPaste:
-			case KoreMenuCommand.ValidateMod:
-			case KoreMenuCommand.LaunchMod1v1:
-			case KoreMenuCommand.LaunchModAiBattle:
-				// Mod flow wiring (file picker, clipboard, validation, test launch) lands in the mod step.
-				this.confirm(command.type);
+			case KoreMenuCommand.ImportModFile: this.confirm(command.type); this.callbacks.onImportModFile?.(); return;
+			case KoreMenuCommand.ImportModPaste: this.confirm(command.type); this.handleModPaste(); return;
+			case KoreMenuCommand.ValidateMod: this.confirm(command.type); this.validateImportedText(); return;
+			case KoreMenuCommand.LaunchMod1v1: this.launchMod("1v1"); return;
+			case KoreMenuCommand.LaunchModAiBattle: this.launchMod("battle"); return;
+		}
+	}
+	private handleModPaste(): void {
+		this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.ModImport });
+		const reader = this.callbacks.onReadModClipboard;
+		if (!reader) {
+			this.runtime.dispatch({ type: "setText", target: KoreMenuElement.ModImportHint, text: formatLanguage(this.language, KoreMenuText.ModError, { error: "Clipboard unavailable" }) });
+			return;
+		}
+		void reader().then(result => {
+			if (!result.ok) {
+				this.runtime.dispatch({ type: "setText", target: KoreMenuElement.ModImportHint, text: formatLanguage(this.language, KoreMenuText.ModError, { error: result.error.message }) });
 				return;
+			}
+			this.runtime.dispatch({ type: "setText", target: KoreMenuElement.ModImportHint, text: translate(this.language, KoreMenuText.ModImportHint) });
+			this.runtime.dispatch({ type: "setValue", target: KoreMenuElement.ModImportInput, value: result.text });
+		});
+	}
+	private validateImportedText(): void { this.applyModImport(importModText(this.getModInput(), { kind: "paste" })); }
+	private getModInput(): string {
+		for (const node of this.runtime.getActiveElements()) if (node.id === KoreMenuElement.ModImportInput && "value" in node) return node.value ?? "";
+		return "";
+	}
+	private launchMod(target: "1v1" | "battle"): void {
+		if (this.mod.status !== "valid" || !this.mod.package) return;
+		this.confirm(target === "1v1" ? KoreMenuCommand.LaunchMod1v1 : KoreMenuCommand.LaunchModAiBattle);
+		if (target === "1v1") this.callbacks.onLaunchMod1v1?.(this.mod.package);
+		else this.callbacks.onLaunchModAiBattle?.(this.mod.package);
+	}
+	private applyModImport(next: ModDocumentState): void {
+		this.mod = next;
+		const valid = next.status === "valid" && next.package;
+		this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.ModResult });
+		if (valid) {
+			const manifest = next.package!.package.manifest;
+			const items = next.package!.package.items?.length ?? 0;
+			const effects = next.package!.package.items?.reduce((count, item) => count + (item.effects?.length ?? 0), 0) ?? 0;
+			this.runtime.dispatch({ type: "setText", target: KoreMenuElement.ModResultSummary, text: [formatLanguage(this.language, KoreMenuText.ModResultName, { name: manifest.name }), formatLanguage(this.language, KoreMenuText.ModResultId, { id: manifest.id }), formatLanguage(this.language, KoreMenuText.ModResultMeta, { version: manifest.version, items, effects })].join("\n") });
+			this.runtime.setElementText(KoreMenuElement.ModsStatus, `${manifest.name} (${next.package!.hash.slice(0, 8)})`);
+			this.runtime.dispatch({ type: "setEnabled", target: KoreMenuElement.ModResult1v1, enabled: true });
+			this.runtime.dispatch({ type: "setEnabled", target: KoreMenuElement.ModResultBattle, enabled: true });
+		} else {
+			this.runtime.dispatch({ type: "setText", target: KoreMenuElement.ModResultSummary, text: formatLanguage(this.language, KoreMenuText.ModError, { error: next.error?.message ?? "Unknown error" }) });
+			this.runtime.setElementText(KoreMenuElement.ModsStatus, translate(this.language, KoreMenuText.ModsStatusEmpty));
+			this.runtime.dispatch({ type: "setEnabled", target: KoreMenuElement.ModResult1v1, enabled: false });
+			this.runtime.dispatch({ type: "setEnabled", target: KoreMenuElement.ModResultBattle, enabled: false });
 		}
 	}
 	private selectMap(value: Extract<KoreMenuCommandMessage, { type: KoreMenuCommand.SelectMap }>["payload"]): void {
@@ -114,7 +181,8 @@ class KoreMenuRenderer implements UiRenderer {
 			: element.style === KoreMenuStyle.MapNote ? 16 : 20;
 		const yOffset = element.style === KoreMenuStyle.MapTitle ? 30 : 16;
 
-		this.ctx.drawText(element.text ?? "", element.rect.x, element.rect.y + yOffset, fontSize);
+		const lines = (element.text ?? "").split("\n");
+		lines.forEach((line, index) => this.ctx.drawText(line, element.rect.x, element.rect.y + yOffset + index * (fontSize + 6), fontSize));
 	}
 
 	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void {
@@ -152,7 +220,8 @@ class KoreMenuRenderer implements UiRenderer {
 
 export function createKoreMainMenuSurface(
 	callbacks: KoreMainMenuCallbacks = {},
-	settings: KoreMainMenuSettings = createMainMenuComposition().build()
+	settings: KoreMainMenuSettings = createMainMenuComposition().build(),
+	language: LanguageCatalog = createEnglishLanguage()
 ): KoreMainMenuSurface {
-	return new KoreMainMenuSurface(callbacks, settings);
+	return new KoreMainMenuSurface(callbacks, settings, language);
 }

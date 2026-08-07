@@ -238,6 +238,13 @@ export class UiRuntime {
 		node.enabled = enabled;
 		return true;
 	}
+	/** Updates element text through the same anywhere-scope host primitive (text/button/input). */
+	public setElementText(id: string, text: string): boolean {
+		const element = this.findElementAnywhere(id);
+		if (!element) return false;
+		element.text = text;
+		return true;
+	}
 	public drainCommands(): UiCommand[] { const commands = this.emitted.map(clone); this.emitted = []; return commands; }
 	public explain(): string { return `UI '${this.settings.id}' uses ${this.systems.map(system => system.id).join(", ")} with explicit tick() and draw().`; }
 
