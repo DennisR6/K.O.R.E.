@@ -913,16 +913,29 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				this.installStructureLifecycle(actor, item, effect, target.position);
 			} else if (isActionModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Action modifiers require an entity target");
-				targetEntity.addPendingActionModifier(createActionModifier({
-					id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
-					action: "force",
-					operation: "scale",
-					factor: effect.factor,
-					...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
-					...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
-					sourceId: item.id,
-					sourceOrder: itemOrder(item),
-				}));
+				const actionModifier = effect.action === "force"
+					? createActionModifier({
+						id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+						action: "force",
+						operation: "scale",
+						factor: effect.factor,
+						...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
+						...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
+						sourceId: item.id,
+						sourceOrder: itemOrder(item),
+					})
+					: createActionModifier({
+						id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+						action: "aim",
+						operation: "random-offset",
+						maxVarianceDegrees: effect.maxVarianceDegrees,
+						randomState: effect.randomState,
+						...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
+						...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
+						sourceId: item.id,
+						sourceOrder: itemOrder(item),
+					});
+				targetEntity.addPendingActionModifier(actionModifier);
 			} else if (isTemporalModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Temporal modifiers require an entity target");
 				const targetId = String(targetEntity.getId());

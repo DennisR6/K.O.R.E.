@@ -31,3 +31,22 @@ test("action modifier lifetime and action-use consumption remain independent", (
 	expect(consumeActionModifiers([timed])).toEqual([timed]);
 	expect(applyActionModifiers({ angle: 0, power: 8 }, [timed])).toEqual({ angle: 0, power: 4 });
 });
+
+test("aim random-offset and force scale compose in stable canonical order", () => {
+	const aim = createActionModifier({ id: "aim", action: "aim", operation: "random-offset", maxVarianceDegrees: 10, randomState: 12345, remainingUses: 1, sourceOrder: 1 });
+	const force = createActionModifier({ id: "force", action: "force", operation: "scale", factor: 1.5, remainingUses: 1, sourceOrder: 2 });
+	const reversed = [force, aim];
+
+	expect(applyActionModifiers({ angle: 90, power: 4 }, reversed)).toEqual(applyActionModifiers({ angle: 90, power: 4 }, [aim, force]));
+	expect(applyActionModifiers({ angle: 90, power: 4 }, reversed).power).toBe(6);
+	expect(consumeActionModifiers([aim])).toEqual([]);
+	const advanced = consumeActionModifiers([createActionModifier({ id: "aim", action: "aim", operation: "random-offset", maxVarianceDegrees: 10, randomState: 12345, remainingUses: 2 })])[0]!;
+	expect(advanced.remainingUses).toBe(1);
+	if (advanced.action !== "aim") throw new Error("Expected aim modifier");
+	expect(advanced.randomState).not.toBe(12345);
+});
+
+test("aim random-offset validates canonical random state and variance", () => {
+	expect(() => createActionModifier({ id: "bad", action: "aim", operation: "random-offset", maxVarianceDegrees: -1, randomState: 1, remainingUses: 1 })).toThrow("variance");
+	expect(() => createActionModifier({ id: "bad", action: "aim", operation: "random-offset", maxVarianceDegrees: 1, randomState: -1, remainingUses: 1 })).toThrow("unsigned");
+});

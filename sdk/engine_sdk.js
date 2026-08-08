@@ -1027,6 +1027,34 @@ function knownKeys(value, keys, label) {
   if (Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
+var LIFETIME_DURATION_UNITS = ["turns", "ticks"];
+function createLifetime(input) {
+  const lifetime = {
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration
+  };
+  validateLifetime(lifetime);
+  return lifetime;
+}
+function advanceLifetime(lifetime) {
+  validateLifetime(lifetime);
+  if (lifetime.remaining <= 1)
+    return;
+  return { ...lifetime, remaining: lifetime.remaining - 1 };
+}
+function validateLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Lifetime must be an object");
+  const lifetime = value;
+  if (!LIFETIME_DURATION_UNITS.includes(lifetime.durationUnit))
+    throw new Error("Lifetime duration unit is invalid");
+  if (!Number.isSafeInteger(lifetime.duration) || lifetime.duration < 1)
+    throw new Error("Lifetime duration must be a positive integer");
+  if (!Number.isSafeInteger(lifetime.remaining) || lifetime.remaining < 1 || lifetime.remaining > lifetime.duration)
+    throw new Error("Lifetime remaining duration is invalid");
+}
+
 var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
 var TEMPORAL_DURATION_UNITS = ["turns"];
 function createTemporalModifierTemplate(input) {
@@ -1048,9 +1076,7 @@ function createTemporalModifier(input) {
     id: input.id,
     target: { ...input.target },
     effect: structuredClone(input.effect),
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
   };
@@ -1059,9 +1085,8 @@ function createTemporalModifier(input) {
 }
 function advanceTemporalModifier(modifier) {
   validateTemporalModifier(modifier);
-  if (modifier.remaining <= 1)
-    return;
-  return { ...structuredClone(modifier), remaining: modifier.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf(modifier));
+  return next ? { ...structuredClone(modifier), ...next } : undefined;
 }
 function validateTemporalModifier(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -1079,12 +1104,7 @@ function validateTemporalModifier(value) {
     throw new Error("Temporal modifier requires a stable entity target");
   if (modifier.durationUnit !== "turns")
     throw new Error("Temporal modifier requires turns duration");
-  const duration = modifier.duration;
-  const remaining = modifier.remaining;
-  if (typeof duration !== "number" || !Number.isSafeInteger(duration) || duration < 1)
-    throw new Error("Temporal modifier duration must be a positive integer");
-  if (typeof remaining !== "number" || !Number.isSafeInteger(remaining) || remaining < 1 || remaining > duration)
-    throw new Error("Temporal modifier remaining duration is invalid");
+  validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
   if (!modifier.effect || typeof modifier.effect !== "object" || Array.isArray(modifier.effect))
     throw new Error("Temporal modifier requires an Engine effect");
   assertJsonValue(modifier.effect);
@@ -1093,6 +1113,9 @@ function validateTemporalModifier(value) {
   const effectKeys = Object.keys(modifier.effect);
   if (effectKeys.some((key) => !["schemaVersion", "type", "typeValue", "target"].includes(key)))
     throw new Error("Temporal modifier Engine effect contains unexpected fields");
+}
+function lifetimeOf(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
 var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
 var STRUCTURE_LIFECYCLE_DURATION_UNITS = ["turns"];
@@ -1106,9 +1129,7 @@ function createStructureLifecycle(input) {
     schemaVersion: STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
     id: input.id,
     structureId: input.structureId,
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
     ...input.targetId === undefined ? {} : { targetId: input.targetId }
@@ -1118,9 +1139,8 @@ function createStructureLifecycle(input) {
 }
 function advanceStructureLifecycle(lifecycle) {
   validateStructureLifecycle(lifecycle);
-  if (lifecycle.remaining <= 1)
-    return;
-  return { ...structuredClone(lifecycle), remaining: lifecycle.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf2(lifecycle));
+  return next ? { ...structuredClone(lifecycle), ...next } : undefined;
 }
 function validateStructureLifecycleTemplate(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -1128,7 +1148,7 @@ function validateStructureLifecycleTemplate(value) {
   const template = value;
   if (template.durationUnit !== "turns")
     throw new Error("Structure lifecycle requires turns duration");
-  validateDuration(template.duration, "Structure lifecycle duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
   if (!template.structure || typeof template.structure !== "object" || Array.isArray(template.structure))
     throw new Error("Structure lifecycle requires structure geometry");
   const structure = template.structure;
@@ -1162,14 +1182,10 @@ function validateStructureLifecycle(value) {
     throw new Error("Structure lifecycle targetId must be non-empty");
   if (lifecycle.durationUnit !== "turns")
     throw new Error("Structure lifecycle requires turns duration");
-  validateDuration(lifecycle.duration, "Structure lifecycle duration");
-  validateDuration(lifecycle.remaining, "Structure lifecycle remaining duration");
-  if (lifecycle.remaining > lifecycle.duration)
-    throw new Error("Structure lifecycle remaining duration exceeds duration");
+  validateLifetime({ durationUnit: lifecycle.durationUnit, duration: lifecycle.duration, remaining: lifecycle.remaining });
 }
-function validateDuration(value, label) {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
-    throw new Error(`${label} must be a positive integer`);
+function lifetimeOf2(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
 var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
 var DEFERRED_EFFECT_DURATION_UNITS = ["ticks"];
@@ -1182,9 +1198,7 @@ function createDeferredEffect(input) {
   const deferred = {
     schemaVersion: DEFERRED_EFFECT_SCHEMA_VERSION,
     id: input.id,
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     effect: structuredClone(input.effect),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
@@ -1195,9 +1209,8 @@ function createDeferredEffect(input) {
 }
 function advanceDeferredEffect(effect) {
   validateDeferredEffect(effect);
-  if (effect.remaining <= 1)
-    return;
-  return { ...structuredClone(effect), remaining: effect.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf3(effect));
+  return next ? { ...structuredClone(effect), ...next } : undefined;
 }
 function validateDeferredEffectTemplate(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -1205,7 +1218,7 @@ function validateDeferredEffectTemplate(value) {
   const template = value;
   if (template.durationUnit !== "ticks")
     throw new Error("Deferred effect requires ticks duration");
-  validateDuration2(template.duration, "Deferred effect duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
   validateEngineEffect(template.effect);
 }
 function validateDeferredEffect(value) {
@@ -1224,10 +1237,8 @@ function validateDeferredEffect(value) {
     throw new Error("Deferred effect ownerId must be non-empty");
   if (effect.durationUnit !== "ticks")
     throw new Error("Deferred effect requires ticks duration");
-  validateDuration2(effect.duration, "Deferred effect duration");
-  validateDuration2(effect.remaining, "Deferred effect remaining duration");
-  if (effect.remaining > effect.duration)
-    throw new Error("Deferred effect remaining duration exceeds duration");
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.duration });
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.remaining });
   validateEngineEffect(effect.effect);
 }
 function validateEngineEffect(value) {
@@ -1240,9 +1251,140 @@ function validateEngineEffect(value) {
   if (effect.target !== undefined)
     assertJsonValue(effect.target);
 }
-function validateDuration2(value, label) {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
-    throw new Error(`${label} must be a positive integer`);
+function lifetimeOf3(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+class SeededRandom {
+  state;
+  constructor(seed) {
+    if (!Number.isSafeInteger(seed))
+      throw new RangeError("Seed must be a safe integer");
+    this.state = seed >>> 0;
+  }
+  next() {
+    this.state = this.state + 1831565813 >>> 0;
+    let value = this.state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  }
+  nextInt(maxExclusive) {
+    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
+      throw new RangeError("Maximum must be a positive safe integer");
+    }
+    return Math.floor(this.next() * maxExclusive);
+  }
+  getState() {
+    return this.state;
+  }
+  static fromState(state) {
+    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
+      throw new RangeError("Random state must be an unsigned 32-bit integer");
+    }
+    const random = new SeededRandom(0);
+    random.state = state;
+    return random;
+  }
+}
+
+var ACTION_MODIFIER_SCHEMA_VERSION = 1;
+function createActionModifierTemplate(input) {
+  const template = structuredClone(input);
+  if (template.action === "force" && template.operation === "scale")
+    validateFactor(template.factor);
+  else if (template.action === "aim" && template.operation === "random-offset") {
+    validateVariance(template.maxVarianceDegrees);
+    validateRandomState(template.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  return template;
+}
+function createActionModifier(input) {
+  const modifier = { schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION, ...structuredClone(input) };
+  validateActionModifier(modifier);
+  return modifier;
+}
+function applyActionModifiers(input, modifiers) {
+  validateAcceptedForceInput(input);
+  if (modifiers.length === 0)
+    return { angle: normalizeAngle(input.angle), power: input.power };
+  return [...modifiers].sort(compareModifiers).reduce((current, modifier) => {
+    validateActionModifier(modifier);
+    if (modifier.action === "force" && modifier.operation === "scale")
+      return { angle: current.angle, power: current.power * modifier.factor };
+    const random = SeededRandom.fromState(modifier.randomState);
+    const offset = (random.next() * 2 - 1) * modifier.maxVarianceDegrees;
+    return { angle: normalizeAngle(current.angle + offset), power: current.power };
+  }, { angle: normalizeAngle(input.angle), power: input.power });
+}
+function consumeActionModifiers(modifiers) {
+  return [...modifiers].sort(compareModifiers).flatMap((modifier) => {
+    validateActionModifier(modifier);
+    const next = structuredClone(modifier);
+    if (next.action === "aim" && next.operation === "random-offset") {
+      const random = SeededRandom.fromState(next.randomState);
+      random.next();
+      next.randomState = random.getState();
+    }
+    if (next.remainingUses === undefined || next.remainingUses <= 1)
+      return next.remainingUses === undefined ? [next] : [];
+    return [{ ...next, remainingUses: next.remainingUses - 1 }];
+  });
+}
+function validateActionModifier(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Action modifier must be an object");
+  const modifier = value;
+  if (modifier.schemaVersion !== ACTION_MODIFIER_SCHEMA_VERSION)
+    throw new Error("Unsupported action modifier schema version");
+  if (typeof modifier.id !== "string" || modifier.id.length === 0)
+    throw new Error("Action modifier requires a stable id");
+  if (modifier.action === "force" && modifier.operation === "scale")
+    validateFactor(modifier.factor);
+  else if (modifier.action === "aim" && modifier.operation === "random-offset") {
+    validateVariance(modifier.maxVarianceDegrees);
+    validateRandomState(modifier.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  if (modifier.remainingUses !== undefined && (!Number.isSafeInteger(modifier.remainingUses) || modifier.remainingUses < 1))
+    throw new Error("Action modifier remaining uses must be a positive integer");
+  const hasLifetime = modifier.durationUnit !== undefined || modifier.duration !== undefined || modifier.remaining !== undefined;
+  if (hasLifetime) {
+    if (modifier.durationUnit === undefined || modifier.duration === undefined || modifier.remaining === undefined)
+      throw new Error("Action modifier lifetime is incomplete");
+    if (modifier.durationUnit !== "turns")
+      throw new Error("Action modifier lifetime requires turns");
+    validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+  }
+  if (modifier.remainingUses === undefined && !hasLifetime)
+    throw new Error("Action modifier requires consumption or lifetime");
+  if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0))
+    throw new Error("Action modifier sourceId must be non-empty");
+  if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder))
+    throw new Error("Action modifier sourceOrder must be a safe integer");
+  assertJsonValue(modifier);
+}
+function validateFactor(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier factor must be a finite non-negative number");
+}
+function validateVariance(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier variance must be a finite non-negative number");
+}
+function validateRandomState(value) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 4294967295)
+    throw new Error("Action modifier random state must be an unsigned 32-bit integer");
+}
+function validateAcceptedForceInput(input) {
+  if (!Number.isFinite(input.angle) || !Number.isFinite(input.power) || input.power < 0)
+    throw new Error("Accepted force input must have a finite angle and non-negative power");
+}
+function compareModifiers(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function normalizeAngle(angle) {
+  return (angle % 360 + 360) % 360;
 }
 
 var engine = {
@@ -1293,6 +1435,7 @@ export {
   validateNumericTarget,
   validateNumericEffectSettings,
   validateMovementState,
+  validateLifetime,
   validateEngineEffectComposition,
   validateDeferredEffectTemplate,
   validateDeferredEffect,
@@ -1301,6 +1444,7 @@ export {
   validateCounterState,
   validateCounterEffectSettings,
   validateCollisionCommandBinding,
+  validateActionModifier,
   registerTransformEffects,
   registerParticipationSystem,
   registerParticipationCommands,
@@ -1326,6 +1470,7 @@ export {
   createScheduleDueTriggerEvent,
   createRoundStartTriggerEvent,
   createMovementState,
+  createLifetime,
   createEnvironmentActivationTriggerEvent,
   createEngineEffectComposition,
   createDeferredEffectTemplate,
@@ -1333,13 +1478,18 @@ export {
   createCounterState,
   createCollisionEnterTriggerEvent,
   createCollisionCommandBinding,
+  createActionModifierTemplate,
+  createActionModifier,
   counterTriggerMatches,
   counterSystemDefinition,
+  consumeActionModifiers,
   canonicalizeCounterStates,
   calculateRadialVelocityDelta,
   applyRadialVelocityDelta,
+  applyActionModifiers,
   advanceTemporalModifier,
   advanceStructureLifecycle,
+  advanceLifetime,
   advanceDeferredEffect,
   TRANSFORM_SWAP_POSITION_EFFECT_ID,
   TRANSFORM_SET_ROTATION_EFFECT_ID,
@@ -1368,6 +1518,7 @@ export {
   MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
   MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID,
   MOVEMENT_ADD_VELOCITY_EFFECT_ID,
+  LIFETIME_DURATION_UNITS,
   EngineWorldBuilder,
   EngineTriggerActivationQueue,
   EngineSystemRegistry,
@@ -1383,5 +1534,6 @@ export {
   COUNTER_CAPABILITY,
   COUNTER_ADD_EFFECT_ID,
   COLLISION_COMMAND_TYPE,
-  COLLISION_COMMAND_SCHEMA_VERSION
+  COLLISION_COMMAND_SCHEMA_VERSION,
+  ACTION_MODIFIER_SCHEMA_VERSION
 };

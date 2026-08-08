@@ -78,3 +78,24 @@ test("historical Anker modifyForce state restores its declared turn lifetime", (
 		sourceId: "anker",
 	})]);
 });
+
+test("historical Vodka-Zero state migrates to a one-shot canonical aim modifier", () => {
+	const settings: any = {
+		players: [{ id: "actor-vodka", itemEffects: [{ type: "aimVariance", typeValue: { maxVarianceDegrees: 10, seed: 999 }, itemId: "vodka-zero", order: 3 }], effects: [] }],
+		items: [],
+		effects: [],
+		mapBoundarys: [],
+	};
+
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.itemEffects).toEqual([]);
+	expect(migrated.players[0]!.pendingActionModifiers).toEqual([expect.objectContaining({
+		action: "aim",
+		operation: "random-offset",
+		maxVarianceDegrees: 10,
+		randomState: 999,
+		remainingUses: 1,
+		sourceId: "vodka-zero",
+		sourceOrder: 3,
+	})]);
+});

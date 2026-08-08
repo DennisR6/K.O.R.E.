@@ -1,4 +1,3 @@
-import { EffectAimVariance } from "../../effects/aimVariance.js";
 import { EffectGhostMode } from "../../effects/ghostMode.js";
 import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
@@ -9,9 +8,9 @@ import { createTemporalModifierTemplate, type TemporalModifierTemplate } from ".
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../../engine/contracts/structureLifecycle.js";
 import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../../engine/contracts/deferredEffect.js";
 import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "../../engine/contracts/actionModifier.js";
+import { SeededRandom } from "../../utils/random.js";
 
 export type RuntimeItemEffect =
-	| EffectAimVariance
 	| EffectGhostMode
 	| ActionModifierTemplate
 	| EffectSelectionLock
@@ -40,7 +39,14 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.SpawnTrigger:
 			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...(value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }), ...(value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition as never }) } });
 		case ItemEffectType.AimVariance:
-			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
+			return createActionModifierTemplate({
+				action: "aim",
+				operation: "random-offset",
+				maxVarianceDegrees: numberValue(value, "maxVarianceDegrees"),
+				randomState: value.randomState === undefined
+					? new SeededRandom(value.seed === undefined ? 1337 : safeIntegerValue(value, "seed")).getState()
+					: safeIntegerValue(value, "randomState"),
+			});
 		case ItemEffectType.TemporalModifier:
 			return createTemporalModifierTemplate({ durationUnit: value.durationUnit as "turns", duration: integerValue(value, "duration"), effect: value.effect as never });
 		case ItemEffectType.StructureLifecycle:
@@ -75,7 +81,7 @@ export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next
 }
 
 export function applyRuntimeForceEffects(force: ForceInput, effects: readonly RuntimeItemEffect[]): ForceInput {
-	const modifiers = effects.flatMap((effect, index) => isActionModifierTemplate(effect) ? [createActionModifier({ id: `runtime-action-modifier:${index}`, action: effect.action, operation: effect.operation, factor: effect.factor, remainingUses: 1, sourceOrder: index })] : []);
+	const modifiers = effects.flatMap((effect, index) => isActionModifierTemplate(effect) && effect.action === "force" ? [createActionModifier({ id: `runtime-action-modifier:${index}`, action: "force", operation: "scale", factor: effect.factor, remainingUses: 1, sourceOrder: index })] : []);
 	return applyActionModifiers(force, modifiers);
 }
 
@@ -110,5 +116,11 @@ export function isDeferredEffectTemplate(value: RuntimeItemEffect): value is Def
 }
 
 export function isActionModifierTemplate(value: RuntimeItemEffect): value is ActionModifierTemplate {
-	return "action" in value && value.action === "force" && "operation" in value && value.operation === "scale" && "factor" in value;
+	return "action" in value && ((value.action === "force" && "operation" in value && value.operation === "scale" && "factor" in value) || (value.action === "aim" && "operation" in value && value.operation === "random-offset" && "maxVarianceDegrees" in value && "randomState" in value));
+}
+
+function safeIntegerValue(value: Record<string, unknown>, key: string): number {
+	const raw = value[key];
+	if (typeof raw !== "number" || !Number.isSafeInteger(raw)) throw new Error(`Item effect requires safe integer ${key}`);
+	return raw;
 }

@@ -500,6 +500,7 @@ export declare const kore: {
         readonly multi: (...effects: Array<SerializableEffect | any>) => any;
         readonly itemEffect: (type: any, typeValue?: Record<string, unknown>) => any;
         readonly shield: (capacity: number) => any;
+        readonly aimVariance: (maxVarianceDegrees: number, seed?: number) => any;
         readonly freeze: (durationTurns?: number) => any;
         readonly magnet: (strength: number, range: number) => KoreEngineItemEffectSettings;
         readonly temporaryWall: (lifetimeTurns?: number) => any;

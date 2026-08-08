@@ -53,19 +53,3 @@ test("Selection Lock is accepted and stored, but the shared shot boundary does n
 	// Characterizes the current missing authoritative selection-policy check.
 	expect(() => emitter.sendShot(target!.getId(), 0, 1)).not.toThrow();
 });
-
-test("Vodka-Zero is accepted and stored, but the accepted shot path does not apply its seeded aim variance", () => {
-	const settings = buildSettings(vodkaZeroItem);
-	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
-	const actor = handler.getEntityManager().getEntities()[0]!;
-	const emitter = new GameEmitter(handler, settings.gameMode!, 2, 707);
-
-	emitter.sendItemUse(actor.getId(), vodkaZeroItem.id, { type: "self" });
-	expect(actor.getItemEffects()).toMatchObject([{ type: "aimVariance", typeValue: { maxVarianceDegrees: 10 } }]);
-	emitter.skipPhase();
-	handler.applyRawTurn({ actorId: actor.getId(), angle: 90, power: 4 });
-
-	expect(actor.getVel().x).toBeCloseTo(0);
-	expect(actor.getVel().y).toBe(4);
-	expect(actor.getItemEffects()).toHaveLength(1);
-});

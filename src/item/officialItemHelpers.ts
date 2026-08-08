@@ -3,8 +3,9 @@ import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../en
 import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, type MovementForceFieldPayload } from "../engine/sdk/movementCapability.js";
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../engine/contracts/structureLifecycle.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
-import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
+import type { ActionModifierTemplate } from "../engine/contracts/actionModifier.js";
+import { SeededRandom } from "../utils/random.js";
 import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../engine/contracts/temporalModifier.js";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { applyActionModifiers, createActionModifier } from "../engine/contracts/actionModifier.js";
@@ -31,7 +32,10 @@ export function createFreezeShot(): TemporalModifierTemplate {
 	return createTemporalModifierTemplate({ durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } });
 }
 export function createSelectionLock(): EffectSelectionLock { return new EffectSelectionLock({ typeValue: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } }); }
-export function createVodkaZero(seed: number = 42): EffectAimVariance { return new EffectAimVariance({ typeValue: { maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES, seed } }); }
+export function createVodkaZero(seed: number = 42): ActionModifierTemplate {
+	if (!Number.isSafeInteger(seed)) throw new Error("Vodka-Zero seed must be a safe integer");
+	return { action: "aim", operation: "random-offset", maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES, randomState: new SeededRandom(seed).getState() };
+}
 export interface FalltuerKillZone { triggerId: string; center: { x: number; y: number }; radius: number; trigger: EffectSpawnTrigger; }
 export function createFalltuerKillZone(center: { x: number; y: number }, radius: number = FALLTUER_RADIUS): FalltuerKillZone {
 	if (!Number.isFinite(center.x) || !Number.isFinite(center.y)) throw new Error("Falltür position must be finite");

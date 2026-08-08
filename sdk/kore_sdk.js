@@ -1972,6 +1972,34 @@ function knownKeys2(value, keys, label) {
   if (Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
+var LIFETIME_DURATION_UNITS = ["turns", "ticks"];
+function createLifetime(input) {
+  const lifetime = {
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration
+  };
+  validateLifetime(lifetime);
+  return lifetime;
+}
+function advanceLifetime(lifetime) {
+  validateLifetime(lifetime);
+  if (lifetime.remaining <= 1)
+    return;
+  return { ...lifetime, remaining: lifetime.remaining - 1 };
+}
+function validateLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Lifetime must be an object");
+  const lifetime = value;
+  if (!LIFETIME_DURATION_UNITS.includes(lifetime.durationUnit))
+    throw new Error("Lifetime duration unit is invalid");
+  if (!Number.isSafeInteger(lifetime.duration) || lifetime.duration < 1)
+    throw new Error("Lifetime duration must be a positive integer");
+  if (!Number.isSafeInteger(lifetime.remaining) || lifetime.remaining < 1 || lifetime.remaining > lifetime.duration)
+    throw new Error("Lifetime remaining duration is invalid");
+}
+
 var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
 function createTemporalModifierTemplate(input) {
   const template = structuredClone(input);
@@ -1992,9 +2020,7 @@ function createTemporalModifier(input) {
     id: input.id,
     target: { ...input.target },
     effect: structuredClone(input.effect),
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
   };
@@ -2003,9 +2029,8 @@ function createTemporalModifier(input) {
 }
 function advanceTemporalModifier(modifier) {
   validateTemporalModifier(modifier);
-  if (modifier.remaining <= 1)
-    return;
-  return { ...structuredClone(modifier), remaining: modifier.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf(modifier));
+  return next ? { ...structuredClone(modifier), ...next } : undefined;
 }
 function validateTemporalModifier(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -2023,12 +2048,7 @@ function validateTemporalModifier(value) {
     throw new Error("Temporal modifier requires a stable entity target");
   if (modifier.durationUnit !== "turns")
     throw new Error("Temporal modifier requires turns duration");
-  const duration = modifier.duration;
-  const remaining = modifier.remaining;
-  if (typeof duration !== "number" || !Number.isSafeInteger(duration) || duration < 1)
-    throw new Error("Temporal modifier duration must be a positive integer");
-  if (typeof remaining !== "number" || !Number.isSafeInteger(remaining) || remaining < 1 || remaining > duration)
-    throw new Error("Temporal modifier remaining duration is invalid");
+  validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
   if (!modifier.effect || typeof modifier.effect !== "object" || Array.isArray(modifier.effect))
     throw new Error("Temporal modifier requires an Engine effect");
   assertJsonValue(modifier.effect);
@@ -2037,6 +2057,9 @@ function validateTemporalModifier(value) {
   const effectKeys = Object.keys(modifier.effect);
   if (effectKeys.some((key) => !["schemaVersion", "type", "typeValue", "target"].includes(key)))
     throw new Error("Temporal modifier Engine effect contains unexpected fields");
+}
+function lifetimeOf(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
 var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
 function createStructureLifecycleTemplate(input) {
@@ -2049,9 +2072,7 @@ function createStructureLifecycle(input) {
     schemaVersion: STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
     id: input.id,
     structureId: input.structureId,
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
     ...input.targetId === undefined ? {} : { targetId: input.targetId }
@@ -2061,9 +2082,8 @@ function createStructureLifecycle(input) {
 }
 function advanceStructureLifecycle(lifecycle) {
   validateStructureLifecycle(lifecycle);
-  if (lifecycle.remaining <= 1)
-    return;
-  return { ...structuredClone(lifecycle), remaining: lifecycle.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf2(lifecycle));
+  return next ? { ...structuredClone(lifecycle), ...next } : undefined;
 }
 function validateStructureLifecycleTemplate(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -2071,7 +2091,7 @@ function validateStructureLifecycleTemplate(value) {
   const template = value;
   if (template.durationUnit !== "turns")
     throw new Error("Structure lifecycle requires turns duration");
-  validateDuration(template.duration, "Structure lifecycle duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
   if (!template.structure || typeof template.structure !== "object" || Array.isArray(template.structure))
     throw new Error("Structure lifecycle requires structure geometry");
   const structure = template.structure;
@@ -2105,14 +2125,10 @@ function validateStructureLifecycle(value) {
     throw new Error("Structure lifecycle targetId must be non-empty");
   if (lifecycle.durationUnit !== "turns")
     throw new Error("Structure lifecycle requires turns duration");
-  validateDuration(lifecycle.duration, "Structure lifecycle duration");
-  validateDuration(lifecycle.remaining, "Structure lifecycle remaining duration");
-  if (lifecycle.remaining > lifecycle.duration)
-    throw new Error("Structure lifecycle remaining duration exceeds duration");
+  validateLifetime({ durationUnit: lifecycle.durationUnit, duration: lifecycle.duration, remaining: lifecycle.remaining });
 }
-function validateDuration(value, label) {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
-    throw new Error(`${label} must be a positive integer`);
+function lifetimeOf2(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
 var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
 function createDeferredEffectTemplate(input) {
@@ -2124,9 +2140,7 @@ function createDeferredEffect(input) {
   const deferred = {
     schemaVersion: DEFERRED_EFFECT_SCHEMA_VERSION,
     id: input.id,
-    durationUnit: input.durationUnit,
-    duration: input.duration,
-    remaining: input.remaining ?? input.duration,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
     effect: structuredClone(input.effect),
     ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
     ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
@@ -2137,9 +2151,8 @@ function createDeferredEffect(input) {
 }
 function advanceDeferredEffect(effect) {
   validateDeferredEffect(effect);
-  if (effect.remaining <= 1)
-    return;
-  return { ...structuredClone(effect), remaining: effect.remaining - 1 };
+  const next = advanceLifetime(lifetimeOf3(effect));
+  return next ? { ...structuredClone(effect), ...next } : undefined;
 }
 function validateDeferredEffectTemplate(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -2147,7 +2160,7 @@ function validateDeferredEffectTemplate(value) {
   const template = value;
   if (template.durationUnit !== "ticks")
     throw new Error("Deferred effect requires ticks duration");
-  validateDuration2(template.duration, "Deferred effect duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
   validateEngineEffect(template.effect);
 }
 function validateDeferredEffect(value) {
@@ -2166,10 +2179,8 @@ function validateDeferredEffect(value) {
     throw new Error("Deferred effect ownerId must be non-empty");
   if (effect.durationUnit !== "ticks")
     throw new Error("Deferred effect requires ticks duration");
-  validateDuration2(effect.duration, "Deferred effect duration");
-  validateDuration2(effect.remaining, "Deferred effect remaining duration");
-  if (effect.remaining > effect.duration)
-    throw new Error("Deferred effect remaining duration exceeds duration");
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.duration });
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.remaining });
   validateEngineEffect(effect.effect);
 }
 function validateEngineEffect(value) {
@@ -2182,9 +2193,140 @@ function validateEngineEffect(value) {
   if (effect.target !== undefined)
     assertJsonValue(effect.target);
 }
-function validateDuration2(value, label) {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
-    throw new Error(`${label} must be a positive integer`);
+function lifetimeOf3(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+class SeededRandom {
+  state;
+  constructor(seed) {
+    if (!Number.isSafeInteger(seed))
+      throw new RangeError("Seed must be a safe integer");
+    this.state = seed >>> 0;
+  }
+  next() {
+    this.state = this.state + 1831565813 >>> 0;
+    let value = this.state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  }
+  nextInt(maxExclusive) {
+    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
+      throw new RangeError("Maximum must be a positive safe integer");
+    }
+    return Math.floor(this.next() * maxExclusive);
+  }
+  getState() {
+    return this.state;
+  }
+  static fromState(state) {
+    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
+      throw new RangeError("Random state must be an unsigned 32-bit integer");
+    }
+    const random = new SeededRandom(0);
+    random.state = state;
+    return random;
+  }
+}
+
+var ACTION_MODIFIER_SCHEMA_VERSION = 1;
+function createActionModifierTemplate(input) {
+  const template = structuredClone(input);
+  if (template.action === "force" && template.operation === "scale")
+    validateFactor(template.factor);
+  else if (template.action === "aim" && template.operation === "random-offset") {
+    validateVariance(template.maxVarianceDegrees);
+    validateRandomState(template.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  return template;
+}
+function createActionModifier(input) {
+  const modifier = { schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION, ...structuredClone(input) };
+  validateActionModifier(modifier);
+  return modifier;
+}
+function applyActionModifiers(input, modifiers) {
+  validateAcceptedForceInput(input);
+  if (modifiers.length === 0)
+    return { angle: normalizeAngle(input.angle), power: input.power };
+  return [...modifiers].sort(compareModifiers).reduce((current, modifier) => {
+    validateActionModifier(modifier);
+    if (modifier.action === "force" && modifier.operation === "scale")
+      return { angle: current.angle, power: current.power * modifier.factor };
+    const random = SeededRandom.fromState(modifier.randomState);
+    const offset = (random.next() * 2 - 1) * modifier.maxVarianceDegrees;
+    return { angle: normalizeAngle(current.angle + offset), power: current.power };
+  }, { angle: normalizeAngle(input.angle), power: input.power });
+}
+function consumeActionModifiers(modifiers) {
+  return [...modifiers].sort(compareModifiers).flatMap((modifier) => {
+    validateActionModifier(modifier);
+    const next = structuredClone(modifier);
+    if (next.action === "aim" && next.operation === "random-offset") {
+      const random = SeededRandom.fromState(next.randomState);
+      random.next();
+      next.randomState = random.getState();
+    }
+    if (next.remainingUses === undefined || next.remainingUses <= 1)
+      return next.remainingUses === undefined ? [next] : [];
+    return [{ ...next, remainingUses: next.remainingUses - 1 }];
+  });
+}
+function validateActionModifier(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Action modifier must be an object");
+  const modifier = value;
+  if (modifier.schemaVersion !== ACTION_MODIFIER_SCHEMA_VERSION)
+    throw new Error("Unsupported action modifier schema version");
+  if (typeof modifier.id !== "string" || modifier.id.length === 0)
+    throw new Error("Action modifier requires a stable id");
+  if (modifier.action === "force" && modifier.operation === "scale")
+    validateFactor(modifier.factor);
+  else if (modifier.action === "aim" && modifier.operation === "random-offset") {
+    validateVariance(modifier.maxVarianceDegrees);
+    validateRandomState(modifier.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  if (modifier.remainingUses !== undefined && (!Number.isSafeInteger(modifier.remainingUses) || modifier.remainingUses < 1))
+    throw new Error("Action modifier remaining uses must be a positive integer");
+  const hasLifetime = modifier.durationUnit !== undefined || modifier.duration !== undefined || modifier.remaining !== undefined;
+  if (hasLifetime) {
+    if (modifier.durationUnit === undefined || modifier.duration === undefined || modifier.remaining === undefined)
+      throw new Error("Action modifier lifetime is incomplete");
+    if (modifier.durationUnit !== "turns")
+      throw new Error("Action modifier lifetime requires turns");
+    validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+  }
+  if (modifier.remainingUses === undefined && !hasLifetime)
+    throw new Error("Action modifier requires consumption or lifetime");
+  if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0))
+    throw new Error("Action modifier sourceId must be non-empty");
+  if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder))
+    throw new Error("Action modifier sourceOrder must be a safe integer");
+  assertJsonValue(modifier);
+}
+function validateFactor(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier factor must be a finite non-negative number");
+}
+function validateVariance(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier variance must be a finite non-negative number");
+}
+function validateRandomState(value) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 4294967295)
+    throw new Error("Action modifier random state must be an unsigned 32-bit integer");
+}
+function validateAcceptedForceInput(input) {
+  if (!Number.isFinite(input.angle) || !Number.isFinite(input.power) || input.power < 0)
+    throw new Error("Accepted force input must have a finite angle and non-negative power");
+}
+function compareModifiers(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function normalizeAngle(angle) {
+  return (angle % 360 + 360) % 360;
 }
 
 var engine = {
@@ -3166,6 +3308,8 @@ function createPlayerSettings(overrides = {}) {
   validateNumericThresholdBindings(overrides.numericThresholds ?? []);
   for (const modifier of overrides.temporalModifiers ?? [])
     validateTemporalModifier(modifier);
+  for (const modifier of overrides.pendingActionModifiers ?? [])
+    validateActionModifier(modifier);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -3190,6 +3334,7 @@ function createPlayerSettings(overrides = {}) {
     inventory: (overrides.inventory ?? []).map((item) => ({ ...item })),
     ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
     ...overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {},
+    ...overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {},
     numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
 }
@@ -3208,75 +3353,6 @@ function createDefaultNumericThresholdBindings() {
       ]
     }]
   }];
-}
-
-class SeededRandom {
-  state;
-  constructor(seed) {
-    if (!Number.isSafeInteger(seed))
-      throw new RangeError("Seed must be a safe integer");
-    this.state = seed >>> 0;
-  }
-  next() {
-    this.state = this.state + 1831565813 >>> 0;
-    let value = this.state;
-    value = Math.imul(value ^ value >>> 15, value | 1);
-    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
-  }
-  nextInt(maxExclusive) {
-    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
-      throw new RangeError("Maximum must be a positive safe integer");
-    }
-    return Math.floor(this.next() * maxExclusive);
-  }
-  getState() {
-    return this.state;
-  }
-  static fromState(state) {
-    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
-      throw new RangeError("Random state must be an unsigned 32-bit integer");
-    }
-    const random = new SeededRandom(0);
-    random.state = state;
-    return random;
-  }
-}
-
-class EffectAimVariance {
-  maxVarianceDegrees;
-  random;
-  constructor(settings) {
-    const { maxVarianceDegrees, seed = 1337, randomState } = settings.typeValue;
-    if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0) {
-      throw new Error("aimVariance maxVarianceDegrees must be a finite non-negative number");
-    }
-    this.maxVarianceDegrees = maxVarianceDegrees;
-    this.random = randomState !== undefined ? SeededRandom.fromState(randomState) : new SeededRandom(seed);
-  }
-  applyToForce(force) {
-    if (!Number.isFinite(force.angle) || !Number.isFinite(force.power) || force.power < 0) {
-      throw new Error("Force input must have a finite angle and non-negative power");
-    }
-    const rnd = this.random.next();
-    const offset = (rnd * 2 - 1) * this.maxVarianceDegrees;
-    return {
-      angle: normalizeAngle(force.angle + offset),
-      power: force.power
-    };
-  }
-  toSettings() {
-    return {
-      type: "aimVariance" /* AimVariance */,
-      typeValue: {
-        maxVarianceDegrees: this.maxVarianceDegrees,
-        randomState: this.random.getState()
-      }
-    };
-  }
-}
-function normalizeAngle(angle) {
-  return (angle % 360 + 360) % 360;
 }
 
 class EffectGhostMode {
@@ -3307,28 +3383,6 @@ class EffectGhostMode {
   toSettings() {
     return { type: "ghostMode" /* GhostMode */, typeValue: { durationTurns: this.durationTurns, remainingTurns: this.remainingTurns } };
   }
-}
-
-class EffectModifyForce {
-  factor;
-  constructor(settings) {
-    if (!Number.isFinite(settings.typeValue.factor) || settings.typeValue.factor < 0) {
-      throw new Error("modifyForce factor must be a finite non-negative number");
-    }
-    this.factor = settings.typeValue.factor;
-  }
-  applyToForce(force) {
-    if (!Number.isFinite(force.angle) || !Number.isFinite(force.power) || force.power < 0) {
-      throw new Error("Force input must have a finite angle and non-negative power");
-    }
-    return { angle: normalizeAngle2(force.angle), power: force.power * this.factor };
-  }
-  toSettings() {
-    return { type: "modifyForce" /* ModifyForce */, typeValue: { factor: this.factor } };
-  }
-}
-function normalizeAngle2(angle) {
-  return (angle % 360 + 360) % 360;
 }
 
 class EffectSelectionLock {
@@ -3476,7 +3530,7 @@ function createRuntimeItemEffect(settings) {
   const value = settings.typeValue;
   switch (settings.type) {
     case "modifyForce" /* ModifyForce */:
-      return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
+      return createActionModifierTemplate({ action: "force", operation: "scale", factor: numberValue(value, "factor") });
     case "ghostMode" /* GhostMode */:
       return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "selectionLock" /* SelectionLock */:
@@ -3486,7 +3540,12 @@ function createRuntimeItemEffect(settings) {
     case "spawnTrigger" /* SpawnTrigger */:
       return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
     case "aimVariance" /* AimVariance */:
-      return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
+      return createActionModifierTemplate({
+        action: "aim",
+        operation: "random-offset",
+        maxVarianceDegrees: numberValue(value, "maxVarianceDegrees"),
+        randomState: value.randomState === undefined ? new SeededRandom(value.seed === undefined ? 1337 : safeIntegerValue(value, "seed")).getState() : safeIntegerValue(value, "randomState")
+      });
     case "temporalModifier" /* TemporalModifier */:
       return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
     case "structureLifecycle" /* StructureLifecycle */:
@@ -3502,7 +3561,7 @@ function resolveRuntimeItemEffects(effects) {
 }
 function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
-  if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
+  if (isActionModifierTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
     return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
   if (!advance)
@@ -3518,7 +3577,8 @@ function advanceRuntimeItemEffectTurn(effect) {
   return { next: { ...effect, typeValue: structuredClone(value) }, due: false };
 }
 function applyRuntimeForceEffects(force, effects) {
-  return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
+  const modifiers = effects.flatMap((effect, index) => isActionModifierTemplate(effect) && effect.action === "force" ? [createActionModifier({ id: `runtime-action-modifier:${index}`, action: "force", operation: "scale", factor: effect.factor, remainingUses: 1, sourceOrder: index })] : []);
+  return applyActionModifiers(force, modifiers);
 }
 function numberValue(value, key) {
   const raw = value[key];
@@ -3546,6 +3606,15 @@ function isStructureLifecycleTemplate(value) {
 }
 function isDeferredEffectTemplate(value) {
   return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.apply-force-field";
+}
+function isActionModifierTemplate(value) {
+  return "action" in value && (value.action === "force" && ("operation" in value) && value.operation === "scale" && ("factor" in value) || value.action === "aim" && ("operation" in value) && value.operation === "random-offset" && ("maxVarianceDegrees" in value) && ("randomState" in value));
+}
+function safeIntegerValue(value, key) {
+  const raw = value[key];
+  if (typeof raw !== "number" || !Number.isSafeInteger(raw))
+    throw new Error(`Item effect requires safe integer ${key}`);
+  return raw;
 }
 
 function dispatchTriggeredEffects(options) {
@@ -3791,6 +3860,7 @@ class Player {
   items = [];
   itemEffects = [];
   temporalModifiers = [];
+  pendingActionModifiers = [];
   numericThresholds = [];
   numericEffectDispatcher;
   effectAlways = [];
@@ -3832,6 +3902,9 @@ class Player {
     for (const modifier of settings.temporalModifiers ?? [])
       validateTemporalModifier(modifier);
     this.temporalModifiers = structuredClone(settings.temporalModifiers ?? []);
+    for (const modifier of settings.pendingActionModifiers ?? [])
+      validateActionModifier(modifier);
+    this.pendingActionModifiers = structuredClone(settings.pendingActionModifiers ?? []);
     validateNumericThresholdBindings(settings.numericThresholds ?? []);
     this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
@@ -4115,6 +4188,7 @@ class Player {
       inventory: this.items.map((item) => ({ ...item })),
       ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
       ...this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {},
+      ...this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {},
       ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
@@ -4197,6 +4271,32 @@ class Player {
   }
   removeTemporalModifiers(sourceIds) {
     this.temporalModifiers = this.temporalModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
+  }
+  addPendingActionModifier(modifier) {
+    validateActionModifier(modifier);
+    this.pendingActionModifiers.push(structuredClone(modifier));
+  }
+  getPendingActionModifiers() {
+    return structuredClone(this.pendingActionModifiers);
+  }
+  applyPendingActionModifiers(input) {
+    if (this.pendingActionModifiers.length === 0)
+      return input;
+    return applyActionModifiers(input, this.pendingActionModifiers);
+  }
+  consumePendingActionModifiers() {
+    this.pendingActionModifiers = consumeActionModifiers(this.pendingActionModifiers);
+  }
+  advancePendingActionModifierLifetimes() {
+    this.pendingActionModifiers = this.pendingActionModifiers.flatMap((modifier) => {
+      if (modifier.durationUnit === undefined)
+        return [modifier];
+      const next = advanceLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+      return next ? [{ ...modifier, ...next }] : [];
+    });
+  }
+  removePendingActionModifiers(sourceIds) {
+    this.pendingActionModifiers = this.pendingActionModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
   }
   addEffect(trigger, effect) {
     switch (trigger) {
@@ -7140,12 +7240,56 @@ function migrateFullEffectSettings(value) {
 function migrateGameSettingsEffects(settings) {
   const copy = structuredClone(settings);
   copy.items = copy.items.map(migrateItemDocument);
+  const itemsById = new Map(copy.items.map((item) => [item.id, item]));
   copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
-  copy.players = copy.players.map((player) => ({
-    ...player,
-    effects: (player.effects ?? []).map(migrateFullEffectSettings),
-    ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition"].includes(effect.type)) } : {}
-  }));
+  copy.players = copy.players.map((player) => {
+    const historicalActionModifiers = (player.itemEffects ?? []).flatMap((effect, index) => {
+      const sourceItem = effect.itemId === undefined ? undefined : itemsById.get(effect.itemId);
+      if (effect.type === "modifyForce") {
+        const factor = effect.typeValue.factor;
+        if (typeof factor !== "number")
+          throw new Error("Historical modifyForce effect requires a numeric factor");
+        return [createActionModifier({
+          id: `${player.id}:action-modifier:${index}`,
+          action: "force",
+          operation: "scale",
+          factor,
+          ...sourceItem?.duration.type === "turns" ? { durationUnit: "turns", duration: sourceItem.duration.value, remaining: sourceItem.duration.value } : { remainingUses: 1 },
+          sourceId: effect.itemId,
+          sourceOrder: effect.order
+        })];
+      }
+      if (effect.type === "aimVariance") {
+        const maxVarianceDegrees = effect.typeValue.maxVarianceDegrees;
+        if (typeof maxVarianceDegrees !== "number" || !Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0)
+          throw new Error("Historical aimVariance requires a finite non-negative max variance");
+        const rawState = effect.typeValue.randomState;
+        const seed = effect.typeValue.seed;
+        if (rawState !== undefined && (typeof rawState !== "number" || !Number.isSafeInteger(rawState) || rawState < 0 || rawState > 4294967295))
+          throw new Error("Historical aimVariance random state must be an unsigned 32-bit integer");
+        if (seed !== undefined && (typeof seed !== "number" || !Number.isSafeInteger(seed)))
+          throw new Error("Historical aimVariance seed must be a safe integer");
+        const randomState = rawState === undefined ? new SeededRandom(seed === undefined ? 1337 : seed).getState() : rawState;
+        return [createActionModifier({
+          id: `${player.id}:action-modifier:${index}`,
+          action: "aim",
+          operation: "random-offset",
+          maxVarianceDegrees,
+          randomState,
+          remainingUses: 1,
+          sourceId: effect.itemId,
+          sourceOrder: effect.order
+        })];
+      }
+      return [];
+    });
+    return {
+      ...player,
+      effects: (player.effects ?? []).map(migrateFullEffectSettings),
+      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance"].includes(effect.type)) } : {},
+      ...historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...player.pendingActionModifiers ?? [], ...historicalActionModifiers] } : {}
+    };
+  });
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
   if (copy.triggerDefinitions)
     copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
@@ -7983,7 +8127,7 @@ function resolveMysteryBoxReward(options = {}) {
     throw new Error("Mystery Box pool must not be empty");
   for (const itemId of pool)
     validateMysteryBoxReward(itemId, options);
-  const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 1e5);
+  const seed = options.seed ?? 0;
   const index = Math.abs(seed) % pool.length;
   return pool[index];
 }
@@ -9274,7 +9418,7 @@ class GameHandler {
       throw new Error(`Actor ${actorId} is not active`);
     this.feedback.record("shot" /* Shot */, this.getTurnNumber(), { actorId, data: { angle, power } });
     const before = new Map(this.entityManager.toSettings().map((player) => [player.id, player]));
-    this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyAcceptedForce(actor, { angle, power });
     this.applyTemporalModifiers(actor);
     this.resolvingTurn = true;
     let frames = 0;
@@ -9310,7 +9454,7 @@ class GameHandler {
     const actor = this.entityManager.getEntityById(packet.actorId);
     if (!actor)
       throw new Error("actor not found!");
-    this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+    this.applyAcceptedForce(actor, packet.input);
     this.applyTemporalModifiers(actor);
     const playback = this.systems.find((s) => s instanceof PlaybackSystem);
     if (!playback)
@@ -9330,8 +9474,13 @@ class GameHandler {
       console.log("Player not Found");
       return;
     }
-    this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyAcceptedForce(actor, { angle, power });
     this.applyTemporalModifiers(actor);
+  }
+  applyAcceptedForce(entity, input) {
+    const effective = entity.applyPendingActionModifiers(input);
+    this.physicsStrategy.applyImpulse(entity, effective.angle, effective.power);
+    entity.consumePendingActionModifiers();
   }
   applyTemporalModifiers(entity) {
     for (const modifier of entity.getTemporalModifiers()) {
@@ -9517,6 +9666,7 @@ class GameHandler {
       this.entityManager.getEntities().forEach((entity) => {
         entity.resetItemUses();
         entity.advanceTemporalModifiersTurn();
+        entity.advancePendingActionModifierLifetimes();
         for (const scheduled of entity.advanceItemEffectsTurn())
           this.executeDueSpawnTrigger(entity, scheduled);
       });
@@ -9832,8 +9982,7 @@ class GameHandler {
         const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
         if (!structure)
           throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
-        structure.setPhysicsEnabled(false);
-        structure.setDrawingEnabled(false);
+        this.setStructureParticipation(structure.getId(), false);
       }
     }
     this.structureLifecycles = next;
@@ -9859,10 +10008,15 @@ class GameHandler {
       if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId)
         continue;
       const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
-      structure?.setPhysicsEnabled(false);
-      structure?.setDrawingEnabled(false);
+      if (structure)
+        this.setStructureParticipation(structure.getId(), false);
     }
     this.structureLifecycles = this.structureLifecycles.filter((lifecycle) => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+  }
+  setStructureParticipation(structureId, enabled) {
+    for (const type of [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID]) {
+      dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: { schemaVersion: 1, type, target: { type: "structure", structureId }, typeValue: { enabled } } });
+    }
   }
   removeDeferredEffects(sourceIds, ownerId) {
     this.deferredEffects = this.deferredEffects.filter((effect) => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
@@ -9902,12 +10056,14 @@ class GameHandler {
     const installedEffects = [
       ...targetEntity.getItemEffects(),
       ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+      ...targetEntity.getPendingActionModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
       ...this.structureLifecycles.filter((lifecycle) => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map((lifecycle) => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
       ...this.deferredEffects.filter((effect) => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map((effect) => ({ itemId: effect.sourceId, order: effect.sourceOrder }))
     ];
     const combination = validateItemCombination(item, installedEffects, new Map(this.items.map((candidate) => [candidate.id, candidate])));
     targetEntity.removeItemEffects(combination.removeItemIds);
     targetEntity.removeTemporalModifiers(combination.removeItemIds);
+    targetEntity.removePendingActionModifiers(combination.removeItemIds);
     this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()));
     this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()));
     this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget);
@@ -9959,6 +10115,30 @@ class GameHandler {
         if (target.type !== "position")
           throw new Error("Structure lifecycles require a position target");
         this.installStructureLifecycle(actor, item, effect, target.position);
+      } else if (isActionModifierTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Action modifiers require an entity target");
+        const actionModifier = effect.action === "force" ? createActionModifier({
+          id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          action: "force",
+          operation: "scale",
+          factor: effect.factor,
+          ...item.duration.type === "turns" ? { durationUnit: "turns", duration: item.duration.value, remaining: item.duration.value } : {},
+          ...item.duration.type !== "turns" ? { remainingUses: 1 } : {},
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        }) : createActionModifier({
+          id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          action: "aim",
+          operation: "random-offset",
+          maxVarianceDegrees: effect.maxVarianceDegrees,
+          randomState: effect.randomState,
+          ...item.duration.type === "turns" ? { durationUnit: "turns", duration: item.duration.value, remaining: item.duration.value } : {},
+          ...item.duration.type !== "turns" ? { remainingUses: 1 } : {},
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        });
+        targetEntity.addPendingActionModifier(actionModifier);
       } else if (isTemporalModifierTemplate(effect)) {
         if (!targetEntity)
           throw new Error("Temporal modifiers require an entity target");
@@ -11374,6 +11554,13 @@ var kore = {
       if (!Number.isFinite(capacity) || capacity <= 0)
         throw new Error("Shield capacity must be a positive number");
       return { type: "shield" /* Shield */, typeValue: { capacity } };
+    },
+    aimVariance(maxVarianceDegrees, seed) {
+      if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0)
+        throw new Error("Aim variance must be a finite non-negative number");
+      if (seed !== undefined && !Number.isSafeInteger(seed))
+        throw new Error("Aim variance seed must be a safe integer");
+      return { type: "aimVariance" /* AimVariance */, typeValue: { maxVarianceDegrees, ...seed === undefined ? {} : { seed } } };
     },
     freeze(durationTurns = 1) {
       if (!Number.isInteger(durationTurns) || durationTurns <= 0)

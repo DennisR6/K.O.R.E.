@@ -680,6 +680,11 @@ export const kore = {
 			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");
 			return { type: ItemEffectType.Shield, typeValue: { capacity } };
 		},
+		aimVariance(maxVarianceDegrees: number, seed?: number): ItemEffectSettings {
+			if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0) throw new Error("Aim variance must be a finite non-negative number");
+			if (seed !== undefined && !Number.isSafeInteger(seed)) throw new Error("Aim variance seed must be a safe integer");
+			return { type: ItemEffectType.AimVariance, typeValue: { maxVarianceDegrees, ...(seed === undefined ? {} : { seed }) } };
+		},
 	freeze(durationTurns: number = 1): ItemEffectSettings {
 		if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
 		return { type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };

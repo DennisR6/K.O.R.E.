@@ -1,5 +1,6 @@
 import { assertJsonValue, type JsonValue } from "./systemSettings.js";
 import { validateLifetime } from "./lifetime.js";
+import { SeededRandom } from "../../utils/random.js";
 
 export const ACTION_MODIFIER_SCHEMA_VERSION = 1 as const;
 
@@ -9,12 +10,9 @@ export interface AcceptedForceInput {
 }
 
 /** Generic entity-owned modifier applied to one or more accepted actions. */
-export interface ActionModifierSettings {
+interface ActionModifierBase {
 	schemaVersion: typeof ACTION_MODIFIER_SCHEMA_VERSION;
 	id: string;
-	action: "force";
-	operation: "scale";
-	factor: number;
 	remainingUses?: number;
 	durationUnit?: "turns";
 	duration?: number;
@@ -23,33 +21,30 @@ export interface ActionModifierSettings {
 	sourceOrder?: number;
 }
 
-export interface ActionModifierTemplate {
-	action: "force";
-	operation: "scale";
-	factor: number;
-}
+export type ActionModifierSettings =
+	| (ActionModifierBase & { action: "force"; operation: "scale"; factor: number })
+	| (ActionModifierBase & { action: "aim"; operation: "random-offset"; maxVarianceDegrees: number; randomState: number });
+
+export type ActionModifierTemplate =
+	| { action: "force"; operation: "scale"; factor: number }
+	| { action: "aim"; operation: "random-offset"; maxVarianceDegrees: number; randomState: number };
+
+export type ActionModifierInput =
+	| Omit<Extract<ActionModifierSettings, { action: "force" }>, "schemaVersion">
+	| Omit<Extract<ActionModifierSettings, { action: "aim" }>, "schemaVersion">;
 
 export function createActionModifierTemplate(input: ActionModifierTemplate): ActionModifierTemplate {
 	const template = structuredClone(input);
-	if (template.action !== "force" || template.operation !== "scale") throw new Error("Unsupported action modifier operation");
-	validateFactor(template.factor);
+	if (template.action === "force" && template.operation === "scale") validateFactor(template.factor);
+	else if (template.action === "aim" && template.operation === "random-offset") {
+		validateVariance(template.maxVarianceDegrees);
+		validateRandomState(template.randomState);
+	} else throw new Error("Unsupported action modifier operation");
 	return template;
 }
 
-export function createActionModifier(input: Omit<ActionModifierSettings, "schemaVersion">): ActionModifierSettings {
-	const modifier: ActionModifierSettings = {
-		schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION,
-		id: input.id,
-		action: input.action,
-		operation: input.operation,
-		factor: input.factor,
-		...(input.remainingUses === undefined ? {} : { remainingUses: input.remainingUses }),
-		...(input.durationUnit === undefined ? {} : { durationUnit: input.durationUnit }),
-		...(input.duration === undefined ? {} : { duration: input.duration }),
-		...(input.remaining === undefined ? {} : { remaining: input.remaining }),
-		...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
-		...(input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }),
-	};
+export function createActionModifier(input: ActionModifierInput): ActionModifierSettings {
+	const modifier = { schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION, ...structuredClone(input) } as ActionModifierSettings;
 	validateActionModifier(modifier);
 	return modifier;
 }
@@ -61,8 +56,10 @@ export function applyActionModifiers(input: AcceptedForceInput, modifiers: reado
 		.sort(compareModifiers)
 		.reduce((current, modifier) => {
 			validateActionModifier(modifier);
-			if (modifier.action !== "force" || modifier.operation !== "scale") return current;
-			return { angle: current.angle, power: current.power * modifier.factor };
+			if (modifier.action === "force" && modifier.operation === "scale") return { angle: current.angle, power: current.power * modifier.factor };
+			const random = SeededRandom.fromState(modifier.randomState);
+			const offset = (random.next() * 2 - 1) * modifier.maxVarianceDegrees;
+			return { angle: normalizeAngle(current.angle + offset), power: current.power };
 		}, { angle: normalizeAngle(input.angle), power: input.power });
 }
 
@@ -71,8 +68,14 @@ export function consumeActionModifiers(modifiers: readonly ActionModifierSetting
 		.sort(compareModifiers)
 		.flatMap(modifier => {
 			validateActionModifier(modifier);
-			if (modifier.remainingUses === undefined || modifier.remainingUses <= 1) return modifier.remainingUses === undefined ? [structuredClone(modifier)] : [];
-			return [{ ...structuredClone(modifier), remainingUses: modifier.remainingUses - 1 }];
+			const next = structuredClone(modifier);
+			if (next.action === "aim" && next.operation === "random-offset") {
+				const random = SeededRandom.fromState(next.randomState);
+				random.next();
+				next.randomState = random.getState();
+			}
+			if (next.remainingUses === undefined || next.remainingUses <= 1) return next.remainingUses === undefined ? [next] : [];
+			return [{ ...next, remainingUses: next.remainingUses - 1 }];
 		});
 }
 
@@ -81,8 +84,11 @@ export function validateActionModifier(value: unknown): asserts value is ActionM
 	const modifier = value as Partial<ActionModifierSettings>;
 	if (modifier.schemaVersion !== ACTION_MODIFIER_SCHEMA_VERSION) throw new Error("Unsupported action modifier schema version");
 	if (typeof modifier.id !== "string" || modifier.id.length === 0) throw new Error("Action modifier requires a stable id");
-	if (modifier.action !== "force" || modifier.operation !== "scale") throw new Error("Unsupported action modifier operation");
-	validateFactor(modifier.factor);
+	if (modifier.action === "force" && modifier.operation === "scale") validateFactor(modifier.factor);
+	else if (modifier.action === "aim" && modifier.operation === "random-offset") {
+		validateVariance(modifier.maxVarianceDegrees);
+		validateRandomState(modifier.randomState);
+	} else throw new Error("Unsupported action modifier operation");
 	if (modifier.remainingUses !== undefined && (!Number.isSafeInteger(modifier.remainingUses) || (modifier.remainingUses as number) < 1)) throw new Error("Action modifier remaining uses must be a positive integer");
 	const hasLifetime = modifier.durationUnit !== undefined || modifier.duration !== undefined || modifier.remaining !== undefined;
 	if (hasLifetime) {
@@ -98,6 +104,14 @@ export function validateActionModifier(value: unknown): asserts value is ActionM
 
 function validateFactor(value: unknown): asserts value is number {
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error("Action modifier factor must be a finite non-negative number");
+}
+
+function validateVariance(value: unknown): asserts value is number {
+	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error("Action modifier variance must be a finite non-negative number");
+}
+
+function validateRandomState(value: unknown): asserts value is number {
+	if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 0xFFFFFFFF) throw new Error("Action modifier random state must be an unsigned 32-bit integer");
 }
 
 function validateAcceptedForceInput(input: AcceptedForceInput): void {
