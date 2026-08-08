@@ -10,12 +10,16 @@ import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
+import { NumericSystem } from "../src/systems/NumericSystem.ts";
+import { MovementSystem } from "../src/systems/MovementSystem.ts";
+import { ParticipationSystem } from "../src/systems/ParticipationSystem.ts";
+import { dispatchPredefinedEffect } from "../src/systems/predefinedEffectDispatcher.ts";
 import type { IGameContext } from "../src/systems/types.ts";
 
 function context(entities: Player[], structures: any[] = []): IGameContext {
 	const manager = new EntityManager();
 	manager.addEntity(entities);
-	return {
+	const ctx = {
 		entities: manager,
 		structures,
 		state: {} as any,
@@ -29,12 +33,16 @@ function context(entities: Player[], structures: any[] = []): IGameContext {
 		activeTeamNumber: 0,
 		myTeamNumber: 0,
 	};
+	const systems = [new NumericSystem(), new MovementSystem(), new ParticipationSystem()];
+	for (const entity of entities) entity.setNumericEffectDispatcher(effect => dispatchPredefinedEffect({ ctx, systems, effect }));
+	return ctx;
 }
 
 function collisionDamage(damage: number) {
 	return [{
-		type: EffectType.Damage,
-		typeValue: { damage },
+		schemaVersion: 1 as const,
+		type: EffectType.NumericAdd,
+		typeValue: { stateId: "hp", amount: -damage },
 		trigger: EffectTrigger.Collision,
 		triggerValue: [],
 	}];
@@ -66,8 +74,8 @@ describe("collision effect lifecycle (13.8)", () => {
 
 	test("same-geometry structures have independent contact identities", () => {
 		const player = new Player(createPlayerSettings({ id: "player", position: { x: 0, y: 0 }, size: 5 }));
-		const first = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid");
-		const second = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid");
+		const first = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "same-geometry-first");
+		const second = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "same-geometry-second");
 		const ctx = context([player], [first, second]);
 
 		new PhysicsSystem(new defaultPhysics()).ticker(ctx, 1, 1);
@@ -100,7 +108,7 @@ describe("collision effect lifecycle (13.8)", () => {
 		const player = new Player(createPlayerSettings({ id: "shielded", position: { x: 0, y: 0 }, size: 10 }));
 		player.onCollision = () => {
 			collisionCallbacks++;
-			if (!ghost.shouldIgnoreCollision()) player.addHP(-shield.absorbDamage(3));
+			if (!ghost.shouldIgnoreCollision()) player.dispatchNumericAdd("hp", -shield.absorbDamage(3));
 		};
 		const wall = new StructureCircle(15, 0, 10, undefined, [], "solid");
 		const ctx = context([player], [wall]);
@@ -129,8 +137,8 @@ describe("collision effect lifecycle (13.8)", () => {
 
 	test("simultaneous contacts each enter once and a fresh system has no stale object key", () => {
 		const player = new Player(createPlayerSettings({ id: "player", position: { x: 0, y: 0 }, size: 5 }));
-		const left = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid");
-		const right = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid");
+		const left = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "simultaneous-left");
+		const right = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "simultaneous-right");
 		const ctx = context([player], [left, right]);
 		const firstSystem = new PhysicsSystem(new defaultPhysics());
 		firstSystem.ticker(ctx, 1, 1);
@@ -139,8 +147,8 @@ describe("collision effect lifecycle (13.8)", () => {
 		const restoredPlayer = new Player(player.toSettings());
 		restoredPlayer.setPos({ x: 0, y: 0 });
 		const restored = context([restoredPlayer], [
-			new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid"),
-			new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid"),
+			new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "simultaneous-left"),
+			new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "simultaneous-right"),
 		]);
 		new PhysicsSystem(new defaultPhysics()).ticker(restored, 1, 1);
 		expect(restoredPlayer.getHP()).toBe(20);

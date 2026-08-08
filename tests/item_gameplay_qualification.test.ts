@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
-import { createOfficialItemLoader, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
+import { createOfficialItemLoader, falltuerItem, falltuerStructure, falltuerTriggerDefinitions, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
 import type { ItemDocument } from "../src/item/types.ts";
 import type { ItemTarget } from "../src/item/target.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
@@ -65,6 +65,11 @@ function makeHandler(item: ItemDocument, economy: Economy): GameHandler {
 	settings.players[2] = { ...settings.players[2]!, id: ENEMY_ID, team: [1], position: { x: 380, y: 225 } };
 	settings.players[3] = { ...settings.players[3]!, team: [1], position: { x: 420, y: 225 } };
 	settings.gameMode = mode(item, economy);
+	if (item.id === falltuerItem.id) {
+		settings.mapBoundarys = structuredClone(settings.mapBoundarys);
+		settings.mapBoundarys.push(structuredClone(falltuerStructure));
+		settings.triggerDefinitions = structuredClone(falltuerTriggerDefinitions);
+	}
 	return new GameHandlerBuilder()
 		.defaultSystems()
 		.addSystem(new WinningSystem(2))
@@ -76,7 +81,7 @@ function observablePlayer(handler: GameHandler): unknown {
 	const player = handler.getEntityManager().getEntityById(ACTOR_ID);
 	if (!player) throw new Error("qualification actor was not created");
 	const snapshot = player.toSettings();
-	return { position: snapshot.position, velocity: snapshot.velocity, hp: snapshot.hp, isDead: snapshot.isDead, effects: snapshot.effects };
+	return { position: snapshot.position, velocity: snapshot.velocity, isDead: !snapshot.isPhysicsEnabled || !snapshot.isDrawingEnabled, hp: snapshot.hp, effects: snapshot.effects };
 }
 
 function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
@@ -107,8 +112,8 @@ function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
 	const effectSucceeded = JSON.stringify(observablePlayer(handler)) !== JSON.stringify({
 		position: before.players.find(player => player.id === ACTOR_ID)!.position,
 		velocity: before.players.find(player => player.id === ACTOR_ID)!.velocity,
+		isDead: !before.players.find(player => player.id === ACTOR_ID)!.isPhysicsEnabled || !before.players.find(player => player.id === ACTOR_ID)!.isDrawingEnabled,
 		hp: before.players.find(player => player.id === ACTOR_ID)!.hp,
-		isDead: before.players.find(player => player.id === ACTOR_ID)!.isDead,
 		effects: before.players.find(player => player.id === ACTOR_ID)!.effects,
 	});
 	const negativeSignals: string[] = [];

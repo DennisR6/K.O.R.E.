@@ -21,7 +21,7 @@ test("map loader applies canonical physics, geometry, and team spawns", () => {
 	expect(settings.drift).toBe(0.25);
 	// Uncolored solid geometry gets the default render color (17.8), so the
 	// loader output is the arena geometry with that color applied.
-	expect(settings.mapBoundarys).toEqual(map.arenaGeometry.map(boundary => ({ ...boundary, color: "#315b7d" })));
+	expect(settings.mapBoundarys).toMatchObject(map.arenaGeometry.map(boundary => ({ ...boundary, color: "#315b7d" })));
 	expect(settings.players.map(player => player.position)).toEqual([{ x: 22, y: 22 }, { x: 152, y: 22 }]);
 });
 

@@ -39,8 +39,8 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 	// The arena geometry (roles, containment) is map authoring; it migrates to
 	// KORE map descriptors in milestone 29. The match header, teams, ids,
 	// items, and game mode are authored through the KORE match SDK.
-	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d" }));
-	base.mapBoundarys.unshift({ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment" });
+	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d", physicsEnabled: boundary.physicsEnabled ?? true, drawingEnabled: boundary.drawingEnabled ?? true }));
+	base.mapBoundarys.unshift({ id: "ice.arena.containment", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment", physicsEnabled: true, drawingEnabled: true });
 	const settings = kore.authorMatchSettings(base, {
 		matchId: CANONICAL_MATCH_ID,
 		myTeam: [0, 1],
@@ -96,7 +96,7 @@ export function validateReferenceSpawnAndCamera(settings: GameSettings): void {
 	const containment = settings.mapBoundarys.find(structure => structure.role === "containment");
 	if (!containment || containment.type !== SHAPE.RECTANGLE) throw new Error("reference camera requires rectangular containment");
 	for (const player of settings.players) {
-		if (player.isDead || player.hp <= 0 || player.team.length !== 1 || (player.team[0] !== 0 && player.team[0] !== 1)) throw new Error("reference player is not selectable");
+		if (!player.isPhysicsEnabled || !player.isDrawingEnabled || player.hp <= 0 || player.team.length !== 1 || (player.team[0] !== 0 && player.team[0] !== 1)) throw new Error("reference player is not selectable");
 		if (!camera.containsCircle(player.position, player.size)) throw new Error("reference player is outside the initial camera");
 		if (player.position.x - player.size < containment.x || player.position.y - player.size < containment.y || player.position.x + player.size > containment.x + containment.w || player.position.y + player.size > containment.y + containment.h) throw new Error("reference player is outside containment");
 	}

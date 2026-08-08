@@ -45,6 +45,6 @@ export class EffectMove implements Effect {
 	}
 	getType(): EffectType { return EffectType.Movement }
 	toSettings(): EffectSettings {
-		return { type: EffectType.Movement, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } }
+		return { schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } }
 	}
 }

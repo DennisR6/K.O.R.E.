@@ -84,7 +84,7 @@ export class UiSystem implements IUiSystem {
 
 		if (this.aimAngle !== null && this.chargePower !== null && this.selectedActorId !== null) {
 			const actor = ctx.entities.getEntityById(this.selectedActorId);
-			if (actor && !actor.isDead() && (actor.getTeam().length === 0 || actor.getTeam().includes(ctx.activeTeam))) {
+			if (actor && !actor.isDead() && actor.isActorEligible() && (actor.getTeam().length === 0 || actor.getTeam().includes(ctx.activeTeam))) {
 				const input = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
 				if (!isValidInput(input)) {
 					this.clearAimAndCharge();
@@ -102,7 +102,7 @@ export class UiSystem implements IUiSystem {
 
 		if (!this.start) return
 		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y)
-		if (!actor || actor.isDead() || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
+		if (!actor || actor.isDead() || !actor.isActorEligible() || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
 			this.clearInput()
 			return
 		}

@@ -195,6 +195,7 @@ export class GameRegistry {
 		const actor = record.handler.getEntityManager().getEntityById(input.actorId)
 		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
+		if (!record.handler.isActorEligibleForAction(input.actorId)) return { ok: false, error: "Actor is locked from selection" }
 
 		record.resolving = true
 		try {
@@ -239,6 +240,7 @@ export class GameRegistry {
 		const actor = record.handler.getEntityManager().getEntityById(actorId)
 		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
+		if (!record.handler.isActorEligibleForAction(actorId)) return { ok: false, error: "Actor is locked from selection" }
 
 		try {
 			record.recorder.recordItemUse(actorId, itemId, target)

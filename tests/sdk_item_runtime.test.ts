@@ -7,7 +7,7 @@ function itemMap() {
 		id: "sdk-freeze",
 		name: "SDK Freeze",
 		type: "utility",
-		effects: [{ type: "freeze", value: { speedFactor: 0.25, durationTurns: 2 } }],
+		effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } }],
 		targetType: "self",
 		useLimit: { perTurn: 1, perGame: 1 },
 		targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
@@ -21,11 +21,8 @@ function itemMap() {
 }
 
 test("public KORE item runtime resolves declarative effects without exposing constructors", () => {
-	const effect = kore.itemRuntime.create({ type: ItemEffectType.Freeze, typeValue: { speedFactor: 0.5, durationTurns: 2 } });
-	expect(effect.toSettings()).toEqual({
-		type: ItemEffectType.Freeze,
-		typeValue: { speedFactor: 0.5, durationTurns: 2, remainingTurns: 2 },
-	});
+	const effect = kore.itemRuntime.create({ type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } } });
+	expect(effect).toEqual({ durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } });
 	const force = kore.itemRuntime.applyForce({ angle: 15, power: 4 }, [
 		kore.itemRuntime.create({ type: ItemEffectType.ModifyForce, typeValue: { factor: 0.5 } }),
 	]);
@@ -39,13 +36,14 @@ test("ordinary SDK item use applies state atomically and survives handler restor
 
 	const used = actor.toSettings();
 	expect(used.inventory).toEqual([{ itemId: "sdk-freeze", remainingUses: 0, usesThisTurn: 1 }]);
-	expect(used.itemEffects).toEqual([{ type: ItemEffectType.Freeze, typeValue: { speedFactor: 0.25, durationTurns: 2, remainingTurns: 2 }, itemId: "sdk-freeze", order: 0 }]);
+	expect(used.temporalModifiers).toHaveLength(1);
+	expect(used.temporalModifiers?.[0]).toMatchObject({ durationUnit: "turns", duration: 2, remaining: 2, target: { type: "entity", entityId: actor.getId() } });
 
 	const snapshot = JSON.parse(JSON.stringify(handler.toSettings()));
 	const restored = kore.restoreHandler(snapshot);
 	const restoredActor = restored.getEntityManager().getEntityById(actor.getId())!;
 	expect(restoredActor.toSettings().inventory).toEqual(used.inventory);
-	expect(restoredActor.toSettings().itemEffects).toEqual(used.itemEffects);
+	expect(restoredActor.toSettings().temporalModifiers).toEqual(used.temporalModifiers);
 	expect(JSON.stringify(restored.toSettings())).toBe(JSON.stringify(snapshot));
 });
 
@@ -55,4 +53,5 @@ test("rejected SDK item use does not consume inventory or install effects", () =
 	expect(() => handler.useItem(actor.getId(), "sdk-freeze", { type: "entity", entityId: actor.getId() })).toThrow("requires a self target");
 	expect(actor.getInventory()).toEqual([{ itemId: "sdk-freeze", remainingUses: 1, usesThisTurn: 0 }]);
 	expect(actor.getItemEffects()).toEqual([]);
+	expect(actor.getTemporalModifiers()).toEqual([]);
 });

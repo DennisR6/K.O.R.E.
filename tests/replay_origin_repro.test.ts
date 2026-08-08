@@ -28,12 +28,13 @@ const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-
 function killingArena() {
 	const settings = createDefaultGameSettings(2, 1);
 	const tiles = {
+		schemaVersion: 1 as const,
 		trigger: EffectTrigger.Always,
 		triggerValue: [],
 		type: EffectType.Physics,
 		typeValue: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 },
 	};
-	const move = { trigger: EffectTrigger.Always, triggerValue: [], type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 } };
+	const move = { schemaVersion: 1 as const, trigger: EffectTrigger.Always, triggerValue: [], type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 } };
 	settings.players[0]!.effects = [move, tiles];
 	settings.players[1]!.effects = [move, tiles];
 	settings.screenResolution = { x: 3000, y: 1600 };
@@ -42,15 +43,17 @@ function killingArena() {
 	// exact center, so the deadly collision triggers on the first physics frame.
 	settings.players[1]!.position = { x: 1500, y: 1400 };
 	settings.mapBoundarys = [
-		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
+		{ id: "killing-containment", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
+			id: "killing-zone",
 			type: SHAPE.CIRCLE,
 			x: 1500,
 			y: 1450,
 			r: 80,
-			effects: [
-				{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-			],
+				effects: [{ schemaVersion: 1 as const, trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+					{ schemaVersion: 1 as const, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+					{ schemaVersion: 1 as const, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+				] }],
 		},
 	];
 	settings.items = [];

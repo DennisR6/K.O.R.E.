@@ -1,10 +1,10 @@
-import { EffectDamage } from "../../effects/damage.js";
 import { MultiEffect } from "../../effects/effects.js";
 import { EffectModifyMass } from "../../effects/modifyMass.js";
 import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
-import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
+import { EffectNumericAdd } from "../../effects/numericAdd.js";
+import { EffectTrigger, EffectType, ItemEffectType, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
@@ -15,11 +15,20 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+import { createCollisionCommandBinding } from "../../engine/sdk/collisionCommand.js";
+import { createEngineEffectComposition } from "../../engine/sdk/composition.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
+import { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../../engine/sdk/transformCapability.js";
+export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
+export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
 import { validateItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../../item/types.js";
+export { TriggerDefinitionCatalog, validateTriggerDefinition } from "../../item/triggerDefinitions.js";
+export type { TriggerDefinition, TriggerDefinitionDescriptor } from "../../item/triggerDefinitions.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
-import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
+import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
 import { koreAi } from "../ai.js";
 import {
@@ -34,6 +43,8 @@ import {
 	type KoreMatchHeader,
 	type KoreMatchOptions,
 } from "./match.js";
+
+type KoreEngineItemEffectSettings = { type: string; typeValue: Record<string, unknown> };
 import { GAME_MODE_CATALOG_SCHEMA_VERSION, getGameModeCatalogEntry, getSelectableGameModes } from "../../rules/modeCatalog.js";
 import { canonicalizeContentPackage, hashContentPackage, loadContentPackage, resolveMapDocument, validateContentPackage } from "../../content/package.js";
 export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
@@ -83,7 +94,7 @@ export interface KoreMapOptions {
 export interface KoreWorldEffects {
 	effects: EffectInput[];
 	trigger?: EffectTrigger;
-	triggerValue?: unknown;
+	triggerValue?: [];
 }
 
 export interface KoreHazardZone {
@@ -122,7 +133,7 @@ export interface KorePlayerInput {
 	playericon?: AssetList;
 	hoop?: AssetList;
 	isPhysicsEnabled?: boolean;
-	isDead?: boolean;
+	isDrawingEnabled?: boolean;
 	effects?: FullEffectSettings[];
 	inventory?: InventoryItem[];
 }
@@ -180,7 +191,7 @@ export function createPlayer(input: KorePlayerInput = {}): PlayerSettings {
 		...(input.playericon !== undefined ? { playericon: input.playericon } : {}),
 		...(input.hoop !== undefined ? { hoop: input.hoop } : {}),
 		...(input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {}),
-		...(input.isDead !== undefined ? { isDead: input.isDead } : {}),
+		...(input.isDrawingEnabled !== undefined ? { isDrawingEnabled: input.isDrawingEnabled } : {}),
 		...(input.effects !== undefined ? { effects: input.effects.map(e => ({ ...e })) } : {}),
 		...(input.inventory !== undefined ? { inventory: input.inventory.map(i => ({ ...i })) } : {}),
 	});
@@ -212,7 +223,7 @@ export class KoreMapBuilder {
 	public constructor(private readonly options: Required<KoreMapOptions>) {
 		this.world = engine.createWorld({ id: options.id, worldSize: options.worldSize });
 		this.world.setBackground(toJson(this.background));
-		const containment: MapBoundarySettings = { type: SHAPE.RECTANGLE, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
+		const containment: MapBoundarySettings = { id: `${options.id}.containment`, type: SHAPE.RECTANGLE, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
 		this.structures.push(containment);
 		this.world.addStructure(toJson(containment));
 	}
@@ -270,8 +281,9 @@ export class KoreMapBuilder {
 	/** Adds a serializable runtime structure or raw map-boundary settings. */
 	public addStructure(structure: StructureInput): this {
 		const settings = "toSettings" in structure ? structure.toSettings() : structure;
-		this.structures.push(clone(settings));
-		this.world.addStructure(toJson(settings));
+		const canonical = { ...settings, id: settings.id ?? `${this.options.id}.structure.${this.structures.length}` };
+		this.structures.push(clone(canonical));
+		this.world.addStructure(toJson(canonical));
 		this.built = undefined;
 		return this;
 	}
@@ -282,7 +294,7 @@ export class KoreMapBuilder {
 	}
 
 	/** Adds a circular obstacle or hazard structure. */
-	public addCircle(settings: { x: number; y: number; r: number; color?: string; role?: StructureCollisionRole; effects?: EffectInput[] }): this {
+	public addCircle(settings: { x: number; y: number; r: number; color?: string; role?: StructureCollisionRole; effects?: EffectInput[]; collisionCommands?: MapBoundarySettingsCircle["collisionCommands"] }): this {
 		return this.addStructure({ type: SHAPE.CIRCLE, ...settings, effects: (settings.effects ?? []).map(effect => toFullEffectSettings(effect, EffectTrigger.Collision, [])) });
 	}
 
@@ -291,7 +303,10 @@ export class KoreMapBuilder {
 		this.assertHazardZone(settings);
 		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
 		const structureIndex = this.structures.length;
-		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: SettingOperation.Set, key: "dead", value: true })] });
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
+			{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+			{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+		]))] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
 		return this;
 	}
@@ -303,7 +318,7 @@ export class KoreMapBuilder {
 		const radians = settings.angle * Math.PI / 180;
 		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
 		const structureIndex = this.structures.length;
-		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
 		return this;
 	}
@@ -322,10 +337,11 @@ export class KoreMapBuilder {
 	private addEnvironmental(mechanic: EnvironmentalMechanic): this {
 		validateEnvironmentalMechanics([mechanic]);
 		if (this.environmentalMechanics.some(candidate => candidate.id === mechanic.id)) throw new Error(`Environmental mechanic ${mechanic.id} is already registered`);
-		this.environmentalMechanics.push(clone(mechanic));
-		const structureIndex = this.structures.length;
-		this.addStructure({ ...clone(mechanic.structure), effects: clone(mechanic.effects ?? mechanic.structure.effects) });
-		this.generatedHazardStructureIndexes.add(structureIndex);
+		const structureId = mechanic.structure.id ?? `${this.options.id}.environment.${mechanic.id}`;
+		const canonicalMechanic = { ...clone(mechanic), structure: { ...clone(mechanic.structure), id: structureId } };
+		this.environmentalMechanics.push(canonicalMechanic);
+		this.addStructure({ ...clone(canonicalMechanic.structure), effects: clone(canonicalMechanic.effects ?? canonicalMechanic.structure.effects) });
+		this.generatedHazardStructureIndexes.add(this.structures.length - 1);
 		this.built = undefined;
 		return this;
 	}
@@ -494,7 +510,7 @@ function arrangePlayers(players: PlayerSettings[], region: KoreSpawnSettings): v
 	});
 }
 
-function toFullEffectSettings(input: EffectInput, trigger: EffectTrigger, triggerValue: unknown): FullEffectSettings {
+function toFullEffectSettings(input: EffectInput, trigger: EffectTrigger, triggerValue: []): FullEffectSettings {
 	const settings = "toSettings" in input ? input.toSettings() : input;
 	if (isFullEffectSettings(settings)) return clone(settings);
 	return { ...clone(settings), trigger, triggerValue: clone(triggerValue) };
@@ -550,11 +566,15 @@ function stableAuthoringHash(value: unknown): string {
 /** KORE's deterministic default runtime profile expressed through the generic framework selector. */
 export function createDefaultKoreFramework(): EngineFrameworkSettings {
 	const registry = new EngineSystemRegistry()
+		.register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] })
+		.register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] })
+		.register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] })
+		.register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] })
 		.register({ id: "core.playback", provides: ["playback"] })
 		.register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] })
 		.register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] })
 		.register({ id: "core.game-state-manager", after: ["core.boundary"] });
-	return registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+	return registry.select(["core.numeric", "core.participation", "core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 
 /**
@@ -627,9 +647,9 @@ export const kore = {
 	effects: {
 		move(values: EffectMoveInput): EffectMove { return new EffectMove({ typeValue: values }); },
 		physics(values: FrictionSettings): EffectPhysics { return new EffectPhysics({ typeValue: values }); },
-		damage(damage: number): EffectDamage {
+		damage(damage: number): EffectNumericAdd {
 			if (!Number.isFinite(damage) || damage < 0) throw new Error("Damage must be a non-negative finite number");
-			return new EffectDamage({ typeValue: { damage } });
+			return new EffectNumericAdd({ typeValue: { stateId: "hp", amount: -damage } });
 		},
 		mass(mass: number): EffectModifyMass {
 			if (!Number.isFinite(mass) || mass <= 0) throw new Error("Mass must be a finite positive number");
@@ -637,41 +657,46 @@ export const kore = {
 		},
 		size(size: number): EffectSettings {
 			if (!Number.isFinite(size) || size <= 0) throw new Error("Size must be a finite positive number");
-			return { type: EffectType.ModifySize, typeValue: { size } };
+			return { schemaVersion: 1, type: EffectType.ModifySize, typeValue: { size } };
 		},
 		position(position: Vector2D): EffectSettings {
 			if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error("Position coordinates must be finite numbers");
-			return { type: EffectType.Position, typeValue: { ...position } };
+			return { schemaVersion: 1, type: EffectType.Position, typeValue: { ...position } };
 		},
 		velocity(velocity: Vector2D): EffectSettings {
 			if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) throw new Error("Velocity components must be finite numbers");
-			return { type: EffectType.Velocity, typeValue: { ...velocity } };
+			return { schemaVersion: 1, type: EffectType.Velocity, typeValue: { ...velocity } };
 		},
 		team(team: number[]): EffectSettings {
-			return { type: EffectType.Team, typeValue: { team: [...team] } };
+			return { schemaVersion: 1, type: EffectType.Team, typeValue: { team: [...team] } };
 		},
 		modifySetting(values: ModifySettingValue): EffectModifySetting { return new EffectModifySetting({ typeValue: values }); },
-		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
+		multi(...effects: Array<SerializableEffect | EffectSettings>): MultiEffect { return new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: effects.map(effect => "toSettings" in effect ? effect.toSettings() : effect) }); },
 
 		// Item Effect Authoring Helpers
 		itemEffect(type: ItemEffectType, typeValue: Record<string, unknown> = {}): ItemEffectSettings {
-			return { type, typeValue: clone(typeValue) };
+			return { type, typeValue: clone(typeValue) } as ItemEffectSettings;
 		},
 		shield(capacity: number): ItemEffectSettings {
 			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");
 			return { type: ItemEffectType.Shield, typeValue: { capacity } };
 		},
-		freeze(durationTurns: number = 1): ItemEffectSettings {
-			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
-			return { type: ItemEffectType.Freeze, typeValue: { durationTurns } };
+		aimVariance(maxVarianceDegrees: number, seed?: number): ItemEffectSettings {
+			if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0) throw new Error("Aim variance must be a finite non-negative number");
+			if (seed !== undefined && !Number.isSafeInteger(seed)) throw new Error("Aim variance seed must be a safe integer");
+			return { type: ItemEffectType.AimVariance, typeValue: { maxVarianceDegrees, ...(seed === undefined ? {} : { seed }) } };
 		},
-		magnet(strength: number, range: number): ItemEffectSettings {
+	freeze(durationTurns: number = 1): ItemEffectSettings {
+		if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
+		return { type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };
+		},
+		magnet(strength: number, range: number): KoreEngineItemEffectSettings {
 			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
-			return { type: ItemEffectType.Magnet, typeValue: { strength, range } };
+			return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: { mode: "attract", force: strength, range } };
 		},
-		temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
-			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary wall lifetimeTurns must be a positive integer");
-			return { type: ItemEffectType.TemporaryWall, typeValue: { lifetimeTurns } };
+			temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary structure lifetimeTurns must be a positive integer");
+			return { type: ItemEffectType.StructureLifecycle, typeValue: { durationUnit: "turns", duration: lifetimeTurns, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } } };
 		},
 		ghostMode(durationTurns: number = 1): ItemEffectSettings {
 			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Ghost mode durationTurns must be a positive integer");
@@ -689,9 +714,9 @@ export const kore = {
 			if (!Number.isFinite(torque)) throw new Error("Torque must be a finite number");
 			return { type: ItemEffectType.ApplyTorque, typeValue: { torque } };
 		},
-		delayedEffect(delayTicks: number, effect: ItemEffectSettings): ItemEffectSettings {
-			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
-			return { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effect: clone(effect) } };
+			deferredEffect(delayTicks: number, effect: EffectSettings): ItemEffectSettings {
+			if (!Number.isSafeInteger(delayTicks) || delayTicks < 1) throw new Error("Delay ticks must be a positive integer");
+			return { type: ItemEffectType.DeferredEffect, typeValue: { durationUnit: "ticks", duration: delayTicks, effect: clone(effect) as never } };
 		},
 		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
@@ -704,20 +729,19 @@ export const kore = {
 		rulePhase: { item: RulePhase.Item, aim: RulePhase.Aim, charge: RulePhase.Charge, push: RulePhase.Push, physics: RulePhase.Physics, complete: RulePhase.Complete },
 		winCondition: { lastTeamStanding: WinCondition.LastTeamStanding },
 		shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
-		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, damage: EffectType.Damage, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
+		effectType: { physics: EffectType.Physics, movement: EffectType.Movement, multi: EffectType.Multi, modifySetting: EffectType.ModifySetting },
 		itemEffectType: {
 			modifyForce: ItemEffectType.ModifyForce,
 			modifyRotation: ItemEffectType.ModifyRotation,
 			lockRotation: ItemEffectType.LockRotation,
 			applyTorque: ItemEffectType.ApplyTorque,
 			spawnTrigger: ItemEffectType.SpawnTrigger,
-			delayedEffect: ItemEffectType.DelayedEffect,
+			deferredEffect: ItemEffectType.DeferredEffect,
 			shield: ItemEffectType.Shield,
-			freeze: ItemEffectType.Freeze,
-			swapPosition: ItemEffectType.SwapPosition,
-			temporaryWall: ItemEffectType.TemporaryWall,
+			swapPosition: TRANSFORM_SWAP_POSITION_EFFECT_ID,
+			structureLifecycle: ItemEffectType.StructureLifecycle,
 			ghostMode: ItemEffectType.GhostMode,
-			magnet: ItemEffectType.Magnet,
+			magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
 			selectionLock: ItemEffectType.SelectionLock,
 			aimVariance: ItemEffectType.AimVariance,
 		},

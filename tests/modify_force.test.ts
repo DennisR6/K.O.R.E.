@@ -1,26 +1,23 @@
 import { expect, test } from "bun:test";
-import { applyForceModifiers, EffectModifyForce } from "../src/effects/modifyForce.ts";
-import { ItemEffectType } from "../src/effects/types.ts";
+import { applyActionModifiers, createActionModifier } from "../src/engine/contracts/actionModifier.ts";
 
-test("modifyForce serializes and applies one deterministic force multiplier", () => {
-	const effect = new EffectModifyForce({ typeValue: { factor: 0.5 } });
-	expect(effect.applyToForce({ angle: -90, power: 8 })).toEqual({ angle: 270, power: 4 });
-	expect(effect.toSettings()).toEqual({ type: ItemEffectType.ModifyForce, typeValue: { factor: 0.5 } });
-	const restored = new EffectModifyForce(effect.toSettings());
-	expect(restored.toSettings()).toEqual(effect.toSettings());
+test("modifyForce authoring applies one deterministic generic force multiplier", () => {
+	const effect = createActionModifier({ id: "modify-force", action: "force", operation: "scale", factor: 0.5, remainingUses: 1 });
+	expect(applyActionModifiers({ angle: -90, power: 8 }, [effect])).toEqual({ angle: 270, power: 4 });
+	expect(JSON.parse(JSON.stringify(effect))).toEqual(effect);
 });
 
 test("modifyForce effects stack in declaration order by multiplication", () => {
-	const result = applyForceModifiers({ angle: 450, power: 10 }, [
-		new EffectModifyForce({ typeValue: { factor: 0.8 } }),
-		new EffectModifyForce({ typeValue: { factor: 0.5 } }),
+	const result = applyActionModifiers({ angle: 450, power: 10 }, [
+		createActionModifier({ id: "first", action: "force", operation: "scale", factor: 0.8, remainingUses: 1, sourceOrder: 0 }),
+		createActionModifier({ id: "second", action: "force", operation: "scale", factor: 0.5, remainingUses: 1, sourceOrder: 1 }),
 	]);
 	expect(result).toEqual({ angle: 90, power: 4 });
 });
 
 test("modifyForce rejects invalid factors and force inputs", () => {
-	expect(() => new EffectModifyForce({ typeValue: { factor: -1 } })).toThrow("non-negative");
-	expect(() => new EffectModifyForce({ typeValue: { factor: Number.NaN } })).toThrow("finite");
-	const effect = new EffectModifyForce({ typeValue: { factor: 1 } });
-	expect(() => effect.applyToForce({ angle: 0, power: -1 })).toThrow("non-negative power");
+	expect(() => createActionModifier({ id: "negative", action: "force", operation: "scale", factor: -1, remainingUses: 1 })).toThrow("non-negative");
+	expect(() => createActionModifier({ id: "nan", action: "force", operation: "scale", factor: Number.NaN, remainingUses: 1 })).toThrow("finite");
+	const effect = createActionModifier({ id: "valid", action: "force", operation: "scale", factor: 1, remainingUses: 1 });
+	expect(() => applyActionModifiers({ angle: 0, power: -1 }, [effect])).toThrow("non-negative power");
 });

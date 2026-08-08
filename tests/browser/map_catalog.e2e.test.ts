@@ -5,6 +5,7 @@ import {
 	assertCleanConsole,
 	captureConsole,
 	canvasGeometry,
+	clickMenuElement,
 	clickWorld,
 	dragWorld,
 	ensureBrowserBuild,
@@ -18,6 +19,7 @@ import {
 	worldToPixel,
 } from "./browserHarness.ts";
 import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
+import { KoreMenuElement, KoreMenuMapIntent, koreMenuMapElementId } from "../../src/kore/ui/menuVocabulary.js";
 
 /**
  * Section 17.8 - browser verification of every qualified map.
@@ -51,9 +53,6 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
 const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
-const LANDING_WORLD = { x: 400, y: 100 };
-// SDK main-menu flow layout: Choose Map is the fifth centered bottom action button.
-const CHOOSE_MAP_BUTTON_WORLD = { x: 701, y: 368 };
 
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;
@@ -75,10 +74,6 @@ const SUICIDE_DRAGS = [
 const QUALIFIED_MAPS = MAP_CATALOG.filter(entry => entry.browserAvailable);
 
 /** World-center of a map-selection row (menu layout: 500x40 rows at y 80+50i). */
-function mapRowWorld(index: number): { x: number; y: number } {
-	return { x: 400, y: 106 + index * 2 * 18 };
-}
-
 /** Grid-quantized drag start (mirrors the Section 16 killDrag helper). */
 function quantized(position: { x: number; y: number }): { x: number; y: number } {
 	return { x: Math.floor(position.x * 1.6) / 1.6, y: Math.floor(position.y * 1.6) / 1.6 };
@@ -138,8 +133,8 @@ const STRUCTURE_PROBES: Record<string, { probe: { x: number; y: number }; ref: {
 /** Opens the visible menu and navigates to the map-selection page. */
 async function openMapSelection(page: import("playwright").Page): Promise<void> {
 	await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
-	await clickWorld(page, LANDING_WORLD.x, LANDING_WORLD.y); // landing page -> main menu
-	await clickWorld(page, CHOOSE_MAP_BUTTON_WORLD.x, CHOOSE_MAP_BUTTON_WORLD.y); // main menu -> choose map
+	await clickMenuElement(page, KoreMenuElement.LandingStart);
+	await clickMenuElement(page, KoreMenuElement.MainMaps);
 }
 
 /** Skips the item phase and plays a weak legal opening for the active team. */
@@ -252,8 +247,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 				// Each map session ends in a fresh boot back at the landing
 				// page, so re-open the map-selection page through the UI.
 				if (index > 0) await openMapSelection(page);
-				const row = mapRowWorld(index);
-				await clickWorld(page, row.x, row.y);
+				await clickMenuElement(page, koreMenuMapElementId(KoreMenuMapIntent.Local, entry.id, undefined, "power-rush-v1"));
 				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, `${entry.id} selection`);
 
 				// Stable map ID, finite visible entities, item phase open.
@@ -328,8 +322,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 			await openMapSelection(page);
 
 			// Select Hazard Control through the production UI.
-			const row = mapRowWorld(index);
-			await clickWorld(page, row.x, row.y);
+			await clickMenuElement(page, koreMenuMapElementId(KoreMenuMapIntent.Local, entry!.id, undefined, "power-rush-v1"));
 			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, "hazard-control selection");
 			await waitFor(async () => colorNear(await probePixel(page, 300, 225), [0xd9, 0x4b, 0x28], 60), 8_000, 100, "hazard zone pixel");
 

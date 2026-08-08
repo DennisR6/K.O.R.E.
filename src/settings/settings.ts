@@ -5,7 +5,7 @@ import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 
 
 import IceMap from "./iceMap.js";
-import { EffectTrigger, EffectType, type FullEffectSettings, type IEffectable } from "../effects/types.js";
+import { EffectTrigger, type FullEffectSettings, type IEffectable } from "../effects/types.js";
 import { EffectPhysics } from "../effects/physics.js";
 import { EffectMove } from "../effects/movement.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
@@ -13,6 +13,10 @@ import { validateItemEconomySettings, type GameModeSettings } from "../rules/typ
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
+import { validateFullEffectSettings } from "../effects/validate.js";
+import { validateTriggerDefinition, type TriggerDefinition } from "../item/triggerDefinitions.js";
+import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
+import { validateCollisionCommandBinding, type CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -44,6 +48,10 @@ export interface GameSettings {
 	mapReference?: { mapId: string; contentHash: string }
 	/** Deterministic map mechanics; omitted by legacy maps. */
 	environmentalMechanics?: EnvironmentalMechanic[]
+	/** Optional data-only named trigger definitions for scheduled item triggers. */
+	triggerDefinitions?: TriggerDefinition[]
+	/** Optional authoring input; runtime snapshots always materialize this collection. */
+	counters?: CounterState[]
 }
 
 export interface SettingsScreenResolution {
@@ -68,15 +76,22 @@ export interface SettingsBackgroundColor {
 
 export type MapBoundarySettings = MapBoundarySettingsCircle | MapBoundarySettingsLine | MapBoundarySettingsRect
 export interface IMapBoundarySettings extends IEffectable {
+	/** Stable content identity; legacy maps may be normalized at the load boundary. */
+	id?: string;
 	type: SHAPE
 	x: number;
 	y: number;
+	/** Independent simulation and presentation participation flags. */
+	physicsEnabled?: boolean;
+	drawingEnabled?: boolean;
 	/**
 	 * Explicit structure role. `undefined` keeps the legacy heuristic: a
 	 * structure that encloses every other non-line structure is treated as a
 	 * containment boundary (never filled) unless it declares `"both"`.
 	 */
 	role?: StructureCollisionRole
+	/** Relative current Engine commands activated on collision entry. */
+	collisionCommands?: CollisionCommandBinding[];
 }
 export interface MapBoundarySettingsCircle extends IMapBoundarySettings {
 	type: SHAPE.CIRCLE
@@ -129,6 +144,8 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	if (!Array.isArray(settings.players) || !settings.players.every(player => isRecord(player) && isVector(player.position) && isVector(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect))) throw new Error("Invalid player settings")
 	if (!isBackground(settings.background)) throw new Error("Invalid background settings")
 	if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary)) throw new Error("Invalid map boundary settings")
+	const structureIds = settings.mapBoundarys.flatMap(boundary => boundary.id === undefined ? [] : [boundary.id]);
+	if (new Set(structureIds).size !== structureIds.length) throw new Error("Structure IDs must be unique");
 	if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect)) throw new Error("Invalid effect settings")
 	if (!Array.isArray(settings.items)) throw new Error("Invalid item settings")
 	try { settings.items.forEach(validateItemDocument) } catch { throw new Error("Invalid item settings") }
@@ -146,6 +163,8 @@ export function validateGameSettings(settings: unknown): asserts settings is Gam
 	}
 	if (settings.ai !== undefined) validateAiSettings(settings.ai)
 	if (settings.environmentalMechanics !== undefined) validateEnvironmentalMechanics(settings.environmentalMechanics)
+	if (settings.triggerDefinitions !== undefined) settings.triggerDefinitions.forEach(validateTriggerDefinition)
+	if (settings.counters !== undefined) canonicalizeCounterStates(settings.counters)
 }
 
 function isRecord(value: unknown): value is Record<string, any> { return typeof value === "object" && value !== null }
@@ -162,12 +181,17 @@ function isBackground(value: unknown): value is SettingsBackground {
 }
 function isTeam(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 }
 function isEffect(value: unknown): value is FullEffectSettings {
-	const types = [EffectType.Physics, EffectType.Damage, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting]
-	const triggers = [EffectTrigger.Always, EffectTrigger.Collision, EffectTrigger.Round]
-	return isRecord(value) && types.includes(value.type) && triggers.includes(value.trigger)
+	try { validateFullEffectSettings(value); return true } catch { return false }
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
+	if (value.collisionCommands !== undefined) {
+		if (!Array.isArray(value.collisionCommands)) return false
+		try { value.collisionCommands.forEach(validateCollisionCommandBinding) } catch { return false }
+	}
+	if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id)) return false
+	if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean") return false
+	if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean") return false
 	if (value.role !== undefined && !isStructureCollisionRole(value.role)) return false
 	if (value.type === SHAPE.CIRCLE) return Number.isFinite(value.r) && value.r > 0
 	if (value.type === SHAPE.RECTANGLE) return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0

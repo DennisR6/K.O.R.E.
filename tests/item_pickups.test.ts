@@ -22,7 +22,8 @@ test("map pickups collect deterministically for live entities on the active team
 	};
 	settings.players.forEach(player => { player.position = { x: 0, y: 0 }; });
 	settings.players[0].position = { x: 110, y: 110 };
-	settings.players[0].isDead = true;
+	settings.players[0].isPhysicsEnabled = false;
+	settings.players[0].isDrawingEnabled = false;
 	settings.players[1].position = { x: 110, y: 110 };
 	settings.players[2].position = { x: 110, y: 110 };
 

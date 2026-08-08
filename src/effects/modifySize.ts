@@ -38,7 +38,7 @@ export class EffectModifySize implements Effect {
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.ModifySize,
+            schemaVersion: 1, type: EffectType.ModifySize,
             typeValue: {
                 size: this.size
             }

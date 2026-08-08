@@ -42,7 +42,7 @@ function playOneTurn(handler: ReturnType<typeof midMatch>["handler"], emitter: R
 	const entities = handler.getEntityManager().getEntities();
 	emitter.sendItemUse(entities[0]!.getId(), "power-dash", { type: "self" });
 	handler.skipCurrentPhase();
-	emitter.sendShot(entities[0]!.getId(), 30, 6);
+	emitter.sendShot(entities[0]!.getId(), 30, 1);
 	let guard = 0;
 	while (handler.getState() === GameState.Playing && guard < 10_000) {
 		handler.tick();

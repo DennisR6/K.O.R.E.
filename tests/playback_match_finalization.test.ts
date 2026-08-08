@@ -40,14 +40,15 @@ function killCircleArena() {
 		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE, x: 1500, y: 1450, r: 80,
-			effects: [
-				{
+				effects: [{
 					trigger: EffectTrigger.Collision,
 					triggerValue: [],
-					type: EffectType.ModifySetting,
-					typeValue: { operation: SettingOperation.Set, key: "dead", value: true },
-				},
-			],
+					type: EffectType.Multi,
+					typeValue: [
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+					],
+				}],
 		},
 	];
 	settings.players[0]!.position = { x: 750, y: 365 };
@@ -97,7 +98,7 @@ describe("playback match finalization", () => {
 		const live = handler.getEntityManager().getEntities();
 		for (let i = 0; i < live.length; i++) {
 			expect(live[i]!.getPos()).toEqual(expected.finalState[i]!.position);
-			expect(live[i]!.isDead()).toBe(expected.finalState[i]!.isDead);
+			expect(live[i]!.isDead()).toBe(!expected.finalState[i]!.isPhysicsEnabled || !expected.finalState[i]!.isDrawingEnabled);
 		}
 		expect(live[0]!.isDead()).toBe(false);
 		expect(live[1]!.isDead()).toBe(true);
@@ -156,7 +157,8 @@ describe("playback match finalization", () => {
 			.fromSettings(settings)
 			.build();
 		const finalState = handler.getEntityManager().toSettings();
-		finalState[1]!.isDead = true;
+		finalState[1]!.isPhysicsEnabled = false;
+		finalState[1]!.isDrawingEnabled = false;
 		finalState[1]!.hp = 0;
 
 		handler.playTurn({

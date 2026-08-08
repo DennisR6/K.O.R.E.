@@ -26,7 +26,7 @@ export class EffectModifyVelocity implements Effect {
 
     toSettings(): EffectSettings {
         return {
-            type: EffectType.Velocity,
+            schemaVersion: 1, type: EffectType.Velocity,
             typeValue: {
                 x: this.x,
                 y: this.y

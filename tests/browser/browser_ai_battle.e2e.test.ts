@@ -67,9 +67,9 @@ test.describe("browser KI vs KI battle", () => {
 					entities: handler?.getEntityManager?.()?.getEntities?.()?.length ?? 0,
 				};
 			});
-			// The SDK HUD wraps the passive AI driver; no human gameplay input is accepted.
-			expect(matchInfo.mouseHandler).toBe("KoreGameHudSurface");
-			expect(matchInfo.gameplayInput).toBe("AiBattleSystem");
+			// Autonomous battles retain only the passive AI driver until the result overlay.
+			expect(matchInfo.mouseHandler).toBe("AiBattleSystem");
+			expect(matchInfo.gameplayInput).toBeNull();
 			expect(matchInfo.entities).toBe(12);
 
 			// The battle plays without any pointer input: wait until at least
@@ -90,7 +90,7 @@ test.describe("browser KI vs KI battle", () => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
-	test("visible pause and resume freeze and continue an active AI battle deterministically", async () => {
+test("autonomous AI battle progresses without a player pause surface", async () => {
 		await ensureBrowserBuild();
 		const server = await startTestServer();
 		const browser = await launchBrowser();
@@ -104,18 +104,11 @@ test.describe("browser KI vs KI battle", () => {
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");
 
 			const beforeState = await readMatchState(page);
-			await clickWorld(page, 748, 25); // visible HUD pause button
-			await waitFor(async () => (await readMatchState(page)).paused, 5_000, 50, "AI battle paused");
-			const pausedSnapshot = await page.evaluate(() => JSON.stringify((window as any).game.handler.toSettings()));
-			await page.waitForTimeout(1_000);
-			const duringPause = await readMatchState(page);
-			expect(duringPause.paused).toBe(true);
-			expect(duringPause.turnNumber).toBe(beforeState.turnNumber);
-			expect(await page.evaluate(() => JSON.stringify((window as any).game.handler.toSettings()))).toBe(pausedSnapshot);
-
-			await clickWorld(page, 400, 261); // visible HUD resume button
-			await waitFor(async () => !(await readMatchState(page)).paused, 5_000, 50, "AI battle resumed");
-			await waitFor(async () => (await page.evaluate(() => JSON.stringify((window as any).game.handler.toSettings()))) !== pausedSnapshot, 10_000, 50, "AI progression after resume");
+			expect(beforeState.paused).toBe(false);
+			await clickWorld(page, 748, 25);
+			await clickWorld(page, 400, 261);
+			expect((await readMatchState(page)).paused).toBe(false);
+			await waitFor(async () => (await readMatchState(page)).turnNumber > beforeState.turnNumber, 60_000, 100, "AI battle progression");
 		} finally {
 			await closeBrowser(browser);
 			await server.stop();
@@ -124,7 +117,7 @@ test.describe("browser KI vs KI battle", () => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
-	test("visible menu action exits a paused AI battle without leaving a battle loop", async () => {
+test("autonomous AI battle ignores menu coordinates while it is running", async () => {
 		await ensureBrowserBuild();
 		const server = await startTestServer();
 		const browser = await launchBrowser();
@@ -136,12 +129,11 @@ test.describe("browser KI vs KI battle", () => {
 			await clickWorld(page, 400, 100);
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");
-			await clickWorld(page, 748, 25); // visible HUD pause button
-			await waitFor(async () => (await readMatchState(page)).paused, 5_000, 50, "AI battle paused");
-			await clickWorld(page, 482, 324); // visible paused-menu action
-			await waitFor(async () => (await activeGameModeId(page)) === null && await page.evaluate(() => (window as any).game?.mapId ?? null) === null, 5_000, 50, "menu after paused battle");
-			await page.waitForTimeout(500);
-			expect(await activeGameModeId(page)).toBeNull();
+			await clickWorld(page, 748, 25);
+			await clickWorld(page, 482, 324);
+			expect((await readMatchState(page)).paused).toBe(false);
+			expect(await activeGameModeId(page)).toBe("local-ice-duel-v1");
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
 		} finally {
 			await closeBrowser(browser);
 			await server.stop();

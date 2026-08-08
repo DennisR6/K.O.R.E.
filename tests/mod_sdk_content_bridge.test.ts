@@ -46,10 +46,11 @@ describe("kore.contentPackage.resolveMap", () => {
 		expect(structures.some(boundary => boundary.type === kore.types.shape.rectangle && boundary.x === 300 && boundary.y === 200 && boundary.w === 60 && boundary.h === 60)).toBe(true);
 		const killZone = structures.find(boundary => boundary.type === kore.types.shape.circle && boundary.x === 400 && boundary.y === 410);
 		expect(killZone).toBeDefined();
-		expect(killZone!.effects.some(effect => {
-			const value = effect.typeValue as Record<string, unknown> | undefined;
-			return value?.key === "dead" && value?.value === true;
-		})).toBe(true);
+		expect(killZone!.effects).toEqual([]);
+		expect(killZone!.collisionCommands?.[0]?.effect).toMatchObject({ type: "effect.composition", effects: [
+			{ type: "participation.set-physics", typeValue: { enabled: false } },
+			{ type: "participation.set-drawing", typeValue: { enabled: false } },
+		] });
 		expect(structures.some(boundary => boundary.type === kore.types.shape.circle && boundary.x === 100 && boundary.y === 100)).toBe(true);
 
 		// The template roster is repositioned into the mod spawn regions.

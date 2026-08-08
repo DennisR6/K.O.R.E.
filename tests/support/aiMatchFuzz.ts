@@ -261,14 +261,15 @@ export function makeAiArena(seed: number): GameSettings {
 		{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 3000, h: 1600, effects: [], role: "containment" },
 		{
 			type: SHAPE.CIRCLE, x: circleX, y: circleY, r: 80,
-			effects: [
-				{
+				effects: [{
 					trigger: EffectTrigger.Collision,
 					triggerValue: [],
-					type: EffectType.ModifySetting,
-					typeValue: { operation: SettingOperation.Set, key: "dead", value: true },
-				},
-			],
+					type: EffectType.Multi,
+					typeValue: [
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+					],
+				}],
 		},
 	];
 	return settings;

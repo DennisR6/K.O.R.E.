@@ -27,7 +27,9 @@ interfaces live in `src/physics/physics.ts`.
 - A body has: `position: Vector2D`, `velocity: Vector2D` (world units per
   tick), `bounds` (circle: `{x: radius, y: radius}`; rectangle: `{x: w, y: h}`;
   line: `{x: endX, y: endY}` relative endpoint), `mass`, `bounceFactor`
-  (restitution), `friction`, `physicsEnabled`, and a `SHAPE`.
+  (restitution), `friction`, `physicsEnabled`, and a `SHAPE`. Canonical map
+  structures additionally carry stable IDs and independent `drawingEnabled`
+  state; rendering never infers presentation participation from physics state.
 - Circle bounds are always square (`x === y === radius`).
 
 ## 3. Mass And Immovable Bodies
@@ -177,9 +179,11 @@ original positions for the impulse computation.
 ## 9. Multi-Contact Resolution (Iteration And Order)
 
 - Contact processing order is explicit and deterministic: entities in
-  manager insertion order (index order), entity/entity pairs by `(i, j)`,
-  then entity/structure pairs by structure index. *(Task 13.5 replaces the
-  single-pass sweep with a bounded iterative solver.)*
+  manager insertion order (an ephemeral local iteration order), entity/entity
+  pairs by `(i, j)`, then entity/structure pairs by local structure iteration
+  order. Persisted contact identity is independent of that order and uses the
+  canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<id>` key.
+  *(Task 13.5 replaces the single-pass sweep with a bounded iterative solver.)*
 - The solver terminates within `MAX_CONTACT_SOLVER_ITERATIONS = 16` passes,
   each pass making measurable progress; supported penetrations are resolved
   at termination. *(Task 13.5)*

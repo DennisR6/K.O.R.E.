@@ -1,24 +1,22 @@
 import { expect, test } from "bun:test";
-import { EffectMagnet } from "../src/effects/magnet.ts";
-import { magnetItem, applyMagnetForce, createOfficialItemLoader } from "../src/item/officialItems.ts";
+import { magnetItem, createOfficialItemLoader, MAGNET_FORCE, MAGNET_RANGE } from "../src/item/officialItems.ts";
+import { applyRadialVelocityDelta } from "../src/engine/sdk/movementForceField.ts";
 
 test("Magnet is a validated built-in configurable attraction item", () => {
 	const loader = createOfficialItemLoader();
 	expect(loader.getSource("magnet")).toBe("built-in");
 	expect(loader.get("magnet")).toEqual(magnetItem);
+	expect(magnetItem.effects).toEqual([{ type: "movement.apply-force-to-entity", value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }]);
 });
 
-test("magnet attracts or repels within its configured range", () => {
-	const attract = new EffectMagnet({ typeValue: { mode: "attract", force: 2, range: 100 } });
-	const repel = new EffectMagnet({ typeValue: { mode: "repel", force: 2, range: 100 } });
-	expect(attract.calculateDelta({ x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: 2, y: 0 });
-	expect(repel.calculateDelta({ x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: -2, y: 0 });
-	expect(attract.calculateDelta({ x: 0, y: 0 }, { x: 101, y: 0 })).toEqual({ x: 0, y: 0 });
-	expect(applyMagnetForce({ x: 1, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: 3, y: 0 });
+test("the generic radial movement language attracts or repels within its configured range", () => {
+	expect(applyRadialVelocityDelta({ x: 1, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }, { mode: "attract", force: 2, range: 100 })).toEqual({ x: 3, y: 0 });
+	expect(applyRadialVelocityDelta({ x: 1, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }, { mode: "repel", force: 2, range: 100 })).toEqual({ x: -1, y: 0 });
+	expect(applyRadialVelocityDelta({ x: 1, y: 0 }, { x: 0, y: 0 }, { x: 101, y: 0 }, { mode: "attract", force: 2, range: 100 })).toEqual({ x: 1, y: 0 });
 });
 
-test("magnet serializes and validates its configuration", () => {
-	const magnet = new EffectMagnet({ typeValue: { mode: "repel", force: 1, range: 50 } });
-	expect(new EffectMagnet(magnet.toSettings()).toSettings()).toEqual(magnet.toSettings());
-	expect(() => new EffectMagnet({ typeValue: { mode: "sideways" as "attract", force: 1, range: 50 } })).toThrow("attract or repel");
+test("Magnet keeps its target, range, and use limits declarative", () => {
+	expect(magnetItem.targetType).toBe("entity");
+	expect(magnetItem.targetValidation).toEqual({ allowSelf: false, allowAlly: true, allowEnemy: true, maxRange: MAGNET_RANGE });
+	expect(magnetItem.useLimit).toEqual({ perTurn: 1, perGame: 2 });
 });
