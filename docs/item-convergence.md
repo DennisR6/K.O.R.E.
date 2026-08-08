@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked after Vodka-Zero qualification: `95cea80 feat(engine): qualify deterministic aim action modifiers`
+Last reranked after Vodka-Zero qualification: `0724a07 docs(items): record vodka zero convergence`
 
 Repository state: Vodka-Zero is qualified through the generic accepted-action aim-modifier boundary; Ghost Mode and Selection Lock remain unqualified.
 
-CocoIndex state: refreshed after the qualification slice; current index contains 728 files and 7,265 chunks.
+CocoIndex state: refreshed after the qualification slice; current index contains 728 files and 7,264 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
