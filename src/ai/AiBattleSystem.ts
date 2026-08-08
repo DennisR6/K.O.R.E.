@@ -78,10 +78,11 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			}
 			if (this.workerHost.isThinking()) return;
 		}
-		if (this.workerHost) this.workerHost.noteSynchronousFallback();
 		const emitter = team === 0 ? this.emitter0 : this.emitter1;
 		const aiSettings = team === 0 ? this.settings0 : this.settings1;
+		const fallbackStart = performance.now();
 		const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
+		if (this.workerHost) this.workerHost.noteSynchronousFallback(performance.now() - fallbackStart);
 		if (!submitted) {
 			// Defensive fallback: the hard AI always submits while its team has
 			// living actors and enemies exist; a neutral straight shot keeps a

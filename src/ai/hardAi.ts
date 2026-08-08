@@ -41,6 +41,7 @@ export class HardAi implements IAiTurnProducer {
 		let simCount = 0;
 		let bestScore = -Infinity;
 		const bestChoices: ScoredChoice[] = [];
+		const simulatedScores = new Map<string, number>();
 
 		for (const aiActor of aiActors) {
 			if (simCount >= maxSimulations) break;
@@ -71,20 +72,25 @@ export class HardAi implements IAiTurnProducer {
 					if (simCount >= maxSimulations) break;
 
 					simCount++;
-					let score = 0;
-					try {
-						const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
+					const simulationKey = `${aiActor.getId()}:${candidate.angle}:${power}`;
+					let score = simulatedScores.get(simulationKey);
+					if (score === undefined) {
+						score = 0;
+						try {
+							const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
 
-						// Evaluate finalState from simulation
-						for (const pSnapshot of sim.finalState) {
-							if (pSnapshot.team.includes(aiSettings.team)) {
-								if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score -= 10000; // Penalize AI elimination
-							} else {
-								if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score += 5000; // Reward enemy elimination
+							// Evaluate finalState from simulation
+							for (const pSnapshot of sim.finalState) {
+								if (pSnapshot.team.includes(aiSettings.team)) {
+									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score -= 10000; // Penalize AI elimination
+								} else {
+									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score += 5000; // Reward enemy elimination
+								}
 							}
+						} catch {
+							score = -20000;
 						}
-					} catch {
-						score = -20000;
+						simulatedScores.set(simulationKey, score);
 					}
 
 					if (score > bestScore) {

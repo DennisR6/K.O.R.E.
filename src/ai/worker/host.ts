@@ -23,6 +23,8 @@ export type HardAiWorkerTurnMetrics = {
 	workerReadyBeforeTurnEnd: boolean;
 };
 
+export type HardAiWorkerDistribution = { min: number; median: number; p95: number; max: number };
+
 export type HardAiWorkerMetrics = {
 	workerPathAvailable: boolean;
 	requestCount: number;
@@ -37,6 +39,11 @@ export type HardAiWorkerMetrics = {
 	maxEventLoopGapMs: number;
 	eventLoopGapP50Ms: number;
 	eventLoopGapP95Ms: number;
+	workerComputeDistribution: HardAiWorkerDistribution;
+	playerVisibleDistribution: HardAiWorkerDistribution;
+	precomputeHeadroomDistribution: HardAiWorkerDistribution;
+	postTurnWaitDistribution: HardAiWorkerDistribution;
+	synchronousFallbackDistribution: HardAiWorkerDistribution;
 	failureReason?: string;
 	lastTurn?: HardAiWorkerTurnMetrics;
 };
@@ -57,6 +64,7 @@ export class HardAiWorkerHost {
 	private fallbackCount = 0;
 	private failedCount = 0;
 	private failureReason: string | undefined;
+	private readonly fallbackDurations: number[] = [];
 
 	private readonly usesDefaultWorkerFactory: boolean;
 	private readonly workerFactory: () => WorkerLike;
@@ -72,6 +80,11 @@ export class HardAiWorkerHost {
 	public getMetrics(): HardAiWorkerMetrics {
 		const gaps = [...this.eventLoopGaps].sort((a, b) => a - b);
 		const percentile = (value: number): number => gaps.length === 0 ? 0 : gaps[Math.min(gaps.length - 1, Math.ceil(value * gaps.length) - 1)]!;
+		const distribution = (values: readonly number[]): HardAiWorkerDistribution => {
+			const sorted = [...values].sort((a, b) => a - b);
+			if (sorted.length === 0) return { min: 0, median: 0, p95: 0, max: 0 };
+			return { min: sorted[0]!, median: sorted[Math.floor((sorted.length - 1) * 0.5)]!, p95: sorted[Math.floor((sorted.length - 1) * 0.95)]!, max: sorted[sorted.length - 1]! };
+		};
 		const last = this.turnMetrics.at(-1);
 		return {
 			workerPathAvailable: this.isAvailable(), requestCount: this.requestCount,
@@ -81,11 +94,16 @@ export class HardAiWorkerHost {
 			precomputeHeadroomMs: last?.precomputeHeadroomMs ?? 0, postTurnWaitMs: last?.postTurnWaitMs ?? 0,
 			maxEventLoopGapMs: this.eventLoopGaps.length === 0 ? 0 : Math.max(...this.eventLoopGaps),
 			eventLoopGapP50Ms: percentile(0.5), eventLoopGapP95Ms: percentile(0.95),
+			workerComputeDistribution: distribution(this.turnMetrics.map(turn => turn.workerComputeMs)),
+			playerVisibleDistribution: distribution(this.turnMetrics.map(turn => turn.playerVisibleDurationMs)),
+			precomputeHeadroomDistribution: distribution(this.turnMetrics.map(turn => turn.precomputeHeadroomMs)),
+			postTurnWaitDistribution: distribution(this.turnMetrics.map(turn => turn.postTurnWaitMs)),
+			synchronousFallbackDistribution: distribution(this.fallbackDurations),
 			...(this.failureReason ? { failureReason: this.failureReason } : {}),
 			...(last ? { lastTurn: structuredClone(last) } : {}),
 		};
 	}
-	public noteSynchronousFallback(): void { this.fallbackCount++; }
+	public noteSynchronousFallback(durationMs = 0): void { this.fallbackCount++; if (durationMs > 0) this.fallbackDurations.push(durationMs); }
 
 	public prepareTurn(input: { snapshot: HardAiWorkerRequest["snapshot"]; acceptedAction: IInput; nextRuleState: RuleState; aiSettings: AiSettings }): string | undefined {
 		if (!this.isAvailable()) return undefined;

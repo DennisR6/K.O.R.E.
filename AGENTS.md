@@ -464,6 +464,9 @@ After every change, check whether this guide still reflects the implementation a
 - `scripts/profileAiDecisionStability.ts`: single-seed experimental profiler
   that compares Hard AI candidate selections at multiple simulation horizons
   against the current 1,200-tick reference without changing production AI.
+- `scripts/profileAiCandidateLimits.ts`: bounded multi-seed profiler comparing
+  candidate-limit selected-action parity and speculative work against the
+  current 30-candidate reference.
 - `scripts/profileAiWorker.ts`: non-production worker parity and boundary
   profiler for canonical snapshot reconstruction, transfer overhead, and
   prepared Hard AI intent.

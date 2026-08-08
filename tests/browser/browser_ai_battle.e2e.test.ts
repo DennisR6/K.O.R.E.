@@ -128,8 +128,22 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		await clickWorld(page, 249, 368);
 		await clickWorld(page, 400, 100);
 		await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
-		await waitFor(async () => (await page.evaluate(() => (window as any).game?.aiWorkerMetrics?.validResponseCount ?? 0)) > 0, 60_000, 100, "validated production worker response");
+		await page.evaluate(() => {
+			const target = window as any;
+			target.__aiLongTasks = [];
+			if (typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes.includes("longtask")) {
+				const observer = new PerformanceObserver(list => target.__aiLongTasks.push(...list.getEntries().map((entry: PerformanceEntry) => ({ duration: entry.duration, name: entry.name }))));
+				observer.observe({ type: "longtask", buffered: true });
+				target.__aiLongTaskObserver = observer;
+			}
+		});
+		await waitFor(async () => await page.evaluate(() => {
+			const metrics = (window as any).game?.aiWorkerMetrics;
+			return (metrics?.requestCount ?? 0) >= 3 && (metrics?.validResponseCount ?? 0) >= 3;
+		}), 180_000, 100, "three validated production worker responses");
 		const metrics = await page.evaluate(() => (window as any).game?.aiWorkerMetrics ?? null);
+		const longTasks = await page.evaluate(() => { const target = window as any; target.__aiLongTaskObserver?.disconnect(); return target.__aiLongTasks ?? []; });
+		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker metrics", metrics);
 		expect(metrics?.workerPathAvailable).toBe(true);
 		expect(metrics?.requestCount).toBeGreaterThan(0);
 		expect(metrics?.validResponseCount).toBeGreaterThan(0);
@@ -138,6 +152,7 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		expect(Number.isFinite(metrics?.precomputeHeadroomMs)).toBe(true);
 		expect(Number.isFinite(metrics?.postTurnWaitMs)).toBe(true);
 		expect(metrics?.maxEventLoopGapMs).toBeLessThan(500);
+		if (process.env.AI_DIAGNOSTIC === "1") console.log("production long tasks", longTasks);
 	} finally {
 		await closeBrowser(browser);
 		await server.stop();

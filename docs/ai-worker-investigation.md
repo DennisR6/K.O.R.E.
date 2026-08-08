@@ -277,6 +277,53 @@ profile's `4.72s` maximum, although this qualification does not claim a
 strict apples-to-apples benchmark run. Worker metrics are UX diagnostics and
 are not part of canonical engine snapshots or performance baselines.
 
+## Throughput Qualification
+
+The first production sample was extended to five Worker requests and three
+validated responses. The representative Chromium run recorded:
+
+| Measurement | Min | Median | P95 | Max |
+| --- | ---: | ---: | ---: | ---: |
+| Worker compute | `2,591ms` | `3,080ms` | `3,080ms` | `3,159ms` |
+| Player-visible playback | `1,585ms` | `20,367ms` | `20,367ms` | `20,383ms` |
+| Precompute headroom | `-1,007ms` | `17,224ms` | `17,224ms` | `17,255ms` |
+| Post-turn wait | `0ms` | `0ms` | `0ms` | `1,007ms` |
+
+The sample hit rate was `40%` (`2` ready-before-turn-end requests out of `5`
+requests). The negative-headroom request was a short playback window, not a
+large Worker workload. The two synchronous fallback computations measured
+approximately `2,341-2,724ms` and corresponded to the remaining Chromium long
+tasks of approximately `2,345ms` and `2,730ms`; Worker-enabled requests did not
+produce comparable multi-second main-thread tasks. Event-loop heartbeat p95
+was `4.7ms`, with a `383.7ms` maximum gap caused by the fallback/other main
+thread work.
+
+The existing AI battle profiler across seeds 1-3 showed workload scaling with
+match decisions: `496/930/868` candidate simulations and
+`155,995/304,586/279,415` speculative ticks. Most candidates reached the
+300-tick cap (`409/881/771` candidates), so the dominant compute category is
+workload cost rather than request transport.
+
+Candidate-limit characterization over 24 early/mid decisions found exact
+selected-action parity against the 30-candidate reference only at 30
+candidates. Parity was `25%`, `46%`, `58%`, `63%`, and `67%` for limits 5, 10,
+15, 20, and 25 respectively. Global candidate reduction is therefore not
+parity-safe. Horizon characterization found 200 ticks agreeing with the
+300-tick reference on 12/16 decisions and 300 ticks on 16/16; no safe global
+adaptive stopping condition was established.
+
+The retained optimization is exact duplicate-candidate score reuse. It keeps
+candidate ordering and duplicate tie multiplicity unchanged, while avoiding
+repeated deterministic simulations. The seed-1 baseline changed from
+`480` to `471` candidate simulations, `138,774` to `136,319` speculative
+ticks, and `40,159,843` to `39,025,396` collision checks. Direct profiler
+runs after the change measured `34.6-36.9s` versus the `34.2s` committed
+baseline; the latest baseline check measured `38.4s` (`+12.3%`, still within
+the allowed `+20%` wall-clock budget). This wall-clock spread is noisy, while
+the deterministic work reduction is stable and passes the explicit baseline
+contract.
+No candidate limit, scoring, horizon, physics, or AI search behavior changed.
+
 ## Timeout Investigation
 
 The replay lifecycle test was measured at approximately `8.3s` for its first
