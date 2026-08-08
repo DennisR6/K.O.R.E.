@@ -766,6 +766,62 @@ function validateParticipationPayload(payload) {
   if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
     throw new Error("Participation payload requires only boolean enabled");
 }
+var NUMERIC_CAPABILITY = "numeric.state";
+var NUMERIC_SET_EFFECT_ID = "numeric.set";
+var NUMERIC_ADD_EFFECT_ID = "numeric.add";
+var NUMERIC_RESET_EFFECT_ID = "numeric.reset";
+var NUMERIC_EFFECT_IDS = [NUMERIC_SET_EFFECT_ID, NUMERIC_ADD_EFFECT_ID, NUMERIC_RESET_EFFECT_ID];
+function numericSystemDefinition() {
+  return { id: "core.numeric", provides: [NUMERIC_CAPABILITY], acceptsEffects: [...NUMERIC_EFFECT_IDS] };
+}
+function registerNumericSystem(registry) {
+  return registry.register(numericSystemDefinition());
+}
+function registerNumericCommands(registry) {
+  return registry.register({ id: NUMERIC_SET_EFFECT_ID, requiresCapability: [NUMERIC_CAPABILITY], targetType: "numeric", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload2(payload, "Numeric set", "value"), validateTarget: validateNumericTarget }).register({ id: NUMERIC_ADD_EFFECT_ID, requiresCapability: [NUMERIC_CAPABILITY], targetType: "numeric", lifecycleCategory: "command", validatePayload: (payload) => validateNumericPayload2(payload, "Numeric add", "amount"), validateTarget: validateNumericTarget }).register({ id: NUMERIC_RESET_EFFECT_ID, requiresCapability: [NUMERIC_CAPABILITY], targetType: "numeric", lifecycleCategory: "command", validatePayload: (payload) => {
+    exactKeys6(record6(payload, "Numeric reset payload"), [], "Numeric reset payload");
+  }, validateTarget: validateNumericTarget });
+}
+function validateNumericTarget(value) {
+  const target = record6(value, "Numeric target");
+  exactKeys6(target, ["type", "entityId", "stateId"], "Numeric target");
+  if (target.type !== "numeric")
+    throw new Error("Numeric target type must be 'numeric'");
+  if (typeof target.entityId !== "string" || target.entityId.length === 0)
+    throw new Error("Numeric target requires a non-empty entityId");
+  if (typeof target.stateId !== "string" || target.stateId.length === 0)
+    throw new Error("Numeric target requires a non-empty stateId");
+}
+function validateNumericEffectSettings(value) {
+  const effect = record6(value, "Numeric effect");
+  exactKeys6(effect, ["schemaVersion", "type", "target", "typeValue"], "Numeric effect");
+  if (effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric effect schema version");
+  validateNumericTarget(effect.target);
+  if (effect.type === NUMERIC_SET_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric set", "value");
+  else if (effect.type === NUMERIC_ADD_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric add", "amount");
+  else if (effect.type === NUMERIC_RESET_EFFECT_ID)
+    exactKeys6(record6(effect.typeValue, "Numeric reset payload"), [], "Numeric reset payload");
+  else
+    throw new Error(`Unknown numeric effect '${String(effect.type)}'`);
+}
+function validateNumericPayload2(payload, label, key) {
+  const value = record6(payload, `${label} payload`);
+  exactKeys6(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record6(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys6(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
 var ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION = 1;
 var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
 function createEngineEffectComposition(effects) {
@@ -786,6 +842,109 @@ function validateEngineEffectComposition(value) {
     if (!effect || typeof effect !== "object" || Array.isArray(effect) || typeof effect.type !== "string")
       throw new Error("Composition children must be Engine effects");
   });
+}
+var COLLISION_COMMAND_SCHEMA_VERSION = 1;
+var COLLISION_COMMAND_TYPE = "collision.command";
+function createCollisionCommandBinding(effect) {
+  const binding = { schemaVersion: 1, type: COLLISION_COMMAND_TYPE, effect: structuredClone(effect) };
+  validateCollisionCommandBinding(binding);
+  return binding;
+}
+function validateCollisionCommandBinding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed collision command binding");
+  const binding = value;
+  if (Object.keys(binding).some((key) => !["schemaVersion", "type", "effect"].includes(key)) || Object.keys(binding).length !== 3)
+    throw new Error("Malformed collision command binding");
+  if (binding.schemaVersion !== 1 || binding.type !== COLLISION_COMMAND_TYPE)
+    throw new Error("Unsupported collision command binding");
+  validateRelativeEffect(binding.effect);
+}
+function isCollisionCommandBinding(value) {
+  try {
+    validateCollisionCommandBinding(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function validateRelativeEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision command effect must be an object");
+  const effect = value;
+  if (effect.type === "effect.composition") {
+    validateEngineEffectComposition(effect);
+    for (const child of effect.effects)
+      validateRelativeEffect(child);
+    return;
+  }
+  if (typeof effect.type !== "string" || effect.type.length === 0 || effect.schemaVersion !== 1 || !("typeValue" in effect) || "target" in effect)
+    throw new Error("Collision command must be a target-relative Engine effect");
+  assertJsonValue(effect.typeValue);
+}
+var NUMERIC_STATE_SCHEMA_VERSION = 1;
+var NUMERIC_THRESHOLD_COMPARATORS = ["below", "below-or-equal", "above", "above-or-equal"];
+function validateNumericThresholdBindings(value) {
+  if (!Array.isArray(value))
+    throw new Error("Numeric threshold bindings must be an array");
+  const bindings = value.map((binding) => {
+    validateNumericThresholdBinding(binding);
+    return structuredClone(binding);
+  });
+  if (new Set(bindings.map((binding) => binding.id)).size !== bindings.length)
+    throw new Error("Numeric threshold IDs must be unique");
+}
+function validateNumericThresholdBinding(value) {
+  const binding = record7(value, "Numeric threshold binding");
+  knownKeys(binding, ["schemaVersion", "id", "resetValue", "thresholds"], "Numeric threshold binding");
+  if (binding.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  identifier(binding.id, "Numeric threshold ID");
+  if (binding.resetValue !== undefined && (typeof binding.resetValue !== "number" || !Number.isFinite(binding.resetValue)))
+    throw new Error("Numeric resetValue must be finite");
+  if (!Array.isArray(binding.thresholds))
+    throw new Error("Numeric threshold binding requires thresholds");
+  binding.thresholds.forEach(validateNumericThreshold);
+}
+function validateNumericThreshold(value) {
+  const threshold = record7(value, "Numeric threshold");
+  exactKeys7(threshold, ["schemaVersion", "comparator", "value", "effects"], "Numeric threshold");
+  if (threshold.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  if (!NUMERIC_THRESHOLD_COMPARATORS.includes(threshold.comparator))
+    throw new Error("Unknown numeric threshold comparator");
+  if (typeof threshold.value !== "number" || !Number.isFinite(threshold.value))
+    throw new Error("Numeric threshold value must be finite");
+  if (!Array.isArray(threshold.effects) || threshold.effects.length === 0)
+    throw new Error("Numeric threshold requires at least one follow-up effect");
+  threshold.effects.forEach(validateRelativeEffect2);
+}
+function validateRelativeEffect2(value) {
+  const effect = record7(value, "Numeric threshold effect");
+  if (Object.keys(effect).some((key) => !["schemaVersion", "type", "typeValue"].includes(key)) || Object.keys(effect).length !== 3)
+    throw new Error("Numeric threshold effects cannot declare their own target");
+  if (effect.schemaVersion !== undefined && effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric threshold effect schema version");
+  if (typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Numeric threshold effect requires a type");
+  assertJsonValue(effect.typeValue);
+}
+function identifier(value, label) {
+  if (typeof value !== "string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(value))
+    throw new Error(`${label} must be a stable identifier`);
+}
+function record7(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys7(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
+function knownKeys(value, keys, label) {
+  if (Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
 }
 
 var engine = {
@@ -827,22 +986,32 @@ export {
   validateTriggerActivation,
   validateTransformTarget,
   validateTransformState,
+  validateNumericThresholdBindings,
+  validateNumericThresholdBinding,
+  validateNumericThreshold,
+  validateNumericTarget,
+  validateNumericEffectSettings,
   validateMovementState,
   validateEngineEffectComposition,
   validateCounterTriggerBinding,
   validateCounterTarget,
   validateCounterState,
   validateCounterEffectSettings,
+  validateCollisionCommandBinding,
   registerTransformEffects,
   registerParticipationSystem,
   registerParticipationCommands,
+  registerNumericSystem,
+  registerNumericCommands,
   registerMovementSystem,
   registerMovementEffect,
   registerMovementCommands,
   registerCounterSystem,
   registerCounterCommands,
   participationSystemDefinition,
+  numericSystemDefinition,
   movementSystemDefinition,
+  isCollisionCommandBinding,
   engine,
   createTriggerActivation,
   createTransformState,
@@ -854,6 +1023,7 @@ export {
   createEngineEffectComposition,
   createCounterState,
   createCollisionEnterTriggerEvent,
+  createCollisionCommandBinding,
   counterTriggerMatches,
   counterSystemDefinition,
   canonicalizeCounterStates,
@@ -864,6 +1034,13 @@ export {
   PARTICIPATION_SET_DRAWING_EFFECT_ID,
   PARTICIPATION_EFFECT_IDS,
   PARTICIPATION_CAPABILITY,
+  NUMERIC_THRESHOLD_COMPARATORS,
+  NUMERIC_STATE_SCHEMA_VERSION,
+  NUMERIC_SET_EFFECT_ID,
+  NUMERIC_RESET_EFFECT_ID,
+  NUMERIC_EFFECT_IDS,
+  NUMERIC_CAPABILITY,
+  NUMERIC_ADD_EFFECT_ID,
   MOVEMENT_SET_VELOCITY_EFFECT_ID,
   MOVEMENT_SCALE_SPEED_EFFECT_ID,
   MOVEMENT_EFFECT_ID,
@@ -881,5 +1058,7 @@ export {
   COUNTER_RESET_EFFECT_ID,
   COUNTER_EFFECT_IDS,
   COUNTER_CAPABILITY,
-  COUNTER_ADD_EFFECT_ID
+  COUNTER_ADD_EFFECT_ID,
+  COLLISION_COMMAND_TYPE,
+  COLLISION_COMMAND_SCHEMA_VERSION
 };

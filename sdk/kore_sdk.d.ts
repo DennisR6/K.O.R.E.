@@ -1,6 +1,4 @@
 /** Standalone public KORE SDK declaration. */
-type EffectDamage = any;
-declare const EffectDamage: any;
 type MultiEffect = any;
 declare const MultiEffect: any;
 type EffectModifyMass = any;
@@ -13,6 +11,8 @@ type EffectMoveInput = any;
 declare const EffectMoveInput: any;
 type EffectPhysics = any;
 declare const EffectPhysics: any;
+type EffectNumericAdd = any;
+declare const EffectNumericAdd: any;
 type EffectTrigger = any;
 declare const EffectTrigger: any;
 type EffectType = any;
@@ -89,6 +89,8 @@ type GameSettings = any;
 declare const GameSettings: any;
 type MapBoundarySettings = any;
 declare const MapBoundarySettings: any;
+type MapBoundarySettingsCircle = any;
+declare const MapBoundarySettingsCircle: any;
 type authorMatchSettings = any;
 declare const authorMatchSettings: any;
 type createGameMode = any;
@@ -273,6 +275,7 @@ export declare class KoreMapBuilder {
         color?: string;
         role?: any;
         effects?: EffectInput[];
+        collisionCommands?: any["collisionCommands"];
     }): this;
     /** Adds a declarative lethal circular zone to the canonical map and runtime build. */
     addKillZone(settings: KoreHazardZone): this;
@@ -528,7 +531,6 @@ export declare const kore: {
         readonly effectType: {
             readonly physics: any.Physics;
             readonly movement: any.Movement;
-            readonly damage: any.Damage;
             readonly multi: any.Multi;
             readonly modifySetting: any.ModifySetting;
         };

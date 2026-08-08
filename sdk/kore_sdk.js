@@ -1,63 +1,5 @@
 var EFFECT_SCHEMA_VERSION = 1;
 
-class EffectModifySetting {
-  settings;
-  constructor({ typeValue }) {
-    this.settings = typeValue;
-  }
-  apply(entity, override) {
-    if (!isSettingMutable(entity))
-      return;
-    const settings = override === undefined ? this.settings : isModifySettingValue(override) ? override : this.settings;
-    switch (settings.operation) {
-      case "set":
-        entity.setSetting(settings.key, settings.value);
-        break;
-      case "add":
-        entity.addSetting(settings.key, settings.value);
-        break;
-      case "remove":
-        entity.removeSetting(settings.key, settings.value);
-        break;
-    }
-  }
-  getType() {
-    return "EffectType.ModifySetting" /* ModifySetting */;
-  }
-  toSettings() {
-    return {
-      schemaVersion: 1,
-      type: "EffectType.ModifySetting" /* ModifySetting */,
-      typeValue: { ...this.settings }
-    };
-  }
-}
-function isModifySettingValue(value) {
-  return typeof value === "object" && value !== null && "operation" in value && "key" in value && "value" in value;
-}
-function isSettingMutable(entity) {
-  return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
-}
-
-class EffectDamage {
-  damage;
-  constructor({ typeValue }) {
-    this.damage = typeValue.damage;
-  }
-  getType() {
-    return "EffectType.Damage" /* Damage */;
-  }
-  apply(entity, override) {
-    let dmg = this.damage;
-    if (override)
-      dmg = override.damage;
-    new EffectModifySetting({ typeValue: { operation: "add" /* Add */, key: "hp", value: -dmg } }).apply(entity);
-  }
-  toSettings() {
-    return { schemaVersion: 1, typeValue: { damage: this.damage }, type: "EffectType.Damage" /* Damage */ };
-  }
-}
-
 class EffectModifyMass {
   mass;
   constructor({ typeValue }) {
@@ -208,6 +150,57 @@ class EffectModifyVelocity {
       }
     };
   }
+}
+
+class EffectModifySetting {
+  settings;
+  constructor({ typeValue }) {
+    this.settings = typeValue;
+  }
+  apply(entity, override) {
+    if (!isSettingMutable(entity))
+      return;
+    const settings = override === undefined ? this.settings : isModifySettingValue(override) ? override : this.settings;
+    if (settings.operation === "add" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+      entity.dispatchNumericAdd("hp", settings.value);
+      return;
+    }
+    if (settings.operation === "set" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericSet" in entity && typeof entity.dispatchNumericSet === "function") {
+      entity.dispatchNumericSet("hp", settings.value);
+      return;
+    }
+    if (settings.operation === "remove" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+      entity.dispatchNumericAdd("hp", -settings.value);
+      return;
+    }
+    switch (settings.operation) {
+      case "set":
+        entity.setSetting(settings.key, settings.value);
+        break;
+      case "add":
+        entity.addSetting(settings.key, settings.value);
+        break;
+      case "remove":
+        entity.removeSetting(settings.key, settings.value);
+        break;
+    }
+  }
+  getType() {
+    return "EffectType.ModifySetting" /* ModifySetting */;
+  }
+  toSettings() {
+    return {
+      schemaVersion: 1,
+      type: "EffectType.ModifySetting" /* ModifySetting */,
+      typeValue: { ...this.settings }
+    };
+  }
+}
+function isModifySettingValue(value) {
+  return typeof value === "object" && value !== null && "operation" in value && "key" in value && "value" in value;
+}
+function isSettingMutable(entity) {
+  return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
 }
 
 var PHYSICS_CONTACT_SLOP = 0.05;
@@ -697,6 +690,28 @@ class EffectPhysics {
   }
 }
 
+class EffectNumericAdd {
+  stateId;
+  amount;
+  constructor({ typeValue }) {
+    this.stateId = typeValue.stateId;
+    this.amount = typeValue.amount;
+  }
+  apply(entity) {
+    if (!("getNumericValue" in entity))
+      return;
+    if (!("dispatchNumericAdd" in entity) || typeof entity.dispatchNumericAdd !== "function")
+      throw new Error("numeric.add requires an attached numeric effect dispatcher");
+    entity.dispatchNumericAdd(this.stateId, this.amount);
+  }
+  getType() {
+    return "numeric.add" /* NumericAdd */;
+  }
+  toSettings() {
+    return { schemaVersion: 1, type: "numeric.add" /* NumericAdd */, typeValue: { stateId: this.stateId, amount: this.amount } };
+  }
+}
+
 function createRuntimeEffect(settings) {
   return new MetaEffect({ schemaVersion: settings.schemaVersion, type: settings.type, typeValue: settings.typeValue });
 }
@@ -802,7 +817,7 @@ var FULL_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue", "trigger",
 var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
-var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
+var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
 var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
@@ -825,9 +840,11 @@ function validateEffectSettings(value) {
       finite2(payload.linearDrag, "Physics linearDrag");
       finite2(payload.stopThreshold, "Physics stopThreshold");
       return;
-    case "EffectType.Damage" /* Damage */:
-      exactKeys2(payload, ["damage"], "Damage payload");
-      finiteNonNegative(payload.damage, "Damage amount");
+    case "numeric.add" /* NumericAdd */:
+      exactKeys2(payload, ["stateId", "amount"], "Numeric add payload");
+      if (typeof payload.stateId !== "string" || payload.stateId.length === 0)
+        throw new Error("Numeric add stateId must be a non-empty string");
+      finite2(payload.amount, "Numeric add amount");
       return;
     case "EffectType.Movement" /* Movement */:
       exactKeys2(payload, ["deltaTime", "x", "y"], "Movement payload");
@@ -1130,14 +1147,14 @@ class MetaEffect {
   constructor(effect) {
     validateEffectSettings(effect);
     switch (effect.type) {
-      case "EffectType.Damage" /* Damage */:
-        this.eff = new EffectDamage(effect);
-        return;
       case "EffectType.Movement" /* Movement */:
         this.eff = new EffectMove(effect);
         return;
       case "EffectType.Physics" /* Physics */:
         this.eff = new EffectPhysics(effect);
+        return;
+      case "numeric.add" /* NumericAdd */:
+        this.eff = new EffectNumericAdd(effect);
         return;
       case "EffectType.Multi" /* Multi */:
         this.eff = new MultiEffect(effect);
@@ -1761,9 +1778,67 @@ function exactKeys5(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
+var PARTICIPATION_CAPABILITY = "participation.state";
 var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
 var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
 var PARTICIPATION_EFFECT_IDS = [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID];
+function participationSystemDefinition() {
+  return { id: "core.participation", provides: [PARTICIPATION_CAPABILITY], acceptsEffects: [...PARTICIPATION_EFFECT_IDS] };
+}
+function registerParticipationSystem(registry) {
+  return registry.register(participationSystemDefinition());
+}
+var NUMERIC_CAPABILITY = "numeric.state";
+var NUMERIC_SET_EFFECT_ID = "numeric.set";
+var NUMERIC_ADD_EFFECT_ID = "numeric.add";
+var NUMERIC_RESET_EFFECT_ID = "numeric.reset";
+var NUMERIC_EFFECT_IDS = [NUMERIC_SET_EFFECT_ID, NUMERIC_ADD_EFFECT_ID, NUMERIC_RESET_EFFECT_ID];
+function numericSystemDefinition() {
+  return { id: "core.numeric", provides: [NUMERIC_CAPABILITY], acceptsEffects: [...NUMERIC_EFFECT_IDS] };
+}
+function registerNumericSystem(registry) {
+  return registry.register(numericSystemDefinition());
+}
+function validateNumericTarget(value) {
+  const target = record6(value, "Numeric target");
+  exactKeys6(target, ["type", "entityId", "stateId"], "Numeric target");
+  if (target.type !== "numeric")
+    throw new Error("Numeric target type must be 'numeric'");
+  if (typeof target.entityId !== "string" || target.entityId.length === 0)
+    throw new Error("Numeric target requires a non-empty entityId");
+  if (typeof target.stateId !== "string" || target.stateId.length === 0)
+    throw new Error("Numeric target requires a non-empty stateId");
+}
+function validateNumericEffectSettings(value) {
+  const effect = record6(value, "Numeric effect");
+  exactKeys6(effect, ["schemaVersion", "type", "target", "typeValue"], "Numeric effect");
+  if (effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric effect schema version");
+  validateNumericTarget(effect.target);
+  if (effect.type === NUMERIC_SET_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric set", "value");
+  else if (effect.type === NUMERIC_ADD_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric add", "amount");
+  else if (effect.type === NUMERIC_RESET_EFFECT_ID)
+    exactKeys6(record6(effect.typeValue, "Numeric reset payload"), [], "Numeric reset payload");
+  else
+    throw new Error(`Unknown numeric effect '${String(effect.type)}'`);
+}
+function validateNumericPayload2(payload, label, key) {
+  const value = record6(payload, `${label} payload`);
+  exactKeys6(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record6(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys6(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
 var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
 function createEngineEffectComposition(effects) {
   const composition = { schemaVersion: 1, type: ENGINE_EFFECT_COMPOSITION_TYPE, effects: structuredClone([...effects]) };
@@ -1783,6 +1858,100 @@ function validateEngineEffectComposition(value) {
     if (!effect || typeof effect !== "object" || Array.isArray(effect) || typeof effect.type !== "string")
       throw new Error("Composition children must be Engine effects");
   });
+}
+var COLLISION_COMMAND_TYPE = "collision.command";
+function createCollisionCommandBinding(effect) {
+  const binding = { schemaVersion: 1, type: COLLISION_COMMAND_TYPE, effect: structuredClone(effect) };
+  validateCollisionCommandBinding(binding);
+  return binding;
+}
+function validateCollisionCommandBinding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed collision command binding");
+  const binding = value;
+  if (Object.keys(binding).some((key) => !["schemaVersion", "type", "effect"].includes(key)) || Object.keys(binding).length !== 3)
+    throw new Error("Malformed collision command binding");
+  if (binding.schemaVersion !== 1 || binding.type !== COLLISION_COMMAND_TYPE)
+    throw new Error("Unsupported collision command binding");
+  validateRelativeEffect(binding.effect);
+}
+function validateRelativeEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision command effect must be an object");
+  const effect = value;
+  if (effect.type === "effect.composition") {
+    validateEngineEffectComposition(effect);
+    for (const child of effect.effects)
+      validateRelativeEffect(child);
+    return;
+  }
+  if (typeof effect.type !== "string" || effect.type.length === 0 || effect.schemaVersion !== 1 || !("typeValue" in effect) || "target" in effect)
+    throw new Error("Collision command must be a target-relative Engine effect");
+  assertJsonValue(effect.typeValue);
+}
+var NUMERIC_STATE_SCHEMA_VERSION = 1;
+var NUMERIC_THRESHOLD_COMPARATORS = ["below", "below-or-equal", "above", "above-or-equal"];
+function validateNumericThresholdBindings(value) {
+  if (!Array.isArray(value))
+    throw new Error("Numeric threshold bindings must be an array");
+  const bindings = value.map((binding) => {
+    validateNumericThresholdBinding(binding);
+    return structuredClone(binding);
+  });
+  if (new Set(bindings.map((binding) => binding.id)).size !== bindings.length)
+    throw new Error("Numeric threshold IDs must be unique");
+}
+function validateNumericThresholdBinding(value) {
+  const binding = record7(value, "Numeric threshold binding");
+  knownKeys2(binding, ["schemaVersion", "id", "resetValue", "thresholds"], "Numeric threshold binding");
+  if (binding.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  identifier(binding.id, "Numeric threshold ID");
+  if (binding.resetValue !== undefined && (typeof binding.resetValue !== "number" || !Number.isFinite(binding.resetValue)))
+    throw new Error("Numeric resetValue must be finite");
+  if (!Array.isArray(binding.thresholds))
+    throw new Error("Numeric threshold binding requires thresholds");
+  binding.thresholds.forEach(validateNumericThreshold);
+}
+function validateNumericThreshold(value) {
+  const threshold = record7(value, "Numeric threshold");
+  exactKeys7(threshold, ["schemaVersion", "comparator", "value", "effects"], "Numeric threshold");
+  if (threshold.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  if (!NUMERIC_THRESHOLD_COMPARATORS.includes(threshold.comparator))
+    throw new Error("Unknown numeric threshold comparator");
+  if (typeof threshold.value !== "number" || !Number.isFinite(threshold.value))
+    throw new Error("Numeric threshold value must be finite");
+  if (!Array.isArray(threshold.effects) || threshold.effects.length === 0)
+    throw new Error("Numeric threshold requires at least one follow-up effect");
+  threshold.effects.forEach(validateRelativeEffect2);
+}
+function validateRelativeEffect2(value) {
+  const effect = record7(value, "Numeric threshold effect");
+  if (Object.keys(effect).some((key) => !["schemaVersion", "type", "typeValue"].includes(key)) || Object.keys(effect).length !== 3)
+    throw new Error("Numeric threshold effects cannot declare their own target");
+  if (effect.schemaVersion !== undefined && effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric threshold effect schema version");
+  if (typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Numeric threshold effect requires a type");
+  assertJsonValue(effect.typeValue);
+}
+function identifier(value, label) {
+  if (typeof value !== "string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(value))
+    throw new Error(`${label} must be a stable identifier`);
+}
+function record7(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys7(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
+function knownKeys2(value, keys, label) {
+  if (Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
 }
 
 var engine = {
@@ -2761,6 +2930,7 @@ function validatePlayerMass(mass) {
     throw new Error("Player mass must be a finite positive number");
 }
 function createPlayerSettings(overrides = {}) {
+  validateNumericThresholdBindings(overrides.numericThresholds ?? []);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -2783,8 +2953,25 @@ function createPlayerSettings(overrides = {}) {
     isDrawingEnabled: overrides.isDrawingEnabled ?? true,
     effects: (overrides.effects ?? []).map((effect) => ({ ...effect })),
     inventory: (overrides.inventory ?? []).map((item) => ({ ...item })),
-    ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}
+    ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+    numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
+}
+function createDefaultNumericThresholdBindings() {
+  return [{
+    schemaVersion: 1,
+    id: "hp",
+    thresholds: [{
+      schemaVersion: 1,
+      comparator: "below-or-equal",
+      value: 0,
+      effects: [
+        { schemaVersion: 1, type: "movement.set-velocity", typeValue: { x: 0, y: 0 } },
+        { schemaVersion: 1, type: "participation.set-physics", typeValue: { enabled: false } },
+        { schemaVersion: 1, type: "participation.set-drawing", typeValue: { enabled: false } }
+      ]
+    }]
+  }];
 }
 
 class SeededRandom {
@@ -3623,6 +3810,8 @@ class Player {
   isDrawingEnabled = true;
   items = [];
   itemEffects = [];
+  numericThresholds = [];
+  numericEffectDispatcher;
   effectAlways = [];
   effectCollision = [];
   effectRound = [];
@@ -3659,6 +3848,8 @@ class Player {
     for (const effect of settings.itemEffects ?? [])
       validateRuntimeItemEffectSettings(effect);
     this.itemEffects = (settings.itemEffects ?? []).map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
+    validateNumericThresholdBindings(settings.numericThresholds ?? []);
+    this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
     this.effectCollision = [];
     this.effectRound = [];
@@ -3737,13 +3928,43 @@ class Player {
   getSize() {
     return { x: this.size, y: this.size };
   }
-  addHP(hp) {
-    this.hp += hp;
-    if (this.hp <= 0)
-      this.setIsDead(true);
-  }
   getHP() {
     return this.hp;
+  }
+  getNumericValue(stateId) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    return this.hp;
+  }
+  setNumericValue(stateId, value) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!Number.isFinite(value))
+      throw new Error("Numeric state value must be finite");
+    this.hp = value;
+  }
+  setNumericEffectDispatcher(dispatcher) {
+    this.numericEffectDispatcher = dispatcher;
+  }
+  dispatchNumericAdd(stateId, amount) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!this.numericEffectDispatcher)
+      throw new Error("Numeric effect dispatcher is not attached");
+    this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.add", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { amount } });
+  }
+  dispatchNumericSet(stateId, value) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!this.numericEffectDispatcher)
+      throw new Error("Numeric effect dispatcher is not attached");
+    this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.set", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { value } });
+  }
+  getNumericResetValue(stateId) {
+    return this.numericThresholds.find((binding) => binding.id === stateId)?.resetValue;
+  }
+  getNumericThresholds(stateId) {
+    return this.numericThresholds.filter((binding) => binding.id === stateId).map((binding) => structuredClone(binding));
   }
   setColor(color) {
     this.color = color;
@@ -3776,9 +3997,6 @@ class Player {
   physicsEnabled() {
     return this.isPhysicsEnabled;
   }
-  setHP(hp) {
-    this.hp = hp;
-  }
   drawingEnabled() {
     return this.isDrawingEnabled;
   }
@@ -3793,10 +4011,6 @@ class Player {
   }
   setSetting(key, value) {
     switch (key) {
-      case "hp":
-        if (typeof value === "number")
-          this.setHPAndDeath(value);
-        break;
       case "mass":
         if (typeof value === "number")
           this.setMass(value);
@@ -3834,9 +4048,6 @@ class Player {
   addSetting(key, value) {
     if (typeof value === "number") {
       switch (key) {
-        case "hp":
-          this.setHPAndDeath(this.hp + value);
-          return;
         case "mass":
           this.setMass(this.mass + value);
           return;
@@ -3860,9 +4071,6 @@ class Player {
   removeSetting(key, value) {
     if (typeof value === "number") {
       switch (key) {
-        case "hp":
-          this.setHPAndDeath(this.hp - value);
-          return;
         case "mass":
           this.setMass(this.mass - value);
           return;
@@ -3921,7 +4129,8 @@ class Player {
         ...sett2
       ],
       inventory: this.items.map((item) => ({ ...item })),
-      ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}
+      ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+      ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
   setTeam(team) {
@@ -4015,11 +4224,6 @@ class Player {
       default:
         console.error("TODO", trigger);
     }
-  }
-  setHPAndDeath(hp) {
-    this.hp = hp;
-    if (hp <= 0)
-      this.setIsDead(true);
   }
 }
 function isVector2(value) {
@@ -4975,8 +5179,8 @@ class PhysicsSystem {
       }
     } else {
       contactedPairs.add(pairKey);
-      this.onCollision?.(entityA, entityB);
       this.strategy.handleCollision(entityA, entityB);
+      this.onCollision?.(entityA, entityB);
     }
   }
   collectCurrentContactPairs(ctx) {
@@ -5709,6 +5913,46 @@ class ParticipationSystem {
   }
 }
 
+class NumericSystem {
+  systemId = "core.numeric";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return NUMERIC_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (target.type !== "numeric")
+      throw new Error("Numeric effect requires a numeric target");
+    validateNumericEffectSettings(effect);
+    const owner = target.entity;
+    const previous = owner.getNumericValue(target.stateId);
+    const next = effect.type === NUMERIC_RESET_EFFECT_ID ? owner.getNumericResetValue(target.stateId) : effect.type === NUMERIC_SET_EFFECT_ID ? effect.typeValue.value : effect.type === NUMERIC_ADD_EFFECT_ID ? previous + effect.typeValue.amount : undefined;
+    if (next === undefined)
+      throw new Error(`Numeric reset requires resetValue for '${target.stateId}'`);
+    if (!Number.isFinite(next))
+      throw new Error("Numeric mutation produced a non-finite value");
+    owner.setNumericValue(target.stateId, next);
+    return owner.getNumericThresholds(target.stateId).flatMap((binding) => binding.thresholds).filter((threshold) => crossedThreshold(previous, next, threshold)).flatMap((threshold) => threshold.effects.map((effect2) => structuredClone(effect2)));
+  }
+}
+function crossedThreshold(previous, current, threshold) {
+  return !matches(previous, threshold) && matches(current, threshold);
+}
+function matches(value, threshold) {
+  switch (threshold.comparator) {
+    case "below":
+      return value < threshold.value;
+    case "below-or-equal":
+      return value <= threshold.value;
+    case "above":
+      return value > threshold.value;
+    case "above-or-equal":
+      return value >= threshold.value;
+  }
+}
+
 var ENVIRONMENT_SCHEMA_VERSION = 1;
 function validateEnvironmentalMechanics(value) {
   if (!Array.isArray(value))
@@ -5906,6 +6150,10 @@ function createSystemFromSettings(settings, restored = new Map) {
       if (Object.keys(state).length)
         throw new Error("Malformed participation settings");
       return new ParticipationSystem;
+    case "core.numeric":
+      if (Object.keys(state).length)
+        throw new Error("Malformed numeric settings");
+      return new NumericSystem;
     default:
       throw new Error(`Unknown system ID '${settings.systemId}'`);
   }
@@ -5921,10 +6169,10 @@ function createPlayerStartPoints(team, players) {
 }
 var friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
 var defaultEffects = [{ trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }];
-var deadly = { schemaVersion: 1, trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.Multi" /* Multi */, typeValue: [
-  new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings(),
-  new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings()
-] };
+var deadly = createCollisionCommandBinding(createEngineEffectComposition([
+  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+]));
 var IceMap = {
   schemaVersion: 1,
   screenResolution: { x, y },
@@ -5939,12 +6187,12 @@ var IceMap = {
     { id: "ice.wall.bottom-right", type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
     { id: "ice.wall.right", type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
     { id: "ice.wall.center", type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.hazard.top-left", type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { id: "ice.hazard.top-right", type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { id: "ice.hazard.bottom-right", type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { id: "ice.hazard.bottom-left", type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { id: "ice.hazard.center-top", type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { id: "ice.hazard.center-bottom", type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] }
+    { id: "ice.hazard.top-left", type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.top-right", type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-right", type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-left", type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-top", type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-bottom", type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] }
   ]
 };
 var iceMap_default = { createPlayerStartPoints, IceMap };
@@ -5976,8 +6224,8 @@ class TriggerDefinitionCatalog {
   }
 }
 function validateTriggerDefinition(value) {
-  const definition = record6(value, "Trigger definition");
-  exactKeys6(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  const definition = record8(value, "Trigger definition");
+  exactKeys8(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
   if (definition.schemaVersion !== 1)
     throw new Error("Unsupported trigger definition schema version");
   if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
@@ -5990,12 +6238,12 @@ function validateTriggerDefinition(value) {
 function isEngineComposition(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
 }
-function record6(value, label) {
+function record8(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys6(value, keys, label) {
+function exactKeys8(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -6102,6 +6350,15 @@ function isEffect(value) {
 function isBoundary2(value) {
   if (!isRecord7(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
     return false;
+  if (value.collisionCommands !== undefined) {
+    if (!Array.isArray(value.collisionCommands))
+      return false;
+    try {
+      value.collisionCommands.forEach(validateCollisionCommandBinding);
+    } catch {
+      return false;
+    }
+  }
   if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))
     return false;
   if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
@@ -6223,7 +6480,8 @@ class StructureCircle {
   alwaysEffects = [];
   roundEffects = [];
   collisionRole;
-  constructor(x2, y2, r, color, effects, role, id, physicsEnabled, drawingEnabled) {
+  collisionCommands;
+  constructor(x2, y2, r, color, effects, role, id, physicsEnabled, drawingEnabled, collisionCommands = []) {
     this.position = { x: x2, y: y2 };
     this.r = r;
     this.shape = 0 /* CIRCLE */;
@@ -6235,6 +6493,7 @@ class StructureCircle {
     this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
     this.isPhysicsEnabled = physicsEnabled ?? true;
     this.isDrawingEnabled = drawingEnabled ?? true;
+    this.collisionCommands = structuredClone(collisionCommands);
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
@@ -6264,9 +6523,6 @@ class StructureCircle {
   }
   tick(_dt) {}
   setPos(pos) {
-    if (this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9 || (this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)) {
-      console.error("STRUCTURE: Position weicht massiv ab!");
-    }
     this.position.x = pos.x;
     this.position.y = pos.y;
   }
@@ -6339,6 +6595,9 @@ class StructureCircle {
     if (typeof value === "boolean")
       this.setSetting(key, !value);
   }
+  getCollisionCommands() {
+    return this.collisionCommands;
+  }
   setColor(color) {
     this.color = color;
   }
@@ -6368,6 +6627,8 @@ class StructureCircle {
       out.physicsEnabled = this.isPhysicsEnabled;
       out.drawingEnabled = this.isDrawingEnabled;
     }
+    if (this.collisionCommands.length > 0)
+      out.collisionCommands = structuredClone(this.collisionCommands);
     return out;
   }
   getType() {
@@ -6395,7 +6656,7 @@ class StructureLine {
   serializeState;
   effects = [];
   friction;
-  constructor(x2, y2, x22, y22, color, effects = [], id, physicsEnabled, drawingEnabled) {
+  constructor(x2, y2, x22, y22, color, effects = [], id, physicsEnabled, drawingEnabled, _collisionCommands = []) {
     if (!Number.isFinite(x2) || !Number.isFinite(y2) || !Number.isFinite(x22) || !Number.isFinite(y22)) {
       throw new Error("Line structures must have finite coordinates");
     }
@@ -6498,6 +6759,9 @@ class StructureLine {
     if (typeof value === "boolean")
       this.setSetting(key, !value);
   }
+  getCollisionCommands() {
+    return [];
+  }
   setColor(color) {
     this.color = color;
   }
@@ -6547,8 +6811,9 @@ class StructureRectangle {
   id;
   serializeState;
   collisionRole;
+  collisionCommands;
   friction;
-  constructor(x2, y2, w, h, color, effects = [], role, id, physicsEnabled, drawingEnabled) {
+  constructor(x2, y2, w, h, color, effects = [], role, id, physicsEnabled, drawingEnabled, collisionCommands = []) {
     this.x = x2;
     this.y = y2;
     this.w = w;
@@ -6562,6 +6827,7 @@ class StructureRectangle {
     this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
     this.isPhysicsEnabled = physicsEnabled ?? true;
     this.isDrawingEnabled = drawingEnabled ?? true;
+    this.collisionCommands = structuredClone(collisionCommands);
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
@@ -6661,6 +6927,9 @@ class StructureRectangle {
     if (typeof value === "boolean")
       this.setSetting(key, !value);
   }
+  getCollisionCommands() {
+    return this.collisionCommands;
+  }
   setColor(color) {
     this.color = color;
   }
@@ -6691,6 +6960,8 @@ class StructureRectangle {
       out.physicsEnabled = this.isPhysicsEnabled;
       out.drawingEnabled = this.isDrawingEnabled;
     }
+    if (this.collisionCommands.length > 0)
+      out.collisionCommands = structuredClone(this.collisionCommands);
     return out;
   }
   getType() {
@@ -6710,13 +6981,13 @@ class FullStructure {
       throw new Error("Runtime structures require an explicit canonical ID");
     switch (str.type) {
       case 0 /* CIRCLE */:
-        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled);
+        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
       case 2 /* RECTANGLE */:
-        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled);
+        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
       case 1 /* LINE */:
-        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled);
+        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
     }
   }
@@ -6746,6 +7017,9 @@ class FullStructure {
   }
   removeSetting(key, value) {
     this.str.removeSetting(key, value);
+  }
+  getCollisionCommands() {
+    return this.str.getCollisionCommands();
   }
   getFriction() {
     return this.str.getFriction();
@@ -6812,6 +7086,12 @@ function migrateEffectSettings(value) {
     throw new Error("Effect migration requires an object");
   if (value.schemaVersion !== undefined && value.schemaVersion !== EFFECT_SCHEMA_VERSION)
     throw new Error(`Unsupported historical Effect schema version: ${String(value.schemaVersion)}`);
+  if (value.type === "EffectType.Damage") {
+    const payload = isRecord8(value.typeValue) ? value.typeValue : undefined;
+    if (!payload || typeof payload.damage !== "number" || !Number.isFinite(payload.damage) || payload.damage < 0)
+      throw new Error("Historical Damage payload is invalid");
+    return { schemaVersion: EFFECT_SCHEMA_VERSION, type: "numeric.add" /* NumericAdd */, typeValue: { stateId: "hp", amount: -payload.damage } };
+  }
   const effect = { schemaVersion: EFFECT_SCHEMA_VERSION, type: value.type, typeValue: structuredClone(value.typeValue) };
   if (effect.type === "EffectType.Multi" && Array.isArray(effect.typeValue))
     effect.typeValue = effect.typeValue.map(migrateEffectSettings);
@@ -6985,6 +7265,8 @@ function clonePickupState(state) {
 }
 
 function dispatchPredefinedEffect(options) {
+  if ((options.depth ?? 0) > 32)
+    throw new Error("Predefined effect follow-up depth exceeded");
   const effect = validateEnvelope(options.effect);
   const interpreters = options.systems.filter(isPredefinedEffectSystem).filter((system) => system.acceptsEffect(effect.type));
   if (interpreters.length === 0)
@@ -6992,7 +7274,11 @@ function dispatchPredefinedEffect(options) {
   if (interpreters.length > 1)
     throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
   const target = resolveTarget(options.ctx, effect.target, options.positionOverride);
-  interpreters[0].applyEffect(options.ctx, effect, target);
+  const followUps = interpreters[0].applyEffect(options.ctx, effect, target);
+  for (const followUp of followUps ?? []) {
+    const bound = followUp.target === undefined ? { ...followUp, target: targetReference(target) } : followUp;
+    dispatchPredefinedEffect({ ...options, effect: bound, depth: (options.depth ?? 0) + 1 });
+  }
 }
 function dispatchPredefinedComposition(options) {
   validateEngineEffectComposition(options.composition);
@@ -7019,6 +7305,16 @@ function resolveTarget(ctx, value, positionOverride) {
       throw new Error(`Unknown entity target '${target.entityId}'`);
     return { type: "entity", entity };
   }
+  if (target.type === "numeric") {
+    if (typeof target.entityId !== "string" || target.entityId.length === 0)
+      throw new Error("Numeric target requires a non-empty entityId");
+    if (typeof target.stateId !== "string" || target.stateId.length === 0)
+      throw new Error("Numeric target requires a non-empty stateId");
+    const entity = ctx.entities.getEntityById(target.entityId);
+    if (!entity)
+      throw new Error(`Unknown numeric entity target '${target.entityId}'`);
+    return { type: "numeric", entity, stateId: target.stateId };
+  }
   if (target.type === "structure") {
     if (typeof target.structureId !== "string" || target.structureId.length === 0)
       throw new Error("Structure target requires a non-empty structureId");
@@ -7028,6 +7324,15 @@ function resolveTarget(ctx, value, positionOverride) {
     return { type: "structure", structure, ...positionOverride ? { positionOverride: { ...positionOverride } } : {} };
   }
   throw new Error(`Unknown predefined target type '${String(target.type)}'`);
+}
+function targetReference(target) {
+  if (target.type === "entity")
+    return { type: "entity", entityId: String(target.entity.getId()) };
+  if (target.type === "numeric")
+    return { type: "entity", entityId: String(target.entity.getId()) };
+  if (target.type === "structure")
+    return { type: "structure", structureId: String(target.structure.getId()) };
+  throw new Error("Counter targets cannot receive relative follow-up effects");
 }
 function validateEnvelope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -7045,6 +7350,32 @@ function validateEnvelope(value) {
 }
 function isPredefinedEffectSystem(system) {
   return "acceptsEffect" in system && typeof system.acceptsEffect === "function" && "applyEffect" in system && typeof system.applyEffect === "function";
+}
+
+function dispatchCollisionCommands(options) {
+  const target = { type: "entity", entityId: String(options.target.getId()) };
+  for (const binding of options.commands) {
+    const effect = binding.effect;
+    if (effect.type === "effect.composition" && "effects" in effect) {
+      dispatchPredefinedComposition({
+        ctx: options.ctx,
+        systems: options.systems,
+        composition: bindComposition(effect, target)
+      });
+    } else {
+      dispatchPredefinedEffect({
+        ctx: options.ctx,
+        systems: options.systems,
+        effect: { ...effect, target }
+      });
+    }
+  }
+}
+function bindComposition(composition, target) {
+  return {
+    ...composition,
+    effects: composition.effects.map((effect) => ({ ...effect, target }))
+  };
 }
 
 var ALLOW_ALL_TARGETS = {
@@ -7458,16 +7789,10 @@ var falltuerItem = createItem({
   useLimit: { perTurn: 1, perGame: 1 },
   targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 }
 });
-var falltuerDeathCollision = {
-  schemaVersion: 1,
-  trigger: "EffectTrigger.Collision" /* Collision */,
-  triggerValue: [],
-  type: "EffectType.Multi" /* Multi */,
-  typeValue: [
-    new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } }).toSettings(),
-    new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }).toSettings()
-  ]
-};
+var falltuerDeathCollision = createCollisionCommandBinding(createEngineEffectComposition([
+  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+]));
 var falltuerStructure = {
   id: FALLTUER_STRUCTURE_ID,
   type: 0 /* CIRCLE */,
@@ -7478,7 +7803,8 @@ var falltuerStructure = {
   role: "solid",
   physicsEnabled: false,
   drawingEnabled: false,
-  effects: [falltuerDeathCollision]
+  effects: [],
+  collisionCommands: [falltuerDeathCollision]
 };
 var falltuerPosition = { schemaVersion: 1, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };
 var falltuerEnablePhysics = { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
@@ -9103,6 +9429,10 @@ class GameHandler {
       this.recordFeedback("collision" /* Collision */, { ...ids[0] ? { actorId: ids[0] } : {}, ...ids.length > 1 ? { targetIds: ids.slice(1) } : {} });
       if (ids.length === 1)
         this.recordFeedback("hazard" /* Hazard */, { actorId: ids[0], data: { structure: true } });
+      const structure = [a, b].find((value) => typeof value.getCollisionCommands === "function");
+      const entity = [a, b].find((value) => typeof value.getId === "function" && typeof value.getTeam === "function");
+      if (structure && entity)
+        dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
     };
   }
   setWorldSize(worldSize) {
@@ -9236,6 +9566,8 @@ class GameHandler {
   }
   start(state) {
     this.context.state = state ?? "GameState.Your_turn" /* Your_turn */;
+    for (const entity of this.entityManager.getEntities())
+      entity.setNumericEffectDispatcher((effect) => this.dispatchEngineEffect(effect));
     return this;
   }
   addStructure(structure) {
@@ -9697,7 +10029,7 @@ class GameHandlerBuilder {
     const physics = new defaultPhysics(friction2);
     const physicsSystem = new PhysicsSystem(physics);
     this.engine.attachFeedbackToPhysics(physicsSystem);
-    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
+    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
     return this;
   }
   fromSettings(gameSettings) {
@@ -9732,6 +10064,10 @@ class GameHandlerBuilder {
       if (byId.has("core.simulator"))
         restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator"), restored));
       this.engine.replaceSystems(systemOrder.map((id) => restored.get(id)));
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.numeric"))
+        this.engine.addSystem(new NumericSystem);
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.participation"))
+        this.engine.addSystem(new ParticipationSystem);
       const restoredPhysics = this.engine.getSystems().find((system) => system.systemId === "core.physics");
       if (!restoredPhysics)
         throw new Error("System snapshot must include core.physics");
@@ -9747,7 +10083,6 @@ class GameHandlerBuilder {
     this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? []);
     if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some((definition) => ("effects" in definition.effect))) {
       this.engine.addSystem(new TransformSystem);
-      this.engine.addSystem(new ParticipationSystem);
     }
     players.forEach((player) => this.addPlayer(createRuntimePlayer(player)));
     if (!("state" in gameSettings)) {
@@ -9917,16 +10252,17 @@ function hazardToBoundary(hazard) {
     y: zone.y,
     r: zone.r,
     color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-    effects: [hazardEffect(hazard)]
+    effects: hazard.type === "kill-zone" ? [] : [hazardEffect(hazard)],
+    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : {}
   };
 }
+function lethalCollisionCommand() {
+  return createCollisionCommandBinding(createEngineEffectComposition([
+    { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+    { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+  ]));
+}
 function hazardEffect(hazard) {
-  if (hazard.type === "kill-zone") {
-    return { schemaVersion: 1, trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.Multi" /* Multi */, typeValue: [
-      { schemaVersion: 1, type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "physicsEnabled", value: false } },
-      { schemaVersion: 1, type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "drawingEnabled", value: false } }
-    ] };
-  }
   const config = hazard.config;
   const radians = config.angle * Math.PI / 180;
   return {
@@ -10011,8 +10347,8 @@ function validateGameMode(mode) {
 function createMatchSystemProfile(teamCount) {
   if (!Number.isSafeInteger(teamCount) || teamCount < 1)
     throw new Error("A match system profile requires at least one team");
-  const registry = registerMovementSystem(new EngineSystemRegistry).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
-  const framework = registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"]);
+  const registry = registerParticipationSystem(registerNumericSystem(registerMovementSystem(new EngineSystemRegistry))).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
+  const framework = registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning", "core.numeric", "core.participation"]);
   assertJsonValue(framework.systems);
   return framework;
 }
@@ -10340,9 +10676,9 @@ function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record7 = value;
-  const metadata = record7.metadata;
-  return String(record7.id ?? metadata?.id ?? "");
+  const record9 = value;
+  const metadata = record9.metadata;
+  return String(record9.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
@@ -10516,7 +10852,10 @@ class KoreMapBuilder {
     this.assertHazardZone(settings);
     this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
     const structureIndex = this.structures.length;
-    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.multi(kore.effects.modifySetting({ operation: "set" /* Set */, key: "physicsEnabled", value: false }), kore.effects.modifySetting({ operation: "set" /* Set */, key: "drawingEnabled", value: false }))] });
+    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
+      { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+      { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+    ]))] });
     this.generatedHazardStructureIndexes.add(structureIndex);
     return this;
   }
@@ -10771,8 +11110,8 @@ function stableAuthoringHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function createDefaultKoreFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
-  return registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+  const registry = new EngineSystemRegistry().register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] }).register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] }).register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
+  return registry.select(["core.numeric", "core.participation", "core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 var kore = {
   engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
@@ -10832,7 +11171,7 @@ var kore = {
     damage(damage) {
       if (!Number.isFinite(damage) || damage < 0)
         throw new Error("Damage must be a non-negative finite number");
-      return new EffectDamage({ typeValue: { damage } });
+      return new EffectNumericAdd({ typeValue: { stateId: "hp", amount: -damage } });
     },
     mass(mass) {
       if (!Number.isFinite(mass) || mass <= 0)
@@ -10922,7 +11261,7 @@ var kore = {
     rulePhase: { item: "item" /* Item */, aim: "aim" /* Aim */, charge: "charge" /* Charge */, push: "push" /* Push */, physics: "physics" /* Physics */, complete: "complete" /* Complete */ },
     winCondition: { lastTeamStanding: "last-team-standing" /* LastTeamStanding */ },
     shape: { circle: 0 /* CIRCLE */, rectangle: 2 /* RECTANGLE */, line: 1 /* LINE */ },
-    effectType: { physics: "EffectType.Physics" /* Physics */, movement: "EffectType.Movement" /* Movement */, damage: "EffectType.Damage" /* Damage */, multi: "EffectType.Multi" /* Multi */, modifySetting: "EffectType.ModifySetting" /* ModifySetting */ },
+    effectType: { physics: "EffectType.Physics" /* Physics */, movement: "EffectType.Movement" /* Movement */, multi: "EffectType.Multi" /* Multi */, modifySetting: "EffectType.ModifySetting" /* ModifySetting */ },
     itemEffectType: {
       modifyForce: "modifyForce" /* ModifyForce */,
       modifyRotation: "modifyRotation" /* ModifyRotation */,

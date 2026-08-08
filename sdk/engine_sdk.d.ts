@@ -89,6 +89,12 @@ export declare const ENGINE_EFFECT_COMPOSITION_TYPE: "effect.composition";
 export interface EngineEffectComposition { schemaVersion: 1; type: "effect.composition"; effects: EngineEffectSettings[]; }
 export declare function createEngineEffectComposition(effects: readonly EngineEffectSettings[]): EngineEffectComposition;
 export declare function validateEngineEffectComposition(value: unknown): asserts value is EngineEffectComposition;
+export declare const COLLISION_COMMAND_SCHEMA_VERSION: 1;
+export declare const COLLISION_COMMAND_TYPE: "collision.command";
+export interface CollisionCommandBinding { schemaVersion: 1; type: "collision.command"; effect: EngineEffectSettings | EngineEffectComposition; }
+export declare function createCollisionCommandBinding(effect: EngineEffectSettings | EngineEffectComposition): CollisionCommandBinding;
+export declare function isCollisionCommandBinding(value: unknown): value is CollisionCommandBinding;
+export declare function validateCollisionCommandBinding(value: unknown): asserts value is CollisionCommandBinding;
 export declare const COUNTER_CAPABILITY: "counter.state";
 export declare const COUNTER_SET_EFFECT_ID: "counter.set";
 export declare const COUNTER_ADD_EFFECT_ID: "counter.add";
