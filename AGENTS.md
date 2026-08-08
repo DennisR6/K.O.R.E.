@@ -68,6 +68,7 @@ This bidirectional lifecycle guarantees that runtime state is always reproducibl
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
 - `sdk/` contains generated standalone ESM runtime bundles and TypeScript declarations for the generic Engine, UI, Audio, Presentation, and KORE SDK entry points. Regenerate it with `bun run sdk:build`; do not edit generated files manually.
 - `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
+- `docs/item-convergence.md` is the durable current Item Convergence inventory and ranking. After each completed Item migration, refresh CocoIndex, rerank remaining official Items from repository evidence, update that document with the baseline commit, and select the next Item only from the refreshed ranking.
 - `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
 - `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph. `package.json` plus the tracked `bun.lock` describe the active dependency graph. Use Bun; do not casually run npm install or regenerate either lock.
 
