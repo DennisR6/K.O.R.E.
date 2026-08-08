@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { EffectModifyForce, applyForceModifiers } from "../src/effects/modifyForce.ts";
+import { applyActionModifiers, createActionModifier } from "../src/engine/contracts/actionModifier.ts";
 import { EffectModifyRotation, applyRotationModifiers } from "../src/effects/modifyRotation.ts";
 import { EffectLockRotation } from "../src/effects/lockRotation.ts";
 import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
@@ -15,9 +15,9 @@ import { EffectTrigger, EffectType } from "../src/effects/types.ts";
 
 test("mixed effect stacking and conflict resolution behave deterministically", () => {
 	// Stacking force multipliers (e.g. Anker 0.5 * Power-Dash 1.5 = 0.75)
-	const forceRes = applyForceModifiers({ angle: 0, power: 10 }, [
-		new EffectModifyForce({ typeValue: { factor: 0.5 } }),
-		new EffectModifyForce({ typeValue: { factor: 1.5 } }),
+	const forceRes = applyActionModifiers({ angle: 0, power: 10 }, [
+		createActionModifier({ id: "anker", action: "force", operation: "scale", factor: 0.5, remainingUses: 1, sourceOrder: 0 }),
+		createActionModifier({ id: "power-dash", action: "force", operation: "scale", factor: 1.5, remainingUses: 1, sourceOrder: 0 }),
 	]);
 	expect(forceRes.power).toBe(7.5);
 	expect(forceRes.angle).toBe(0);

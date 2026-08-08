@@ -65,6 +65,7 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getPendingActionModifiers(): ActionModifierSettings[]
 	applyPendingActionModifiers(input: AcceptedForceInput): AcceptedForceInput
 	consumePendingActionModifiers(): void
+	advancePendingActionModifierLifetimes(): void
 	removePendingActionModifiers(sourceIds: ReadonlySet<string>): void
 	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
 	dispatchNumericAdd(stateId: string, amount: number): void;

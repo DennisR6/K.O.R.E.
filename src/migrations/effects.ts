@@ -30,18 +30,20 @@ export function migrateFullEffectSettings(value: unknown): FullEffectSettings {
 export function migrateGameSettingsEffects<T extends GameSettings | EngineSettings>(settings: T): T {
 	const copy = structuredClone(settings) as T;
 	copy.items = copy.items.map(migrateItemDocument);
+	const itemsById = new Map(copy.items.map(item => [item.id, item]));
 	copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
 	copy.players = copy.players.map(player => {
 		const historicalActionModifiers = (player.itemEffects ?? []).flatMap((effect, index) => {
 			if (effect.type !== "modifyForce") return [];
 			const factor = effect.typeValue.factor;
 			if (typeof factor !== "number") throw new Error("Historical modifyForce effect requires a numeric factor");
+			const sourceItem = effect.itemId === undefined ? undefined : itemsById.get(effect.itemId);
 			return [createActionModifier({
 				id: `${player.id}:action-modifier:${index}`,
 				action: "force",
 				operation: "scale",
 				factor,
-				remainingUses: 1,
+				...(sourceItem?.duration.type === "turns" ? { durationUnit: "turns" as const, duration: sourceItem.duration.value, remaining: sourceItem.duration.value } : { remainingUses: 1 }),
 				sourceId: effect.itemId,
 				sourceOrder: effect.order,
 			})];

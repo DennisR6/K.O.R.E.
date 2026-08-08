@@ -1,4 +1,3 @@
-import { EffectModifyForce } from "../effects/modifyForce.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../engine/contracts/deferredEffect.js";
 import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, type MovementForceFieldPayload } from "../engine/sdk/movementCapability.js";
@@ -8,6 +7,7 @@ import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
 import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../engine/contracts/temporalModifier.js";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { applyActionModifiers, createActionModifier } from "../engine/contracts/actionModifier.js";
 import {
 	ANKER_FORCE_FACTOR, DELAYED_MINE_DELAY_TICKS, DELAYED_MINE_FORCE, DELAYED_MINE_RADIUS,
 	FALLTUER_RADIUS, FREEZE_SHOT_DURATION_TURNS, FREEZE_SHOT_SPEED_FACTOR, JAEGERMEISTER_ELIXIER_DURATION_TURNS,
@@ -15,8 +15,8 @@ import {
 	POWER_DASH_FACTOR, VODKA_ZERO_MAX_VARIANCE_DEGREES,
 } from "./officialItems.js";
 
-export function applyAnkerForce(force: ForceInput): ForceInput { return new EffectModifyForce({ typeValue: { factor: ANKER_FORCE_FACTOR } }).applyToForce(force); }
-export function applyPowerDashForce(force: ForceInput): ForceInput { return new EffectModifyForce({ typeValue: { factor: POWER_DASH_FACTOR } }).applyToForce(force); }
+export function applyAnkerForce(force: ForceInput): ForceInput { return applyActionModifiers(force, [createActionModifier({ id: "official:anker", action: "force", operation: "scale", factor: ANKER_FORCE_FACTOR, remainingUses: 1 })]); }
+export function applyPowerDashForce(force: ForceInput): ForceInput { return applyActionModifiers(force, [createActionModifier({ id: "official:power-dash", action: "force", operation: "scale", factor: POWER_DASH_FACTOR, remainingUses: 1 })]); }
 
 export interface VerzoegerteMine { center: { x: number; y: number }; radius: number; deferred: DeferredEffectTemplate; force: MovementForceFieldPayload; }
 export function createVerzoegerteMine(center: { x: number; y: number }, delayTicks: number = DELAYED_MINE_DELAY_TICKS): VerzoegerteMine {

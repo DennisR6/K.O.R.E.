@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { migrateEffectSettings, migrateFullEffectSettings, migrateGameSettingsEffects, migrateItemDocument } from "../src/migrations/effects.ts";
 import { validateEffectSettings, validateFullEffectSettings } from "../src/effects/validate.ts";
 import { EffectType, EffectTrigger } from "../src/effects/types.ts";
+import { ankerItem } from "../src/item/officialItems.ts";
 
 test("the migration boundary upgrades historical unversioned Effects recursively", () => {
 	const migrated = migrateEffectSettings({ type: EffectType.Multi, typeValue: [{ type: "EffectType.Damage", typeValue: { damage: 5 } }] });
@@ -57,4 +58,23 @@ test("the migration boundary moves historical modifyForce state into pending act
 		sourceId: "power-dash",
 		sourceOrder: 0,
 	}]);
+});
+
+test("historical Anker modifyForce state restores its declared turn lifetime", () => {
+	const settings: any = {
+		players: [{ id: "actor-anker", itemEffects: [{ type: "modifyForce", typeValue: { factor: 0.5 }, itemId: "anker", order: 0 }], effects: [] }],
+		items: [ankerItem],
+		effects: [],
+		mapBoundarys: [],
+	};
+
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.pendingActionModifiers).toEqual([expect.objectContaining({
+		action: "force",
+		factor: 0.5,
+		durationUnit: "turns",
+		duration: 2,
+		remaining: 2,
+		sourceId: "anker",
+	})]);
 });

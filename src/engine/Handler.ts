@@ -48,10 +48,9 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isActionModifierTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
-import { EffectModifyForce } from "../effects/modifyForce.js";
 import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
@@ -527,6 +526,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => {
 			entity.resetItemUses();
 			entity.advanceTemporalModifiersTurn();
+			entity.advancePendingActionModifierLifetimes();
 			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
 		})
 		if (this.context.currTurn !== turnNumber) this.advanceStructureLifecyclesTurn();
@@ -911,13 +911,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (isStructureLifecycleTemplate(effect)) {
 				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
 				this.installStructureLifecycle(actor, item, effect, target.position);
-			} else if (effect instanceof EffectModifyForce) {
+			} else if (isActionModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Action modifiers require an entity target");
 				targetEntity.addPendingActionModifier(createActionModifier({
 					id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
 					action: "force",
 					operation: "scale",
 					factor: effect.factor,
+					...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
+					...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
 					sourceId: item.id,
 					sourceOrder: itemOrder(item),
 				}));

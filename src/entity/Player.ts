@@ -18,6 +18,7 @@ import { validateNumericThresholdBindings, type NumericThresholdBinding } from "
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
+import { advanceLifetime } from "../engine/contracts/lifetime.js";
 
 
 /**
@@ -348,6 +349,13 @@ export class Player implements IEntity {
 	}
 	public consumePendingActionModifiers(): void {
 		this.pendingActionModifiers = consumeActionModifiers(this.pendingActionModifiers)
+	}
+	public advancePendingActionModifierLifetimes(): void {
+		this.pendingActionModifiers = this.pendingActionModifiers.flatMap(modifier => {
+			if (modifier.durationUnit === undefined) return [modifier];
+			const next = advanceLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration!, remaining: modifier.remaining! });
+			return next ? [{ ...modifier, ...next }] : [];
+		});
 	}
 	public removePendingActionModifiers(sourceIds: ReadonlySet<string>): void {
 		this.pendingActionModifiers = this.pendingActionModifiers.filter(modifier => !modifier.sourceId || !sourceIds.has(modifier.sourceId))

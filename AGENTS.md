@@ -139,8 +139,6 @@ After every change, check whether this guide still reflects the implementation a
   handler, Player, MovementSystem, and circle/rectangle structure trigger paths;
   it also dispatches typed `round.start` activations at `GameHandler.startTurn()`;
   it does not alter serialized Effect settings.
-- `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
-  item actions, with deterministic stacking.
 - `src/effects/modifyRotation.ts`: serializable additive rotation modifier for
   item actions, with deterministic angle normalization.
 - `src/effects/lockRotation.ts`: serializable turn-counted rotation lock with
@@ -191,7 +189,8 @@ After every change, check whether this guide still reflects the implementation a
   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; Mini-Wall lowers to a generic timed canonical rectangle lifecycle and retains expired structures as dormant entries.
   Power-Dash lowers `modifyForce` into the generic entity-owned
   `pendingActionModifiers` contract and is consumed once at the accepted-shot
-  force boundary; Anker remains unqualified and is not migrated by that slice.
+  force boundary; Anker uses the same force operation with a two-turn lifetime
+  in the same pending-action contract.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;

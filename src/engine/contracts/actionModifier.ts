@@ -1,4 +1,5 @@
 import { assertJsonValue, type JsonValue } from "./systemSettings.js";
+import { validateLifetime } from "./lifetime.js";
 
 export const ACTION_MODIFIER_SCHEMA_VERSION = 1 as const;
 
@@ -14,7 +15,10 @@ export interface ActionModifierSettings {
 	action: "force";
 	operation: "scale";
 	factor: number;
-	remainingUses: number;
+	remainingUses?: number;
+	durationUnit?: "turns";
+	duration?: number;
+	remaining?: number;
 	sourceId?: string;
 	sourceOrder?: number;
 }
@@ -32,14 +36,17 @@ export function createActionModifierTemplate(input: ActionModifierTemplate): Act
 	return template;
 }
 
-export function createActionModifier(input: Omit<ActionModifierSettings, "schemaVersion" | "remainingUses"> & { remainingUses?: number }): ActionModifierSettings {
+export function createActionModifier(input: Omit<ActionModifierSettings, "schemaVersion">): ActionModifierSettings {
 	const modifier: ActionModifierSettings = {
 		schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION,
 		id: input.id,
 		action: input.action,
 		operation: input.operation,
 		factor: input.factor,
-		remainingUses: input.remainingUses ?? 1,
+		...(input.remainingUses === undefined ? {} : { remainingUses: input.remainingUses }),
+		...(input.durationUnit === undefined ? {} : { durationUnit: input.durationUnit }),
+		...(input.duration === undefined ? {} : { duration: input.duration }),
+		...(input.remaining === undefined ? {} : { remaining: input.remaining }),
 		...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
 		...(input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }),
 	};
@@ -64,7 +71,7 @@ export function consumeActionModifiers(modifiers: readonly ActionModifierSetting
 		.sort(compareModifiers)
 		.flatMap(modifier => {
 			validateActionModifier(modifier);
-			if (modifier.remainingUses <= 1) return [];
+			if (modifier.remainingUses === undefined || modifier.remainingUses <= 1) return modifier.remainingUses === undefined ? [structuredClone(modifier)] : [];
 			return [{ ...structuredClone(modifier), remainingUses: modifier.remainingUses - 1 }];
 		});
 }
@@ -76,7 +83,14 @@ export function validateActionModifier(value: unknown): asserts value is ActionM
 	if (typeof modifier.id !== "string" || modifier.id.length === 0) throw new Error("Action modifier requires a stable id");
 	if (modifier.action !== "force" || modifier.operation !== "scale") throw new Error("Unsupported action modifier operation");
 	validateFactor(modifier.factor);
-	if (!Number.isSafeInteger(modifier.remainingUses) || (modifier.remainingUses as number) < 1) throw new Error("Action modifier remaining uses must be a positive integer");
+	if (modifier.remainingUses !== undefined && (!Number.isSafeInteger(modifier.remainingUses) || (modifier.remainingUses as number) < 1)) throw new Error("Action modifier remaining uses must be a positive integer");
+	const hasLifetime = modifier.durationUnit !== undefined || modifier.duration !== undefined || modifier.remaining !== undefined;
+	if (hasLifetime) {
+		if (modifier.durationUnit === undefined || modifier.duration === undefined || modifier.remaining === undefined) throw new Error("Action modifier lifetime is incomplete");
+		if (modifier.durationUnit !== "turns") throw new Error("Action modifier lifetime requires turns");
+		validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+	}
+	if (modifier.remainingUses === undefined && !hasLifetime) throw new Error("Action modifier requires consumption or lifetime");
 	if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0)) throw new Error("Action modifier sourceId must be non-empty");
 	if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder)) throw new Error("Action modifier sourceOrder must be a safe integer");
 	assertJsonValue(modifier as unknown as JsonValue);

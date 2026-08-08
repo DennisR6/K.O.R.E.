@@ -1,6 +1,5 @@
 import { EffectAimVariance } from "../../effects/aimVariance.js";
 import { EffectGhostMode } from "../../effects/ghostMode.js";
-import { EffectModifyForce } from "../../effects/modifyForce.js";
 import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
@@ -9,11 +8,12 @@ import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
 import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../../engine/contracts/temporalModifier.js";
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../../engine/contracts/structureLifecycle.js";
 import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../../engine/contracts/deferredEffect.js";
+import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "../../engine/contracts/actionModifier.js";
 
 export type RuntimeItemEffect =
 	| EffectAimVariance
 	| EffectGhostMode
-	| EffectModifyForce
+	| ActionModifierTemplate
 	| EffectSelectionLock
 	| EffectShield
 	| EffectSpawnTrigger
@@ -30,7 +30,7 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 	const value = settings.typeValue as Record<string, unknown>;
 	switch (settings.type) {
 		case ItemEffectType.ModifyForce:
-			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
+			return createActionModifierTemplate({ action: "force", operation: "scale", factor: numberValue(value, "factor") });
 		case ItemEffectType.GhostMode:
 			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.SelectionLock:
@@ -63,7 +63,7 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 
 export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
-	if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
+	if (isActionModifierTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
@@ -75,7 +75,8 @@ export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next
 }
 
 export function applyRuntimeForceEffects(force: ForceInput, effects: readonly RuntimeItemEffect[]): ForceInput {
-	return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
+	const modifiers = effects.flatMap((effect, index) => isActionModifierTemplate(effect) ? [createActionModifier({ id: `runtime-action-modifier:${index}`, action: effect.action, operation: effect.operation, factor: effect.factor, remainingUses: 1, sourceOrder: index })] : []);
+	return applyActionModifiers(force, modifiers);
 }
 
 function numberValue(value: Record<string, unknown>, key: string): number {
@@ -106,4 +107,8 @@ export function isStructureLifecycleTemplate(value: RuntimeItemEffect): value is
 
 export function isDeferredEffectTemplate(value: RuntimeItemEffect): value is DeferredEffectTemplate {
 	return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.apply-force-field";
+}
+
+export function isActionModifierTemplate(value: RuntimeItemEffect): value is ActionModifierTemplate {
+	return "action" in value && value.action === "force" && "operation" in value && value.operation === "scale" && "factor" in value;
 }
