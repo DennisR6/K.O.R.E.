@@ -65,6 +65,11 @@ export interface PhysicsContactState {
 	activePairs: string[];
 }
 
+/** Shared physical-participation boundary used by ticking and settlement. */
+export function isPhysicsParticipant(entity: { isDead(): boolean; physicsEnabled(): boolean }): boolean {
+	return !entity.isDead() && entity.physicsEnabled();
+}
+
 /** True when both vector components are finite numbers. */
 export function isFiniteVector(v: Vector2D): boolean {
 	return Number.isFinite(v.x) && Number.isFinite(v.y);

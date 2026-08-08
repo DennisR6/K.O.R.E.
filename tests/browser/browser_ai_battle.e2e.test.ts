@@ -158,6 +158,7 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		expect(Number.isFinite(metrics?.postTurnWaitMs)).toBe(true);
 		expect(metrics?.maxEventLoopGapMs).toBeLessThan(500);
 		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("ai.worker.requested");
+		expect(performanceLogs.filter((log: { type: string; data?: { maxTicks?: number } }) => log.type === "turn.simulation.max-ticks" && log.data?.maxTicks === 1200)).toHaveLength(0);
 		expect(performanceLogs.filter((log: { type: string }) => log.type === "ai.worker.completed").length).toBeGreaterThan(0);
 		expect(performanceLogs.find((log: { type: string; data?: unknown }) => log.type === "ai.worker.completed")?.data).toHaveProperty("precomputeHeadroomMs");
 		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("turn.playback.completed");

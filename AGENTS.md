@@ -568,11 +568,17 @@ browser frame observations are emitted as bounded aggregate windows.
 The initial event taxonomy uses `domain.event` names such as
 `input.accepted`, `turn.simulation.completed`, `turn.playback.completed`,
 `turnPacket.created`, `ai.decision.completed`, and
-`performance.frame-window`, `ai.worker.requested`, and
+`turn.simulation.max-ticks`, `performance.frame-window`, `ai.worker.requested`, and
 `ai.worker.completed`. Performance filtering includes `performance.*`,
 `turn.*`, and `ai.*` observations, so Worker and turn timing are available
 through `handler.getLogs(handler.LoggerType.Performance)`. Consumers inspect a
 detached `getLogs()` result; there is no remote sink.
+Physics settlement uses the same `!entity.isDead() && entity.physicsEnabled()`
+participation semantics as `PhysicsSystem` ticking. Inactive/dead entities may
+retain stale physical fields, but those fields must not keep a turn alive.
+`turn.simulation.long-running` is an observational warning; the
+`turn.simulation.max-ticks` safety-cap event is a regression signal in normal
+qualification scenarios, not a normal completion mode.
 - `src/types/global.d.ts`: browser globals including `window.game`.
 - `src/i18n/language.ts`: typed JSON language loader. It always loads the
   complete `en_en` catalog first and overlays the selected language, so

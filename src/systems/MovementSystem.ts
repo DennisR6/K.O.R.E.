@@ -6,6 +6,7 @@ import { MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_
 import { applyRadialVelocityDelta } from "../engine/sdk/movementForceField.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import type { IPredefinedEffectSystem, ResolvedPredefinedTarget } from "./types.js";
+import { isPhysicsParticipant } from "../physics/physics.js";
 
 /** Applies persistent Movement effects before entity-local physics effects. */
 export class MovementSystem implements IPredefinedEffectSystem {
@@ -13,7 +14,7 @@ export class MovementSystem implements IPredefinedEffectSystem {
 
 	public preTick(ctx: IGameContext, dt: number): void {
 		for (const entity of ctx.entities.getEntities()) {
-			if (entity.isDead() || !entity.physicsEnabled()) continue;
+			if (!isPhysicsParticipant(entity)) continue;
 			const settings = entity.toSettings();
 			let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
 			const movementEffects = entity.getAlwaysEffects().filter(effect => effect.getType() === EffectType.Movement);
@@ -33,7 +34,7 @@ export class MovementSystem implements IPredefinedEffectSystem {
 			const payload = effect.typeValue as Record<string, unknown>;
 			if (payload.mode !== "attract" && payload.mode !== "repel" || typeof payload.force !== "number" || !Number.isFinite(payload.force) || payload.force < 0 || typeof payload.range !== "number" || !Number.isFinite(payload.range) || payload.range <= 0) throw new Error("Movement force field payload is invalid");
 			for (const entity of _ctx.entities.getEntities()) {
-				if (entity.isDead() || !entity.physicsEnabled()) continue;
+				if (!isPhysicsParticipant(entity)) continue;
 				entity.setVel(applyRadialVelocityDelta(entity.getVel(), target.position, entity.getPos(), { mode: payload.mode, force: payload.force, range: payload.range }));
 			}
 			return;

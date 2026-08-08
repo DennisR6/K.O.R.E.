@@ -1,4 +1,4 @@
-import { SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
+import { isPhysicsParticipant, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
 import { EntityManager } from "../entity/EntityManager.js";
 import { PlaybackSystem } from "../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
@@ -123,6 +123,7 @@ type LoweredItemEffect = RuntimeItemEffect | EntityForceFieldItemEffect | Entity
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
 export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSettings> {
+	public static readonly LONG_TURN_WARNING_TICKS = 600;
 	/** Console-friendly category source: `game.handler.LoggerType.Performance`. */
 	public readonly LoggerType = LoggerType;
 	private teamSize: number = 0
@@ -233,7 +234,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
 		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
-		const packet = g.resolveTurnWithTickBudget({ actorId, angle, power }, maxTicks);
+		const packet = g.resolveTurnWithDiagnostics({ actorId, angle, power }, maxTicks, (type, data) => this.log(`turn.simulation.${type}`, data));
 		this.log("turn.simulation.completed", { actorId, ticks: packet.durationFrames, durationMs: runtimeNow() - started });
 		this.log("turnPacket.created", { actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
 		return packet
@@ -246,6 +247,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 	/** Shared resolution implementation; callers use the authoritative default or a narrow speculative budget. */
 	private resolveTurnWithTickBudget({ actorId, angle, power }: IInput, maxTicks: number): TurnPacket {
+		return this.resolveTurnWithDiagnostics({ actorId, angle, power }, maxTicks, undefined);
+	}
+
+	private resolveTurnWithDiagnostics({ actorId, angle, power }: IInput, maxTicks: number, diagnosticSink: ((type: "long-running" | "max-ticks", data: unknown) => void) | undefined): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot resolve further turns")
 		const actor = this.validateActorForAction(actorId);
 		this.log("input.received", { actionType: "shot", actorId, angle, power });
@@ -261,10 +266,52 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// mid-loop (the deciding tick already stored the result).
 		this.resolvingTurn = true;
 		let frames = 0;
+		let lastMeaningfulMotionTick = 0;
+		let lastPositionChangeTick = 0;
+		let lastVelocityChangeTick = 0;
+		let lastRotationChangeTick = 0;
+		let previousKinematics = maxTicks >= GameHandler.LONG_TURN_WARNING_TICKS ? new Map(this.entityManager.getEntities().map(entity => [String(entity.getId()), { position: entity.getPos(), velocity: entity.getVel(), rotation: (entity as unknown as { getRotation: () => number }).getRotation() }])) : undefined;
+		const emitLongRunningWarning = (data: unknown) => diagnosticSink ? diagnosticSink("long-running", data) : this.log("turn.simulation.long-running", data);
+		const emitMaxDiagnostic = (data: unknown) => diagnosticSink ? diagnosticSink("max-ticks", data) : this.log("turn.simulation.max-ticks", data);
+		let longRunningWarningLogged = false;
+		const inspectBodies = () => {
+			const bodies = this.entityManager.getEntities().filter(isPhysicsParticipant).map(entity => {
+				const velocity = entity.getVel();
+				const getAngularVelocity = (entity as unknown as { getAngularVelocity?: () => number }).getAngularVelocity;
+				return { entityId: String(entity.getId()), velocity, velocityMagnitude: Math.hypot(velocity.x, velocity.y), angularVelocity: getAngularVelocity?.call(entity) ?? 0, physicsEnabled: entity.physicsEnabled(), isDead: entity.isDead(), drawingEnabled: entity.drawingEnabled() };
+			});
+			const blockers = bodies.filter(body => Math.abs(body.velocity.x) >= 0.1 || Math.abs(body.velocity.y) >= 0.1).sort((first, second) => second.velocityMagnitude - first.velocityMagnitude).slice(0, 4);
+			return { activePhysicalEntities: bodies.length, movingPhysicalEntities: blockers.length, maxVelocityMagnitude: bodies.reduce((max, body) => Math.max(max, body.velocityMagnitude), 0), maxAngularVelocityMagnitude: bodies.reduce((max, body) => Math.max(max, Math.abs(body.angularVelocity)), 0), blockers };
+		};
 		try {
-			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < maxTicks; frames++) this.tick()
+			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < maxTicks; frames++) {
+				this.tick();
+				if (previousKinematics) {
+					let moved = false;
+					for (const entity of this.entityManager.getEntities()) {
+						if (!isPhysicsParticipant(entity)) continue;
+						const id = String(entity.getId());
+						const previous = previousKinematics.get(id);
+						const position = entity.getPos();
+						const velocity = entity.getVel();
+						const rotation = (entity as unknown as { getRotation: () => number }).getRotation();
+						if (previous && Math.hypot(position.x - previous.position.x, position.y - previous.position.y) > 1e-6) { moved = true; lastPositionChangeTick = frames + 1; }
+						if (previous && Math.hypot(velocity.x - previous.velocity.x, velocity.y - previous.velocity.y) > 1e-6) { moved = true; lastVelocityChangeTick = frames + 1; }
+						if (previous && Math.abs(rotation - previous.rotation) > 1e-6) { moved = true; lastRotationChangeTick = frames + 1; }
+						previousKinematics.set(id, { position, velocity, rotation });
+					}
+					if (moved) lastMeaningfulMotionTick = frames + 1;
+					if (!longRunningWarningLogged && frames + 1 >= GameHandler.LONG_TURN_WARNING_TICKS) {
+						longRunningWarningLogged = true;
+						emitLongRunningWarning({ ticks: frames + 1, maxTicks, lastMeaningfulMotionTick, ...inspectBodies() });
+					}
+				}
+			}
 		} finally {
 			this.resolvingTurn = false;
+		}
+		if (frames >= maxTicks && !this.physicsStrategy.isStatic(this.entityManager)) {
+			emitMaxDiagnostic({ ticks: frames, maxTicks, lastPositionChangeTick, lastVelocityChangeTick, lastRotationChangeTick, lastMeaningfulMotionTick, ...inspectBodies() });
 		}
 		const finalState = this.entityManager.serialize();
 		for (const player of this.entityManager.toSettings()) {

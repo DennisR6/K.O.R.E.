@@ -1,6 +1,6 @@
 import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
-import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
+import { isPhysicsParticipant, SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { isCollisionAllowed } from "../engine/contracts/collisionFilter.js";
@@ -63,7 +63,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 */
 	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, _friction: number): void {
 		this.registerContactIdentities(ctx);
-		const activeEntities = ctx.entities.getEntities().filter(e => !e.isDead() && e.physicsEnabled());
+		const activeEntities = ctx.entities.getEntities().filter(isPhysicsParticipant);
 
 		let maxDisplacement = 0;
 		for (const e of activeEntities) {
@@ -114,7 +114,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 
 		let totalMovement = 0;
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
-			if (entity.isDead() || !entity.physicsEnabled()) return;
+			if (!isPhysicsParticipant(entity)) return;
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
 				entity.setVel({ x: 0, y: 0 });
@@ -136,7 +136,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 */
 	private resolveAllCollisions(ctx: IGameContext, contactedPairsThisTick: Set<string> = new Set<string>(), filterSnapshot: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>> = new Map()) {
 		const { entities, structures } = ctx;
-		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
+		const enitityArr = entities.getEntities().filter(isPhysicsParticipant)
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
 		);
@@ -277,7 +277,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 */
 	private collectCurrentContactPairs(ctx: IGameContext, filterSnapshot?: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>>): Set<string> {
 		const contacts = new Set<string>();
-		const entities = ctx.entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled());
+		const entities = ctx.entities.getEntities().filter(isPhysicsParticipant);
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(ctx.structures as unknown as IPhysics<SHAPE>[]),
 		);

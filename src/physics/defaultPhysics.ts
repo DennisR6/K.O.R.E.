@@ -1,6 +1,6 @@
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { forwardVectorFromRotation, getShapeName, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
+import { forwardVectorFromRotation, getShapeName, isPhysicsParticipant, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
 
 /**
  * Die Standard-Physik-Strategie der Engine.
@@ -536,7 +536,7 @@ export class defaultPhysics implements PhysicsStrategy {
 		// Alles unter 0.1 Pixel/Sekunde gilt als "stehend".
 		const epsilon = 0.1;
 
-		return entities.getEntities().every(e => {
+		return entities.getEntities().filter(isPhysicsParticipant).every(e => {
 			const vel = e.getVel();
 			return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
 		});

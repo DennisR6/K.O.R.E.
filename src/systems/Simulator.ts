@@ -2,6 +2,7 @@ import type { EntityManager } from "../entity/EntityManager.js";
 import type { IGameContext, ISerializableSystem, ISimulator, SystemSettings } from "./types.js";
 import type { PhysicsSystem } from "./PhysicsSystem.js";
 import { GameState } from "../engine/types.js";
+import { isPhysicsParticipant } from "../physics/physics.js";
 
 /**
  * Der Simulator berechnet Spielzustände unabhängig von der Anzeige.
@@ -30,7 +31,7 @@ export class Simulator implements ISimulator, ISerializableSystem<SystemSettings
 		// Alles unter 0.1 Pixel/Sekunde gilt als "stehend".
 		const epsilon = 0.1;
 
-		return entities.getEntities().every(e => {
+		return entities.getEntities().filter(isPhysicsParticipant).every(e => {
 			const vel = e.getVel();
 			return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
 		});
