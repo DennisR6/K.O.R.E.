@@ -16,7 +16,7 @@ const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
-const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle, ItemEffectType.DeferredEffect] as const;
+const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.Shield, ItemEffectType.GhostMode, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle, ItemEffectType.DeferredEffect] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
@@ -104,7 +104,6 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload"); requiredKeys(payload, ["capacity"], "shield payload"); finitePositive(payload.capacity, "shield capacity");
 			if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity)) throw new Error("shield remainingCapacity is outside capacity");
 			optionalBoolean(payload.blocksCollision, "shield blocksCollision"); return;
-		case ItemEffectType.SwapPosition: exactKeys(payload, [], "swapPosition payload"); return;
 		case ItemEffectType.StructureLifecycle:
 			exactKeys(payload, ["durationUnit", "duration", "structure"], "structureLifecycle payload");
 			if (payload.durationUnit !== "turns") throw new Error("structureLifecycle durationUnit must be turns");

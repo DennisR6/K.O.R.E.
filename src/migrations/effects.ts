@@ -33,7 +33,7 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 	copy.players = copy.players.map(player => ({
 		...player,
 		effects: (player.effects ?? []).map(migrateFullEffectSettings),
-		...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => (effect.type as string) !== "magnet") } : {}),
+		...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition"].includes(effect.type as string)) } : {}),
 	}));
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
@@ -46,6 +46,7 @@ export function migrateItemDocument(item: ItemDocument): ItemDocument {
 	return {
 		...item,
 		effects: item.effects.map(effect => {
+			if (effect.type === "swapPosition") return { type: "transform.swap-position", value: {} };
 			if (effect.type !== "magnet") return structuredClone(effect);
 			const value = effect.value ?? {};
 			const force = typeof value.force === "number" ? value.force : value.strength;

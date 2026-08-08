@@ -19,6 +19,7 @@ import { createCollisionCommandBinding } from "../../engine/sdk/collisionCommand
 import { createEngineEffectComposition } from "../../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
 import { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../../engine/sdk/transformCapability.js";
 export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
 export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
@@ -730,7 +731,7 @@ export const kore = {
 			spawnTrigger: ItemEffectType.SpawnTrigger,
 			deferredEffect: ItemEffectType.DeferredEffect,
 			shield: ItemEffectType.Shield,
-			swapPosition: ItemEffectType.SwapPosition,
+			swapPosition: TRANSFORM_SWAP_POSITION_EFFECT_ID,
 			structureLifecycle: ItemEffectType.StructureLifecycle,
 			ghostMode: ItemEffectType.GhostMode,
 			magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,

@@ -29,3 +29,10 @@ test("the migration boundary lowers historical Magnet documents and drops alread
 	const migrated = migrateGameSettingsEffects(settings);
 	expect(migrated.players[0]!.itemEffects).toEqual([]);
 });
+
+test("the migration boundary lowers historical Switch documents and drops applied swap state", () => {
+	const item = migrateItemDocument({ schemaVersion: 1, id: "switch", name: "Switch", type: "utility", effects: [{ type: "swapPosition", value: {} }], targetType: "entity", duration: { type: "instant", value: 0 }, useLimit: { perTurn: 1, perGame: 1 } });
+	expect(item.effects).toEqual([{ type: "transform.swap-position", value: {} }]);
+	const settings: any = { players: [{ itemEffects: [{ type: "swapPosition", typeValue: {} }], effects: [] }], items: [item], effects: [], mapBoundarys: [] };
+	expect(migrateGameSettingsEffects(settings).players[0]!.itemEffects).toEqual([]);
+});

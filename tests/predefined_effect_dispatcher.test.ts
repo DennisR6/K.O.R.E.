@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
 import { CounterSystem } from "../src/systems/CounterSystem.ts";
 import { MovementSystem } from "../src/systems/MovementSystem.ts";
+import { TransformSystem } from "../src/systems/TransformSystem.ts";
 import { COUNTER_ADD_EFFECT_ID } from "../src/engine/sdk/index.ts";
 
 test("Counter and Movement use the same predefined host and runtime-object APIs", () => {
@@ -38,6 +39,38 @@ test("predefined dispatch validates the current envelope and target before mutat
 	expect(() => handler.dispatchEngineEffect({ schemaVersion: 1, type: "movement.set-velocity", target: { type: "counter", counterId: "missing" }, typeValue: { x: 1, y: 1 } })).toThrow("Unknown counter target");
 	expect(() => handler.dispatchEngineEffect({ schemaVersion: 1, type: "movement.set-velocity", target: { type: "entity", entityId: actor.getId() }, typeValue: { x: Number.NaN, y: 1 } })).toThrow("invalid");
 	expect(actor.getVel()).toEqual(before);
+});
+
+test("transform swap dispatch captures both positions before either write", () => {
+	const handler = createCanonicalPlayableMatchHandler();
+	handler.addSystem(new TransformSystem());
+	const [first, second] = handler.getEntityManager().getEntities();
+	first!.setPos({ x: 10, y: 20 });
+	second!.setPos({ x: 80, y: 90 });
+
+	handler.dispatchEngineEffect({ schemaVersion: 1, type: "transform.swap-position", target: { type: "entity", entityId: first!.getId() }, typeValue: { otherEntityId: String(second!.getId()) } });
+
+	expect(first!.getPos()).toEqual({ x: 80, y: 90 });
+	expect(second!.getPos()).toEqual({ x: 10, y: 20 });
+});
+
+test("transform swap dispatch performs no partial mutation on missing or invalid targets", () => {
+	const handler = createCanonicalPlayableMatchHandler();
+	handler.addSystem(new TransformSystem());
+	const [first, second] = handler.getEntityManager().getEntities();
+	first!.setPos({ x: 10, y: 20 });
+	second!.setPos({ x: 80, y: 90 });
+	const command = (otherEntityId: string) => ({ schemaVersion: 1 as const, type: "transform.swap-position", target: { type: "entity" as const, entityId: String(first!.getId()) }, typeValue: { otherEntityId } });
+
+	expect(() => handler.dispatchEngineEffect(command("missing"))).toThrow("Unknown transform swap entity");
+	expect(first!.getPos()).toEqual({ x: 10, y: 20 });
+	expect(second!.getPos()).toEqual({ x: 80, y: 90 });
+	expect(() => handler.dispatchEngineEffect(command(String(first!.getId())))).toThrow("distinct entities");
+	expect(first!.getPos()).toEqual({ x: 10, y: 20 });
+	expect(second!.getPos()).toEqual({ x: 80, y: 90 });
+	second!.setPos({ x: Number.NaN, y: 90 });
+	expect(() => handler.dispatchEngineEffect(command(String(second!.getId())))).toThrow("positions must be finite");
+	expect(first!.getPos()).toEqual({ x: 10, y: 20 });
 });
 
 test("entity-scoped radial force dispatch mutates only its stable entity target", () => {

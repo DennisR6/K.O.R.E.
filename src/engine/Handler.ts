@@ -50,7 +50,7 @@ import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
-import { EffectSwapPosition } from "../effects/swapPosition.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
 import { TriggerDefinitionCatalog, type TriggerDefinition } from "../item/triggerDefinitions.js";
 import type { AiSettings } from "../ai/types.js";
@@ -64,7 +64,8 @@ import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedb
 import type { JsonValue } from "../engine/contracts/systemSettings.js";
 
 type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };
-type LoweredItemEffect = RuntimeItemEffect | EntityForceFieldItemEffect;
+type EntitySwapPositionItemEffect = { type: typeof TRANSFORM_SWAP_POSITION_EFFECT_ID; typeValue: Record<string, unknown> };
+type LoweredItemEffect = RuntimeItemEffect | EntityForceFieldItemEffect | EntitySwapPositionItemEffect;
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -822,7 +823,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!targetEntity) throw new Error("Item target entity not found")
 		const runtimeEffects: LoweredItemEffect[] = item.effects.map(effect => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID
 			? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) }
-			: createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
+			: effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID
+				? { type: TRANSFORM_SWAP_POSITION_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) }
+				: createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
 		for (const effect of runtimeEffects) {
 			if (effect instanceof EffectSpawnTrigger) {
 				this.triggerDefinitions.require(effect.triggerId);
@@ -866,6 +869,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 					typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() },
 				});
 			}
+			else if (isEntitySwapPositionItemEffect(effect)) {
+				if (target.type !== "entity" || !targetEntity) throw new Error("Swap position effects require an entity target");
+				this.dispatchEngineEffect({ schemaVersion: 1, type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: String(actor.getId()) }, typeValue: { otherEntityId: String(targetEntity.getId()) } });
+			}
 			else if (isDeferredEffectTemplate(effect)) {
 				if (!resolvedItemTarget) throw new Error("Deferred Effects require a resolved target");
 				if (resolvedItemTarget.type !== "position") throw new Error("Deferred force fields require a position target");
@@ -886,9 +893,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
 				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
 			}
-			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
-				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
-			} else if (isStructureLifecycleTemplate(effect)) {
+			else if (isStructureLifecycleTemplate(effect)) {
 				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
 				this.installStructureLifecycle(actor, item, effect, target.position);
 			} else if (isTemporalModifierTemplate(effect)) {
@@ -1064,6 +1069,10 @@ function isEntityForceFieldItemEffect(effect: LoweredItemEffect): effect is Enti
 	return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
 }
 
+function isEntitySwapPositionItemEffect(effect: LoweredItemEffect): effect is EntitySwapPositionItemEffect {
+	return "type" in effect && effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID;
+}
+
 
 
 export class GameHandlerBuilder {
@@ -1099,6 +1108,7 @@ export class GameHandlerBuilder {
 		this
 			.addPhysics(physics)
 			.addSystem(new MovementSystem())
+			.addSystem(new TransformSystem())
 			.addSystem(new NumericSystem())
 			.addSystem(new ParticipationSystem())
 			.addSystem(new PlaybackSystem())
@@ -1139,6 +1149,7 @@ export class GameHandlerBuilder {
 			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
 			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.numeric")) this.engine.addSystem(new NumericSystem())
 			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.participation")) this.engine.addSystem(new ParticipationSystem())
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.transform") && gameSettings.items.some(item => item.effects.some(effect => effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID))) this.engine.addSystem(new TransformSystem())
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
 			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
 			restoredPhysics.strategy = this.engine.getPhysics()
@@ -1155,7 +1166,7 @@ export class GameHandlerBuilder {
 		this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? [])
 		this.engine.loadEffects(gameSettings.effects)
 		this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? [])
-		if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some(definition => "effects" in definition.effect)) {
+		if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some(definition => "effects" in definition.effect) && !this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.transform")) {
 			this.engine.addSystem(new TransformSystem())
 		}
 

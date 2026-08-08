@@ -513,6 +513,7 @@ function normalizeZero(value) {
 var TRANSFORM_CAPABILITY = "transform.state";
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
 var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
+var TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position";
 function registerTransformEffects(registry) {
   return registry.register({
     id: TRANSFORM_SET_POSITION_EFFECT_ID,
@@ -530,6 +531,18 @@ function registerTransformEffects(registry) {
       const value = record3(payload, "Transform rotation payload");
       exactKeys3(value, ["rotation"], "Transform rotation payload");
       finite2(value.rotation, "Transform rotation");
+    },
+    validateTarget: (target) => validateTransformTarget(target, false)
+  }).register({
+    id: TRANSFORM_SWAP_POSITION_EFFECT_ID,
+    requiresCapability: [TRANSFORM_CAPABILITY],
+    targetType: "entity",
+    lifecycleCategory: "command",
+    validatePayload: (payload) => {
+      const value = record3(payload, "Transform swap position payload");
+      exactKeys3(value, ["otherEntityId"], "Transform swap position payload");
+      if (typeof value.otherEntityId !== "string" || value.otherEntityId.length === 0)
+        throw new Error("Transform swap position requires a non-empty otherEntityId");
     },
     validateTarget: (target) => validateTransformTarget(target, false)
   });
@@ -1328,6 +1341,7 @@ export {
   advanceTemporalModifier,
   advanceStructureLifecycle,
   advanceDeferredEffect,
+  TRANSFORM_SWAP_POSITION_EFFECT_ID,
   TRANSFORM_SET_ROTATION_EFFECT_ID,
   TRANSFORM_SET_POSITION_EFFECT_ID,
   TRANSFORM_CAPABILITY,

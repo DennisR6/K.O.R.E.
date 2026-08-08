@@ -25,7 +25,6 @@ export const enum ItemEffectType {
 	SpawnTrigger = "spawnTrigger",
 	DeferredEffect = "deferredEffect",
 	Shield = "shield",
-	SwapPosition = "swapPosition",
 	StructureLifecycle = "structureLifecycle",
 	GhostMode = "ghostMode",
 	SelectionLock = "selectionLock",
@@ -76,7 +75,6 @@ export interface ItemEffectPayloadMap {
 	[ItemEffectType.SpawnTrigger]: SpawnTriggerPayload;
 	[ItemEffectType.DeferredEffect]: { durationUnit: "ticks"; duration: number; effect: Record<string, unknown> };
 	[ItemEffectType.Shield]: ShieldPayload;
-	[ItemEffectType.SwapPosition]: Record<string, never>;
 	[ItemEffectType.StructureLifecycle]: { durationUnit: "turns"; duration: number; structure: Record<string, unknown> };
 	[ItemEffectType.GhostMode]: GhostModePayload;
 	[ItemEffectType.SelectionLock]: LockRotationPayload;

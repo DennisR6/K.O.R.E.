@@ -3,7 +3,6 @@ import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../engine/contracts/deferredEffect.js";
 import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, type MovementForceFieldPayload } from "../engine/sdk/movementCapability.js";
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../engine/contracts/structureLifecycle.js";
-import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
 import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
@@ -33,7 +32,6 @@ export function createFreezeShot(): TemporalModifierTemplate {
 }
 export function createSelectionLock(): EffectSelectionLock { return new EffectSelectionLock({ typeValue: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } }); }
 export function createVodkaZero(seed: number = 42): EffectAimVariance { return new EffectAimVariance({ typeValue: { maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES, seed } }); }
-export function applySwitch(first: PositionTargetState, second: PositionTargetState): [{ x: number; y: number }, { x: number; y: number }] { return new EffectSwapPosition().swap(first, second); }
 export interface FalltuerKillZone { triggerId: string; center: { x: number; y: number }; radius: number; trigger: EffectSpawnTrigger; }
 export function createFalltuerKillZone(center: { x: number; y: number }, radius: number = FALLTUER_RADIUS): FalltuerKillZone {
 	if (!Number.isFinite(center.x) || !Number.isFinite(center.y)) throw new Error("Falltür position must be finite");

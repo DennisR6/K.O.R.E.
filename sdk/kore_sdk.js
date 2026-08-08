@@ -798,7 +798,7 @@ var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "ghostMode" /* GhostMode */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */, "deferredEffect" /* DeferredEffect */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "shield" /* Shield */, "ghostMode" /* GhostMode */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */, "deferredEffect" /* DeferredEffect */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
@@ -931,9 +931,6 @@ function validateRuntimeItemEffectSettings(value) {
       if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity))
         throw new Error("shield remainingCapacity is outside capacity");
       optionalBoolean(payload.blocksCollision, "shield blocksCollision");
-      return;
-    case "swapPosition" /* SwapPosition */:
-      exactKeys2(payload, [], "swapPosition payload");
       return;
     case "structureLifecycle" /* StructureLifecycle */:
       exactKeys2(payload, ["durationUnit", "duration", "structure"], "structureLifecycle payload");
@@ -1574,6 +1571,7 @@ function normalizeZero(value) {
 }
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
 var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
+var TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position";
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -3473,36 +3471,6 @@ class EffectSpawnTrigger {
   }
 }
 
-class EffectSwapPosition {
-  toSettings() {
-    return { type: "swapPosition" /* SwapPosition */, typeValue: {} };
-  }
-  swap(first, second) {
-    validateTarget(first);
-    validateTarget(second);
-    if (first.id === second.id)
-      throw new Error("Cannot swap an entity with itself");
-    return [{ ...second.position }, { ...first.position }];
-  }
-  teleport(target, destination) {
-    validateTarget(target);
-    if (!isVector(destination))
-      throw new Error("Teleport destination must have finite coordinates");
-    return { ...destination };
-  }
-}
-function validateTarget(target) {
-  if (typeof target.id !== "string" || target.id.length === 0)
-    throw new Error("Position target requires a non-empty id");
-  if (!target.active)
-    throw new Error("Position target must be active");
-  if (!isVector(target.position))
-    throw new Error("Position target must have finite coordinates");
-}
-function isVector(value) {
-  return typeof value === "object" && value !== null && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
-}
-
 function createRuntimeItemEffect(settings) {
   validateRuntimeItemEffectSettings(settings);
   const value = settings.typeValue;
@@ -3519,8 +3487,6 @@ function createRuntimeItemEffect(settings) {
       return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
     case "aimVariance" /* AimVariance */:
       return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
-    case "swapPosition" /* SwapPosition */:
-      return new EffectSwapPosition;
     case "temporalModifier" /* TemporalModifier */:
       return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
     case "structureLifecycle" /* StructureLifecycle */:
@@ -4042,11 +4008,11 @@ class Player {
           this.setFriction(value);
         break;
       case "position":
-        if (isVector2(value))
+        if (isVector(value))
           this.setPos(value);
         break;
       case "velocity":
-        if (isVector2(value))
+        if (isVector(value))
           this.setVel(value);
         break;
       case "team":
@@ -4077,7 +4043,7 @@ class Player {
           return;
       }
     }
-    if (isVector2(value)) {
+    if (isVector(value)) {
       if (key === "position")
         this.setPos({ x: this.position.x + value.x, y: this.position.y + value.y });
       if (key === "velocity")
@@ -4100,7 +4066,7 @@ class Player {
           return;
       }
     }
-    if (isVector2(value)) {
+    if (isVector(value)) {
       if (key === "position")
         this.setPos({ x: this.position.x - value.x, y: this.position.y - value.y });
       if (key === "velocity")
@@ -4248,7 +4214,7 @@ class Player {
     }
   }
 }
-function isVector2(value) {
+function isVector(value) {
   return typeof value === "object" && value !== null && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number";
 }
 
@@ -5906,11 +5872,30 @@ class TransformSystem {
   }
   ticker(_ctx, _dt, _friction) {}
   acceptsEffect(effectId) {
-    return effectId === TRANSFORM_SET_POSITION_EFFECT_ID || effectId === TRANSFORM_SET_ROTATION_EFFECT_ID;
+    return effectId === TRANSFORM_SET_POSITION_EFFECT_ID || effectId === TRANSFORM_SET_ROTATION_EFFECT_ID || effectId === TRANSFORM_SWAP_POSITION_EFFECT_ID;
   }
   applyEffect(_ctx, effect, target) {
     if (!effect.typeValue || typeof effect.typeValue !== "object" || Array.isArray(effect.typeValue))
       throw new Error("Transform command requires an object payload");
+    if (effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID) {
+      if (target.type !== "entity")
+        throw new Error("Transform swap position requires an entity target");
+      const value2 = effect.typeValue;
+      if (Object.keys(value2).length !== 1 || typeof value2.otherEntityId !== "string" || value2.otherEntityId.length === 0)
+        throw new Error("Transform swap position payload is invalid");
+      if (value2.otherEntityId === String(target.entity.getId()))
+        throw new Error("Transform swap position requires distinct entities");
+      const other = _ctx.entities.getEntityById(value2.otherEntityId);
+      if (!other)
+        throw new Error(`Unknown transform swap entity '${value2.otherEntityId}'`);
+      const firstPosition = target.entity.getPos();
+      const secondPosition = other.getPos();
+      if (!finitePosition(firstPosition) || !finitePosition(secondPosition))
+        throw new Error("Transform swap positions must be finite");
+      target.entity.setPos(secondPosition);
+      other.setPos(firstPosition);
+      return;
+    }
     if (effect.type === TRANSFORM_SET_POSITION_EFFECT_ID) {
       const value2 = effect.typeValue;
       if (typeof value2.x !== "number" || !Number.isFinite(value2.x) || typeof value2.y !== "number" || !Number.isFinite(value2.y) || Object.keys(value2).some((key) => key !== "x" && key !== "y") || !Object.keys(value2).includes("x") || !Object.keys(value2).includes("y"))
@@ -5931,6 +5916,9 @@ class TransformSystem {
       throw new Error("Transform rotation payload is invalid");
     target.entity.setRotation(value.rotation);
   }
+}
+function finitePosition(value) {
+  return Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 
 class ParticipationSystem {
@@ -6025,7 +6013,7 @@ function validateEnvironmentalMechanics(value) {
           throw new Error("Invalid triggered zone timing");
         break;
       case "moving-structure":
-        if (!isVector3(mechanic.to) || !positiveInteger(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
+        if (!isVector2(mechanic.to) || !positiveInteger(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
           throw new Error("Invalid moving structure path");
         break;
       case "environmental-cycle":
@@ -6046,7 +6034,7 @@ function finite4(value) {
 function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
-function isVector3(value) {
+function isVector2(value) {
   return isRecord6(value) && finite4(value.x) && finite4(value.y);
 }
 function isZone(value) {
@@ -6313,7 +6301,7 @@ function validateFigureCounts(playerCount, figuresPerPlayer) {
 function validateGameSettings(settings) {
   if (!isRecord7(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
     throw new Error("Invalid game settings document");
-  if (!isVector4(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
+  if (!isVector3(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
     throw new Error("Invalid screen resolution");
   if (!isRecord7(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
     throw new Error("Invalid friction settings");
@@ -6321,7 +6309,7 @@ function validateGameSettings(settings) {
   validateFigureCounts(settings.playerCount, settings.figuresPerPlayer);
   if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam))
     throw new Error("Invalid team settings");
-  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord7(player) && isVector4(player.position) && isVector4(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
+  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord7(player) && isVector3(player.position) && isVector3(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
     throw new Error("Invalid player settings");
   if (!isBackground(settings.background))
     throw new Error("Invalid background settings");
@@ -6364,7 +6352,7 @@ function validateGameSettings(settings) {
 function isRecord7(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector4(value) {
+function isVector3(value) {
   return isRecord7(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isBackground(value) {
@@ -7156,7 +7144,7 @@ function migrateGameSettingsEffects(settings) {
   copy.players = copy.players.map((player) => ({
     ...player,
     effects: (player.effects ?? []).map(migrateFullEffectSettings),
-    ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => effect.type !== "magnet") } : {}
+    ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition"].includes(effect.type)) } : {}
   }));
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
   if (copy.triggerDefinitions)
@@ -7169,6 +7157,8 @@ function migrateItemDocument(item) {
   return {
     ...item,
     effects: item.effects.map((effect) => {
+      if (effect.type === "swapPosition")
+        return { type: "transform.swap-position", value: {} };
       if (effect.type !== "magnet")
         return structuredClone(effect);
       const value = effect.value ?? {};
@@ -7512,13 +7502,13 @@ function validateEntityTarget(target, validation, context) {
   validateRange(context.actor.getPos(), entity.getPos(), validation.maxRange);
 }
 function validatePositionTarget(position, maxRange, context) {
-  if (!isVector5(position))
+  if (!isVector4(position))
     throw new Error("Position targets require finite x and y coordinates");
   validateWorldPosition(position, context.worldSize);
   validateRange(context.actor.getPos(), position, maxRange);
 }
 function validateZoneTarget(target, maxRange, context) {
-  if (!isVector5(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
+  if (!isVector4(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
     throw new Error("Zone targets require a finite center and positive radius");
   }
   validateWorldPosition(target.center, context.worldSize);
@@ -7543,7 +7533,7 @@ function sharesTeam(first, second) {
 function isRecord9(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector5(value) {
+function isVector4(value) {
   return isRecord9(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
 }
 
@@ -7768,7 +7758,7 @@ function clone4(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", TRANSFORM_SWAP_POSITION_EFFECT_ID, "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 function createItem(input) {
   const item = createItemDocument({
@@ -7936,7 +7926,7 @@ var switchItem = createItem({
   name: "Switch",
   description: "Swaps the active figure's position with a targeted ally.",
   type: "utility",
-  effects: [{ type: "swapPosition", value: {} }],
+  effects: [{ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, value: {} }],
   targetType: "entity",
   duration: { type: "instant", value: 0 },
   useLimit: { perTurn: 1, perGame: 1 },
@@ -9894,7 +9884,7 @@ class GameHandler {
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
     if (!targetEntity)
       throw new Error("Item target entity not found");
-    const runtimeEffects = item.effects.map((effect) => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID ? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
+    const runtimeEffects = item.effects.map((effect) => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID ? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID ? { type: TRANSFORM_SWAP_POSITION_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
     for (const effect of runtimeEffects) {
       if (effect instanceof EffectSpawnTrigger) {
         this.triggerDefinitions.require(effect.triggerId);
@@ -9940,6 +9930,10 @@ class GameHandler {
           target: { type: "entity", entityId: String(targetEntity.getId()) },
           typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() }
         });
+      } else if (isEntitySwapPositionItemEffect(effect)) {
+        if (target.type !== "entity" || !targetEntity)
+          throw new Error("Swap position effects require an entity target");
+        this.dispatchEngineEffect({ schemaVersion: 1, type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: String(actor.getId()) }, typeValue: { otherEntityId: String(targetEntity.getId()) } });
       } else if (isDeferredEffectTemplate(effect)) {
         if (!resolvedItemTarget)
           throw new Error("Deferred Effects require a resolved target");
@@ -9961,10 +9955,6 @@ class GameHandler {
         const triggerSettings = effect.toSettings();
         const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
         actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {} } }, { itemId: item.id, order: itemOrder(item) });
-      } else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
-        const actorPosition = actor.getPos();
-        actor.setPos(targetEntity.getPos());
-        targetEntity.setPos(actorPosition);
       } else if (isStructureLifecycleTemplate(effect)) {
         if (target.type !== "position")
           throw new Error("Structure lifecycles require a position target");
@@ -10155,6 +10145,9 @@ class GameHandler {
 function isEntityForceFieldItemEffect(effect) {
   return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
 }
+function isEntitySwapPositionItemEffect(effect) {
+  return "type" in effect && effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID;
+}
 
 class GameHandlerBuilder {
   engine;
@@ -10203,7 +10196,7 @@ class GameHandlerBuilder {
     const physics = new defaultPhysics(friction2);
     const physicsSystem = new PhysicsSystem(physics);
     this.engine.attachFeedbackToPhysics(physicsSystem);
-    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
+    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new TransformSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
     return this;
   }
   fromSettings(gameSettings) {
@@ -10242,6 +10235,8 @@ class GameHandlerBuilder {
         this.engine.addSystem(new NumericSystem);
       if (!this.engine.getSystems().some((system) => system.systemId === "core.participation"))
         this.engine.addSystem(new ParticipationSystem);
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.transform") && gameSettings.items.some((item) => item.effects.some((effect) => effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID)))
+        this.engine.addSystem(new TransformSystem);
       const restoredPhysics = this.engine.getSystems().find((system) => system.systemId === "core.physics");
       if (!restoredPhysics)
         throw new Error("System snapshot must include core.physics");
@@ -10255,7 +10250,7 @@ class GameHandlerBuilder {
     this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? []);
     this.engine.loadEffects(gameSettings.effects);
     this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? []);
-    if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some((definition) => ("effects" in definition.effect))) {
+    if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some((definition) => ("effects" in definition.effect)) && !this.engine.getSystems().some((system) => system.systemId === "core.transform")) {
       this.engine.addSystem(new TransformSystem);
     }
     players.forEach((player) => this.addPlayer(createRuntimePlayer(player)));
@@ -10315,7 +10310,7 @@ function validateMapDocument(document) {
     throw new Error("Invalid map schema version");
   if (!isRecord11(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
     throw new Error("Invalid map metadata");
-  if (!isVector6(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
+  if (!isVector5(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
     throw new Error("Invalid map world size");
   if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1)
     throw new Error("Invalid map physics");
@@ -10331,7 +10326,7 @@ function validateMapDocument(document) {
 function isRecord11(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector6(value) {
+function isVector5(value) {
   return isRecord11(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isFriction(value) {
@@ -10650,7 +10645,7 @@ function getSelectableGameModes() {
 var CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 var CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
 var CONTENT_PACKAGE_MAX_DOCUMENTS = 256;
-var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "transform.swap-position", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 var EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
@@ -11440,7 +11435,7 @@ var kore = {
       spawnTrigger: "spawnTrigger" /* SpawnTrigger */,
       deferredEffect: "deferredEffect" /* DeferredEffect */,
       shield: "shield" /* Shield */,
-      swapPosition: "swapPosition" /* SwapPosition */,
+      swapPosition: TRANSFORM_SWAP_POSITION_EFFECT_ID,
       structureLifecycle: "structureLifecycle" /* StructureLifecycle */,
       ghostMode: "ghostMode" /* GhostMode */,
       magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,

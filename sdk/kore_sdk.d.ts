@@ -546,7 +546,7 @@ export declare const kore: {
             readonly spawnTrigger: any.SpawnTrigger;
             readonly deferredEffect: any.DeferredEffect;
             readonly shield: any.Shield;
-            readonly swapPosition: any.SwapPosition;
+            readonly swapPosition: "transform.swap-position";
             readonly structureLifecycle: any.StructureLifecycle;
             readonly ghostMode: any.GhostMode;
             readonly magnet: "movement.apply-force-to-entity";

@@ -3,6 +3,7 @@ import type { EngineEffectRegistry } from "./effectRegistry.js";
 export const TRANSFORM_CAPABILITY = "transform.state" as const;
 export const TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position" as const;
 export const TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation" as const;
+export const TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position" as const;
 
 export interface TransformSetPositionPayload {
 	x: number;
@@ -11,6 +12,10 @@ export interface TransformSetPositionPayload {
 
 export interface TransformSetRotationPayload {
 	rotation: number;
+}
+
+export interface TransformSwapPositionPayload {
+	otherEntityId: string;
 }
 
 export type TransformTarget = { type: "entity"; entityId: string } | { type: "structure"; structureId: string };
@@ -35,6 +40,18 @@ export function registerTransformEffects(registry: EngineEffectRegistry): Engine
 				const value = record(payload, "Transform rotation payload");
 				exactKeys(value, ["rotation"], "Transform rotation payload");
 				finite(value.rotation, "Transform rotation");
+			},
+			validateTarget: target => validateTransformTarget(target, false),
+		})
+		.register({
+			id: TRANSFORM_SWAP_POSITION_EFFECT_ID,
+			requiresCapability: [TRANSFORM_CAPABILITY],
+			targetType: "entity",
+			lifecycleCategory: "command",
+			validatePayload: payload => {
+				const value = record(payload, "Transform swap position payload");
+				exactKeys(value, ["otherEntityId"], "Transform swap position payload");
+				if (typeof value.otherEntityId !== "string" || value.otherEntityId.length === 0) throw new Error("Transform swap position requires a non-empty otherEntityId");
 			},
 			validateTarget: target => validateTransformTarget(target, false),
 		});

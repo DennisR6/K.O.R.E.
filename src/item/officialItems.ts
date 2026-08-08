@@ -12,6 +12,7 @@ import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapabil
 import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -176,7 +177,7 @@ export const switchItem: ItemDocument = createItem({
 	name: "Switch",
 	description: "Swaps the active figure's position with a targeted ally.",
 	type: "utility",
-	effects: [{ type: "swapPosition", value: {} }],
+	effects: [{ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, value: {} }],
 	targetType: "entity",
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -304,7 +305,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("deferredEffect");
 	validator.registerEffectType("structureLifecycle");
-	validator.registerEffectType("swapPosition");
+	validator.registerEffectType(TRANSFORM_SWAP_POSITION_EFFECT_ID);
 	validator.registerEffectType("selectionLock");
 	validator.registerEffectType("aimVariance");
 	validator.registerEffectType("temporalModifier");

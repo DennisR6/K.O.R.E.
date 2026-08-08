@@ -4,7 +4,6 @@ import { EffectModifyForce } from "../../effects/modifyForce.js";
 import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
-import { EffectSwapPosition } from "../../effects/swapPosition.js";
 import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../effects/types.js";
 import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
 import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../../engine/contracts/temporalModifier.js";
@@ -18,7 +17,6 @@ export type RuntimeItemEffect =
 	| EffectSelectionLock
 	| EffectShield
 	| EffectSpawnTrigger
-	| EffectSwapPosition
 	| TemporalModifierTemplate
 	| StructureLifecycleTemplate
 	| DeferredEffectTemplate;
@@ -43,8 +41,6 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...(value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }), ...(value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition as never }) } });
 		case ItemEffectType.AimVariance:
 			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
-		case ItemEffectType.SwapPosition:
-			return new EffectSwapPosition();
 		case ItemEffectType.TemporalModifier:
 			return createTemporalModifierTemplate({ durationUnit: value.durationUnit as "turns", duration: integerValue(value, "duration"), effect: value.effect as never });
 		case ItemEffectType.StructureLifecycle:

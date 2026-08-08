@@ -650,12 +650,13 @@ Account for this mismatch when changing rendering APIs.
 `GameHandlerBuilder.defaultSystems()` installs systems in this order:
 
 1. `MovementSystem`
-2. `NumericSystem`
-3. `ParticipationSystem`
-4. `PlaybackSystem`
-5. `PhysicsSystem`
-6. `BoundarySystem`
-7. `GameStateManager`
+2. `TransformSystem`
+3. `NumericSystem`
+4. `ParticipationSystem`
+5. `PlaybackSystem`
+6. `PhysicsSystem`
+7. `BoundarySystem`
+8. `GameStateManager`
 
 The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`
 through `createMatchHandler`, then installs input/drawing/result wiring with the
