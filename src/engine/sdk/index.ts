@@ -45,6 +45,8 @@ export type { EngineCollisionEnterTriggerEvent, EngineEnvironmentActivationTrigg
 export type { EngineEffectDefinition, EngineEffectDescriptor, EngineEffectSettings } from "./effectRegistry.js";
 export { createMovementState, createTransformState, validateMovementState, validateTransformState } from "./entityState.js";
 export type { EngineMovementState, EngineTransformState } from "./entityState.js";
+export { COLLISION_COMMAND_SCHEMA_VERSION, COLLISION_COMMAND_TYPE, createCollisionCommandBinding, isCollisionCommandBinding, validateCollisionCommandBinding } from "./collisionCommand.js";
+export type { CollisionCommandBinding } from "./collisionCommand.js";
 export { COUNTER_SCHEMA_VERSION, canonicalizeCounterStates, createCounterState, validateCounterState } from "../contracts/counterState.js";
 export type { CounterState } from "../contracts/counterState.js";
 export { NUMERIC_STATE_SCHEMA_VERSION, NUMERIC_THRESHOLD_COMPARATORS, validateNumericThreshold, validateNumericThresholdBinding, validateNumericThresholdBindings } from "../contracts/numericState.js";

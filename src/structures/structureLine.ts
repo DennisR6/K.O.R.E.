@@ -5,6 +5,7 @@ import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type V
 import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
 import { deriveStructureId } from "./identity.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 /**
  * Repräsentiert ein statisches Liniensegment (z.B. eine Bande oder Mauer).
@@ -45,7 +46,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	 * @param y2 - End Y.
 		 * @param color - Farbe der Wand.
 		 */
-	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = [], id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean) {
+	constructor(x: number, y: number, x2: number, y2: number, color: string, effects: EffectSettings[] = [], id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean, _collisionCommands: CollisionCommandBinding[] = []) {
 		// Zero-length lines have no valid segment direction and would corrupt
 		// the collision normal (Task 13.4). Reject them at construction so no
 		// arbitrary fallback direction is silently invented.
@@ -120,6 +121,7 @@ export class StructureLine implements IStructure, IPhysics<SHAPE.LINE>, ISetting
 	public setSetting(key: SettingKey, value: SettingValue): void { if (typeof value !== "boolean") return; if (key === "physicsEnabled") this.setPhysicsEnabled(value); else if (key === "drawingEnabled") this.setDrawingEnabled(value); }
 	public addSetting(key: SettingKey, value: SettingValue): void { this.setSetting(key, value); }
 	public removeSetting(key: SettingKey, value: SettingValue): void { if (typeof value === "boolean") this.setSetting(key, !value); }
+	public getCollisionCommands(): readonly CollisionCommandBinding[] { return []; }
 	public setColor(color: string | undefined) { this.color = color }
 	/** Line segments are collision obstacles only and never containment. */
 	public getCollisionRole(): StructureCollisionRole | undefined { return undefined }

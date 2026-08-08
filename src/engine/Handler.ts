@@ -34,6 +34,7 @@ import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventor
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
+import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import { TransformSystem } from "../systems/TransformSystem.js";
 import { ParticipationSystem } from "../systems/ParticipationSystem.js";
@@ -487,6 +488,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			const ids = [a, b].filter((value): value is IEntity & IPhysics<SHAPE> => typeof (value as IEntity).getId === "function").map(value => value.getId())
 			this.recordFeedback(KoreGameplayFeedbackType.Collision, { ...(ids[0] ? { actorId: ids[0] } : {}), ...(ids.length > 1 ? { targetIds: ids.slice(1) } : {}) })
 			if (ids.length === 1) this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true } })
+			const structure = [a, b].find(value => typeof (value as IStructure).getCollisionCommands === "function") as IStructure | undefined;
+			const entity = [a, b].find(value => typeof (value as IEntity).getId === "function" && typeof (value as IEntity).getTeam === "function") as IEntity | undefined;
+			if (structure && entity) dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
 		}
 	}
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }

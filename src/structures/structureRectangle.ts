@@ -7,6 +7,7 @@ import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from
 import type { MapBoundarySettingsRect } from "../settings/settings.js";
 import { type IStructure } from "./types.js";
 import { deriveStructureId } from "./identity.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 /**
  * Repräsentiert ein massives, rechteckiges Hindernis (Block).
@@ -44,6 +45,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	private readonly id: string
 	private serializeState: boolean
 	private collisionRole: StructureCollisionRole | undefined
+	private readonly collisionCommands: CollisionCommandBinding[]
 
 	// aktuell brauchen wir diese noch nicht.
 	// Aber für die Items später dann schon
@@ -58,7 +60,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	 * @param effects - Serialisierte Kollisions-/Runden-/Dauer-Effekte.
 	 * @param role - Explizite Strukturrolle ("solid", "containment", "both").
 	 */
-	constructor(x: number, y: number, w: number, h: number, color?: string, effects: FullEffectSettings[] = [], role?: StructureCollisionRole, id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean) {
+	constructor(x: number, y: number, w: number, h: number, color?: string, effects: FullEffectSettings[] = [], role?: StructureCollisionRole, id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean, collisionCommands: CollisionCommandBinding[] = []) {
 		this.x = x
 		this.y = y
 		this.w = w
@@ -72,6 +74,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 		this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
 		this.isPhysicsEnabled = physicsEnabled ?? true;
 		this.isDrawingEnabled = drawingEnabled ?? true;
+		this.collisionCommands = structuredClone(collisionCommands);
 		for (const eff of effects) {
 			switch (eff.trigger) {
 				case EffectTrigger.Collision: this.collisionEffects.push(createRuntimeEffect(eff)); continue
@@ -133,6 +136,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 	public setSetting(key: SettingKey, value: SettingValue): void { if (typeof value !== "boolean") return; if (key === "physicsEnabled") this.setPhysicsEnabled(value); else if (key === "drawingEnabled") this.setDrawingEnabled(value); }
 	public addSetting(key: SettingKey, value: SettingValue): void { this.setSetting(key, value); }
 	public removeSetting(key: SettingKey, value: SettingValue): void { if (typeof value === "boolean") this.setSetting(key, !value); }
+	public getCollisionCommands(): readonly CollisionCommandBinding[] { return this.collisionCommands; }
 	public setColor(color: string | undefined) { this.color = color }
 	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
 	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
@@ -152,6 +156,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 		}
 		if (this.collisionRole !== undefined) out.role = this.collisionRole
 		if (this.serializeState) { out.id = this.id; out.physicsEnabled = this.isPhysicsEnabled; out.drawingEnabled = this.isDrawingEnabled; }
+		if (this.collisionCommands.length > 0) out.collisionCommands = structuredClone(this.collisionCommands);
 		return out
 	}
 	//

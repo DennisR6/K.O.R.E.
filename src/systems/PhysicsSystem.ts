@@ -258,8 +258,11 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			}
 		} else {
 			contactedPairs.add(pairKey);
-			this.onCollision?.(entityA, entityB);
 			this.strategy.handleCollision(entityA, entityB);
+			// Structure collision Effects execute during strategy resolution. The
+			// orchestration callback runs immediately afterward so current Engine
+			// commands preserve the same post-resolution entry point.
+			this.onCollision?.(entityA, entityB);
 		}
 	}
 

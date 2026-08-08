@@ -7,6 +7,7 @@ import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from
 import { type MapBoundarySettingsCircle } from "../settings/settings.js";
 import { type Structure } from "./types.js";
 import { deriveStructureId } from "./identity.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -45,8 +46,9 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	private alwaysEffects: Effect[] = []
 	private roundEffects: Effect[] = []
 	private collisionRole: StructureCollisionRole | undefined
+	private readonly collisionCommands: CollisionCommandBinding[]
 
-	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole, id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean) {
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole, id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean, collisionCommands: CollisionCommandBinding[] = []) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = SHAPE.CIRCLE
@@ -58,6 +60,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 		this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
 		this.isPhysicsEnabled = physicsEnabled ?? true;
 		this.isDrawingEnabled = drawingEnabled ?? true;
+		this.collisionCommands = structuredClone(collisionCommands);
 		for (const eff of effects) {
 			switch (eff.trigger) {
 				case EffectTrigger.Collision: this.collisionEffects.push(createRuntimeEffect(eff)); continue
@@ -117,6 +120,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public setSetting(key: SettingKey, value: SettingValue): void { if (typeof value !== "boolean") return; if (key === "physicsEnabled") this.setPhysicsEnabled(value); else if (key === "drawingEnabled") this.setDrawingEnabled(value); }
 	public addSetting(key: SettingKey, value: SettingValue): void { this.setSetting(key, value); }
 	public removeSetting(key: SettingKey, value: SettingValue): void { if (typeof value === "boolean") this.setSetting(key, !value); }
+	public getCollisionCommands(): readonly CollisionCommandBinding[] { return this.collisionCommands; }
 	public setColor(color: string | undefined) { this.color = color }
 	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
 	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
@@ -135,6 +139,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 		}
 		if (this.collisionRole !== undefined) out.role = this.collisionRole
 		if (this.serializeState) { out.id = this.id; out.physicsEnabled = this.isPhysicsEnabled; out.drawingEnabled = this.isDrawingEnabled; }
+		if (this.collisionCommands.length > 0) out.collisionCommands = structuredClone(this.collisionCommands);
 		return out
 	}
 	public getType(): SHAPE.CIRCLE { return this.shape }

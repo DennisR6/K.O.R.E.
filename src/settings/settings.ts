@@ -16,6 +16,7 @@ import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../e
 import { validateFullEffectSettings } from "../effects/validate.js";
 import { validateTriggerDefinition, type TriggerDefinition } from "../item/triggerDefinitions.js";
 import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
+import { validateCollisionCommandBinding, type CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 const MAPS = { IceMap }
 MAPS;
@@ -89,6 +90,8 @@ export interface IMapBoundarySettings extends IEffectable {
 	 * containment boundary (never filled) unless it declares `"both"`.
 	 */
 	role?: StructureCollisionRole
+	/** Relative current Engine commands activated on collision entry. */
+	collisionCommands?: CollisionCommandBinding[];
 }
 export interface MapBoundarySettingsCircle extends IMapBoundarySettings {
 	type: SHAPE.CIRCLE
@@ -182,6 +185,10 @@ function isEffect(value: unknown): value is FullEffectSettings {
 }
 function isBoundary(value: unknown): value is MapBoundarySettings {
 	if (!isRecord(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect)) return false
+	if (value.collisionCommands !== undefined) {
+		if (!Array.isArray(value.collisionCommands)) return false
+		try { value.collisionCommands.forEach(validateCollisionCommandBinding) } catch { return false }
+	}
 	if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id)) return false
 	if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean") return false
 	if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean") return false

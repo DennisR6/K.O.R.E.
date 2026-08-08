@@ -5,15 +5,16 @@ import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureLine, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
 import type { SettingKey, SettingValue } from "../effects/types.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 export class FullStructure implements IStructure, IdefaultPhysics {
 	str: IStructure & RoleAwarePhysics
 	constructor(str: MapBoundarySettings) {
 		if (str.id === undefined) throw new Error("Runtime structures require an explicit canonical ID");
 		switch (str.type) {
-			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled); break;
-			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled); break;
-			case SHAPE.LINE: this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled); break;
+			case SHAPE.CIRCLE: this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands); break;
+			case SHAPE.RECTANGLE: this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands); break;
+			case SHAPE.LINE: this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands); break;
 		}
 	}
 
@@ -26,6 +27,7 @@ export class FullStructure implements IStructure, IdefaultPhysics {
 	public setSetting(key: SettingKey, value: SettingValue): void { this.str.setSetting(key, value) }
 	public addSetting(key: SettingKey, value: SettingValue): void { this.str.addSetting(key, value) }
 	public removeSetting(key: SettingKey, value: SettingValue): void { this.str.removeSetting(key, value) }
+	public getCollisionCommands(): readonly CollisionCommandBinding[] { return this.str.getCollisionCommands(); }
 	public getFriction(): number | undefined { return this.str.getFriction() }
 	public getPos(): Vector2D { return this.str.getPos() }
 	public getVel(): Vector2D { return this.str.getVel() }

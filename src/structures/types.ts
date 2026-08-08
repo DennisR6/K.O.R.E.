@@ -6,6 +6,7 @@ import type { IPhysics, SHAPE } from "../physics/physics.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import type { SettingKey, SettingValue } from "../effects/types.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 import { StructureCircle } from "./structureCircle.js";
 import { StructureLine } from "./structureLine.js";
 import { StructureRectangle } from "./structureRectangle.js";
@@ -44,6 +45,7 @@ export interface IStructure extends
 	setSetting(key: SettingKey, value: SettingValue): void;
 	addSetting(key: SettingKey, value: SettingValue): void;
 	removeSetting(key: SettingKey, value: SettingValue): void;
+	getCollisionCommands(): readonly CollisionCommandBinding[];
 }
 export type StructureMap = {
 	[SHAPE.CIRCLE]: StructureCircle & IPhysics<SHAPE.CIRCLE>
