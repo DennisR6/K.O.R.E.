@@ -356,12 +356,13 @@ After every change, check whether this guide still reflects the implementation a
   intent while locked, and retains playlist keyboard compatibility.
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.
-- `src/assetManager/loader.ts`: lazy browser image fetch/cache with a currently
-  misaligned JSON fallback path.
+- `src/assetManager/loader.ts`: lazy browser image fetch/cache with a working
+  `public/assets/json/` fallback path.
 - `scripts/createAssetPack.ts`: scans public images, rewrites the asset
-  registry, and emits base64 JSON packs under `dist/`.
-- `scripts/listAssets.ts`: stale diagnostic whose paths do not match the
-  current generator.
+  registry, and emits base64 JSON packs under `public/assets/json/` with
+  proper MIME types.
+- `scripts/listAssets.ts`: diagnostic tool that checks size and MIME type of
+  generated JSON assets under `public/assets/json/`.
 
 ### Networking and utilities
 

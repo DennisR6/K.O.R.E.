@@ -77,9 +77,15 @@ class EngineAssetManager {
 	}
 
 	private async loadJsonFallback(key: ImageKey) {
-		if (typeof key === "string") return;
+		if (key === undefined || key === null) return;
+		const assetName = typeof key === "number" ? AssetList[key] : key;
+		if (!assetName) return;
+
 		try {
-			const response = await fetch(`./src/assetManager/assets/json/${AssetList[key]}.json`);
+			let response = await fetch(`./assets/json/${assetName}.json`);
+			if (!response.ok) {
+				response = await fetch(`./public/assets/json/${assetName}.json`);
+			}
 			if (!response.ok) throw new Error("JSON Fallback fehlgeschlagen");
 
 			const data = await response.json();
