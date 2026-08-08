@@ -1,4 +1,3 @@
-import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
 import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../effects/types.js";
@@ -9,11 +8,12 @@ import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../..
 import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "../../engine/contracts/actionModifier.js";
 import { SeededRandom } from "../../utils/random.js";
 import { createCollisionFilterTemplate, type CollisionFilterTemplate } from "../../engine/contracts/collisionFilter.js";
+import { createActorEligibilityConstraintTemplate, type ActorEligibilityConstraintTemplate } from "../../engine/contracts/actorEligibility.js";
 
 export type RuntimeItemEffect =
 	| CollisionFilterTemplate
 	| ActionModifierTemplate
-	| EffectSelectionLock
+	| ActorEligibilityConstraintTemplate
 	| EffectShield
 	| EffectSpawnTrigger
 	| TemporalModifierTemplate
@@ -33,7 +33,7 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.GhostMode:
 			return createCollisionFilterTemplate({ excludedCategories: ["entity", "structure"], durationUnit: "turns", duration: integerValue(value, "durationTurns") });
 		case ItemEffectType.SelectionLock:
-			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
+			return createActorEligibilityConstraintTemplate({ mode: "excluded", durationUnit: "turns", duration: integerValue(value, "durationTurns") });
 		case ItemEffectType.Shield:
 			return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
 		case ItemEffectType.SpawnTrigger:
@@ -69,7 +69,7 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 
 export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
-	if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
+	if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isActorEligibilityConstraintTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
@@ -121,6 +121,10 @@ export function isActionModifierTemplate(value: RuntimeItemEffect): value is Act
 
 export function isCollisionFilterTemplate(value: RuntimeItemEffect): value is CollisionFilterTemplate {
 	return "excludedCategories" in value && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
+}
+
+export function isActorEligibilityConstraintTemplate(value: RuntimeItemEffect): value is ActorEligibilityConstraintTemplate {
+	return "mode" in value && value.mode === "excluded" && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
 }
 
 function safeIntegerValue(value: Record<string, unknown>, key: string): number {

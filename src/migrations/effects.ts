@@ -8,6 +8,7 @@ import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movement
 import { createActionModifier } from "../engine/contracts/actionModifier.js";
 import { SeededRandom } from "../utils/random.js";
 import { createCollisionFilter, createCollisionFilterLifetime } from "../engine/contracts/collisionFilter.js";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "../engine/contracts/actorEligibility.js";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {
@@ -83,13 +84,27 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 				lifetime: createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order }),
 			}];
 		});
+		const historicalActorConstraints = (player.itemEffects ?? []).flatMap((effect, index) => {
+			if (effect.type !== "selectionLock") return [];
+			const durationTurns = effect.typeValue.durationTurns;
+			const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+			if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1) throw new Error("Historical selectionLock requires a positive duration");
+			if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns) return [];
+			const constraintId = `${player.id}:actor-eligibility:${index}`;
+			return [{
+				constraint: createActorEligibilityConstraint({ id: constraintId, mode: "excluded", sourceId: effect.itemId, sourceOrder: effect.order }),
+				lifetime: createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order }),
+			}];
+		});
 		return {
 			...player,
 			effects: (player.effects ?? []).map(migrateFullEffectSettings),
-			...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode"].includes(effect.type as string)) } : {}),
+			...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode", "selectionLock"].includes(effect.type as string)) } : {}),
 			...(historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...(player.pendingActionModifiers ?? []), ...historicalActionModifiers] } : {}),
 			...(historicalCollisionFilters.length || player.collisionFilters?.length ? { collisionFilters: [...(player.collisionFilters ?? []), ...historicalCollisionFilters.map(entry => entry.filter)] } : {}),
 			...(historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...(player.collisionFilterLifetimes ?? []), ...historicalCollisionFilters.map(entry => entry.lifetime)] } : {}),
+			...(historicalActorConstraints.length || player.actorEligibilityConstraints?.length ? { actorEligibilityConstraints: [...(player.actorEligibilityConstraints ?? []), ...historicalActorConstraints.map(entry => entry.constraint)] } : {}),
+			...(historicalActorConstraints.length || player.actorEligibilityConstraintLifetimes?.length ? { actorEligibilityConstraintLifetimes: [...(player.actorEligibilityConstraintLifetimes ?? []), ...historicalActorConstraints.map(entry => entry.lifetime)] } : {}),
 		};
 	});
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));

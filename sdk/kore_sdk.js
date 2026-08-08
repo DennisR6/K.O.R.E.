@@ -2443,6 +2443,106 @@ function compareFilterOrder(first, second) {
 function compareLifetimeOrder(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
+var ACTOR_ELIGIBILITY_SCHEMA_VERSION = 1;
+var ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION = 1;
+function createActorEligibilityConstraint(input) {
+  const constraint = {
+    schemaVersion: ACTOR_ELIGIBILITY_SCHEMA_VERSION,
+    id: input.id,
+    mode: input.mode,
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateActorEligibilityConstraint(constraint);
+  return constraint;
+}
+function createActorEligibilityConstraintLifetime(input) {
+  const lifetime = {
+    schemaVersion: ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION,
+    id: input.id,
+    constraintId: input.constraintId,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateActorEligibilityConstraintLifetime(lifetime);
+  return lifetime;
+}
+function createActorEligibilityConstraintTemplate(input) {
+  const template = structuredClone(input);
+  if (template.mode !== "excluded" || template.durationUnit !== "turns" || !Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Actor eligibility constraint requires a positive turn duration");
+  return template;
+}
+function advanceActorEligibilityConstraintLifetime(lifetime) {
+  validateActorEligibilityConstraintLifetime(lifetime);
+  const next = advanceLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  return next ? { ...structuredClone(lifetime), ...next } : undefined;
+}
+function isActorEligible(constraints) {
+  return !constraints.some((constraint) => constraint.mode === "excluded");
+}
+function validateActorEligibilityConstraint(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Actor eligibility constraint must be an object");
+  const constraint = value;
+  if (constraint.schemaVersion !== ACTOR_ELIGIBILITY_SCHEMA_VERSION)
+    throw new Error("Unsupported actor eligibility constraint schema version");
+  if (typeof constraint.id !== "string" || constraint.id.length === 0)
+    throw new Error("Actor eligibility constraint requires a stable id");
+  if (constraint.mode !== "excluded")
+    throw new Error("Unsupported actor eligibility constraint mode");
+  if (constraint.sourceId !== undefined && (typeof constraint.sourceId !== "string" || constraint.sourceId.length === 0))
+    throw new Error("Actor eligibility constraint sourceId must be non-empty");
+  if (constraint.sourceOrder !== undefined && !Number.isSafeInteger(constraint.sourceOrder))
+    throw new Error("Actor eligibility constraint sourceOrder must be a safe integer");
+  assertJsonValue(constraint);
+}
+function validateActorEligibilityConstraintLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Actor eligibility constraint lifetime must be an object");
+  const lifetime = value;
+  if (lifetime.schemaVersion !== ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION)
+    throw new Error("Unsupported actor eligibility lifetime schema version");
+  if (typeof lifetime.id !== "string" || lifetime.id.length === 0 || typeof lifetime.constraintId !== "string" || lifetime.constraintId.length === 0)
+    throw new Error("Actor eligibility lifetime requires stable ids");
+  if (lifetime.durationUnit !== "turns")
+    throw new Error("Actor eligibility constraint lifetime requires turns");
+  validateLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  if (lifetime.sourceId !== undefined && (typeof lifetime.sourceId !== "string" || lifetime.sourceId.length === 0))
+    throw new Error("Actor eligibility lifetime sourceId must be non-empty");
+  if (lifetime.sourceOrder !== undefined && !Number.isSafeInteger(lifetime.sourceOrder))
+    throw new Error("Actor eligibility lifetime sourceOrder must be a safe integer");
+  assertJsonValue(lifetime);
+}
+function validateActorEligibilityState(constraints, lifetimes) {
+  const ids = new Set;
+  let previous;
+  for (const constraint of constraints) {
+    validateActorEligibilityConstraint(constraint);
+    if (ids.has(constraint.id) || previous && compareConstraintOrder(previous, constraint) > 0)
+      throw new Error("Actor eligibility constraints must be unique and canonically ordered");
+    ids.add(constraint.id);
+    previous = constraint;
+  }
+  const lifetimeIds = new Set;
+  let previousLifetime;
+  for (const lifetime of lifetimes) {
+    validateActorEligibilityConstraintLifetime(lifetime);
+    if (!ids.has(lifetime.constraintId))
+      throw new Error("Actor eligibility lifetime references an unknown constraint");
+    if (lifetimeIds.has(lifetime.id) || previousLifetime && compareLifetimeOrder2(previousLifetime, lifetime) > 0)
+      throw new Error("Actor eligibility lifetimes must be unique and canonically ordered");
+    lifetimeIds.add(lifetime.id);
+    previousLifetime = lifetime;
+  }
+}
+function compareConstraintOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareLifetimeOrder2(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
 
 var engine = {
   createWorld(options) {
@@ -3430,6 +3530,11 @@ function createPlayerSettings(overrides = {}) {
   for (const lifetime of overrides.collisionFilterLifetimes ?? [])
     validateCollisionFilterLifetime(lifetime);
   validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? []);
+  for (const constraint of overrides.actorEligibilityConstraints ?? [])
+    validateActorEligibilityConstraint(constraint);
+  for (const lifetime of overrides.actorEligibilityConstraintLifetimes ?? [])
+    validateActorEligibilityConstraintLifetime(lifetime);
+  validateActorEligibilityState(overrides.actorEligibilityConstraints ?? [], overrides.actorEligibilityConstraintLifetimes ?? []);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -3457,6 +3562,8 @@ function createPlayerSettings(overrides = {}) {
     ...overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {},
     ...overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {},
     ...overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {},
+    ...overrides.actorEligibilityConstraints ? { actorEligibilityConstraints: structuredClone(overrides.actorEligibilityConstraints) } : {},
+    ...overrides.actorEligibilityConstraintLifetimes ? { actorEligibilityConstraintLifetimes: structuredClone(overrides.actorEligibilityConstraintLifetimes) } : {},
     numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
 }
@@ -3475,38 +3582,6 @@ function createDefaultNumericThresholdBindings() {
       ]
     }]
   }];
-}
-
-class EffectSelectionLock {
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1) {
-      throw new Error("selectionLock durationTurns must be a positive integer");
-    }
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns) {
-      throw new Error("selectionLock remainingTurns must be between zero and durationTurns");
-    }
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  isLocked() {
-    return this.remainingTurns > 0;
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toSettings() {
-    return {
-      type: "selectionLock" /* SelectionLock */,
-      typeValue: { durationTurns: this.durationTurns, remainingTurns: this.remainingTurns }
-    };
-  }
 }
 
 class EffectShield {
@@ -3626,7 +3701,7 @@ function createRuntimeItemEffect(settings) {
     case "ghostMode" /* GhostMode */:
       return createCollisionFilterTemplate({ excludedCategories: ["entity", "structure"], durationUnit: "turns", duration: integerValue(value, "durationTurns") });
     case "selectionLock" /* SelectionLock */:
-      return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
+      return createActorEligibilityConstraintTemplate({ mode: "excluded", durationUnit: "turns", duration: integerValue(value, "durationTurns") });
     case "shield" /* Shield */:
       return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
     case "spawnTrigger" /* SpawnTrigger */:
@@ -3653,7 +3728,7 @@ function resolveRuntimeItemEffects(effects) {
 }
 function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
-  if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
+  if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isActorEligibilityConstraintTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
     return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
   if (!advance)
@@ -3704,6 +3779,9 @@ function isActionModifierTemplate(value) {
 }
 function isCollisionFilterTemplate(value) {
   return "excludedCategories" in value && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
+}
+function isActorEligibilityConstraintTemplate(value) {
+  return "mode" in value && value.mode === "excluded" && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
 }
 function safeIntegerValue(value, key) {
   const raw = value[key];
@@ -3958,6 +4036,8 @@ class Player {
   pendingActionModifiers = [];
   collisionFilters = [];
   collisionFilterLifetimes = [];
+  actorEligibilityConstraints = [];
+  actorEligibilityConstraintLifetimes = [];
   numericThresholds = [];
   numericEffectDispatcher;
   effectAlways = [];
@@ -4009,6 +4089,13 @@ class Player {
     validateCollisionFilterState(settings.collisionFilters ?? [], settings.collisionFilterLifetimes ?? []);
     this.collisionFilters = structuredClone(settings.collisionFilters ?? []);
     this.collisionFilterLifetimes = structuredClone(settings.collisionFilterLifetimes ?? []);
+    for (const constraint of settings.actorEligibilityConstraints ?? [])
+      validateActorEligibilityConstraint(constraint);
+    for (const lifetime of settings.actorEligibilityConstraintLifetimes ?? [])
+      validateActorEligibilityConstraintLifetime(lifetime);
+    validateActorEligibilityState(settings.actorEligibilityConstraints ?? [], settings.actorEligibilityConstraintLifetimes ?? []);
+    this.actorEligibilityConstraints = structuredClone(settings.actorEligibilityConstraints ?? []);
+    this.actorEligibilityConstraintLifetimes = structuredClone(settings.actorEligibilityConstraintLifetimes ?? []);
     validateNumericThresholdBindings(settings.numericThresholds ?? []);
     this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
@@ -4295,6 +4382,8 @@ class Player {
       ...this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {},
       ...this.collisionFilters.length ? { collisionFilters: structuredClone(this.collisionFilters) } : {},
       ...this.collisionFilterLifetimes.length ? { collisionFilterLifetimes: structuredClone(this.collisionFilterLifetimes) } : {},
+      ...this.actorEligibilityConstraints.length ? { actorEligibilityConstraints: structuredClone(this.actorEligibilityConstraints) } : {},
+      ...this.actorEligibilityConstraintLifetimes.length ? { actorEligibilityConstraintLifetimes: structuredClone(this.actorEligibilityConstraintLifetimes) } : {},
       ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
@@ -4436,6 +4525,41 @@ class Player {
     this.collisionFilters = this.collisionFilters.filter((filter) => !removed.has(filter.id));
     this.collisionFilterLifetimes = this.collisionFilterLifetimes.filter((lifetime) => !removed.has(lifetime.filterId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)));
   }
+  addActorEligibilityConstraint(constraint, lifetime) {
+    validateActorEligibilityConstraint(constraint);
+    validateActorEligibilityConstraintLifetime(lifetime);
+    if (lifetime.constraintId !== constraint.id)
+      throw new Error("Actor eligibility lifetime must target its constraint");
+    this.actorEligibilityConstraints = [...this.actorEligibilityConstraints.filter((existing) => existing.id !== constraint.id), structuredClone(constraint)].sort(compareActorConstraints);
+    this.actorEligibilityConstraintLifetimes = [...this.actorEligibilityConstraintLifetimes.filter((existing) => existing.constraintId !== constraint.id), structuredClone(lifetime)].sort(compareActorLifetimes);
+  }
+  getActorEligibilityConstraints() {
+    return structuredClone(this.actorEligibilityConstraints);
+  }
+  getActorEligibilityConstraintLifetimes() {
+    return structuredClone(this.actorEligibilityConstraintLifetimes);
+  }
+  advanceActorEligibilityConstraintLifetimes() {
+    const active = [];
+    const activeIds = new Set;
+    for (const lifetime of this.actorEligibilityConstraintLifetimes) {
+      const next = advanceActorEligibilityConstraintLifetime(lifetime);
+      if (next) {
+        active.push(next);
+        activeIds.add(lifetime.constraintId);
+      }
+    }
+    this.actorEligibilityConstraintLifetimes = active.sort(compareActorLifetimes);
+    this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter((constraint) => activeIds.has(constraint.id));
+  }
+  removeActorEligibilityConstraints(sourceIds) {
+    const removed = new Set(this.actorEligibilityConstraints.filter((constraint) => constraint.sourceId && sourceIds.has(constraint.sourceId)).map((constraint) => constraint.id));
+    this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter((constraint) => !removed.has(constraint.id));
+    this.actorEligibilityConstraintLifetimes = this.actorEligibilityConstraintLifetimes.filter((lifetime) => !removed.has(lifetime.constraintId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)));
+  }
+  isActorEligible() {
+    return isActorEligible(this.actorEligibilityConstraints);
+  }
   addEffect(trigger, effect) {
     switch (trigger) {
       case "EffectTrigger.Always" /* Always */:
@@ -4456,6 +4580,12 @@ function compareCollisionFilters(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 function compareCollisionFilterLifetimes(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareActorConstraints(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareActorLifetimes(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 function isVector(value) {
@@ -4657,7 +4787,7 @@ class AiTurnEmitter {
     if (decision.itemUse) {
       const { actorId, itemId, target } = decision.itemUse;
       const actor = handler.getEntityManager().getEntityById(actorId);
-      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team)) {
+      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId)) {
         targetEmitter.sendItemUse?.(actorId, itemId, target);
         actionSubmitted = true;
       }
@@ -4665,7 +4795,7 @@ class AiTurnEmitter {
     if (decision.shot) {
       const { actorId, angle, power } = decision.shot;
       const actor = handler.getEntityManager().getEntityById(actorId);
-      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && isValidInput({ actorId, angle, power })) {
+      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId) && isValidInput({ actorId, angle, power })) {
         targetEmitter.sendShot(actorId, angle, power);
         actionSubmitted = true;
       }
@@ -4676,7 +4806,7 @@ class AiTurnEmitter {
 
 class EasyAi {
   computeTurn(handler, aiSettings) {
-    const aiActors = handler.getEntityManager().getEntities().filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = handler.getEntityManager().getEntities().filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     if (aiActors.length === 0)
       return;
     const random = new SeededRandom(aiSettings.seed + handler.getTurnNumber() * 31);
@@ -4698,7 +4828,7 @@ class HardAi {
   computeTurn(handler, aiSettings) {
     const random = new SeededRandom(aiSettings.seed);
     const entities = handler.getEntityManager().getEntities();
-    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
@@ -4783,7 +4913,7 @@ class HardAi {
 class MediumAi {
   computeTurn(handler, aiSettings) {
     const entities = handler.getEntityManager().getEntities();
-    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
@@ -4949,7 +5079,7 @@ class AiBattleSystem {
     const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
     if (!submitted) {
       console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
-      const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(team));
+      const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(team) && this.handler.isActorEligibleForAction(entity.getId()));
       if (actor)
         this.targetEmitter.sendShot(actor.getId(), 0, 4);
     }
@@ -4997,7 +5127,7 @@ class AiOpponentSystem {
       return;
     if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
       return;
-    const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(this.settings.team));
+    const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler.isActorEligibleForAction(entity.getId()));
     if (actor)
       this.targetEmitter.sendShot(actor.getId(), 0, 4);
   }
@@ -5263,8 +5393,9 @@ class PhysicsSystem {
     const stepSize = CCD_MAX_STEP_SIZE;
     const substeps = maxDisplacement > stepSize ? Math.min(Math.ceil(maxDisplacement / stepSize), MAX_CCD_SUBSTEPS) : 1;
     const contactedPairsThisTick = new Set;
+    const filterSnapshot = new Map(ctx.entities.getEntities().map((entity) => [entity, this.getCollisionFilters(entity)]));
     if (substeps <= 1) {
-      this.resolveAllCollisions(ctx, contactedPairsThisTick);
+      this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
     } else {
       for (const e of activeEntities) {
         const vel = e.getVel();
@@ -5286,7 +5417,7 @@ class PhysicsSystem {
             y: pos.y + vel.y * subDt
           });
         }
-        this.resolveAllCollisions(ctx, contactedPairsThisTick);
+        this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
       }
     }
     let totalMovement = 0;
@@ -5300,9 +5431,9 @@ class PhysicsSystem {
         totalMovement += speed;
       }
     });
-    this.activeContactPairs = this.collectCurrentContactPairs(ctx);
+    this.activeContactPairs = this.collectCurrentContactPairs(ctx, filterSnapshot);
   }
-  resolveAllCollisions(ctx, contactedPairsThisTick = new Set) {
+  resolveAllCollisions(ctx, contactedPairsThisTick = new Set, filterSnapshot = new Map) {
     const { entities, structures } = ctx;
     const enitityArr = entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(structures));
@@ -5312,7 +5443,7 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          if (this.isEntityPairAllowed(entityA, entityB) && this.strategy.checkCollision(entityA, entityB)) {
+          if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot) && this.strategy.checkCollision(entityA, entityB)) {
             this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
           }
         }
@@ -5322,7 +5453,7 @@ class PhysicsSystem {
             continue;
           if (this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          if (this.isStructurePairAllowed(entityA) && this.strategy.checkCollision(entityA, structureB)) {
+          if (this.isStructurePairAllowed(entityA, filterSnapshot) && this.strategy.checkCollision(entityA, structureB)) {
             this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
           }
         }
@@ -5332,14 +5463,14 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          if (this.isEntityPairAllowed(entityA, entityB))
+          if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot))
             totalOverlap += this.getOverlapDistance(entityA, entityB);
         }
         for (let j = 0;j < structures.length; j++) {
           const structureB = structures[j];
           if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          if (this.isStructurePairAllowed(entityA))
+          if (this.isStructurePairAllowed(entityA, filterSnapshot))
             totalOverlap += this.getOverlapDistance(entityA, structureB);
         }
       }
@@ -5417,7 +5548,7 @@ class PhysicsSystem {
       this.onCollision?.(entityA, entityB);
     }
   }
-  collectCurrentContactPairs(ctx) {
+  collectCurrentContactPairs(ctx, filterSnapshot) {
     const contacts = new Set;
     const entities = ctx.entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(ctx.structures));
@@ -5425,13 +5556,13 @@ class PhysicsSystem {
       const entity = entities[i];
       for (let j = i + 1;j < entities.length; j++) {
         const other = entities[j];
-        if (this.isEntityPairAllowed(entity, other) && this.strategy.checkCollision(entity, other))
+        if (this.isEntityPairAllowed(entity, other, filterSnapshot) && this.strategy.checkCollision(entity, other))
           contacts.add(this.getPairKey(entity, other));
       }
       for (const structure of ctx.structures) {
         if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries))
           continue;
-        if (this.isStructurePairAllowed(entity) && this.strategy.checkCollision(entity, structure))
+        if (this.isStructurePairAllowed(entity, filterSnapshot) && this.strategy.checkCollision(entity, structure))
           contacts.add(this.getPairKey(entity, structure));
       }
     }
@@ -5500,11 +5631,15 @@ class PhysicsSystem {
       return true;
     return containmentBoundaries.has(structureB);
   }
-  isEntityPairAllowed(first, second) {
-    return isCollisionAllowed("entity", first.getCollisionFilters(), "entity", second.getCollisionFilters());
+  isEntityPairAllowed(first, second, filterSnapshot) {
+    return isCollisionAllowed("entity", filterSnapshot?.get(first) ?? this.getCollisionFilters(first), "entity", filterSnapshot?.get(second) ?? this.getCollisionFilters(second));
   }
-  isStructurePairAllowed(entity) {
-    return isCollisionAllowed("entity", entity.getCollisionFilters(), "structure", []);
+  isStructurePairAllowed(entity, filterSnapshot) {
+    return isCollisionAllowed("entity", filterSnapshot?.get(entity) ?? this.getCollisionFilters(entity), "structure", []);
+  }
+  getCollisionFilters(entity) {
+    const candidate = entity;
+    return typeof candidate.getCollisionFilters === "function" ? candidate.getCollisionFilters() : [];
   }
   constrainToMap(entity, _ctx) {
     const pos = entity.getPos();
@@ -5915,7 +6050,7 @@ class UiSystem {
     }
     if (this.aimAngle !== null && this.chargePower !== null && this.selectedActorId !== null) {
       const actor2 = ctx.entities.getEntityById(this.selectedActorId);
-      if (actor2 && !actor2.isDead() && (actor2.getTeam().length === 0 || actor2.getTeam().includes(ctx.activeTeam))) {
+      if (actor2 && !actor2.isDead() && actor2.isActorEligible() && (actor2.getTeam().length === 0 || actor2.getTeam().includes(ctx.activeTeam))) {
         const input2 = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
         if (!isValidInput(input2)) {
           this.clearAimAndCharge();
@@ -5933,7 +6068,7 @@ class UiSystem {
     if (!this.start)
       return;
     const actor = ctx.entities.getEntityAt(this.start.x, this.start.y);
-    if (!actor || actor.isDead() || actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam)) {
+    if (!actor || actor.isDead() || !actor.isActorEligible() || actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam)) {
       this.clearInput();
       return;
     }
@@ -7450,13 +7585,30 @@ function migrateGameSettingsEffects(settings) {
         lifetime: createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order })
       }];
     });
+    const historicalActorConstraints = (player.itemEffects ?? []).flatMap((effect, index) => {
+      if (effect.type !== "selectionLock")
+        return [];
+      const durationTurns = effect.typeValue.durationTurns;
+      const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+      if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1)
+        throw new Error("Historical selectionLock requires a positive duration");
+      if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns)
+        return [];
+      const constraintId = `${player.id}:actor-eligibility:${index}`;
+      return [{
+        constraint: createActorEligibilityConstraint({ id: constraintId, mode: "excluded", sourceId: effect.itemId, sourceOrder: effect.order }),
+        lifetime: createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order })
+      }];
+    });
     return {
       ...player,
       effects: (player.effects ?? []).map(migrateFullEffectSettings),
-      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode"].includes(effect.type)) } : {},
+      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode", "selectionLock"].includes(effect.type)) } : {},
       ...historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...player.pendingActionModifiers ?? [], ...historicalActionModifiers] } : {},
       ...historicalCollisionFilters.length || player.collisionFilters?.length ? { collisionFilters: [...player.collisionFilters ?? [], ...historicalCollisionFilters.map((entry) => entry.filter)] } : {},
-      ...historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...player.collisionFilterLifetimes ?? [], ...historicalCollisionFilters.map((entry) => entry.lifetime)] } : {}
+      ...historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...player.collisionFilterLifetimes ?? [], ...historicalCollisionFilters.map((entry) => entry.lifetime)] } : {},
+      ...historicalActorConstraints.length || player.actorEligibilityConstraints?.length ? { actorEligibilityConstraints: [...player.actorEligibilityConstraints ?? [], ...historicalActorConstraints.map((entry) => entry.constraint)] } : {},
+      ...historicalActorConstraints.length || player.actorEligibilityConstraintLifetimes?.length ? { actorEligibilityConstraintLifetimes: [...player.actorEligibilityConstraintLifetimes ?? [], ...historicalActorConstraints.map((entry) => entry.lifetime)] } : {}
     };
   });
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
@@ -9580,11 +9732,7 @@ class GameHandler {
   resolveTurn({ actorId, angle, power }) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot resolve further turns");
-    const actor = this.entityManager.getEntityById(actorId);
-    if (!actor)
-      throw new Error(`Actor ${actorId} not found`);
-    if (actor.isDead())
-      throw new Error(`Actor ${actorId} is not active`);
+    const actor = this.validateActorForAction(actorId);
     this.feedback.record("shot" /* Shot */, this.getTurnNumber(), { actorId, data: { angle, power } });
     const before = new Map(this.entityManager.toSettings().map((player) => [player.id, player]));
     this.applyAcceptedForce(actor, { angle, power });
@@ -9614,6 +9762,24 @@ class GameHandler {
       durationFrames: frames,
       finalState
     };
+  }
+  validateActorForAction(actorId) {
+    const actor = this.entityManager.getEntityById(actorId);
+    if (!actor)
+      throw new Error(`Actor ${actorId} not found`);
+    if (actor.isDead())
+      throw new Error(`Actor ${actorId} is not active`);
+    if (!actor.isActorEligible())
+      throw new Error(`Actor ${actorId} is locked from selection`);
+    return actor;
+  }
+  isActorEligibleForAction(actorId) {
+    try {
+      this.validateActorForAction(actorId);
+      return true;
+    } catch {
+      return false;
+    }
   }
   playTurn(packet, onComplete) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
@@ -9837,6 +10003,7 @@ class GameHandler {
         entity.advanceTemporalModifiersTurn();
         entity.advancePendingActionModifierLifetimes();
         entity.advanceCollisionFilterLifetimes();
+        entity.advanceActorEligibilityConstraintLifetimes();
         for (const scheduled of entity.advanceItemEffectsTurn())
           this.executeDueSpawnTrigger(entity, scheduled);
       });
@@ -10192,9 +10359,7 @@ class GameHandler {
     this.deferredEffects = this.deferredEffects.filter((effect) => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
   }
   useItem(actorId, itemId, target = { type: "self" }) {
-    const actor = this.entityManager.getEntityById(actorId);
-    if (!actor)
-      throw new Error(`Actor ${actorId} not found`);
+    const actor = this.validateActorForAction(actorId);
     const item = this.items.find((candidate) => candidate.id === itemId);
     if (!item)
       throw new Error(`Item '${itemId}' is not declared for this game`);
@@ -10228,6 +10393,7 @@ class GameHandler {
       ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
       ...targetEntity.getPendingActionModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
       ...targetEntity.getCollisionFilters().map((filter) => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
+      ...targetEntity.getActorEligibilityConstraints().map((constraint) => ({ itemId: constraint.sourceId, order: constraint.sourceOrder })),
       ...this.structureLifecycles.filter((lifecycle) => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map((lifecycle) => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
       ...this.deferredEffects.filter((effect) => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map((effect) => ({ itemId: effect.sourceId, order: effect.sourceOrder }))
     ];
@@ -10236,6 +10402,7 @@ class GameHandler {
     targetEntity.removeTemporalModifiers(combination.removeItemIds);
     targetEntity.removePendingActionModifiers(combination.removeItemIds);
     targetEntity.removeCollisionFilters(combination.removeItemIds);
+    targetEntity.removeActorEligibilityConstraints(combination.removeItemIds);
     this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()));
     this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()));
     this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget);
@@ -10292,6 +10459,11 @@ class GameHandler {
           throw new Error("Collision filters require an entity target");
         const filterId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
         targetEntity.addCollisionFilter(createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }), createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }));
+      } else if (isActorEligibilityConstraintTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Actor eligibility constraints require an entity target");
+        const constraintId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+        targetEntity.addActorEligibilityConstraint(createActorEligibilityConstraint({ id: constraintId, mode: effect.mode, sourceId: item.id, sourceOrder: itemOrder(item) }), createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }));
       } else if (isActionModifierTemplate(effect)) {
         if (!targetEntity)
           throw new Error("Action modifiers require an entity target");

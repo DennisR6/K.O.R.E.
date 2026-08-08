@@ -44,9 +44,8 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		// path before recording or simulating: a rejected shot never mutates the
 		// match and never reaches the replay document.
 		if (!isValidInput({ actorId, angle, power })) throw new Error("Invalid shot input")
-		const actor = this.handler.getEntityManager().getEntityById(actorId)
-		if (!actor) throw new Error(`Actor ${actorId} not found`)
-		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`)
+		const validateActor = (this.handler as Partial<GameHandler>).validateActorForAction;
+		if (validateActor) validateActor.call(this.handler, actorId);
 		this.recorder.recordShoot(actorId, angle, power)
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
@@ -74,6 +73,8 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		if (this.ruleState.itemUses >= this.rules.getMaxItemsPerTurn()) throw new Error("Item allowance has been exhausted")
 		const actor = this.handler.getEntityManager().getEntityById(actorId)
 		if (!actor || actor.isDead()) throw new Error("Actor is not active")
+		const validateActor = (this.handler as Partial<GameHandler>).validateActorForAction;
+		if (validateActor) validateActor.call(this.handler, actorId);
 		this.recorder.recordItemUse(actorId, itemId, target)
 		this.handler.useItem(actorId, itemId, target)
 		this.ruleState = this.rules.useItem(this.ruleState)

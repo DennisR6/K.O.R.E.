@@ -37,6 +37,7 @@ import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../syst
 import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
 import { createActionModifier } from "./contracts/actionModifier.js";
 import { createCollisionFilter, createCollisionFilterLifetime } from "./contracts/collisionFilter.js";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "./contracts/actorEligibility.js";
 import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
 import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
@@ -49,7 +50,7 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isActionModifierTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isActionModifierTemplate, isActorEligibilityConstraintTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
@@ -228,9 +229,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	/** Resolves and commits one turn on this handler. Use this on the authoritative server. */
 	public resolveTurn({ actorId, angle, power }: IInput): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot resolve further turns")
-		const actor = this.entityManager.getEntityById(actorId)
-		if (!actor) throw new Error(`Actor ${actorId} not found`);
-		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		const actor = this.validateActorForAction(actorId);
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
 		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
 		this.applyAcceptedForce(actor, { angle, power });
@@ -259,6 +258,20 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			durationFrames: frames,
 			finalState,
 		};
+	}
+
+	/** Shared authoritative actor eligibility boundary for all action transports. */
+	public validateActorForAction(actorId: string): IEntity {
+		const actor = this.entityManager.getEntityById(actorId);
+		if (!actor) throw new Error(`Actor ${actorId} not found`);
+		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		if (!actor.isActorEligible()) throw new Error(`Actor ${actorId} is locked from selection`);
+		return actor;
+	}
+
+	public isActorEligibleForAction(actorId: string): boolean {
+		try { this.validateActorForAction(actorId); return true; }
+		catch { return false; }
 	}
 
 	/**
@@ -529,6 +542,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			entity.advanceTemporalModifiersTurn();
 			entity.advancePendingActionModifierLifetimes();
 			entity.advanceCollisionFilterLifetimes();
+			entity.advanceActorEligibilityConstraintLifetimes();
 			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
 		})
 		if (this.context.currTurn !== turnNumber) this.advanceStructureLifecyclesTurn();
@@ -823,8 +837,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 * one deterministic reward; every validation runs before any mutation.
 	 */
 	public useItem(actorId: string, itemId: string, target: unknown = { type: "self" }): void {
-		const actor = this.entityManager.getEntityById(actorId)
-		if (!actor) throw new Error(`Actor ${actorId} not found`)
+		const actor = this.validateActorForAction(actorId)
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
@@ -859,6 +872,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
 			...targetEntity.getPendingActionModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
 			...targetEntity.getCollisionFilters().map(filter => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
+			...targetEntity.getActorEligibilityConstraints().map(constraint => ({ itemId: constraint.sourceId, order: constraint.sourceOrder })),
 			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
 			...this.deferredEffects.filter(effect => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map(effect => ({ itemId: effect.sourceId, order: effect.sourceOrder })),
 		];
@@ -867,6 +881,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		targetEntity.removeTemporalModifiers(combination.removeItemIds)
 		targetEntity.removePendingActionModifiers(combination.removeItemIds)
 		targetEntity.removeCollisionFilters(combination.removeItemIds)
+		targetEntity.removeActorEligibilityConstraints(combination.removeItemIds)
 		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
 		this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()))
 		this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget)
@@ -921,6 +936,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				targetEntity.addCollisionFilter(
 					createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }),
 					createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }),
+				);
+			} else if (isActorEligibilityConstraintTemplate(effect)) {
+				if (!targetEntity) throw new Error("Actor eligibility constraints require an entity target");
+				const constraintId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+				targetEntity.addActorEligibilityConstraint(
+					createActorEligibilityConstraint({ id: constraintId, mode: effect.mode, sourceId: item.id, sourceOrder: itemOrder(item) }),
+					createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }),
 				);
 			} else if (isActionModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Action modifiers require an entity target");

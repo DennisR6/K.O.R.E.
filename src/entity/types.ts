@@ -8,6 +8,7 @@ import { validateNumericThresholdBindings, type NumericThresholdBinding } from "
 import { validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import { validateActionModifier, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 import { validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
+import { validateActorEligibilityState, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -77,6 +78,8 @@ export interface PlayerSettings {
 	pendingActionModifiers?: ActionModifierSettings[]
 	collisionFilters?: CollisionFilterSettings[]
 	collisionFilterLifetimes?: CollisionFilterLifetimeSettings[]
+	actorEligibilityConstraints?: ActorEligibilityConstraintSettings[]
+	actorEligibilityConstraintLifetimes?: ActorEligibilityConstraintLifetimeSettings[]
 	numericThresholds?: NumericThresholdBinding[]
 }
 
@@ -92,6 +95,9 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 	for (const filter of overrides.collisionFilters ?? []) validateCollisionFilter(filter)
 	for (const lifetime of overrides.collisionFilterLifetimes ?? []) validateCollisionFilterLifetime(lifetime)
 	validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? [])
+	for (const constraint of overrides.actorEligibilityConstraints ?? []) validateActorEligibilityConstraint(constraint)
+	for (const lifetime of overrides.actorEligibilityConstraintLifetimes ?? []) validateActorEligibilityConstraintLifetime(lifetime)
+	validateActorEligibilityState(overrides.actorEligibilityConstraints ?? [], overrides.actorEligibilityConstraintLifetimes ?? [])
 	const mass = overrides.mass ?? 1;
 	validatePlayerMass(mass);
 	return {
@@ -119,6 +125,8 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		...(overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {}),
 		...(overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {}),
 		...(overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {}),
+		...(overrides.actorEligibilityConstraints ? { actorEligibilityConstraints: structuredClone(overrides.actorEligibilityConstraints) } : {}),
+		...(overrides.actorEligibilityConstraintLifetimes ? { actorEligibilityConstraintLifetimes: structuredClone(overrides.actorEligibilityConstraintLifetimes) } : {}),
 		numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings()),
 	};
 }

@@ -21,7 +21,7 @@ export class HardAi implements IAiTurnProducer {
 		const random = new SeededRandom(aiSettings.seed);
 
 		const entities = handler.getEntityManager().getEntities();
-		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
 		const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
 
 		if (aiActors.length === 0 || enemyActors.length === 0) return undefined;

@@ -113,3 +113,17 @@ test("historical Ghost Mode state migrates to a category filter with separate tu
 	expect(migrated.players[0]!.collisionFilters).toEqual([expect.objectContaining({ id: "actor-ghost:collision-filter:0", excludedCategories: ["entity", "structure"], sourceId: "durchlaessigkeit", sourceOrder: 4 })]);
 	expect(migrated.players[0]!.collisionFilterLifetimes).toEqual([expect.objectContaining({ filterId: "actor-ghost:collision-filter:0", duration: 2, remaining: 1, sourceId: "durchlaessigkeit", sourceOrder: 4 })]);
 });
+
+test("historical Selection Lock state migrates to an excluded actor constraint with separate turn lifetime", () => {
+	const settings: any = {
+		players: [{ id: "actor-selection", itemEffects: [{ type: "selectionLock", typeValue: { durationTurns: 2, remainingTurns: 1 }, itemId: "jaegermeister-elixier", order: 2 }], effects: [] }],
+		items: [],
+		effects: [],
+		mapBoundarys: [],
+	};
+
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.itemEffects).toEqual([]);
+	expect(migrated.players[0]!.actorEligibilityConstraints).toEqual([expect.objectContaining({ id: "actor-selection:actor-eligibility:0", mode: "excluded", sourceId: "jaegermeister-elixier", sourceOrder: 2 })]);
+	expect(migrated.players[0]!.actorEligibilityConstraintLifetimes).toEqual([expect.objectContaining({ constraintId: "actor-selection:actor-eligibility:0", duration: 2, remaining: 1, sourceId: "jaegermeister-elixier", sourceOrder: 2 })]);
+});

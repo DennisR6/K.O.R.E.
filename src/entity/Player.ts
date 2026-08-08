@@ -20,6 +20,7 @@ import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifie
 import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 import { advanceLifetime } from "../engine/contracts/lifetime.js";
 import { advanceCollisionFilterLifetime, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
+import { advanceActorEligibilityConstraintLifetime, isActorEligible, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, validateActorEligibilityState, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
 
 
 /**
@@ -61,6 +62,8 @@ export class Player implements IEntity {
 	private pendingActionModifiers: ActionModifierSettings[] = []
 	private collisionFilters: CollisionFilterSettings[] = []
 	private collisionFilterLifetimes: CollisionFilterLifetimeSettings[] = []
+	private actorEligibilityConstraints: ActorEligibilityConstraintSettings[] = []
+	private actorEligibilityConstraintLifetimes: ActorEligibilityConstraintLifetimeSettings[] = []
 	private numericThresholds: NumericThresholdBinding[] = []
 	private numericEffectDispatcher: ((effect: EngineEffectSettings) => void) | undefined
 
@@ -111,6 +114,11 @@ export class Player implements IEntity {
 		validateCollisionFilterState(settings.collisionFilters ?? [], settings.collisionFilterLifetimes ?? [])
 		this.collisionFilters = structuredClone(settings.collisionFilters ?? [])
 		this.collisionFilterLifetimes = structuredClone(settings.collisionFilterLifetimes ?? [])
+		for (const constraint of settings.actorEligibilityConstraints ?? []) validateActorEligibilityConstraint(constraint)
+		for (const lifetime of settings.actorEligibilityConstraintLifetimes ?? []) validateActorEligibilityConstraintLifetime(lifetime)
+		validateActorEligibilityState(settings.actorEligibilityConstraints ?? [], settings.actorEligibilityConstraintLifetimes ?? [])
+		this.actorEligibilityConstraints = structuredClone(settings.actorEligibilityConstraints ?? [])
+		this.actorEligibilityConstraintLifetimes = structuredClone(settings.actorEligibilityConstraintLifetimes ?? [])
 		validateNumericThresholdBindings(settings.numericThresholds ?? [])
 		this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings())
 		this.effectAlways = []
@@ -292,6 +300,8 @@ export class Player implements IEntity {
 			...(this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {}),
 			...(this.collisionFilters.length ? { collisionFilters: structuredClone(this.collisionFilters) } : {}),
 			...(this.collisionFilterLifetimes.length ? { collisionFilterLifetimes: structuredClone(this.collisionFilterLifetimes) } : {}),
+			...(this.actorEligibilityConstraints.length ? { actorEligibilityConstraints: structuredClone(this.actorEligibilityConstraints) } : {}),
+			...(this.actorEligibilityConstraintLifetimes.length ? { actorEligibilityConstraintLifetimes: structuredClone(this.actorEligibilityConstraintLifetimes) } : {}),
 			...(this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}),
 		}
 	}
@@ -394,6 +404,31 @@ export class Player implements IEntity {
 		this.collisionFilters = this.collisionFilters.filter(filter => !removed.has(filter.id))
 		this.collisionFilterLifetimes = this.collisionFilterLifetimes.filter(lifetime => !removed.has(lifetime.filterId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)))
 	}
+	public addActorEligibilityConstraint(constraint: ActorEligibilityConstraintSettings, lifetime: ActorEligibilityConstraintLifetimeSettings): void {
+		validateActorEligibilityConstraint(constraint)
+		validateActorEligibilityConstraintLifetime(lifetime)
+		if (lifetime.constraintId !== constraint.id) throw new Error("Actor eligibility lifetime must target its constraint");
+		this.actorEligibilityConstraints = [...this.actorEligibilityConstraints.filter(existing => existing.id !== constraint.id), structuredClone(constraint)].sort(compareActorConstraints)
+		this.actorEligibilityConstraintLifetimes = [...this.actorEligibilityConstraintLifetimes.filter(existing => existing.constraintId !== constraint.id), structuredClone(lifetime)].sort(compareActorLifetimes)
+	}
+	public getActorEligibilityConstraints(): ActorEligibilityConstraintSettings[] { return structuredClone(this.actorEligibilityConstraints) }
+	public getActorEligibilityConstraintLifetimes(): ActorEligibilityConstraintLifetimeSettings[] { return structuredClone(this.actorEligibilityConstraintLifetimes) }
+	public advanceActorEligibilityConstraintLifetimes(): void {
+		const active: ActorEligibilityConstraintLifetimeSettings[] = []
+		const activeIds = new Set<string>()
+		for (const lifetime of this.actorEligibilityConstraintLifetimes) {
+			const next = advanceActorEligibilityConstraintLifetime(lifetime)
+			if (next) { active.push(next); activeIds.add(lifetime.constraintId) }
+		}
+		this.actorEligibilityConstraintLifetimes = active.sort(compareActorLifetimes)
+		this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter(constraint => activeIds.has(constraint.id))
+	}
+	public removeActorEligibilityConstraints(sourceIds: ReadonlySet<string>): void {
+		const removed = new Set(this.actorEligibilityConstraints.filter(constraint => constraint.sourceId && sourceIds.has(constraint.sourceId)).map(constraint => constraint.id))
+		this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter(constraint => !removed.has(constraint.id))
+		this.actorEligibilityConstraintLifetimes = this.actorEligibilityConstraintLifetimes.filter(lifetime => !removed.has(lifetime.constraintId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)))
+	}
+	public isActorEligible(): boolean { return isActorEligible(this.actorEligibilityConstraints) }
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
 		switch (trigger) {
 			case EffectTrigger.Always: this.effectAlways.push(effect); break
@@ -410,6 +445,14 @@ function compareCollisionFilters(first: CollisionFilterSettings, second: Collisi
 }
 
 function compareCollisionFilterLifetimes(first: CollisionFilterLifetimeSettings, second: CollisionFilterLifetimeSettings): number {
+	return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+
+function compareActorConstraints(first: ActorEligibilityConstraintSettings, second: ActorEligibilityConstraintSettings): number {
+	return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+
+function compareActorLifetimes(first: ActorEligibilityConstraintLifetimeSettings, second: ActorEligibilityConstraintLifetimeSettings): number {
 	return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 

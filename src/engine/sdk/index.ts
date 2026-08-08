@@ -63,5 +63,7 @@ export { applyActionModifiers, consumeActionModifiers, createActionModifier, cre
 export type { AcceptedForceInput, ActionModifierSettings, ActionModifierTemplate } from "../contracts/actionModifier.js";
 export { advanceCollisionFilterLifetime, createCollisionFilter, createCollisionFilterLifetime, createCollisionFilterTemplate, isCollisionAllowed, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, COLLISION_CATEGORIES, COLLISION_FILTER_SCHEMA_VERSION, COLLISION_FILTER_LIFETIME_SCHEMA_VERSION } from "../contracts/collisionFilter.js";
 export type { CollisionCategory, CollisionFilterLifetimeSettings, CollisionFilterSettings, CollisionFilterTemplate } from "../contracts/collisionFilter.js";
+export { advanceActorEligibilityConstraintLifetime, createActorEligibilityConstraint, createActorEligibilityConstraintLifetime, createActorEligibilityConstraintTemplate, isActorEligible, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, validateActorEligibilityState, ACTOR_ELIGIBILITY_SCHEMA_VERSION, ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION } from "../contracts/actorEligibility.js";
+export type { ActorEligibilityConstraintLifetimeSettings, ActorEligibilityConstraintSettings, ActorEligibilityConstraintTemplate } from "../contracts/actorEligibility.js";
 export { advanceLifetime, createLifetime, validateLifetime, LIFETIME_DURATION_UNITS } from "../contracts/lifetime.js";
 export type { DurationUnit, LifetimeSettings } from "../contracts/lifetime.js";

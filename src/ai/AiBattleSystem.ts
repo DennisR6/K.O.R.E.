@@ -75,7 +75,7 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			// living actors and enemies exist; a neutral straight shot keeps a
 			// battle moving if a future producer returns no decision.
 			console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
-			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team));
+			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team) && this.handler!.isActorEligibleForAction(entity.getId()));
 			if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
 		}
 	}

@@ -12,6 +12,7 @@ import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import type { TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import type { AcceptedForceInput, ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 import type { CollisionFilterLifetimeSettings, CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
+import type { ActorEligibilityConstraintLifetimeSettings, ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -73,6 +74,12 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	getCollisionFilterLifetimes(): CollisionFilterLifetimeSettings[]
 	advanceCollisionFilterLifetimes(): void
 	removeCollisionFilters(sourceIds: ReadonlySet<string>): void
+	addActorEligibilityConstraint(constraint: ActorEligibilityConstraintSettings, lifetime: ActorEligibilityConstraintLifetimeSettings): void
+	getActorEligibilityConstraints(): ActorEligibilityConstraintSettings[]
+	getActorEligibilityConstraintLifetimes(): ActorEligibilityConstraintLifetimeSettings[]
+	advanceActorEligibilityConstraintLifetimes(): void
+	removeActorEligibilityConstraints(sourceIds: ReadonlySet<string>): void
+	isActorEligible(): boolean
 	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
 	dispatchNumericAdd(stateId: string, amount: number): void;
 	dispatchNumericSet(stateId: string, value: number): void;

@@ -38,7 +38,7 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 		}
 		if (rule.phase !== RulePhase.Physics) return;
 		if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
-		const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(this.settings.team));
+		const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler!.isActorEligibleForAction(entity.getId()));
 		if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
 	}
 }
