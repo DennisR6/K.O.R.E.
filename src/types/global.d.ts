@@ -7,12 +7,7 @@ declare global {
 		game: {
 			handler: GameHandler
 			mapId: string | null
-			logs: {
-				timestamp,
-				level,
-				caller,
-				data: args
-			}[]
+			readonly logs: readonly import('../engine/runtimeLog.js').RuntimeLogEntry[]
 			audio: AudioManager
 		},
 	}

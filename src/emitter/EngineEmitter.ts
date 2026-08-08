@@ -38,6 +38,7 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 	public drainSoundCommands() { return this.sounds.drainSoundCommands(); }
 
 	sendShot(actorId: string, angle: number, power: number): void {
+		this.handler.log?.("input.received", { actionType: "shot", actorId, angle, power });
 		this.ruleState = this.handler.getRuleState()
 		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
 		// Reject the same invalid inputs as the authoritative server and the AI
@@ -47,6 +48,8 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		const actor = this.handler.getEntityManager().getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`)
+		this.handler.log?.("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+		this.handler.log?.("turn.started", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
 		this.recorder.recordShoot(actorId, angle, power)
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)

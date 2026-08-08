@@ -436,6 +436,20 @@ After every change, check whether this guide still reflects the implementation a
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
 - `src/utils/ErrorHandling.ts`: error utility.
 - `src/utils/log.ts`: commented logger prototype.
+
+Runtime timing and lifecycle observations belong in the typed, ephemeral
+`GameHandler` runtime log buffer (`handler.log()` / `handler.getLogs()`). The
+handler exposes the shared `LoggerType` enum as `handler.LoggerType` for
+console filtering; `getLogs()` accepts one category or an array of categories.
+They
+must never be added to `EngineSettings`, deterministic fingerprints, replay
+documents, or gameplay decisions. Durations use the monotonic runtime clock;
+browser frame observations are emitted as bounded aggregate windows.
+The initial event taxonomy uses `domain.event` names such as
+`input.accepted`, `turn.simulation.completed`, `turn.playback.completed`,
+`turnPacket.created`, `ai.decision.completed`, and
+`performance.frame-window`. Consumers inspect a detached `getLogs()` result;
+there is no remote sink or worker-AI lifecycle in the current production path.
 - `src/types/global.d.ts`: browser globals including `window.game`.
 - `src/i18n/language.ts`: typed JSON language loader. It always loads the
   complete `en_en` catalog first and overlays the selected language, so

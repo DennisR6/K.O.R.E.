@@ -49,6 +49,8 @@ export interface IGameContext {
 	 * must never set `state` or the result independently.
 	 */
 	finishMatch(result: MatchResult): void;
+	/** Ephemeral diagnostics sink; deliberately absent from serialized state. */
+	log?(type: string, data: unknown): void;
 }
 
 /**

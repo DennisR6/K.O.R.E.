@@ -22,6 +22,7 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 		try {
 			this.emitter.sendShot(actorId, angle, power)
 		} catch (error) {
+			ctx.log?.("input.rejected", { actionType: "shot", actorId, angle, power, reason: error instanceof Error ? error.message : String(error) });
 			this.onError?.(error)
 			ctx.state = GameState.Your_turn
 			return

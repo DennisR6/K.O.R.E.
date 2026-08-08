@@ -49,6 +49,7 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		if (message.type === NetworkMessageType.TURN) {
 			const turn = message as NetworkTurn
 			handler.setRuleState(turn.ruleState)
+			handler.log("turnPacket.received", { actorId: turn.sim.actorId, frameCount: turn.sim.durationFrames, playerCount: turn.sim.finalState.length });
 			handler.playTurn(turn.sim, () => {
 				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 		})

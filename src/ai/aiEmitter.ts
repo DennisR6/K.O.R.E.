@@ -6,6 +6,7 @@ import type { AiSettings } from "./types.js";
 // function, but the AI path must not pull server-only modules into the
 // browser bundle.
 import { isValidInput } from "../input/validate.js";
+import { runtimeNow } from "../engine/runtimeLog.js";
 
 export interface AiDecision {
 	shot?: { actorId: string; angle: number; power: number };
@@ -20,8 +21,13 @@ export class AiTurnEmitter {
 	constructor(private readonly producer: IAiTurnProducer) {}
 
 	public executeTurn(handler: GameHandler, aiSettings: AiSettings, targetEmitter: IInputEmitter): boolean {
+		const started = runtimeNow();
+		handler.log("ai.decision.started", { team: aiSettings.team, difficulty: aiSettings.difficulty });
 		const decision = this.producer.computeTurn(handler, aiSettings);
-		if (!decision) return false;
+		if (!decision) {
+			handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: false });
+			return false;
+		}
 
 		let actionSubmitted = false;
 
@@ -29,6 +35,7 @@ export class AiTurnEmitter {
 			const { actorId, itemId, target } = decision.itemUse;
 			const actor = handler.getEntityManager().getEntityById(actorId);
 			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team)) {
+				handler.log("input.accepted", { actionType: "item", actorId, team: aiSettings.team });
 				targetEmitter.sendItemUse?.(actorId, itemId, target);
 				actionSubmitted = true;
 			}
@@ -38,11 +45,13 @@ export class AiTurnEmitter {
 			const { actorId, angle, power } = decision.shot;
 			const actor = handler.getEntityManager().getEntityById(actorId);
 			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && isValidInput({ actorId, angle, power })) {
+				handler.log("input.accepted", { actionType: "shot", actorId, angle, power, team: aiSettings.team });
 				targetEmitter.sendShot(actorId, angle, power);
 				actionSubmitted = true;
 			}
 		}
 
+		handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: actionSubmitted });
 		return actionSubmitted;
 	}
 }

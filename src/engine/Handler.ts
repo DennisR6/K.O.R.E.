@@ -46,6 +46,7 @@ import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } fro
 import type { LanguageCatalog } from "../i18n/language.js";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../kore/gameplayFeedback.js";
 import type { JsonValue } from "../engine/contracts/systemSettings.js";
+import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "./runtimeLog.js";
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -98,6 +99,8 @@ import type { JsonValue } from "../engine/contracts/systemSettings.js";
  * @implements {IMouse} Verarbeitet Maus-Interaktionen über das gesamte Spielfeld.
  */
 export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSettings> {
+	/** Console-friendly category source: `game.handler.LoggerType.Performance`. */
+	public readonly LoggerType = LoggerType;
 	private teamSize: number = 0
 	private id: UUID
 	private turns: TurnPacket[] = []
@@ -113,7 +116,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private postDrawers: IDrawer[] = []
 	private dt: number = 1;
 	private mouseHandler: IMouse | undefined;
-	private logs: any[] = []
+	private readonly logs: RuntimeLogEntry[] = []
+	private playbackStartedAt: number | undefined;
+	private turnStartedAt: number | undefined;
 	private team: number[] = []
 	private effectAlways: Effect[] = []
 	private effectRound: Effect[] = []
@@ -154,6 +159,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			activeTeam: 0,
 			myTeamNumber: 0,
 			finishMatch: (result) => this.finishMatch(result),
+			log: (type, data) => this.log(type, data),
 		}
 		this.entityManager = em;
 		this.physicsStrategy = new defaultPhysics();
@@ -186,6 +192,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// 	 */
 	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
+		const started = runtimeNow();
+		this.log("turn.simulation.started", { actorId, angle, power });
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
 		// Autonomous drivers are input adapters, not physics participants.  A
 		// simulated shot must not let an AI submit nested turns in its clone.
@@ -194,7 +202,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
 		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
-		return g.resolveTurn({ actorId, angle, power })
+		const packet = g.resolveTurn({ actorId, angle, power });
+		this.log("turn.simulation.completed", { actorId, ticks: packet.durationFrames, durationMs: runtimeNow() - started });
+		this.log("turnPacket.created", { actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
+		return packet
 	}
 
 	/** Resolves and commits one turn on this handler. Use this on the authoritative server. */
@@ -203,6 +214,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const actor = this.entityManager.getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`);
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		this.log("input.received", { actionType: "shot", actorId, angle, power });
+		this.log("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+		this.turnStartedAt = runtimeNow();
+		this.log("turn.started", { actorId, actionType: "shot", angle, power });
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
 		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
 		this.physicsStrategy.applyImpulse(actor, angle, power);
@@ -224,12 +239,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			if (player.isDead && !previous.isDead) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
 		}
 		this.feedback.record(KoreGameplayFeedbackType.Turn, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
-		return {
+		const packet: TurnPacket = {
 			actorId,
 			input: { angle, power },
 			durationFrames: frames,
 			finalState,
 		};
+		this.log("turn.simulation.completed", { actorId, ticks: frames, durationMs: runtimeNow() - (this.turnStartedAt ?? runtimeNow()) });
+		this.log("turnPacket.created", { actorId, frameCount: frames, playerCount: finalState.length });
+		return packet;
 	}
 
 	/**
@@ -244,6 +262,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public playTurn(packet: TurnPacket, onComplete?: () => void): void {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot play further turns")
 		this.turns.push(packet)
+		this.playbackStartedAt = runtimeNow();
+		this.log("turnPacket.playbackStarted", { actorId: packet.actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
+		this.log("turn.playback.started", { actorId: packet.actorId, frames: packet.durationFrames });
 		this.setState(GameState.Playing)
 
 		const actor = this.entityManager.getEntityById(packet.actorId);
@@ -253,6 +274,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		if (!playback) throw new Error("playbacksystem not found!")
 		playback.start(packet.durationFrames, packet.finalState, () => {
+			const durationMs = runtimeNow() - (this.playbackStartedAt ?? runtimeNow());
+			this.log("turn.playback.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs });
+			this.log("turnPacket.playbackCompleted", { actorId: packet.actorId, frameCount: packet.durationFrames, durationMs });
+			this.log("turn.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs: runtimeNow() - (this.turnStartedAt ?? runtimeNow()) });
+			this.playbackStartedAt = undefined;
+			this.turnStartedAt = undefined;
 			// A terminal match state set by gameplay systems during the final
 			// tick (e.g. WinningSystem) must survive the playback completion.
 			if (this.context.state !== GameState.Game_over) {
@@ -585,7 +612,19 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setInitialSettings(settings: GameSettings): void { this.initialSettings = JSON.parse(JSON.stringify(settings)) as GameSettings }
 	public getSettings(): GameSettings | EngineSettings | undefined { return this.settings }
 	public exportGame(): { logs: TurnPacket[], settings: Partial<GameSettings> | any } { return { logs: this.turns, settings: JSON.stringify(this.settings) } }
-	public addLog(log: any) { this.logs.push(log) }
+	/** Appends a cheap structured observation. `data` is intentionally not cloned. */
+	public log<T>(type: string, data: T): RuntimeLogEntry<T> {
+		if (!type || typeof type !== "string") throw new Error("Runtime log type must be a non-empty string");
+		const entry: RuntimeLogEntry<T> = { type, timestampMs: runtimeNow(), turnNumber: this.getTurnNumber(), data };
+		this.logs.push(entry as RuntimeLogEntry);
+		return entry;
+	}
+	/** Returns detached runtime observations, optionally filtered by category. */
+	public getLogs(types?: LoggerType | readonly LoggerType[]): readonly RuntimeLogEntry[] {
+		if (types === undefined) return this.logs.slice();
+		const categories = new Set(Array.isArray(types) ? types : [types]);
+		return this.logs.filter(log => [...categories].some(category => isRuntimeLogCategory(log.type, category)));
+	}
 	public recordFeedback(type: KoreGameplayFeedbackType, details: Omit<KoreGameplayFeedbackEvent, "schemaVersion" | "sequence" | "turnNumber" | "type"> = {}): KoreGameplayFeedbackEvent { return this.feedback.record(type, this.getTurnNumber(), details); }
 	public getFeedbackTrace(fromSequence = 0): KoreGameplayFeedbackEvent[] { return this.feedback.list(fromSequence); }
 

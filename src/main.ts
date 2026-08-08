@@ -25,6 +25,7 @@ import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
 import { createKoreReplayViewerSurface } from "./kore/ui/replayViewerSurface.js";
 import { createKoreShareSurface } from "./kore/ui/shareSurface.js";
 import type { IMouse } from "./engine/types.js";
+import { runtimeNow, summarizeFrameWindow } from "./engine/runtimeLog.js";
 import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
@@ -261,6 +262,9 @@ function logReplayFrameError(error: unknown): void {
 function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h, afterTick?: () => void) {
 	const sketch = (p: p5Types) => {
 		let ctx: RenderContext;
+		let previousFrameAt: number | undefined;
+		let frameWindowStartedAt: number | undefined;
+		const frameSamples: number[] = [];
 		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
 		const scale = adapted.scale;
 		p.setup = () => {
@@ -282,6 +286,16 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			if (!ctx) return
 			try {
 				const active = getActiveHandler()
+				const frameStarted = runtimeNow();
+				if (previousFrameAt !== undefined) frameSamples.push(frameStarted - previousFrameAt);
+				previousFrameAt = frameStarted;
+				frameWindowStartedAt ??= frameStarted;
+				if (frameStarted - frameWindowStartedAt >= 1000) {
+					const summary = summarizeFrameWindow(frameSamples);
+					if (summary) active.log("performance.frame-window", summary);
+					frameSamples.length = 0;
+					frameWindowStartedAt = frameStarted;
+				}
 				active.tick()
 				afterTick?.()
 				flushBrowserAudio(active)
@@ -335,7 +349,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		get handler() { return getActiveHandler(); },
 		// The catalog map ID of the active local match, or null in the menu.
 		get mapId() { return router?.getMapId() ?? null; },
-		logs: [],
+		get logs() { return [...getActiveHandler().getLogs()]; },
 		audio: browserAudioManager
 	};
 }
