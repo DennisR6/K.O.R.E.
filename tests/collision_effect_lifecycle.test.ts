@@ -74,8 +74,8 @@ describe("collision effect lifecycle (13.8)", () => {
 
 	test("same-geometry structures have independent contact identities", () => {
 		const player = new Player(createPlayerSettings({ id: "player", position: { x: 0, y: 0 }, size: 5 }));
-		const first = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid");
-		const second = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid");
+		const first = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "same-geometry-first");
+		const second = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "same-geometry-second");
 		const ctx = context([player], [first, second]);
 
 		new PhysicsSystem(new defaultPhysics()).ticker(ctx, 1, 1);
@@ -137,8 +137,8 @@ describe("collision effect lifecycle (13.8)", () => {
 
 	test("simultaneous contacts each enter once and a fresh system has no stale object key", () => {
 		const player = new Player(createPlayerSettings({ id: "player", position: { x: 0, y: 0 }, size: 5 }));
-		const left = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid");
-		const right = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid");
+		const left = new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "simultaneous-left");
+		const right = new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "simultaneous-right");
 		const ctx = context([player], [left, right]);
 		const firstSystem = new PhysicsSystem(new defaultPhysics());
 		firstSystem.ticker(ctx, 1, 1);
@@ -147,8 +147,8 @@ describe("collision effect lifecycle (13.8)", () => {
 		const restoredPlayer = new Player(player.toSettings());
 		restoredPlayer.setPos({ x: 0, y: 0 });
 		const restored = context([restoredPlayer], [
-			new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid"),
-			new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid"),
+			new StructureCircle(0, 0, 10, undefined, collisionDamage(2), "solid", "simultaneous-left"),
+			new StructureCircle(0, 0, 10, undefined, collisionDamage(3), "solid", "simultaneous-right"),
 		]);
 		new PhysicsSystem(new defaultPhysics()).ticker(restored, 1, 1);
 		expect(restoredPlayer.getHP()).toBe(20);

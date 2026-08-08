@@ -35,8 +35,10 @@ test("replacement and ordering are deterministic and survive a snapshot", () => 
 	handler.useItem(actor.getId(), replacement.id);
 	const effects = actor.getItemEffects();
 	const temporal = actor.getTemporalModifiers();
-	expect(effects).toHaveLength(1);
+	const collisionFilters = actor.getCollisionFilters();
+	expect(effects).toHaveLength(0);
 	expect(temporal).toHaveLength(0);
+	expect(collisionFilters).toHaveLength(1);
 
 	const snapshot = handler.toSettings();
 	const restored = new GameHandlerBuilder().defaultSystems().fromSettings(structuredClone(snapshot)).build();

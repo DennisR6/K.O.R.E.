@@ -573,10 +573,19 @@ export async function waitFor(predicate: () => boolean | Promise<boolean>, timeo
 		// instead of hanging the test until its outer timeout.
 		const remaining = deadline - Date.now();
 		if (remaining <= 0) throw new BrowserHarnessError(`timed out waiting for ${what}`);
-		const result = await Promise.race([
-			Promise.resolve().then(predicate),
-			sleep(remaining).then(() => undefined),
-		]);
+		let result: boolean | undefined;
+		try {
+			result = await Promise.race([
+				Promise.resolve().then(predicate),
+				sleep(remaining).then(() => undefined),
+			]);
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("no canvas element")) {
+				await sleep(intervalMs);
+				continue;
+			}
+			throw error;
+		}
 		if (result === undefined) throw new BrowserHarnessError(`timed out waiting for ${what}`);
 		if (result) return;
 		await sleep(intervalMs);

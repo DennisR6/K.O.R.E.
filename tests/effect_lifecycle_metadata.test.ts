@@ -6,7 +6,7 @@ test("every supported core and item Effect has explicit lifecycle metadata", () 
 	for (const metadata of Object.values(CORE_EFFECT_LIFECYCLE)) expect(metadata.category).toBeTruthy();
 	for (const metadata of Object.values(ITEM_EFFECT_LIFECYCLE)) expect(metadata.execution).toBeTruthy();
 	expect(Object.keys(CORE_EFFECT_LIFECYCLE)).toHaveLength(10);
-	expect(Object.keys(ITEM_EFFECT_LIFECYCLE)).toHaveLength(14);
+	expect(Object.keys(ITEM_EFFECT_LIFECYCLE)).toHaveLength(12);
 });
 
 test("lifecycle metadata is static and independent from serialized settings", () => {
