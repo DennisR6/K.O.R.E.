@@ -5,6 +5,7 @@ import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { LoggerType } from "../src/engine/runtimeLog.ts";
+import { HardAiWorkerHost } from "../src/ai/worker/host.ts";
 
 describe("runtime logging", () => {
 	test("appends structured entries and returns a detached view", () => {
@@ -42,10 +43,9 @@ describe("runtime logging", () => {
 		const turnLogs = handler.getLogs(types.Turn);
 		const performanceAndWorker = handler.getLogs([types.Performance, types.Worker]);
 
-		expect(performanceLogs).toHaveLength(1);
-		expect(performanceLogs[0]?.type).toBe("performance.frame-window");
+		expect(performanceLogs.map(log => log.type)).toEqual(["performance.frame-window", "turn.completed", "ai.worker.completed"]);
 		expect(turnLogs.map(log => log.type)).toEqual(["turn.completed", "turnPacket.created"]);
-		expect(performanceAndWorker.map(log => log.type)).toEqual(["performance.frame-window", "ai.worker.completed"]);
+		expect(performanceAndWorker.map(log => log.type)).toEqual(["performance.frame-window", "turn.completed", "ai.worker.completed"]);
 	});
 
 	test("frame samples are summarized as one bounded observation", () => {
@@ -77,5 +77,20 @@ describe("runtime logging", () => {
 		emitter.sendShot(actor.getId(), 0, 4);
 
 		expect(handler.getLogs().map(log => log.type)).toContain("input.accepted");
+	});
+
+	test("fallback lifecycle logs expose reason and duration without canonical impact", () => {
+		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createDefaultGameSettings(2, 1)).build();
+		const worker = { onmessage: null, onerror: null, postMessage: () => {}, terminate: () => {} };
+		const host = new HardAiWorkerHost(() => worker);
+		host.attachHandler(handler);
+		const before = JSON.stringify(handler.toSettings());
+		const started = host.beginSynchronousFallback("worker-runtime-error", 1);
+		host.completeSynchronousFallback("worker-runtime-error", 1, started);
+		const logs = handler.getLogs(LoggerType.Performance);
+		expect(logs.find(log => log.type === "ai.fallback.started")?.data).toEqual({ reason: "worker-runtime-error", team: 1 });
+		expect(logs.find(log => log.type === "ai.fallback.completed")?.data).toMatchObject({ reason: "worker-runtime-error", team: 1 });
+		expect(JSON.stringify(handler.toSettings())).toBe(before);
+		host.dispose();
 	});
 });

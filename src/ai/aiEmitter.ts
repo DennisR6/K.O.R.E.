@@ -25,7 +25,7 @@ export class AiTurnEmitter {
 		handler.log("ai.decision.started", { team: aiSettings.team, difficulty: aiSettings.difficulty });
 		const decision = this.producer.computeTurn(handler, aiSettings);
 		if (!decision) {
-			handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: false });
+			handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: false, executionMode: "synchronous" });
 			return false;
 		}
 
@@ -51,7 +51,7 @@ export class AiTurnEmitter {
 			}
 		}
 
-		handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: actionSubmitted });
+		handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: actionSubmitted, executionMode: "synchronous" });
 		return actionSubmitted;
 	}
 }

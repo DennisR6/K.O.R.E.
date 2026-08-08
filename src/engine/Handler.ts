@@ -325,9 +325,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!playback) throw new Error("playbacksystem not found!")
 		playback.start(packet.durationFrames, packet.finalState, () => {
 			const durationMs = runtimeNow() - (this.playbackStartedAt ?? runtimeNow());
-			this.log("turn.playback.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs });
+			this.log("turn.playback.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs, playerVisibleDurationMs: durationMs });
 			this.log("turnPacket.playbackCompleted", { actorId: packet.actorId, frameCount: packet.durationFrames, durationMs });
-			this.log("turn.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs: runtimeNow() - (this.turnStartedAt ?? runtimeNow()) });
+			const turnDurationMs = this.turnStartedAt === undefined ? durationMs : runtimeNow() - this.turnStartedAt;
+			this.log("turn.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs: turnDurationMs, turnDurationMs });
 			this.playbackStartedAt = undefined;
 			this.turnStartedAt = undefined;
 			// A terminal match state set by gameplay systems during the final
@@ -686,6 +687,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setPaused(paused: boolean): void { this.paused = paused }
 	public isPaused(): boolean { return this.paused }
 	public getActiveTeam(): number { return this.context.activeTeam }
+	/** Starts the ephemeral wall-clock span for a local accepted turn. */
+	public beginTurnTiming(): void { this.turnStartedAt = runtimeNow(); }
 	public start(state?: GameState): this {
 		this.context.state = state ?? GameState.Your_turn;
 		for (const entity of this.entityManager.getEntities()) entity.setNumericEffectDispatcher(effect => this.dispatchEngineEffect(effect));

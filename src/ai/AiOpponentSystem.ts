@@ -49,11 +49,12 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 			if (this.workerHost.isThinking()) return;
 		}
 		if (this.workerHost) {
-			const start = performance.now();
+			const reason = this.workerHost.getFallbackReason();
+			const start = this.workerHost.beginSynchronousFallback(reason, this.settings.team);
 			try {
 				if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
 			} finally {
-				this.workerHost.noteSynchronousFallback(performance.now() - start);
+				this.workerHost.completeSynchronousFallback(reason, this.settings.team, start);
 			}
 		} else if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
 		const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler!.isActorEligibleForAction(entity.getId()));

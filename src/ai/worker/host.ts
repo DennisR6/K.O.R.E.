@@ -4,6 +4,7 @@ import type { AiSettings } from "../types.js";
 import type { IInput } from "../../engine/types.js";
 import type { RuleState } from "../../rules/types.js";
 import { isValidInput } from "../../input/validate.js";
+import { runtimeNow, summarizeFrameWindow } from "../../engine/runtimeLog.js";
 
 type WorkerLike = {
 	onmessage: ((event: MessageEvent) => void) | null;
@@ -12,7 +13,7 @@ type WorkerLike = {
 	terminate(): void;
 };
 
-type PreparedTurn = { request: HardAiWorkerRequest; response?: HardAiWorkerResponse; actualPostTurnHash?: string; startedAt: number; responseReceivedAt?: number; playbackEndedAt?: number; valid: boolean; metricsRecorded: boolean };
+type PreparedTurn = { request: HardAiWorkerRequest; response?: HardAiWorkerResponse; actualPostTurnHash?: string; startedAt: number; responseReceivedAt?: number; playbackEndedAt?: number; valid: boolean; metricsRecorded: boolean; waitingLogged: boolean };
 
 export type HardAiWorkerTurnMetrics = {
 	playerVisibleDurationMs: number;
@@ -58,6 +59,7 @@ export class HardAiWorkerHost {
 	private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 	private heartbeatAt = 0;
 	private eventLoopGaps: number[] = [];
+	private eventLoopWindowGaps: number[] = [];
 	private readonly turnMetrics: HardAiWorkerTurnMetrics[] = [];
 	private requestCount = 0;
 	private validResponseCount = 0;
@@ -65,6 +67,9 @@ export class HardAiWorkerHost {
 	private failedCount = 0;
 	private failureReason: string | undefined;
 	private readonly fallbackDurations: number[] = [];
+	private handler: GameHandler | undefined;
+	private fallbackReason: string | undefined;
+	private failureCode: string | undefined;
 
 	private readonly usesDefaultWorkerFactory: boolean;
 	private readonly workerFactory: () => WorkerLike;
@@ -77,6 +82,10 @@ export class HardAiWorkerHost {
 
 	public isAvailable(): boolean { return this.worker !== undefined && !this.failed; }
 	public isThinking(): boolean { return this.isAvailable() && this.pending !== undefined && !this.pending.valid; }
+	public attachHandler(handler: GameHandler): void {
+		this.handler = handler;
+		if (this.failed && this.failureCode && !this.failureReasonLogged) this.logFailure(this.failureCode);
+	}
 	public getMetrics(): HardAiWorkerMetrics {
 		const gaps = [...this.eventLoopGaps].sort((a, b) => a - b);
 		const percentile = (value: number): number => gaps.length === 0 ? 0 : gaps[Math.min(gaps.length - 1, Math.ceil(value * gaps.length) - 1)]!;
@@ -103,7 +112,18 @@ export class HardAiWorkerHost {
 			...(last ? { lastTurn: structuredClone(last) } : {}),
 		};
 	}
-	public noteSynchronousFallback(durationMs = 0): void { this.fallbackCount++; if (durationMs > 0) this.fallbackDurations.push(durationMs); }
+	public getFallbackReason(): string { return this.fallbackReason ?? this.failureCode ?? "no-prepared-request"; }
+	public beginSynchronousFallback(reason: string, team: number): number {
+		const started = runtimeNow();
+		this.handler?.log("ai.fallback.started", { reason, team });
+		return started;
+	}
+	public completeSynchronousFallback(reason: string, team: number, startedAt: number): void {
+		const durationMs = runtimeNow() - startedAt;
+		this.noteSynchronousFallback(durationMs, reason);
+		this.handler?.log("ai.fallback.completed", { reason, team, durationMs });
+	}
+	public noteSynchronousFallback(durationMs = 0, reason = "unknown"): void { this.fallbackReason = reason; this.fallbackCount++; if (durationMs > 0) this.fallbackDurations.push(durationMs); }
 
 	public prepareTurn(input: { snapshot: HardAiWorkerRequest["snapshot"]; acceptedAction: IInput; nextRuleState: RuleState; aiSettings: AiSettings }): string | undefined {
 		if (!this.isAvailable()) return undefined;
@@ -121,9 +141,11 @@ export class HardAiWorkerHost {
 			basedOnStateHash: fingerprintHardAiRequest(requestWithoutHash),
 			...requestWithoutHash,
 		};
-		this.pending = { request, startedAt: performance.now(), valid: false, metricsRecorded: false };
+		this.pending = { request, startedAt: runtimeNow(), valid: false, metricsRecorded: false, waitingLogged: false };
+		this.fallbackReason = undefined;
 		this.requestCount++;
 		this.startHeartbeat();
+		this.handler?.log("ai.worker.requested", { requestId: request.requestId, turnNumber: request.expectedTurnNumber, team: input.aiSettings.team });
 		try {
 			this.worker!.postMessage(request);
 		} catch (error) {
@@ -137,8 +159,12 @@ export class HardAiWorkerHost {
 	public completeAuthoritativeTurn(handler: GameHandler): void {
 		if (!this.pending) return;
 		this.pending.actualPostTurnHash = fingerprintCanonicalSnapshot(handler.toSettings());
-		this.pending.playbackEndedAt = performance.now();
+		this.pending.playbackEndedAt = runtimeNow();
 		this.validatePending();
+		if (this.pending && !this.pending.valid && !this.pending.waitingLogged) {
+			this.pending.waitingLogged = true;
+			this.handler?.log("ai.worker.waiting", { requestId: this.pending.request.requestId, turnNumber: this.pending.request.expectedTurnNumber, team: this.pending.request.aiSettings.team });
+		}
 	}
 
 	public consumePreparedAction(): IInput | undefined {
@@ -146,25 +172,32 @@ export class HardAiWorkerHost {
 		if (!prepared?.valid || !prepared.response?.action) return undefined;
 		this.pending = undefined;
 		this.stopHeartbeat();
+		this.fallbackReason = undefined;
 		return prepared.response.action;
 	}
 
 	/** Invalidates current work without affecting the authoritative handler. */
-	public invalidate(): void { this.pending = undefined; this.stopHeartbeat(); }
+	public invalidate(reason = "game-over"): void {
+		if (this.pending) this.logRejected(reason, this.pending.request.requestId);
+		this.pending = undefined;
+		this.stopHeartbeat();
+	}
 
 	public dispose(): void {
 		this.disposed = true;
 		this.generation++;
+		const pendingRequestId = this.pending?.request.requestId;
 		this.pending = undefined;
 		this.worker?.terminate();
 		this.worker = undefined;
 		this.stopHeartbeat();
+		if (this.handler && pendingRequestId) this.handler.log("ai.worker.rejected", { requestId: pendingRequestId, reason: "disposed" });
 	}
 
 	private start(): void {
 		// Bun exposes a Worker global too, but this entry point is a browser
 		// module worker and must not be started by headless/server-side tests.
-		if (this.usesDefaultWorkerFactory && (typeof window === "undefined" || typeof Worker === "undefined")) { this.failed = true; return; }
+		if (this.usesDefaultWorkerFactory && (typeof window === "undefined" || typeof Worker === "undefined")) { this.failed = true; this.failureCode = "worker-unavailable"; return; }
 		try {
 			const worker = this.workerFactory();
 			worker.onmessage = event => this.receive(event.data);
@@ -173,6 +206,7 @@ export class HardAiWorkerHost {
 		} catch (error) {
 			this.failedCount++;
 			this.failureReason = error instanceof Error ? error.message : String(error);
+			this.failureCode = "worker-creation-failed";
 			this.failed = true;
 		}
 	}
@@ -181,10 +215,15 @@ export class HardAiWorkerHost {
 		if (message.type === "error") { this.fail(new Error(message.message ?? "AI worker computation failed")); return; }
 		const prepared = this.pending;
 		const response = message.type === "result" ? message.response : undefined;
-		if (!prepared || !response || response.requestId !== prepared.request.requestId || response.basedOnStateHash !== prepared.request.basedOnStateHash || response.expectedTurnNumber !== prepared.request.expectedTurnNumber || response.expectedNextTeam !== prepared.request.expectedNextTeam) return;
-		if (response.schemaVersion !== 1 || !Number.isFinite(response.computeMs) || !response.action || !isValidInput(response.action)) { this.pending = undefined; this.stopHeartbeat(); return; }
+		if (!prepared) { this.logRejected("stale-request", response?.requestId); return; }
+		if (!response) { this.rejectPending("malformed-response"); return; }
+		if (response.requestId !== prepared.request.requestId) { this.logRejected("stale-request", response.requestId); return; }
+		if (response.basedOnStateHash !== prepared.request.basedOnStateHash) { this.rejectPending("fingerprint-mismatch"); return; }
+		if (response.expectedTurnNumber !== prepared.request.expectedTurnNumber) { this.rejectPending("turn-mismatch"); return; }
+		if (response.expectedNextTeam !== prepared.request.expectedNextTeam) { this.rejectPending("team-mismatch"); return; }
+		if (response.schemaVersion !== 1 || !Number.isFinite(response.computeMs) || !response.action || !isValidInput(response.action)) { this.rejectPending("malformed-response"); return; }
 		prepared.response = response;
-		prepared.responseReceivedAt = performance.now();
+		prepared.responseReceivedAt = runtimeNow();
 		this.validatePending();
 	}
 
@@ -192,20 +231,26 @@ export class HardAiWorkerHost {
 		const prepared = this.pending;
 		if (!prepared || !prepared.response || !prepared.actualPostTurnHash) return;
 		prepared.valid = prepared.response.postTurnStateHash === prepared.actualPostTurnHash;
-		if (!prepared.valid) { this.pending = undefined; this.stopHeartbeat(); return; }
+		if (!prepared.valid) { this.rejectPending("fingerprint-mismatch"); return; }
 		this.validResponseCount++;
-		if (prepared.responseReceivedAt !== undefined && prepared.playbackEndedAt !== undefined) this.recordTurnMetrics(prepared);
+		const metrics = this.recordTurnMetrics(prepared);
+		if (metrics) {
+			this.handler?.log("ai.worker.completed", { requestId: prepared.request.requestId, turnNumber: prepared.request.expectedTurnNumber, team: prepared.request.aiSettings.team, workerComputeMs: metrics.workerComputeMs, playerVisibleDurationMs: metrics.playerVisibleDurationMs, precomputeHeadroomMs: metrics.precomputeHeadroomMs, postTurnWaitMs: metrics.postTurnWaitMs, workerReadyBeforeTurnEnd: metrics.workerReadyBeforeTurnEnd });
+			this.handler?.log("ai.decision.completed", { requestId: prepared.request.requestId, team: prepared.request.aiSettings.team, difficulty: prepared.request.aiSettings.difficulty, durationMs: metrics.workerComputeMs, submitted: Boolean(prepared.response.action), executionMode: "worker" });
+		}
 	}
 
 	private fail(error: unknown): void {
 		if (this.disposed) return;
 		this.failedCount++;
 		this.failureReason = error instanceof Error ? error.message : String(error);
+		this.failureCode = "worker-runtime-error";
 		this.failed = true;
 		this.pending = undefined;
 		this.worker?.terminate();
 		this.worker = undefined;
 		this.stopHeartbeat();
+		this.logFailure(this.failureCode);
 	}
 
 	private startHeartbeat(): void {
@@ -213,7 +258,9 @@ export class HardAiWorkerHost {
 		this.heartbeatAt = performance.now();
 		this.heartbeatTimer = setInterval(() => {
 			const now = performance.now();
-			this.eventLoopGaps.push(Math.max(0, now - this.heartbeatAt - 25));
+			const gap = Math.max(0, now - this.heartbeatAt - 25);
+			this.eventLoopGaps.push(gap);
+			this.eventLoopWindowGaps.push(gap);
 			this.heartbeatAt = now;
 		}, 25);
 	}
@@ -221,12 +268,25 @@ export class HardAiWorkerHost {
 		if (this.heartbeatTimer === undefined) return;
 		clearInterval(this.heartbeatTimer);
 		this.heartbeatTimer = undefined;
+		const summary = summarizeFrameWindow(this.eventLoopWindowGaps);
+		if (summary) this.handler?.log("performance.event-loop-window", summary);
+		this.eventLoopWindowGaps.length = 0;
 	}
-	private recordTurnMetrics(prepared: PreparedTurn): void {
-		if (prepared.metricsRecorded || !prepared.response || prepared.responseReceivedAt === undefined || prepared.playbackEndedAt === undefined) return;
+	private recordTurnMetrics(prepared: PreparedTurn): HardAiWorkerTurnMetrics | undefined {
+		if (prepared.metricsRecorded || !prepared.response || prepared.responseReceivedAt === undefined || prepared.playbackEndedAt === undefined) return undefined;
 		prepared.metricsRecorded = true;
 		const playerVisibleDurationMs = prepared.playbackEndedAt - prepared.startedAt;
 		const workerCompletionDurationMs = prepared.responseReceivedAt - prepared.startedAt;
-		this.turnMetrics.push({ playerVisibleDurationMs, workerComputeMs: prepared.response.computeMs, workerCompletionDurationMs, precomputeHeadroomMs: playerVisibleDurationMs - workerCompletionDurationMs, postTurnWaitMs: Math.max(0, prepared.responseReceivedAt - prepared.playbackEndedAt), workerReadyBeforeTurnEnd: prepared.responseReceivedAt <= prepared.playbackEndedAt });
+		const metrics = { playerVisibleDurationMs, workerComputeMs: prepared.response.computeMs, workerCompletionDurationMs, precomputeHeadroomMs: playerVisibleDurationMs - workerCompletionDurationMs, postTurnWaitMs: Math.max(0, prepared.responseReceivedAt - prepared.playbackEndedAt), workerReadyBeforeTurnEnd: prepared.responseReceivedAt <= prepared.playbackEndedAt };
+		this.turnMetrics.push(metrics);
+		return metrics;
 	}
+	private failureReasonLogged = false;
+	private logFailure(reason: string | undefined): void {
+		if (this.failureReasonLogged || !reason) return;
+		this.failureReasonLogged = true;
+		this.handler?.log("ai.worker.failed", { reason, message: this.failureReason });
+	}
+	private logRejected(reason: string, requestId?: string): void { this.handler?.log("ai.worker.rejected", { ...(requestId ? { requestId } : {}), reason }); }
+	private rejectPending(reason: string): void { this.fallbackReason = reason; const requestId = this.pending?.request.requestId; this.logRejected(reason, requestId); this.pending = undefined; this.stopHeartbeat(); }
 }

@@ -23,6 +23,7 @@ describe("HardAiWorkerHost", () => {
 		const worker = new FakeWorker();
 		const host = new HardAiWorkerHost(() => worker);
 		const handler = createMatchHandler({ mode: "hotseat", mapId: "ice-map-v1", seed: 7 });
+		host.attachHandler(handler);
 		const snapshot = handler.toSettings();
 		const nextRuleState = { ...handler.getRuleState(), phase: RulePhase.Physics, turnNumber: handler.getRuleState().turnNumber + 1, activeTeam: 1 };
 		const aiSettings = { difficulty: "hard" as const, seed: 11, team: 1 };
@@ -62,6 +63,8 @@ describe("HardAiWorkerHost", () => {
 		host.completeAuthoritativeTurn(handler);
 		expect(host.consumePreparedAction()).toEqual({ actorId: acceptedAction.actorId, angle: 0.5, power: 2 });
 		expect(host.getMetrics().validResponseCount).toBe(1);
+		expect(handler.getLogs(handler.LoggerType.Performance).map(log => log.type)).toContain("ai.worker.requested");
+		expect(handler.getLogs(handler.LoggerType.Performance).find(log => log.type === "ai.worker.completed")?.data).toMatchObject({ workerComputeMs: 1, postTurnWaitMs: 0, workerReadyBeforeTurnEnd: true });
 		host.dispose();
 		expect(worker.terminated).toBe(true);
 
@@ -76,11 +79,16 @@ describe("HardAiWorkerHost", () => {
 		const worker = new FakeWorker();
 		const host = new HardAiWorkerHost(() => worker);
 		const handler = createMatchHandler({ mode: "hotseat", mapId: "ice-map-v1", seed: 8 });
+		host.attachHandler(handler);
 		const snapshot = handler.toSettings();
 		host.prepareTurn({ snapshot, acceptedAction: { actorId: snapshot.players[0]!.id, angle: 0, power: 1 }, nextRuleState: handler.getRuleState(), aiSettings: { difficulty: "hard", seed: 12, team: 0 } });
 		expect(host.isThinking()).toBe(true);
 		expect(host.consumePreparedAction()).toBeUndefined();
 		expect(host.getMetrics().fallbackCount).toBe(0);
+		host.completeAuthoritativeTurn(handler);
+		expect(handler.getLogs(handler.LoggerType.Performance).map(log => log.type)).toContain("ai.worker.waiting");
+		expect(handler.getLogs(handler.LoggerType.Performance).map(log => log.type)).not.toContain("ai.fallback.started");
+		expect(handler.getLogs(handler.LoggerType.Performance).map(log => log.type)).not.toContain("ai.fallback.completed");
 		host.noteSynchronousFallback();
 		expect(host.getMetrics().fallbackCount).toBe(1);
 		host.dispose();

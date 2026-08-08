@@ -277,6 +277,31 @@ profile's `4.72s` maximum, although this qualification does not claim a
 strict apples-to-apples benchmark run. Worker metrics are UX diagnostics and
 are not part of canonical engine snapshots or performance baselines.
 
+## Runtime Performance Logs
+
+High-level production timing is available directly from the ephemeral Handler
+runtime log buffer; no profiling harness or import is needed in DevTools:
+
+```ts
+const types = game.handler.LoggerType;
+game.handler.getLogs(types.Performance);
+game.handler.getLogs(types.Performance)
+  .filter(log => log.type === "ai.worker.completed");
+```
+
+Worker request, completion, waiting, rejection, and failure events expose
+small request/turn identifiers and measured compute, playback, headroom,
+wait, and readiness fields. Synchronous fallback events expose the reason and
+duration. Existing Handler events expose simulation, playback, turn, and
+bounded frame-window summaries. Performance filtering includes `performance`,
+`turn`, and `ai` event namespaces. Runtime logs remain outside
+`EngineSettings`, fingerprints, replay documents, Worker snapshots, and
+gameplay decisions.
+
+High-level timing and lifecycle metrics are now runtime-native. Collision
+checks, candidate tick distributions, and deep physics attribution remain in
+`scripts/profileAiBattle.ts` and the other dedicated profilers.
+
 ## Throughput Qualification
 
 The first production sample was extended to five Worker requests and three

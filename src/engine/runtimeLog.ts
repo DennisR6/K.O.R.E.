@@ -18,6 +18,7 @@ export interface RuntimeLogEntry<T = unknown> {
 export function isRuntimeLogCategory(type: string, category: LoggerType): boolean {
 	if (category === LoggerType.Turn) return type.startsWith("turn.") || type.startsWith("turnPacket.");
 	if (category === LoggerType.Worker) return type.startsWith("worker.") || type.includes(".worker.");
+	if (category === LoggerType.Performance) return type.startsWith("performance.") || type.startsWith("turn.") || type.startsWith("ai.");
 	return type.startsWith(`${category}.`);
 }
 

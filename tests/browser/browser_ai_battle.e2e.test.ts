@@ -143,6 +143,10 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		}), 180_000, 100, "three validated production worker responses");
 		const metrics = await page.evaluate(() => (window as any).game?.aiWorkerMetrics ?? null);
 		const longTasks = await page.evaluate(() => { const target = window as any; target.__aiLongTaskObserver?.disconnect(); return target.__aiLongTasks ?? []; });
+		const performanceLogs = await page.evaluate(() => {
+			const handler = (window as any).game.handler;
+			return handler.getLogs(handler.LoggerType.Performance).map((log: any) => ({ type: log.type, data: log.data }));
+		});
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker metrics", metrics);
 		expect(metrics?.workerPathAvailable).toBe(true);
 		expect(metrics?.requestCount).toBeGreaterThan(0);
@@ -152,6 +156,10 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		expect(Number.isFinite(metrics?.precomputeHeadroomMs)).toBe(true);
 		expect(Number.isFinite(metrics?.postTurnWaitMs)).toBe(true);
 		expect(metrics?.maxEventLoopGapMs).toBeLessThan(500);
+		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("ai.worker.requested");
+		expect(performanceLogs.filter((log: { type: string }) => log.type === "ai.worker.completed").length).toBeGreaterThan(0);
+		expect(performanceLogs.find((log: { type: string; data?: unknown }) => log.type === "ai.worker.completed")?.data).toHaveProperty("precomputeHeadroomMs");
+		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("turn.playback.completed");
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production long tasks", longTasks);
 	} finally {
 		await closeBrowser(browser);

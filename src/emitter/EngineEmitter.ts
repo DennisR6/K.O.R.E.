@@ -60,6 +60,7 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		const validateActor = (this.handler as Partial<GameHandler>).validateActorForAction;
 		if (validateActor) validateActor.call(this.handler, actorId);
 		const acceptedAction = { actorId, angle, power };
+		this.handler.beginTurnTiming?.();
 		const nextRuleState = this.rules.startNextTurn(this.rules.advancePhase(this.ruleState), this.teamCount);
 		const nextAiSettings = this.aiWorkerSettings.get(nextRuleState.activeTeam);
 		if (this.aiWorkerHost && nextAiSettings) this.aiWorkerHost.prepareTurn({ snapshot: this.handler.toSettings(), acceptedAction, nextRuleState, aiSettings: nextAiSettings });

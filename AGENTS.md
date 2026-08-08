@@ -562,8 +562,11 @@ browser frame observations are emitted as bounded aggregate windows.
 The initial event taxonomy uses `domain.event` names such as
 `input.accepted`, `turn.simulation.completed`, `turn.playback.completed`,
 `turnPacket.created`, `ai.decision.completed`, and
-`performance.frame-window`. Consumers inspect a detached `getLogs()` result;
-there is no remote sink or worker-AI lifecycle in the current production path.
+`performance.frame-window`, `ai.worker.requested`, and
+`ai.worker.completed`. Performance filtering includes `performance.*`,
+`turn.*`, and `ai.*` observations, so Worker and turn timing are available
+through `handler.getLogs(handler.LoggerType.Performance)`. Consumers inspect a
+detached `getLogs()` result; there is no remote sink.
 - `src/types/global.d.ts`: browser globals including `window.game`.
 - `src/i18n/language.ts`: typed JSON language loader. It always loads the
   complete `en_en` catalog first and overlays the selected language, so

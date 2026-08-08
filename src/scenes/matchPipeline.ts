@@ -56,6 +56,7 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 		: { myTeam: settings.myTeam, allTeams: settings.allTeams };
 	const definition = kore.createMatchDefinition({ mapId: config.mapId, settings, gameMode: settings.gameMode!, seed, header });
 	const handler = kore.createRuntimeMatch(definition);
+	config.aiWorkerHost?.attachHandler(handler);
 	const emitters = new CombiEmitter();
 	const gameEmitter = new GameEmitter(handler, handler.getSettings()?.gameMode, CANONICAL_PLAYABLE_MATCH.teamCount, seed, config.aiWorkerHost);
 	emitters.addEmitter(gameEmitter);
