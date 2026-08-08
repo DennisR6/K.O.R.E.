@@ -105,7 +105,7 @@ export type UnTypedNetworkMessage =
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
-export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, mapId?: string, modeId?: string }
+export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, gameId?: string, mapId?: string, modeId?: string }
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
 }
@@ -126,6 +126,7 @@ export interface NetworkTurn {
 	turnNumber: number,
 	activeTeam: number,
 	ruleState: RuleState,
+	gameOver?: boolean,
 }
 export interface NetworkError {
 	type: NetworkMessageType.ERROR,

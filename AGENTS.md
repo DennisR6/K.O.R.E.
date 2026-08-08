@@ -412,8 +412,11 @@ After every change, check whether this guide still reflects the implementation a
   (fires exactly once per finished match on the draw path, re-arms after a
   rematch), `collectOfflineMatchRecord`, and `reportOfflineMatch` (same-origin
   POST, never throws). The produced `OfflineMatchRecordPayload` carries the
-  mode header, map id, recorder seed, optional difficulty, players, result, and
-  the validated replay document.
+   mode header, map id, recorder seed, optional difficulty, players, result, and
+   the validated replay document.
+- `src/net/performanceReport.ts`: browser-side aggregation and best-effort
+  upload of completed online-match Handler performance logs. It stores no raw
+  log buffer and never affects match or replay completion.
 - `src/kore/ui/mainMenu.ts`: authoritative SDK-authored main-menu composition.
   Its `.build()` result contains every production menu screen, element, action,
   UI framework, and persistent menu-audio intent. `menuVocabulary.ts` owns its
@@ -518,6 +521,9 @@ After every change, check whether this guide still reflects the implementation a
   origin).
 - `src/server/offlineMatches.ts`: `serveOfflineMatchReport` route handler for
   `/offline-matches` (POST only, 2 MB body cap, 400 on malformed records).
+- `src/server/performanceReports.ts`: game-member route handler for
+  `/api/games/<gameId>/performance`; it accepts only completed games and stores
+  idempotent match and per-turn performance summaries without replay state.
 - `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
   `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
   retired revisions for new matches while preserving them in storage. Its

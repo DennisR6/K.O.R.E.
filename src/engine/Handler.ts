@@ -325,10 +325,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!playback) throw new Error("playbacksystem not found!")
 		playback.start(packet.durationFrames, packet.finalState, () => {
 			const durationMs = runtimeNow() - (this.playbackStartedAt ?? runtimeNow());
-			this.log("turn.playback.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs, playerVisibleDurationMs: durationMs });
+			const team = this.entityManager.getEntityById(packet.actorId)?.getTeam()[0];
+			this.log("turn.playback.completed", { actorId: packet.actorId, team, frames: packet.durationFrames, durationMs, playerVisibleDurationMs: durationMs });
 			this.log("turnPacket.playbackCompleted", { actorId: packet.actorId, frameCount: packet.durationFrames, durationMs });
 			const turnDurationMs = this.turnStartedAt === undefined ? durationMs : runtimeNow() - this.turnStartedAt;
-			this.log("turn.completed", { actorId: packet.actorId, frames: packet.durationFrames, durationMs: turnDurationMs, turnDurationMs });
+			this.log("turn.completed", { actorId: packet.actorId, team, frames: packet.durationFrames, durationMs: turnDurationMs, turnDurationMs });
 			this.playbackStartedAt = undefined;
 			this.turnStartedAt = undefined;
 			// A terminal match state set by gameplay systems during the final

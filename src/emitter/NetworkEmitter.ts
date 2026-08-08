@@ -1,4 +1,4 @@
-import { type IInputEmitter } from "../engine/types.js";
+import { GameState, type IInputEmitter } from "../engine/types.js";
 import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
@@ -51,7 +51,7 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			handler.setRuleState(turn.ruleState)
 			handler.log("turnPacket.received", { actorId: turn.sim.actorId, frameCount: turn.sim.durationFrames, playerCount: turn.sim.finalState.length });
 			handler.playTurn(turn.sim, () => {
-				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
+				handler.setState(turn.gameOver ? GameState.Game_over : TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 		})
 		}
 		if (message.type === NetworkMessageType.ITEM_USED) {

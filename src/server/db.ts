@@ -12,6 +12,7 @@ import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle 
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import type { OfflineMatchReport } from "./offlineMatchContract.js";
 import type { MatchResult } from "../rules/types.js";
+import { validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
 
 export type StoredGame = {
 	id: string;
@@ -37,6 +38,7 @@ export type StoredMap = { id: string; document: MapDocument; status: StoredMapSt
 /** Persisted offline/KI match; the validated replay document is retained in full. */
 export type StoredOfflineMatch = OfflineMatchReport & { id: string; createdAt: number };
 export type StoredOfflineMatchSummary = Omit<StoredOfflineMatch, "replay">;
+export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
 
 type StoredGameRow = {
 	id: string;
@@ -143,6 +145,35 @@ export class GameDatabase {
 				result_json TEXT NOT NULL,
 				replay_json TEXT NOT NULL,
 				created_at INTEGER NOT NULL
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS game_performance_reports (
+				id TEXT PRIMARY KEY NOT NULL,
+				game_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				schema_version INTEGER NOT NULL,
+				engine_version TEXT,
+				client_json TEXT,
+				summary_json TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				UNIQUE(game_id, user_id, schema_version),
+				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS game_turn_performance (
+				report_id TEXT NOT NULL,
+				game_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				schema_version INTEGER NOT NULL,
+				turn_number INTEGER NOT NULL,
+				team INTEGER NOT NULL DEFAULT -1,
+				metrics_json TEXT NOT NULL,
+				PRIMARY KEY(report_id, turn_number, team),
+				FOREIGN KEY (report_id) REFERENCES game_performance_reports(id) ON DELETE CASCADE,
+				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
 		this.db.run(`
@@ -309,6 +340,40 @@ export class GameDatabase {
 			VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
 		`).run(id, report.mode, report.mapId, report.difficulty ?? null, report.seed, JSON.stringify(report.players), JSON.stringify(report.result), JSON.stringify(replay), now);
 		return { id, mode: report.mode, mapId: report.mapId, difficulty: report.difficulty, seed: report.seed, players: [...report.players], result: structuredClone(report.result), replay, createdAt: now };
+	}
+
+	/** Stores one idempotent client performance report for a completed game. */
+	public storePerformanceReport(report: MatchPerformanceReport, now: number = Date.now()): StoredPerformanceReport {
+		validateMatchPerformanceReport(report);
+		if (!Number.isSafeInteger(now) || now < 0) throw new Error("Performance report time must be a non-negative integer");
+		if (!this.hasGame(report.gameId)) throw new Error("Unknown game");
+		const lifecycle = this.getLifecycle(report.gameId);
+		if (lifecycle?.status !== "completed") throw new Error("Performance reports require a completed game");
+		const member = this.db.query("SELECT 1 AS found FROM game_players WHERE game_id = ?1 AND user_id = ?2").get(report.gameId, report.userId);
+		if (!member) throw new Error("User does not belong to this game");
+		const existing = this.db.query("SELECT id, created_at FROM game_performance_reports WHERE game_id = ?1 AND user_id = ?2 AND schema_version = ?3").get(report.gameId, report.userId, report.schemaVersion) as { id: string; created_at: number } | null;
+		const id = existing?.id ?? crypto.randomUUID();
+		const createdAt = existing?.created_at ?? now;
+		this.db.transaction(() => {
+			this.db.query(`
+				INSERT INTO game_performance_reports (id, game_id, user_id, schema_version, engine_version, client_json, summary_json, created_at, updated_at)
+				VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+				ON CONFLICT(game_id, user_id, schema_version) DO UPDATE SET engine_version = excluded.engine_version, client_json = excluded.client_json, summary_json = excluded.summary_json, updated_at = excluded.updated_at
+			`).run(id, report.gameId, report.userId, report.schemaVersion, report.engineVersion ?? null, report.client ? JSON.stringify(report.client) : null, JSON.stringify(report.summary), createdAt, now);
+			this.db.query("DELETE FROM game_turn_performance WHERE report_id = ?1").run(id);
+			const insertTurn = this.db.query("INSERT INTO game_turn_performance (report_id, game_id, user_id, schema_version, turn_number, team, metrics_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)");
+			for (const turn of report.turns) insertTurn.run(id, report.gameId, report.userId, report.schemaVersion, turn.turnNumber, turn.team ?? -1, JSON.stringify(turn));
+		})();
+		return { ...structuredClone(report), id, createdAt, updatedAt: now };
+	}
+
+	public getPerformanceReport(gameId: string, userId: string, schemaVersion = 1): StoredPerformanceReport | undefined {
+		const row = this.db.query("SELECT id, game_id, user_id, schema_version, engine_version, client_json, summary_json, created_at, updated_at FROM game_performance_reports WHERE game_id = ?1 AND user_id = ?2 AND schema_version = ?3").get(gameId, userId, schemaVersion) as { id: string; game_id: string; user_id: string; schema_version: number; engine_version: string | null; client_json: string | null; summary_json: string; created_at: number; updated_at: number } | null;
+		if (!row) return undefined;
+		const turns = this.db.query("SELECT metrics_json FROM game_turn_performance WHERE report_id = ?1 ORDER BY turn_number ASC, team ASC").all(row.id) as Array<{ metrics_json: string }>;
+		const report: MatchPerformanceReport = { schemaVersion: row.schema_version as 1, gameId: row.game_id, userId: row.user_id, ...(row.engine_version ? { engineVersion: row.engine_version } : {}), ...(row.client_json ? { client: JSON.parse(row.client_json) } : {}), summary: JSON.parse(row.summary_json), turns: turns.map(turn => JSON.parse(turn.metrics_json)) };
+		validateMatchPerformanceReport(report);
+		return { ...report, id: row.id, createdAt: row.created_at, updatedAt: row.updated_at };
 	}
 
 	/** Lists offline match summaries (the heavy replay document is excluded). */

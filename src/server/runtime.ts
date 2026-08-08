@@ -5,6 +5,7 @@ import { parseDiscordInvite } from "../discord/invites.js";
 import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
+import { GameState } from "../engine/types.js";
 import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -92,7 +93,7 @@ export class ServerRuntime {
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
-				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId, modeId: record.handler.getSettings()?.gameMode?.id }))
+				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId, modeId: record.handler.getSettings()?.gameMode?.id }))
 			}
 		}
 	}
@@ -129,7 +130,7 @@ export class ServerRuntime {
 				return this.sendError(socket, "Game not found or expired")
 			}
 			this.games.connectUser(userId)
-			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
 		} catch (error) {
 			this.sendError(socket, error instanceof Error ? error.message : "Invalid invite payload")
 		}
@@ -147,7 +148,7 @@ export class ServerRuntime {
 		if (requestedUserId === undefined) socket.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: userId as NetworkNewUser["userid"] }))
 		const record = this.games.connectUser(userId)
 		if (record) {
-				socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
 			return
 		}
 		const preference = this.validateMapPreference(mapPreference)
@@ -193,6 +194,7 @@ export class ServerRuntime {
 			turnNumber: result.record.turnNumber,
 			activeTeam: result.record.currentTeam,
 			ruleState: result.record.ruleState,
+			gameOver: result.record.handler.getState() === GameState.Game_over,
 		}
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
@@ -226,7 +228,7 @@ export class ServerRuntime {
 		if (!result.ok) return this.sendError(socket, result.error)
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
-			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState, modeId: result.record.handler.getSettings()?.gameMode?.id }))
+			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: result.record.id, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState, modeId: result.record.handler.getSettings()?.gameMode?.id }))
 		}
 	}
 
