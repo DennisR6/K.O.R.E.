@@ -43,6 +43,29 @@ export function fingerprintCanonicalSnapshot(snapshot: EngineSettings): string {
 	return fingerprintString(JSON.stringify(snapshot));
 }
 
+export type CanonicalDifference = { path: string; workerValue: unknown; mainValue: unknown };
+
+/** Diagnostic-only structural comparison for explaining a rejected Worker result. */
+export function diffCanonicalSettings(worker: unknown, main: unknown, limit = 20): CanonicalDifference[] {
+	const differences: CanonicalDifference[] = [];
+	const visit = (workerValue: unknown, mainValue: unknown, path: string): void => {
+		if (differences.length >= limit || Object.is(workerValue, mainValue)) return;
+		if (typeof workerValue !== "object" || workerValue === null || typeof mainValue !== "object" || mainValue === null) {
+			differences.push({ path, workerValue, mainValue });
+			return;
+		}
+		if (Array.isArray(workerValue) !== Array.isArray(mainValue)) {
+			differences.push({ path, workerValue, mainValue });
+			return;
+		}
+		const workerKeys = Object.keys(workerValue as Record<string, unknown>);
+		const mainKeys = Object.keys(mainValue as Record<string, unknown>);
+		for (const key of [...new Set([...workerKeys, ...mainKeys])]) visit((workerValue as Record<string, unknown>)[key], (mainValue as Record<string, unknown>)[key], `${path}.${key}`);
+	};
+	visit(worker, main, "$" );
+	return differences;
+}
+
 function fingerprintString(source: string): string {
 	let hash = 2166136261;
 	for (let index = 0; index < source.length; index++) {

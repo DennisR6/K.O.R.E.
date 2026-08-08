@@ -148,6 +148,7 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 			return handler.getLogs(handler.LoggerType.Performance).map((log: any) => ({ type: log.type, data: log.data }));
 		});
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker metrics", metrics);
+		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker rejections", performanceLogs.filter((log: { type: string }) => log.type === "ai.worker.rejected"));
 		expect(metrics?.workerPathAvailable).toBe(true);
 		expect(metrics?.requestCount).toBeGreaterThan(0);
 		expect(metrics?.validResponseCount).toBeGreaterThan(0);

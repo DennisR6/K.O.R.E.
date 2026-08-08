@@ -272,6 +272,37 @@ HUD as a hard-AI thinking status after visible playback ends. Failed,
 unavailable, malformed, stale, or mismatched worker results use the existing
 synchronous fallback or are discarded as appropriate.
 
+### Fingerprint mismatch investigation
+
+The supplied production trace (`game.json`) reproduces a post-playback
+`fingerprint-mismatch` for request
+`00000000-0000-4000-8000-000000000014:ai-worker:0:0`. The request was prepared
+before the visible turn, its Worker result was ready before playback ended,
+and rejection occurred at the playback completion boundary. A faithful
+structural comparison of the Worker and main-thread canonical settings found
+the first difference at:
+
+```text
+systems[7].state.syncPending
+worker: false
+main:   true
+```
+
+`systems[7]` is `core.playback`. `remainingFrames` was `0` on both paths;
+`completionPending` was `false` and `finalState` was `null` on both paths. The
+main-thread hard sync cleared `finalState` but left `syncPending` set, while
+the Worker path never started visual playback and therefore retained the idle
+value. Validation runs inside the playback completion callback, after
+`startTurn` and before the next tick, so this is a canonical cleanup divergence,
+not an early-validation race. `PlaybackSystem.applyHardSync()` now clears
+`syncPending` after applying the final state.
+
+The diagnostic-only `diffCanonicalSettings()` helper and regression in
+`tests/ai_worker_host.test.ts` prove equality of the canonical settings and
+fingerprints at that exact boundary. The dedicated Chromium AI-worker test
+recorded no `ai.worker.rejected` events after the fix; its single fallback was
+the initial `no-prepared-request` startup case.
+
 The measured event-loop gap is far below the previous synchronous browser
 profile's `4.72s` maximum, although this qualification does not claim a
 strict apples-to-apples benchmark run. Worker metrics are UX diagnostics and

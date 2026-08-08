@@ -103,6 +103,7 @@ export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
 		entities.applySettings(this.finalState);
 
 		this.finalState = undefined;
+		this.syncPending = false;
 		// NOTE: the completion callback is NOT fired here. `drainCompletion()`
 		// fires it once after ALL flush hooks have run (called by the handler).
 	}

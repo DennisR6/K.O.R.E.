@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { HardAiWorkerHost } from "../src/ai/worker/host.js";
-import { fingerprintCanonicalSnapshot, fingerprintHardAiRequest, type HardAiWorkerRequest, type HardAiWorkerResponse } from "../src/ai/worker/protocol.js";
+import { diffCanonicalSettings, fingerprintCanonicalSnapshot, fingerprintHardAiRequest, type HardAiWorkerRequest, type HardAiWorkerResponse } from "../src/ai/worker/protocol.js";
 import { createMatchHandler } from "../src/scenes/matchPipeline.js";
 import { RulePhase } from "../src/rules/types.js";
 import { AiBattleSystem } from "../src/ai/AiBattleSystem.js";
 import { GameState } from "../src/engine/types.js";
+import { restoreHardAiWorkerHandler } from "../src/ai/worker/compute.js";
 
 class FakeWorker {
 	onmessage: ((event: MessageEvent) => void) | null = null;
@@ -73,6 +74,36 @@ describe("HardAiWorkerHost", () => {
 		failedWorker.crash();
 		expect(failedHost.isAvailable()).toBe(false);
 		expect(failedHost.getMetrics().failedCount).toBe(1);
+	});
+
+	test("keeps Worker and playback post-turn canonical state identical", () => {
+		const worker = new FakeWorker();
+		const host = new HardAiWorkerHost(() => worker);
+		const handler = createMatchHandler({ mode: "hotseat", mapId: "ice-map-v1", seed: 17 });
+		const snapshot = handler.toSettings();
+		const actorId = snapshot.players[0]!.id;
+		const acceptedAction = { actorId, angle: 0, power: 1 };
+		const nextRuleState = { ...handler.getRuleState(), phase: RulePhase.Physics, turnNumber: handler.getRuleState().turnNumber + 1, activeTeam: 1 };
+		host.prepareTurn({ snapshot, acceptedAction, nextRuleState, aiSettings: { difficulty: "hard", seed: 19, team: 1 } });
+		const workerHandler = restoreHardAiWorkerHandler(snapshot);
+		workerHandler.resolveTurn(acceptedAction);
+		workerHandler.startTurn(nextRuleState);
+		const workerSettings = workerHandler.toSettings();
+		const packet = handler.simulateTurn(actorId, 0, 1);
+		const request = worker.posted[0]!;
+		worker.respond({ schemaVersion: 1, requestId: request.requestId, basedOnStateHash: request.basedOnStateHash, expectedTurnNumber: request.expectedTurnNumber, expectedNextTeam: request.expectedNextTeam, action: acceptedAction, postTurnStateHash: fingerprintCanonicalSnapshot(workerSettings), computeMs: 1 });
+		let mainSettings = handler.toSettings();
+		handler.playTurn(packet, () => {
+			handler.startTurn(nextRuleState);
+			handler.setState(GameState.Your_turn);
+			mainSettings = handler.toSettings();
+			host.completeAuthoritativeTurn(handler);
+		});
+		for (let tick = 0; tick < packet.durationFrames + 2; tick++) handler.tick();
+		expect(diffCanonicalSettings(workerSettings, mainSettings)).toEqual([]);
+		expect(fingerprintCanonicalSnapshot(workerSettings)).toBe(fingerprintCanonicalSnapshot(mainSettings));
+		expect(host.consumePreparedAction()).toEqual(acceptedAction);
+		host.dispose();
 	});
 
 	test("keeps a healthy pending request asynchronous and falls back only when unavailable", () => {
