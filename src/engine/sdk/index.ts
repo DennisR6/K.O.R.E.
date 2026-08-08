@@ -53,6 +53,8 @@ export type { CounterState } from "../contracts/counterState.js";
 export { NUMERIC_STATE_SCHEMA_VERSION, NUMERIC_THRESHOLD_COMPARATORS, validateNumericThreshold, validateNumericThresholdBinding, validateNumericThresholdBindings } from "../contracts/numericState.js";
 export type { NumericThreshold, NumericThresholdBinding, NumericThresholdComparator, NumericThresholdEffect } from "../contracts/numericState.js";
 export type { EngineFrameworkSettings, EngineSystemDefinition, EngineWorldSettings };
+export { collectAssetReferences } from "./assetReferences.js";
+export type { RenderAssetReference } from "./assetReferences.js";
 export { advanceTemporalModifier, createTemporalModifier, createTemporalModifierTemplate, validateTemporalModifier, TEMPORAL_DURATION_UNITS, TEMPORAL_MODIFIER_SCHEMA_VERSION } from "../contracts/temporalModifier.js";
 export type { TemporalDurationUnit, TemporalModifierSettings, TemporalModifierTarget, TemporalModifierTemplate } from "../contracts/temporalModifier.js";
 export { advanceStructureLifecycle, createStructureLifecycle, createStructureLifecycleTemplate, STRUCTURE_LIFECYCLE_DURATION_UNITS, STRUCTURE_LIFECYCLE_SCHEMA_VERSION, validateStructureLifecycle, validateStructureLifecycleTemplate } from "../contracts/structureLifecycle.js";

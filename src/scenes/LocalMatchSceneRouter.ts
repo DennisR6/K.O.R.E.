@@ -19,6 +19,7 @@ import type { LoadedContentPackage } from "../content/package.js";
 import { HardAiWorkerHost } from "../ai/worker/host.js";
 import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
 import { startupMark } from "../engine/startupTelemetry.js";
+import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -141,6 +142,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			startupMark("game.build.started", { mode: this.mode, mapId });
 			const next = factory();
 			startupMark("game.build.completed", { mode: this.mode, mapId });
+			void new AssetPreloader().warm(next.toSettings());
 			startupMark("game.scene.init.started", { scene: this.mode ?? "game" });
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
