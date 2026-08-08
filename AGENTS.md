@@ -243,6 +243,9 @@ After every change, check whether this guide still reflects the implementation a
   used for Falltür. Historical geometry-derived IDs are assigned only by
   `src/migrations/structures.ts`; runtime `FullStructure` construction requires
   the persisted ID.
+  Relative current Engine collision commands are stored separately as validated
+  `collisionCommands` bindings; `GameHandler` resolves the colliding entity and
+  routes them through the shared predefined dispatcher after physics resolution.
 - `src/structures/DeadlyObstacleCircle.ts` and `DebuggerStructure.ts`: special
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator

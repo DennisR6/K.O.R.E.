@@ -660,22 +660,24 @@ contracts unless a concrete Engine-neutral consumer exists.
 
 1. Classify and retain or remove orphaned item contracts without inventing Engine semantics.
 2. Add the smallest Transform interpreter for the real `Position`/Falltür consumer, then migrate `Position` alone.
-3. Evaluate `Velocity` against the existing Movement host only if a production consumer is established.
-4. Migrate direct object commands one semantic at a time (`ModifyMass`, `ModifySize`, then `Team`) only when their generic target/state owners are concrete.
-5. Reconcile `Damage` and HP/participation composition after object-state ownership is explicit.
-6. Preserve `Movement` as a separate temporal integration decision; do not equate it with velocity commands.
-7. Keep `Multi` as ordered composition and migrate children independently.
-8. Leave active KORE item scheduling, status, structural, and target-sensitive Effects in the KORE layer unless a concrete generic consumer proves otherwise.
+3. Qualify the generic collision-command host, then migrate collision `ModifySetting(participation)` alone.
+4. Reevaluate `ModifySetting(add velocity)` against the qualified collision host before migrating it.
+5. Migrate direct object commands one semantic at a time (`ModifyMass`, `ModifySize`, then `Team`) only when their generic target/state owners are concrete.
+6. Reconcile `Damage` and HP/participation composition after object-state ownership is explicit.
+7. Preserve `Movement` as a separate temporal integration decision; do not equate it with velocity commands.
+8. Keep `Multi` as ordered composition and migrate children independently.
+9. Leave active KORE item scheduling, status, structural, and target-sensitive Effects in the KORE layer unless a concrete generic consumer proves otherwise.
 
 Each `[ ]` entry requires its own characterization, migration or explicit
 retention/deletion decision, focused verification, and atomic commit. No two
 unrelated Effect semantics may share a behavior-migration commit.
 
-Falltür activation and deactivation are the first completed convergence slice.
+Falltür activation and deactivation were the first completed convergence slice.
 Their ordered current composition uses Transform and Participation commands,
 captures the resolved position once, persists pending scheduling state, and
 re-enters the shared predefined host at due time. The legacy collision Damage
-composition remains intentionally unchanged and is a separate future semantic.
+composition remains intentionally unchanged and is a separate future semantic;
+lethal collision participation now uses the generic collision-command host.
 
 ### Damage Ownership Decision
 
@@ -786,7 +788,7 @@ The repository-wide inventory after the Damage and Falltür slices is:
 | Engine | `Velocity` | A/F | Legacy authoring/tests remain; live force zones use `ModifySetting(add velocity)` and therefore need collision-host characterization first. |
 | Engine | `Team` | D | SDK authoring/tests only; team membership remains KORE-owned with no generic target/state contract. |
 | Engine | `ModifySetting(hp)` | F/B | Compatibility-only HP shape; current damage uses `numeric.add`. |
-| Engine | `ModifySetting(participation)` | A | Live death circles, editor kill zones, and KORE kill-zone authoring; maps directly to `participation.set-*`. |
+| Engine | `ModifySetting(participation)` | A | Migrated: live death circles, editor kill zones, and KORE kill-zone authoring now use relative `collision.command` bindings with `participation.set-*`. |
 | Engine | `ModifySetting(add velocity)` | A | Live force hazards and editor push zones; maps directly to `movement.add-velocity`. |
 | KORE item | `modifyForce` | D | Live Anker and Power-Dash outgoing-shot modifiers; retain as KORE semantics. |
 | KORE item | `spawnTrigger` | D | Live Falltür and Mystery Box scheduling; retain as KORE scheduling semantics. |
@@ -813,21 +815,20 @@ The ranked live candidates are:
 | 2 | `ModifySetting(add velocity)` | High: reuses `movement.add-velocity` for force/push hazards and future impulses | High: force hazards and editor push zones | High: removes vector-setting branch and legacy force declarations | Same missing collision-command host; cannot safely migrate declarations alone. |
 | 3 | `Physics` | Medium: could establish generic physics modifier ownership | High: every puck/map tick | Medium | Semantics include friction, drag, stop threshold, and KORE entity behavior; requires materially new ownership rather than a small primitive. |
 
-`ModifySetting(participation)` is selected as the next Effect semantic. It has the
-highest leverage and the safest behavior characterization, but implementation is
-intentionally deferred in this selection cycle: the required next boundary is a
-generic collision-trigger host that receives the authoritative handler context,
-resolves the colliding entity target, dispatches ordered predefined commands, and
-preserves collision-entry semantics. Adding a KORE-only callback or teaching
-`ParticipationSystem` about structure collision lists would hide that ownership
-problem and would not qualify a reusable Engine primitive.
+`ModifySetting(participation)` was selected and is now migrated. The reusable
+collision boundary receives the authoritative handler context, resolves the
+colliding entity by stable ID, dispatches ordered predefined commands, and
+preserves collision-entry timing without adding participation-specific logic.
+Legacy `ModifySetting` remains validated for HP, velocity, and historical
+compatibility; only current collision participation content was replaced.
 
-Characterization evidence is currently `tests/setting_effect.test.ts`,
+Characterization and migration evidence is currently `tests/collision_command_host.test.ts`,
+`tests/setting_effect.test.ts`,
 `tests/editor_map_conversion.test.ts`, `tests/falltuer_dormant_runtime.test.ts`,
 `tests/numeric_threshold.test.ts`, and the generic dispatcher/trigger contract
-tests. No production Effect was changed by this selection cycle. The next
-convergence commit must therefore be the generic collision-command host, followed
-by one atomic `ModifySetting(participation)` migration commit.
+tests. The next candidate is `ModifySetting(add velocity)`, but it must be
+reevaluated against the now-qualified host before migration; its production
+content remains unchanged in this cycle.
 
 ### Phase 9: Pong External Qualification
 
