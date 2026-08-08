@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked from current selection-pass baseline: `d1ebdc5 docs(items): record anker convergence`
+Last reranked after Vodka-Zero qualification: `95cea80 feat(engine): qualify deterministic aim action modifiers`
 
-Repository state: fresh remaining-Item selection complete; Vodka-Zero selected for the next characterization slice.
+Repository state: Vodka-Zero is qualified through the generic accepted-action aim-modifier boundary; Ghost Mode and Selection Lock remain unqualified.
 
-CocoIndex state: refreshed after the selection pass; current index contains 727 files and 7,214 chunks.
+CocoIndex state: refreshed after the qualification slice; current index contains 728 files and 7,265 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -30,29 +30,29 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 | Switch | Two stable entity IDs -> `transform.swap-position` -> shared predefined dispatcher -> `TransformSystem` | E | Atomic read-before-write position exchange; no partial mutation; legacy `EffectSwapPosition` path removed. |
 | Power-Dash | `pendingActionModifiers` -> accepted `force.scale` -> `PhysicsStrategy.applyImpulse()` | E | One-shot factor 1.5; consumed at the shared accepted-action boundary with snapshot/replay/AI parity. |
 | Anker | `pendingActionModifiers` -> accepted `force.scale` + flat turn lifetime | E | Factor 0.5 applies across two qualified turn intervals; lifetime expiry and action consumption remain separate. |
+| Vodka-Zero | `pendingActionModifiers` -> accepted `aim.random-offset` -> `PhysicsStrategy.applyImpulse()` | E | One-shot seeded additive angle offset; canonical random state advances only after an accepted action. |
 
 ## Current Ranking
 
 Already-converged Items are excluded from this active ranking.
 
-Anker qualified the optional timed policy on the accepted-force action boundary. No remaining official Item currently has a justified next convergence candidate.
+Vodka-Zero qualified the narrow aim-domain extension of the accepted-action modifier contract. The remaining ranking is limited to the two unqualified official Items below.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Vodka-Zero | F | Pending accepted-action boundary; seeded random state; existing aim helper | Narrow canonical aim-variance action modifier | High | Medium | Select next characterization slice |
-| 2 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
-| 3 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
+| 1 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
+| 2 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
 | -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
 
 ## Remaining Item Inventory
 
-The four remaining Items below, together with the eight completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
+The four remaining Items below, together with the nine completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
 
 | Item | Production consumer | Current runtime path | Target / phase | Lifecycle/state | Reusable primitives | Gap / classification |
 |------|---------------------|----------------------|----------------|-----------------|---------------------|---------------------|
 | Durchlässigkeit | No `PhysicsSystem` collision-filter consumer | Declarative `ghostMode` -> `EffectGhostMode`; flag is stored and serialized | Self / Item phase | Two-turn `shouldIgnoreCollision()` state | Temporal lifetime shape only | Requires collision filter/category semantics; participation is not equivalent; F |
 | Jägermeister-Elixier | No `UiSystem` selection-lock check | Declarative `selectionLock` -> `EffectSelectionLock`; state is stored and serialized | Enemy entity / Item phase | Two-turn lock flag | Turn lifetime only | Requires KORE input-selection policy; F |
-| Vodka-Zero | No production shot/input consumer | Declarative `aimVariance` -> `EffectAimVariance`; seeded state is serializable | Self / Item phase | Instant declaration; random state advances on `applyToForce()` | Deterministic random state | Requires accepted-shot aim modifier; F |
+| Vodka-Zero | Shared accepted-action boundary | Declarative `aimVariance` -> canonical `aim.random-offset`; legacy `EffectAimVariance` retained only for historical/helper compatibility | Self / Item phase | One accepted shot; `remainingUses: 1`; no time lifetime | Pending action state, seeded random primitive, stable modifier ordering | Qualified; E |
 | Wunderkiste | `GameHandler.resolveMysteryBoxUse()` plus reward resolver and inventory economy | Declarative `spawnTrigger` declaration with a special Handler reward branch | Self / Item phase | Deterministic reward ID, recursion guard, per-game inventory cap | Item economy, seeded draw state, stable actor identity, scheduling concepts | Reward selection/grant remains KORE content semantics; D |
 
 ## Evidence Notes
@@ -67,11 +67,11 @@ The four remaining Items below, together with the eight completed Items above, a
 - `MapPickupSystem` is adjacent infrastructure: it grants declared world pickups through the same inventory helper but does not resolve Wunderkiste rewards.
 - The Handler special case is legitimate KORE orchestration, not a duplicated generic Engine reward mechanism. No generic reward command or reward graph is justified by another production consumer.
 
-## Recommended Next Item
+## Next Item
 
-Recommended next Item: **Vodka-Zero**
+No next Item is selected. The current rerank is complete and the next slice must begin with a fresh evidence pass.
 
-Reason: Vodka-Zero has the narrowest clearly evidenced missing semantic: seeded aim variance at the shared accepted-action boundary. Ghost Mode requires collision filtering, and Selection Lock requires a cross-transport authoritative selection policy.
+Current order: **Ghost Mode / Durchlässigkeit**, then **Selection Lock / Jägermeister-Elixier**.
 
 Qualified Wunderkiste ownership:
 
@@ -94,7 +94,7 @@ Required characterization:
 
 ## Active Convergence Status
 
-Power-Dash and Anker are qualified through the generic accepted-action force modifier. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
+Power-Dash, Anker, and Vodka-Zero are qualified through the generic accepted-action modifier contract. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
 
 ## Final Drift Audit
 
@@ -248,7 +248,7 @@ Anker characterization and semantic qualification were completed from the curren
 
 ## Remaining Item Selection Pass
 
-This fresh read-only characterization was performed from baseline `d1ebdc5` after refreshing repository evidence.
+This fresh read-only characterization was performed from baseline `d1ebdc5`; qualification verification completed at `95cea80` after refreshing repository evidence.
 
 ### Ghost Mode / Durchlässigkeit
 
@@ -270,25 +270,28 @@ This fresh read-only characterization was performed from baseline `d1ebdc5` afte
 
 ### Vodka-Zero
 
-- **Current production behavior:** Item use is accepted and `aimVariance` state is stored with seeded random state support. The accepted shot path does not read or advance the stored `EffectAimVariance`; no aim variance affects live movement.
-- **Declarative contract:** Self-targeted `aimVariance` with maximum variance of 10 degrees and instant Item duration; description says it adds seeded deterministic aim variance to shots.
-- **Historical behavior:** `EffectAimVariance.applyToForce()` changes only angle by a seeded offset and preserves power; serialization preserves the next random state exactly.
-- **Reusable primitives:** Accepted-action boundary, canonical Player pending state, deterministic ordering, snapshot/replay, and AI/network input paths are reusable. Force-scale operation is not an exact semantic match because Vodka-Zero changes angle, not power.
-- **Missing semantic:** A narrow seeded accepted-action aim modifier with canonical random state and deterministic angle transformation.
-- **Ranking:** Missing semantic 2, reuse 2, legacy removal 3, determinism 3, clarity 3, risk 2, overall 13/18.
+- **Pre-slice production behavior:** Item use consumed inventory and stored executable `aimVariance` state in `Player.itemEffects`; the accepted-shot path ignored it, so live movement was unaffected.
+- **Declarative contract:** Self-targeted `aimVariance` with maximum variance of 10 degrees and instant Item duration; the Item adds seeded deterministic aim variance to shots.
+- **Exact formula:** `effectiveAngle = normalizeAngle(rawAngle + ((nextRandom() * 2) - 1) * maxVarianceDegrees)`; `power` is unchanged. `SeededRandom.next()` returns `[0, 1)`, and normalization is `((angle % 360) + 360) % 360`.
+- **Random model:** Model B. The canonical modifier stores the current unsigned 32-bit `randomState`; accepted application derives one offset from it, and accepted consumption advances it once. The official declarative Item has no seed, so its existing runtime default `1337` is preserved. The helper’s explicit seed is converted to the same canonical state.
+- **Rejected-action behavior:** Validation occurs before the accepted-action boundary, so rejected shots do not apply, consume, or advance the modifier state and are not recorded in replay.
+- **Lifetime and consumption:** One accepted shot via `remainingUses: 1`; no `duration` or `durationUnit`. Action-use consumption remains separate from turn lifetime.
+- **Ordering:** Modifiers sort by explicit `sourceOrder`, then stable `id`. Aim modifiers transform angle and force modifiers transform power within that deterministic sequence. No runtime insertion order is authoritative.
+- **Canonical representation:** `PlayerSettings.pendingActionModifiers` stores `{ schemaVersion, id, action: "aim", operation: "random-offset", maxVarianceDegrees, randomState, remainingUses, sourceId, sourceOrder }`.
+- **Runtime boundary:** `GameHandler.applyAcceptedForce()` applies generic pending modifiers immediately before `PhysicsStrategy.applyImpulse()` and consumes them only after application.
+- **Replay/snapshot/AI/network:** Replay records raw `{ angle, power }`; replay restoration, snapshot restoration, AI emitters, local input, and server `resolveTurn()` all use the same accepted-action boundary. Effective angle is never trusted from the client or duplicated in replay.
+- **Legacy migration:** Historical `itemEffects` `aimVariance` records migrate explicitly to `pendingActionModifiers`. `EffectAimVariance` remains only as a historical/helper compatibility decoder; it is no longer constructed by the current KORE runtime factory or installed as current live state.
+- **Qualification:** E. The smallest justified aim-domain operation was added without a Vodka-Zero-specific System, Handler branch, RNG framework, expression language, or tick lifetime.
 
-### Selection Decision
+### Qualification Decision
 
-- **Selected next Item:** Vodka-Zero.
-- **Why:** It qualifies the accepted-action language in a second mechanical domain with a clear declarative contract, deterministic state, and narrow scope.
-- **Why not Ghost Mode:** Its exact behavior requires collision filtering rather than existing participation flags and would widen the physics solver boundary.
-- **Why not Selection Lock:** Its authoritative semantics require a new shared selection-policy boundary across UI, server, AI, replay, and target validation; current contract evidence does not define that policy precisely enough.
-- **Expected architecture question:** Whether the existing pending action modifier can add one narrow seeded aim operation without becoming a universal action-expression framework.
-- **Expected reusable composition:** `pendingActionModifiers` + canonical seeded random state + accepted action angle transformation; no lifetime because the Item duration is instant.
-- **Expected legacy cleanup:** If qualified, remove `EffectAimVariance` as an executable runtime object while retaining declarative `aimVariance` validation and explicit historical migration as needed.
-- **Expected verification surface:** Accepted human/AI/replay/network action parity, seeded snapshot/replay continuity, angle-only mutation, rejected-action non-consumption, and deterministic ordering with force modifiers.
+- **Qualified Item:** Vodka-Zero.
+- **Qualification decision:** The existing `pendingActionModifiers` contract is the correct owner for one narrow aim operation. Its canonical random state is JSON-safe and reproduces the same result through snapshot, replay, AI, and network restoration.
+- **Not introduced:** No Vodka-Zero-specific Engine System, mechanical Handler branch, direct velocity mutation, PhysicsStrategy branch, hidden runtime RNG, universal action middleware, generic expression language, tick lifetime, or Item-name field in the generic contract.
+- **Negative invariants:** Rejected actions do not advance RNG state or consume the modifier; force and aim remain distinct; raw replay/network input remains authoritative; no duplicate `itemEffects` and pending ownership remains; no `Math.random()`, wall-clock entropy, or process ordering affects Vodka-Zero.
+- **Verification:** `tests/vodka_zero_characterization.test.ts`, `tests/vodka_zero_item.test.ts`, `tests/action_modifier.test.ts`, `tests/effect_migration.test.ts`, and `tests/sdk_item_runtime.test.ts` cover formula, state, rejection, consumption, ordering, interactions, snapshot, replay, AI, network, and migration boundaries.
 
-No production migration was performed during this selection pass.
+The production migration is complete; Ghost Mode and Selection Lock were not modified.
 
 ## Checkpoint Workflow
 

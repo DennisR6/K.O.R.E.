@@ -190,7 +190,10 @@ After every change, check whether this guide still reflects the implementation a
   Power-Dash lowers `modifyForce` into the generic entity-owned
   `pendingActionModifiers` contract and is consumed once at the accepted-shot
   force boundary; Anker uses the same force operation with a two-turn lifetime
-  in the same pending-action contract.
+  in the same pending-action contract. Vodka-Zero lowers `aimVariance` into the
+  generic `aim.random-offset` operation with canonical seeded state and one
+  accepted-shot consumption at that same boundary; its legacy executable
+  helper is historical compatibility only.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;
