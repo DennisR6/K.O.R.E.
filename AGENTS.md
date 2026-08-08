@@ -160,6 +160,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/engine/contracts/structureLifecycle.ts`: generic JSON-safe timed
   canonical-structure lifecycle with stable IDs, retained dormant structures,
   and deterministic turn expiry.
+- `src/engine/contracts/collisionFilter.ts`: generic JSON-safe entity-owned
+  collision relation exclusions with separately persisted turn lifetimes and a
+  pure pair-eligibility predicate. `PhysicsSystem` applies it before collision
+  resolution and entry dispatch; it does not alter boundary elimination.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
@@ -201,8 +205,11 @@ After every change, check whether this guide still reflects the implementation a
   derives the deterministic seed from snapshot-stable state (actor, turn, team,
   and the seeded-draw seed or game-id hash), so restore and replay reproduce
   the same reward.
-- `src/effects/ghostMode.ts`: serializable collision-filtering effect with turn
-  expiration and snapshot-safe state.
+- `src/effects/ghostMode.ts`: historical Ghost Mode decoder/helper. Current
+  Durchlässigkeit lowers to the generic `collisionFilters` plus separate
+  turn-counted `collisionFilterLifetimes` state; `PhysicsSystem` filters the
+  excluded `entity` and `structure` relations before resolution and collision
+  entry dispatch. Boundary elimination remains independent.
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range
   and deterministic vector behavior.
   The declarative official-item path is active for

@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked after Vodka-Zero qualification: `0724a07 docs(items): record vodka zero convergence`
+Last reranked after Ghost Mode qualification: `01148f3 feat(engine): qualify generic collision filtering`
 
-Repository state: Vodka-Zero is qualified through the generic accepted-action aim-modifier boundary; Ghost Mode and Selection Lock remain unqualified.
+Repository state: Vodka-Zero and Ghost Mode are qualified through generic Engine contracts; Selection Lock remains unqualified.
 
-CocoIndex state: refreshed after the qualification slice; current index contains 728 files and 7,264 chunks.
+CocoIndex state: refreshed after the qualification slice; current index contains 731 files and 7,326 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -36,21 +36,20 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 
 Already-converged Items are excluded from this active ranking.
 
-Vodka-Zero qualified the narrow aim-domain extension of the accepted-action modifier contract. The remaining ranking is limited to the two unqualified official Items below.
+Ghost Mode qualified the narrow collision-relation extension of the physics boundary. Selection Lock is the only remaining unqualified official Item.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
-| 2 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
+| 1 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
 | -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
 
 ## Remaining Item Inventory
 
-The four remaining Items below, together with the nine completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
+The inventory below covers the two unqualified Items and the qualified retained/converged Items relevant to the current catalog checkpoint from `createOfficialItemLoader()`.
 
 | Item | Production consumer | Current runtime path | Target / phase | Lifecycle/state | Reusable primitives | Gap / classification |
 |------|---------------------|----------------------|----------------|-----------------|---------------------|---------------------|
-| Durchlässigkeit | No `PhysicsSystem` collision-filter consumer | Declarative `ghostMode` -> `EffectGhostMode`; flag is stored and serialized | Self / Item phase | Two-turn `shouldIgnoreCollision()` state | Temporal lifetime shape only | Requires collision filter/category semantics; participation is not equivalent; F |
+| Durchlässigkeit | `PhysicsSystem` pair eligibility boundary | Declarative `ghostMode` -> entity-owned `collisionFilters` + separate `collisionFilterLifetimes`; legacy `EffectGhostMode` retained only for historical/helper compatibility | Self / Item phase | Two-turn filter lifetime; excludes `entity` and `structure` relations | Collision filter contract, lifetime core, canonical Player state | Qualified; E |
 | Jägermeister-Elixier | No `UiSystem` selection-lock check | Declarative `selectionLock` -> `EffectSelectionLock`; state is stored and serialized | Enemy entity / Item phase | Two-turn lock flag | Turn lifetime only | Requires KORE input-selection policy; F |
 | Vodka-Zero | Shared accepted-action boundary | Declarative `aimVariance` -> canonical `aim.random-offset`; legacy `EffectAimVariance` retained only for historical/helper compatibility | Self / Item phase | One accepted shot; `remainingUses: 1`; no time lifetime | Pending action state, seeded random primitive, stable modifier ordering | Qualified; E |
 | Wunderkiste | `GameHandler.resolveMysteryBoxUse()` plus reward resolver and inventory economy | Declarative `spawnTrigger` declaration with a special Handler reward branch | Self / Item phase | Deterministic reward ID, recursion guard, per-game inventory cap | Item economy, seeded draw state, stable actor identity, scheduling concepts | Reward selection/grant remains KORE content semantics; D |
@@ -69,9 +68,9 @@ The four remaining Items below, together with the nine completed Items above, ar
 
 ## Next Item
 
-No next Item is selected. The current rerank is complete and the next slice must begin with a fresh evidence pass.
+No next Item is selected. Selection Lock requires a fresh characterization pass before any implementation.
 
-Current order: **Ghost Mode / Durchlässigkeit**, then **Selection Lock / Jägermeister-Elixier**.
+Current order: **Selection Lock / Jägermeister-Elixier**.
 
 Qualified Wunderkiste ownership:
 
@@ -94,7 +93,7 @@ Required characterization:
 
 ## Active Convergence Status
 
-Power-Dash, Anker, and Vodka-Zero are qualified through the generic accepted-action modifier contract. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
+Power-Dash, Anker, Vodka-Zero, and Ghost Mode are qualified through generic Engine contracts. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
 
 ## Final Drift Audit
 
@@ -102,7 +101,7 @@ Already-converged Items must not be opportunistically rewritten during active co
 
 After all intended Item slices are complete, perform one final drift audit against the completed Engine/KORE primitive set. The audit must verify that each completed lowering still uses the current generic contracts and that no Item-specific runtime branch has reappeared.
 
-Audit result at baseline `e577ab7`:
+Audit result refreshed for the Ghost Mode qualification slice:
 
 - Falltür uses the generic `spawnTrigger` schedule, validated stable structure targets, ordered Engine compositions, and generic transform/participation dispatch. Its dormant canonical structure and collision binding are data configuration, not a Falltür-specific runtime effect.
 - Freeze-Shot uses the generic `TemporalModifier` lifecycle and `movement.scale-speed` command. Its target, expiry, stacking, snapshot, and replay behavior remain covered.
@@ -111,8 +110,9 @@ Audit result at baseline `e577ab7`:
 - Magnet uses the generic selected-entity `movement.apply-force-to-entity` command with the actor position as origin. It does not retain a legacy Magnet runtime path or mutate unrelated entities in range.
 - Switch uses the generic `transform.swap-position` command and captures both positions before either write. It does not retain a legacy Switch runtime path.
 - Wunderkiste retains only KORE-specific reward-pool interpretation and deterministic reward selection. The actual capped inventory mutation uses the shared inventory grant primitive; no generic reward subsystem is justified.
+- Ghost Mode uses entity-owned generic collision filters with separate turn lifetimes. `PhysicsSystem` filters entity/structure pairs before resolution and entry dispatch; boundary elimination remains independent.
 
-No completed Item-specific runtime branch or legacy effect implementation was found that warrants removal or replacement. No source change is required by this audit.
+No current executable Ghost Mode Item branch remains; `EffectGhostMode` is retained only for historical/helper compatibility and migration lowers old state into canonical filter/lifetime records.
 
 ## Negative Invariant Audit
 
@@ -126,10 +126,11 @@ The explicit negative-invariant audit was rerun after the final drift audit. Evi
 - **Invariant:** No runtime object reference is stored in canonical settings. **Evidence:** lifecycle, target, trigger, and effect contracts validate JSON-shaped IDs and payloads; snapshots use `toSettings()` and detached clones. **Status:** PASS. **Required action:** None.
 - **Invariant:** No array index is used as stable identity. **Evidence:** Item, entity, structure, lifecycle, deferred, and trigger identities are string IDs; transient activation sequence/index values are not persisted identities. **Status:** PASS. **Required action:** None.
 - **Invariant:** No hidden randomness or wall-clock timer influences deterministic Item gameplay. **Evidence:** official reward and pickup helpers now use `seed ?? 0`; Handler derives the Wunderkiste seed from snapshot-stable values. Scene-level random match seed generation is explicit input initialization, not hidden runtime state. **Status:** PASS. **Required action:** None.
-- **Invariant:** No historical Item Effect type remains executable in the current runtime. **Evidence:** historical `magnet`/`swapPosition` forms are handled only by `src/migrations/effects.ts`; current runtime construction accepts the generic command IDs. **Status:** PASS. **Required action:** None.
+- **Invariant:** No historical Item Effect type remains executable in the current runtime. **Evidence:** historical `magnet`/`swapPosition`/`ghostMode`/`aimVariance` forms are handled only by migration or compatibility helpers; current runtime construction lowers current content to generic command/filter/action templates. **Status:** PASS. **Required action:** None.
 - **Invariant:** No compatibility representation is accepted outside migration boundaries. **Evidence:** `GameHandlerBuilder.fromSettings()` calls `migrateGameSettingsEffects()` before strict runtime construction; current validators require schema version 1. **Status:** PASS. **Required action:** None.
 - **Invariant:** No transient activation event is persisted as authoritative state. **Evidence:** `schedule.due` is emitted transiently by `advanceDeferredEffectsTick()`; only deferred records, not activation events, are serialized. **Status:** PASS. **Required action:** None.
 - **Invariant:** No lifecycle state is duplicated between Item state and Handler/world state. **Evidence:** TemporalModifier and DeferredEffect state have separate owners; Structure participation is canonical Structure state while StructureLifecycle stores only timing metadata. **Status:** PASS. **Required action:** None.
+- **Invariant:** Collision filter state and lifetime state have one entity-owned canonical owner each. **Evidence:** `PlayerSettings.collisionFilters` stores relation exclusions and `collisionFilterLifetimes` stores turn expiry; `itemEffects` stores neither for current Ghost Mode. **Status:** PASS. **Required action:** None.
 - **Invariant:** No generic Engine primitive contains KORE Item names or terminology. **Evidence:** Engine contracts and SDK capabilities use generic movement, transform, participation, lifecycle, and deferred terminology; Wunderkiste terminology remains in `src/item` and `Handler` orchestration. **Status:** PASS. **Required action:** None.
 - **Invariant:** No retained KORE semantic was moved into Engine solely to remove a Handler branch. **Evidence:** Wunderkiste reward-pool interpretation remains in `officialItems.ts`/`Handler`; no generic reward subsystem was introduced. **Status:** PASS. **Required action:** None.
 
@@ -155,7 +156,7 @@ The explicit negative-invariant audit was rerun after the final drift audit. Evi
 
 - **Invariant:** Switch captures both positions before either write and swaps only positions. **Evidence:** `TransformSystem` reads `firstPosition` and `secondPosition` before both `setPos()` calls; the characterization test covers atomicity and unchanged non-position state. **Status:** PASS. **Required action:** None.
 - **Invariant:** Falltür/Mini-Wall position and participation remain orthogonal. **Evidence:** `TransformSystem` only sets position; `ParticipationSystem` only sets physics/drawing flags. **Status:** PASS. **Required action:** None.
-- **Invariant:** Physics and drawing participation remain orthogonal to death and Ghost Mode. **Evidence:** both flags are independently serialized and controlled; `EffectGhostMode` remains a separate collision-filtering runtime effect. **Status:** PASS. **Required action:** None.
+- **Invariant:** Physics and drawing participation remain orthogonal to death and Ghost Mode. **Evidence:** Ghost Mode only changes `PhysicsSystem` pair eligibility; participation flags remain independently serialized and BoundarySystem still eliminates out-of-bounds players. **Status:** PASS. **Required action:** None.
 - **Invariant:** Mini-Wall instances have stable independent identity and expire by disabling participation. **Evidence:** Handler creates IDs from actor, item, and turn; lifecycle expiry retains the canonical Structure and disables both flags; characterization covers multiple owners and restore. **Status:** PASS. **Required action:** None.
 - **Invariant:** Delayed Mine binds position at use, resolves entities at due time, uses ticks, removes before execution, and executes once. **Evidence:** `createDeferredEffect()` stores the resolved position; `advanceDeferredEffectsTick()` removes due records before dispatch; Handler tick order runs this before entity/system processing; characterization covers timing and one-shot behavior. **Status:** PASS. **Required action:** None.
 - **Invariant:** Magnet affects only the selected entity and keeps actor origin distinct. **Evidence:** Handler dispatches an entity target with `origin: actor.getPos()`; `MovementSystem` applies the radial delta only to that target. **Status:** PASS. **Required action:** None.
@@ -246,18 +247,21 @@ Anker characterization and semantic qualification were completed from the curren
 - **Invariant:** No wall-clock, randomness, universal middleware, or Item-specific generic contract was introduced. **Evidence:** only existing action/lifetime contracts were extended; the shared Engine contracts contain no Item names. **Status:** PASS. **Required action:** None.
 - **Invariant:** No current executable `EffectModifyForce` runtime path remains. **Evidence:** the class/module is removed; source search finds only declarative `modifyForce`, validation, migration, authoring, and tests. **Status:** PASS. **Required action:** None.
 
-## Remaining Item Selection Pass
+## Ghost Mode Qualification Pass
 
-This fresh read-only characterization was performed from baseline `d1ebdc5`; qualification verification completed at `95cea80` after refreshing repository evidence.
+This fresh read-only characterization was performed from the clean Vodka-Zero checkpoint after refreshing repository evidence.
 
 ### Ghost Mode / Durchlässigkeit
 
-- **Current production behavior:** Item use is accepted and inventory/rule/replay state advances. The `ghostMode` runtime effect is stored in `Player.itemEffects` and its turn countdown can advance, but no production PhysicsSystem collision filter reads `shouldIgnoreCollision()`.
+- **Pre-slice production behavior:** Item use was accepted, inventory/rule/replay state advanced, and executable `ghostMode` state was stored in `Player.itemEffects`; `PhysicsSystem` ignored that state, so player and structure contacts still resolved normally.
 - **Declarative contract:** Self-targeted `ghostMode` with `durationTurns: 2`; the Item description says it ignores entity and Structure collisions for a short duration.
-- **Historical behavior:** Existing runtime helper tests prove a two-turn `shouldIgnoreCollision()` flag. Isolated collision adapter tests manually consult that flag; this is not a live Item path.
-- **Reusable primitives:** Lifetime shape is reusable; participation flags are only a partial mismatch because disabling physics changes movement, hazards, boundaries, and solver participation, while drawing is orthogonal.
-- **Missing semantic:** Generic collision-category filtering/participation that can ignore entity and Structure contacts without aliasing death or disabling all physics.
-- **Ranking:** Missing semantic 3, reuse 1, legacy removal 3, determinism 2, clarity 3, risk 3, overall 12/18.
+- **Interaction matrix:** Player-player and player-structure contacts are filtered before detection/resolution and produce no impulse, depenetration, or entry callback. Boundary containment remains `BoundarySystem` logic, so leaving the arena still eliminates the player. Collision-based structure hazards are filtered as structure contacts; no general non-collision hazard immunity is added. Movement, friction, drift, and drawing remain unchanged.
+- **Why participation is not equivalent:** `physicsEnabled: false` removes the player from movement integration and the PhysicsSystem, and `drawingEnabled: false` is coupled by elimination. Ghost Mode keeps both enabled and only excludes selected collision relations.
+- **Chosen primitive:** Generic entity-owned `collisionFilters` with `excludedCategories: ["entity", "structure"]`, plus separate `collisionFilterLifetimes` using the shared turn lifetime core. `PhysicsSystem` checks the pure `isCollisionAllowed()` contract before collision detection and excludes filtered pairs from overlap accounting, resolution, and contact tracking.
+- **Canonical owner:** `PlayerSettings.collisionFilters` and `PlayerSettings.collisionFilterLifetimes`; no PhysicsSystem-local authoritative state.
+- **Legacy migration:** Historical `itemEffects.ghostMode` records migrate explicitly to the filter/lifetime pair. Current KORE runtime lowering returns the generic filter template; `EffectGhostMode` remains historical/helper compatibility only.
+- **Replay/snapshot/AI/network:** The canonical Player state is copied through snapshots, replay origin restoration, AI simulation, and server-authoritative resolution. No transport-specific collision path exists.
+- **Qualification:** E. No Ghost Mode-specific System, Handler branch, hazard rule, physics participation toggle, universal collision DSL, or Item-name Engine contract was introduced.
 
 ### Selection Lock / Jägermeister-Elixier
 
@@ -283,15 +287,17 @@ This fresh read-only characterization was performed from baseline `d1ebdc5`; qua
 - **Legacy migration:** Historical `itemEffects` `aimVariance` records migrate explicitly to `pendingActionModifiers`. `EffectAimVariance` remains only as a historical/helper compatibility decoder; it is no longer constructed by the current KORE runtime factory or installed as current live state.
 - **Qualification:** E. The smallest justified aim-domain operation was added without a Vodka-Zero-specific System, Handler branch, RNG framework, expression language, or tick lifetime.
 
-### Qualification Decision
+### Ghost Mode Qualification Decision
 
-- **Qualified Item:** Vodka-Zero.
-- **Qualification decision:** The existing `pendingActionModifiers` contract is the correct owner for one narrow aim operation. Its canonical random state is JSON-safe and reproduces the same result through snapshot, replay, AI, and network restoration.
-- **Not introduced:** No Vodka-Zero-specific Engine System, mechanical Handler branch, direct velocity mutation, PhysicsStrategy branch, hidden runtime RNG, universal action middleware, generic expression language, tick lifetime, or Item-name field in the generic contract.
-- **Negative invariants:** Rejected actions do not advance RNG state or consume the modifier; force and aim remain distinct; raw replay/network input remains authoritative; no duplicate `itemEffects` and pending ownership remains; no `Math.random()`, wall-clock entropy, or process ordering affects Vodka-Zero.
-- **Verification:** `tests/vodka_zero_characterization.test.ts`, `tests/vodka_zero_item.test.ts`, `tests/action_modifier.test.ts`, `tests/effect_migration.test.ts`, and `tests/sdk_item_runtime.test.ts` cover formula, state, rejection, consumption, ordering, interactions, snapshot, replay, AI, network, and migration boundaries.
+- **Variant A, participation:** Rejected. It disables movement and broad physics participation, not only collision relations.
+- **Variant B, generic collision enabled/disabled:** Rejected. It is too broad and provides no relation distinction.
+- **Variant C, full category/mask layer:** Rejected for this slice. It would introduce a larger physics policy surface than the two evidenced relations require.
+- **Variant D, narrow category exclusion:** Chosen. Two generic categories are sufficient for current entity/structure pairs and leave containment logic independent.
+- **Collision event rule:** A filtered pair does not exist for the current collision lifecycle: no physical response, depenetration, collision command, hazard feedback, or entry callback. Unfiltered pairs retain existing behavior.
+- **Negative invariants:** No Ghost Mode-specific Engine System or mechanical Handler branch; no direct velocity mutation; no action modifier; no PhysicsSystem-local hidden state; no randomness or wall-clock lifetime; no client/AI/replay-specific filtering; no duplicate `itemEffects` plus filter ownership; no accidental drawing/death coupling; no universal collision policy DSL.
+- **Verification:** `tests/ghost_mode_characterization.test.ts`, `tests/collision_filter.test.ts`, `tests/ghost_mode_item.test.ts`, `tests/collision_effect_lifecycle.test.ts`, `tests/containment_structure_role.test.ts`, and `tests/effect_migration.test.ts` cover acceptance, matrix, lifetime, filtering, events, boundaries, snapshot, replay, AI, network, and migration.
 
-The production migration is complete; Ghost Mode and Selection Lock were not modified.
+The production migration is complete; Selection Lock was not modified and remains the only unqualified official Item.
 
 ## Checkpoint Workflow
 
