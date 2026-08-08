@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked from current Anker qualification baseline: `dd4465d feat(engine): qualify anker timed action modifiers`
+Last reranked from current selection-pass baseline: `d1ebdc5 docs(items): record anker convergence`
 
-Repository state: Anker qualified in the current working tree; remaining Items require separate semantic work.
+Repository state: fresh remaining-Item selection complete; Vodka-Zero selected for the next characterization slice.
 
-CocoIndex state: refreshed after the Anker slice; current index contains 726 files and 7,202 chunks.
+CocoIndex state: refreshed after the selection pass; current index contains 727 files and 7,214 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -39,9 +39,9 @@ Anker qualified the optional timed policy on the accepted-force action boundary.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
-| 2 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Defer pending input-policy qualification |
-| 3 | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Defer pending aim-policy qualification |
+| 1 | Vodka-Zero | F | Pending accepted-action boundary; seeded random state; existing aim helper | Narrow canonical aim-variance action modifier | High | Medium | Select next characterization slice |
+| 2 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
+| 3 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
 | -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
 
 ## Remaining Item Inventory
@@ -69,9 +69,9 @@ The four remaining Items below, together with the eight completed Items above, a
 
 ## Recommended Next Item
 
-Recommended next Item: **None**
+Recommended next Item: **Vodka-Zero**
 
-Reason: Anker now qualifies the optional timed lifetime composition. The refreshed remaining ranking contains only incomplete/non-production Items requiring different future input, collision, or aim-policy capabilities; Wunderkiste remains a qualified retained KORE semantic.
+Reason: Vodka-Zero has the narrowest clearly evidenced missing semantic: seeded aim variance at the shared accepted-action boundary. Ghost Mode requires collision filtering, and Selection Lock requires a cross-transport authoritative selection policy.
 
 Qualified Wunderkiste ownership:
 
@@ -245,6 +245,50 @@ Anker characterization and semantic qualification were completed from the curren
 - **Invariant:** No lifetime countdown is encoded in trigger data or hidden runtime state. **Evidence:** lifetime fields are canonical Player settings and no trigger/scheduler path is involved. **Status:** PASS. **Required action:** None.
 - **Invariant:** No wall-clock, randomness, universal middleware, or Item-specific generic contract was introduced. **Evidence:** only existing action/lifetime contracts were extended; the shared Engine contracts contain no Item names. **Status:** PASS. **Required action:** None.
 - **Invariant:** No current executable `EffectModifyForce` runtime path remains. **Evidence:** the class/module is removed; source search finds only declarative `modifyForce`, validation, migration, authoring, and tests. **Status:** PASS. **Required action:** None.
+
+## Remaining Item Selection Pass
+
+This fresh read-only characterization was performed from baseline `d1ebdc5` after refreshing repository evidence.
+
+### Ghost Mode / Durchlässigkeit
+
+- **Current production behavior:** Item use is accepted and inventory/rule/replay state advances. The `ghostMode` runtime effect is stored in `Player.itemEffects` and its turn countdown can advance, but no production PhysicsSystem collision filter reads `shouldIgnoreCollision()`.
+- **Declarative contract:** Self-targeted `ghostMode` with `durationTurns: 2`; the Item description says it ignores entity and Structure collisions for a short duration.
+- **Historical behavior:** Existing runtime helper tests prove a two-turn `shouldIgnoreCollision()` flag. Isolated collision adapter tests manually consult that flag; this is not a live Item path.
+- **Reusable primitives:** Lifetime shape is reusable; participation flags are only a partial mismatch because disabling physics changes movement, hazards, boundaries, and solver participation, while drawing is orthogonal.
+- **Missing semantic:** Generic collision-category filtering/participation that can ignore entity and Structure contacts without aliasing death or disabling all physics.
+- **Ranking:** Missing semantic 3, reuse 1, legacy removal 3, determinism 2, clarity 3, risk 3, overall 12/18.
+
+### Selection Lock / Jägermeister-Elixier
+
+- **Current production behavior:** Enemy target validation, inventory/rule/replay recording, and serialized `selectionLock` Item state work. No UiSystem, shared input validator, AI emitter, server registry, or replay path checks the lock before accepting an actor selection/action.
+- **Declarative contract:** Enemy-entity target within range; `selectionLock` duration is two turns; description says the opponent figure cannot be selected during that duration.
+- **Historical behavior:** The runtime helper stores and decrements `remainingTurns`; no authoritative selection-policy consumer exists.
+- **Reusable primitives:** Target validation and turn lifetime are reusable shapes; neither provides dynamic forbidden-actor eligibility. UI-only enforcement would be non-authoritative, while Engine-only enforcement would need a shared human/AI/server/replay policy boundary.
+- **Missing semantic:** Canonical target/actor selection eligibility policy with shared enforcement across all accepted action paths.
+- **Ranking:** Missing semantic 3, reuse 1, legacy removal 3, determinism 2, clarity 3, risk 3, overall 12/18.
+
+### Vodka-Zero
+
+- **Current production behavior:** Item use is accepted and `aimVariance` state is stored with seeded random state support. The accepted shot path does not read or advance the stored `EffectAimVariance`; no aim variance affects live movement.
+- **Declarative contract:** Self-targeted `aimVariance` with maximum variance of 10 degrees and instant Item duration; description says it adds seeded deterministic aim variance to shots.
+- **Historical behavior:** `EffectAimVariance.applyToForce()` changes only angle by a seeded offset and preserves power; serialization preserves the next random state exactly.
+- **Reusable primitives:** Accepted-action boundary, canonical Player pending state, deterministic ordering, snapshot/replay, and AI/network input paths are reusable. Force-scale operation is not an exact semantic match because Vodka-Zero changes angle, not power.
+- **Missing semantic:** A narrow seeded accepted-action aim modifier with canonical random state and deterministic angle transformation.
+- **Ranking:** Missing semantic 2, reuse 2, legacy removal 3, determinism 3, clarity 3, risk 2, overall 13/18.
+
+### Selection Decision
+
+- **Selected next Item:** Vodka-Zero.
+- **Why:** It qualifies the accepted-action language in a second mechanical domain with a clear declarative contract, deterministic state, and narrow scope.
+- **Why not Ghost Mode:** Its exact behavior requires collision filtering rather than existing participation flags and would widen the physics solver boundary.
+- **Why not Selection Lock:** Its authoritative semantics require a new shared selection-policy boundary across UI, server, AI, replay, and target validation; current contract evidence does not define that policy precisely enough.
+- **Expected architecture question:** Whether the existing pending action modifier can add one narrow seeded aim operation without becoming a universal action-expression framework.
+- **Expected reusable composition:** `pendingActionModifiers` + canonical seeded random state + accepted action angle transformation; no lifetime because the Item duration is instant.
+- **Expected legacy cleanup:** If qualified, remove `EffectAimVariance` as an executable runtime object while retaining declarative `aimVariance` validation and explicit historical migration as needed.
+- **Expected verification surface:** Accepted human/AI/replay/network action parity, seeded snapshot/replay continuity, angle-only mutation, rejected-action non-consumption, and deterministic ordering with force modifiers.
+
+No production migration was performed during this selection pass.
 
 ## Checkpoint Workflow
 
