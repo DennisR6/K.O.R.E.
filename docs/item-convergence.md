@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked from baseline commit: `e577ab7 docs(items): refresh convergence index metadata`
+Last reranked from current Anker qualification baseline: `dd4465d feat(engine): qualify anker timed action modifiers`
 
-Repository state: Power-Dash qualified in the current working tree; Anker selected for separate characterization.
+Repository state: Anker qualified in the current working tree; remaining Items require separate semantic work.
 
-CocoIndex state: refreshed after the Power-Dash slice; current index contains 723 files and 7,167 chunks.
+CocoIndex state: refreshed after the Anker slice; current index contains 726 files and 7,202 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -29,29 +29,27 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 | Magnet | Stable selected entity + canonical origin -> `movement.apply-force-to-entity` -> shared predefined dispatcher -> `MovementSystem` | E | Entity-scoped radial force; no unrelated in-range entity mutation; legacy `EffectMagnet` path removed. |
 | Switch | Two stable entity IDs -> `transform.swap-position` -> shared predefined dispatcher -> `TransformSystem` | E | Atomic read-before-write position exchange; no partial mutation; legacy `EffectSwapPosition` path removed. |
 | Power-Dash | `pendingActionModifiers` -> accepted `force.scale` -> `PhysicsStrategy.applyImpulse()` | E | One-shot factor 1.5; consumed at the shared accepted-action boundary with snapshot/replay/AI parity. |
+| Anker | `pendingActionModifiers` -> accepted `force.scale` + flat turn lifetime | E | Factor 0.5 applies across two qualified turn intervals; lifetime expiry and action consumption remain separate. |
 
 ## Current Ranking
 
 Already-converged Items are excluded from this active ranking.
 
-Anker is the next characterization candidate. Power-Dash qualified the reusable accepted-force action boundary; Anker remains deferred until its longer-lived policy is characterized separately.
+Anker qualified the optional timed policy on the accepted-force action boundary. No remaining official Item currently has a justified next convergence candidate.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Anker | F | Qualified accepted-force modifier; existing `EffectModifyForce` factor 0.5 | Longer-lived action-modifier policy and countdown semantics | High | High | Characterize next; do not implement in the Power-Dash slice |
+| 1 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer pending collision-policy qualification |
+| 2 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Defer pending input-policy qualification |
+| 3 | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Defer pending aim-policy qualification |
 | -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
-| -- | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer |
-| -- | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Retain until input policy evolves |
-| -- | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Retain as shot-policy semantic |
 
 ## Remaining Item Inventory
 
-The five remaining Items below, together with the seven completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
+The four remaining Items below, together with the eight completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
 
 | Item | Production consumer | Current runtime path | Target / phase | Lifecycle/state | Reusable primitives | Gap / classification |
 |------|---------------------|----------------------|----------------|-----------------|---------------------|---------------------|
-| Anker | No live force application; helper and runtime factory only | Declarative `modifyForce` -> `EffectModifyForce`; `applyAnkerForce()` is a helper | Self / Item phase; intended next accepted shot | Factor `0.5`; declared two turns, but the runtime effect has no countdown | Possible `TemporalModifier` plus movement command, but not exact input semantics | Missing accepted-action force modifier; F |
-| Power-Dash | Shared accepted-action force boundary | Declarative `modifyForce` -> canonical `pendingActionModifiers` -> accepted force scaling | Self / Item phase; next accepted shot | One-shot factor `1.5`; snapshot/replay/AI safe | Generic action modifier contract | E |
 | Durchlässigkeit | No `PhysicsSystem` collision-filter consumer | Declarative `ghostMode` -> `EffectGhostMode`; flag is stored and serialized | Self / Item phase | Two-turn `shouldIgnoreCollision()` state | Temporal lifetime shape only | Requires collision filter/category semantics; participation is not equivalent; F |
 | Jägermeister-Elixier | No `UiSystem` selection-lock check | Declarative `selectionLock` -> `EffectSelectionLock`; state is stored and serialized | Enemy entity / Item phase | Two-turn lock flag | Turn lifetime only | Requires KORE input-selection policy; F |
 | Vodka-Zero | No production shot/input consumer | Declarative `aimVariance` -> `EffectAimVariance`; seeded state is serializable | Self / Item phase | Instant declaration; random state advances on `applyToForce()` | Deterministic random state | Requires accepted-shot aim modifier; F |
@@ -71,9 +69,9 @@ The five remaining Items below, together with the seven completed Items above, a
 
 ## Recommended Next Item
 
-Recommended next Item: **Anker**
+Recommended next Item: **None**
 
-Reason: Power-Dash qualified the smallest accepted-action force modifier. Anker is the only remaining official Item that can immediately reuse that mechanical boundary, but its longer-lived policy must be characterized and implemented in a separate slice.
+Reason: Anker now qualifies the optional timed lifetime composition. The refreshed remaining ranking contains only incomplete/non-production Items requiring different future input, collision, or aim-policy capabilities; Wunderkiste remains a qualified retained KORE semantic.
 
 Qualified Wunderkiste ownership:
 
@@ -96,7 +94,7 @@ Required characterization:
 
 ## Active Convergence Status
 
-Power-Dash is qualified through the generic accepted-action force modifier. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work. Anker is selected for the next characterization slice only; it is not implemented here.
+Power-Dash and Anker are qualified through the generic accepted-action force modifier. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
 
 ## Final Drift Audit
 
@@ -175,10 +173,10 @@ The audit initially found and corrected two violations: direct Handler participa
 
 Power-Dash is the next semantic-convergence slice. This decision is recorded before changing the production action path.
 
-- **Power-Dash pre-slice production behavior:** Item validation, inventory consumption, rule-phase advancement, and replay recording worked. `EffectModifyForce` was stored in `Player.itemEffects`, but no accepted shot path read it, so the live Item was a no-op. `tests/power_dash_characterization.test.ts` captures that defect boundary.
-- **Intended semantic:** The next accepted relevant shot uses the declared force multiplier exactly once. The official configuration supplies factor `1.5`; the GDD's older "friction reduce" wording is superseded for this slice by the current declarative Item contract and `EffectModifyForce` formula.
+- **Power-Dash pre-slice production behavior:** Item validation, inventory consumption, rule-phase advancement, and replay recording worked. The historical `modifyForce` runtime object was stored in `Player.itemEffects`, but no accepted shot path read it, so the live Item was a no-op. `tests/power_dash_characterization.test.ts` captures that defect boundary.
+- **Intended semantic:** The next accepted relevant shot uses the declared force multiplier exactly once. The official configuration supplies factor `1.5`; the GDD's older "friction reduce" wording is superseded for this slice by the current declarative Item contract and generic force-scale formula.
 - **Current runtime owner:** `GameHandler.useItem()` installs Item runtime state on the target Player; `GameHandler.resolveTurn()` owns accepted-shot simulation and `defaultPhysics.applyImpulse()` owns force-to-velocity conversion.
-- **Current `EffectModifyForce` behavior:** It normalizes angle and returns `{ angle, power: power * factor }`; it validates finite angle and non-negative power and does not clamp the resulting power.
+- **Historical force behavior:** The former `EffectModifyForce` normalized angle and returned `{ angle, power: power * factor }`; the current generic action modifier preserves that formula and validation without a runtime Item Effect object.
 - **Accepted action pipeline:** validated emitter/server/AI input -> replay records raw accepted action -> `simulateTurn()` or authoritative `resolveTurn()` -> `applyImpulse()` -> fixed physics ticks -> final-state packet. Power-Dash must bind between accepted input validation/recording and `applyImpulse()`.
 - **Exact force formula:** `effectivePower = acceptedPower * 1.5`; direction/angle is unchanged and no post-modifier maximum-power clamp is applied.
 - **Action binding point:** Transform the accepted `{ angle, power }` value immediately before `PhysicsStrategy.applyImpulse()` in the shared Handler action boundary. Do not scale retained velocity after impulse.
@@ -194,7 +192,7 @@ Power-Dash is the next semantic-convergence slice. This decision is recorded bef
 - **Expected Anker reuse:** Anker may later reuse the accepted-force operation with a different lifetime policy; Anker is not implemented in this slice.
 - **Chosen canonical representation:** Entity-owned `pendingActionModifiers` containing generic force-scale operations and explicit remaining-use state; no Item name or runtime object reference.
 - **Runtime owner:** The shared accepted action boundary in `GameHandler`, with generic contract validation and the existing physics impulse owner. No Power-Dash System or Power-Dash Handler branch.
-- **Migration justified?:** Yes for Power-Dash's live `modifyForce` lowering. Retain the legacy `EffectModifyForce` helper only while Anker remains an unqualified current consumer; remove or migrate it only at an explicit later boundary.
+- **Migration justified?:** Yes. Power-Dash and Anker now lower `modifyForce` to the generic action-modifier contract; historical `itemEffects.modifyForce` state is normalized at the explicit migration boundary and the legacy runtime class is removed.
 
 Power-Dash implementation outcome:
 
@@ -203,17 +201,50 @@ Power-Dash implementation outcome:
 - `GameHandler` applies pending force modifiers immediately before `PhysicsStrategy.applyImpulse()` in resolve, playback, and raw accepted-action paths, then consumes them once.
 - The explicit migration boundary moves historical `modifyForce` entries from `itemEffects` into `pendingActionModifiers`.
 - Human, AI, local replay, network snapshot, and restore paths use the same accepted-action boundary; replay records raw Item and shot intent rather than effective force.
-- No Power-Dash-specific Engine System or mechanical Handler branch exists. The Handler branches on the generic `EffectModifyForce` capability while Anker remains a current helper consumer.
+- No Power-Dash-specific Engine System or mechanical Handler branch exists. The Handler lowers the generic action-modifier template and derives optional lifetime metadata from the declarative duration.
 - Power-Dash characterization, generic action-modifier, migration, SDK, phase, replay, snapshot, and AI tests pass.
 
 ### Power-Dash Negative Invariants
 
-- **Invariant:** No Power-Dash-specific Engine System or Handler mechanical branch exists. **Evidence:** action modifiers are generic contracts and the Handler only lowers the generic `EffectModifyForce` capability. **Status:** PASS. **Required action:** None.
+- **Invariant:** No Power-Dash-specific Engine System or Handler mechanical branch exists. **Evidence:** action modifiers are generic contracts and the Handler lowers generic action-modifier templates. **Status:** PASS. **Required action:** None.
 - **Invariant:** Power-Dash does not mutate velocity directly or apply both force and velocity modifiers. **Evidence:** it transforms the accepted input before `applyImpulse()`; `MovementSystem` is not involved. **Status:** PASS. **Required action:** None.
 - **Invariant:** A rejected action does not consume the one-shot modifier. **Evidence:** emitter/server validation occurs before the Handler action boundary; characterization covers rejected power. **Status:** PASS. **Required action:** None.
 - **Invariant:** Human, AI, and replay actions share the same modifier boundary. **Evidence:** all use `GameHandler` accepted-action methods; characterization covers AI and replay parity. **Status:** PASS. **Required action:** None.
 - **Invariant:** Pending action state is canonical and JSON-safe. **Evidence:** `PlayerSettings.pendingActionModifiers` validates and round-trips; snapshot and replay characterization restores the same effective result. **Status:** PASS. **Required action:** None.
 - **Invariant:** No hidden randomness, wall-clock state, duplicate modifier owner, or over-broad action framework was introduced. **Evidence:** the contract contains only force scale, explicit remaining uses, stable ordering, and JSON data; no scheduler, event bus, or universal expression layer was added. **Status:** PASS. **Required action:** None.
+
+## Anker Qualification
+
+Anker characterization and semantic qualification were completed from the current declarative contract and accepted-action implementation.
+
+- **Anker current production behavior:** Before this slice, Anker was accepted, consumed inventory, advanced the Item phase, recorded replay intent, and lowered to a one-shot pending force modifier. It applied factor `0.5` to the next accepted shot, but ignored its declared two-turn duration.
+- **Declarative contract:** Self-targeted `modifyForce` with factor `0.5`, `duration: turns(2)`, `perTurn: 1`, and `perGame: 2`. The duration is the time policy; inventory limits remain consumption/availability policy.
+- **Force operation:** `effectivePower = acceptedPower * 0.5`; angle is unchanged; raw input is validated before the action boundary; no post-modifier clamp is introduced.
+- **Lifetime policy:** Active for two qualified turn intervals. The first accepted shot uses `remaining: 2`; the normal turn transition advances it to `1`; the next eligible shot uses it; the following qualified turn transition expires it. A turn advancement without a shot still advances the lifetime exactly once at the existing Handler boundary.
+- **Consumption policy:** Anker has no `remainingUses` action-consumption field. It applies to every eligible accepted shot while its lifetime remains active. Inventory `perTurn`/`perGame` limits remain separate.
+- **Rejected-action semantics:** Existing emitter/server validation rejects invalid shots before the accepted-action boundary; Anker lifetime and action state are unchanged.
+- **Stacking semantics:** The existing default Item interaction mode remains stacking. Multiple action modifiers use stable `sourceOrder` and ID ordering. Anker and Power-Dash therefore compose deterministically to `0.5 * 1.5 = 0.75` when a mode permits both uses.
+- **Snapshot/replay behavior:** The pending modifier stores flat lifetime fields in `PlayerSettings`; restore preserves the exact remaining value. Replay records raw Item and shot intent and reapplies the same lifetime/action boundary.
+- **AI/network behavior:** AI uses the same accepted-action emitter path. Network `ITEM_USED` snapshots carry the pending modifier through ordinary Player settings reconciliation; no Anker transport or AI branch exists.
+- **Power-Dash reuse:** Yes. Both use the generic force-scale action operation; Power-Dash uses `remainingUses: 1` without time lifetime.
+- **Lifetime-core reuse:** Yes. The pending action owner uses the shared pure lifetime arithmetic for its optional turn fields; it retains the advancement boundary and expiry removal.
+- **TemporalModifier reuse:** No. Anker is an action-bound command with optional lifetime metadata, not a persistent movement Engine effect targeted through the TemporalModifier contract.
+- **Missing generic primitive:** None. The existing pending action modifier now supports either explicit action-use consumption or optional flat lifetime metadata, justified by Power-Dash and Anker together.
+- **Canonical owner:** `PlayerSettings.pendingActionModifiers` and the Player runtime object.
+- **Runtime interpreter:** The shared Handler accepted-force boundary applies the modifier before `PhysicsStrategy.applyImpulse()`; Player advances optional turn lifetime at the existing `setTurnNumber()` boundary.
+- **Migration boundary:** Historical `itemEffects.modifyForce` entries are converted to pending action modifiers; Anker entries derive their two-turn lifetime from the declared Item document.
+- **Legacy runtime status:** `src/effects/modifyForce.ts` and its executable runtime-object path were removed. Declarative `modifyForce` remains a validated Item authoring identifier and is lowered through the generic action-modifier template. Remaining source references are authoring, validation, migration, or tests.
+
+### Anker Negative Invariants
+
+- **Invariant:** No Anker-specific Engine System or mechanical Handler branch exists. **Evidence:** Anker lowers through the generic `isActionModifierTemplate()` path; lifetime advancement is generic Player state behavior. **Status:** PASS. **Required action:** None.
+- **Invariant:** No direct velocity mutation or post-impulse movement scaling implements Anker. **Evidence:** Anker modifies accepted force before `PhysicsStrategy.applyImpulse()`; `MovementSystem` is not involved. **Status:** PASS. **Required action:** None.
+- **Invariant:** Lifetime and action-use consumption remain distinct. **Evidence:** Anker has `durationUnit/duration/remaining` and no `remainingUses`; Power-Dash has `remainingUses` and no lifetime. **Status:** PASS. **Required action:** None.
+- **Invariant:** No duplicate `itemEffects` and `pendingActionModifiers` Anker ownership exists. **Evidence:** new uses install only pending action state; migration removes historical `modifyForce` item effects. **Status:** PASS. **Required action:** None.
+- **Invariant:** Rejected actions do not consume or advance Anker state. **Evidence:** action validation precedes the shared accepted-action boundary; lifetime advances only from Handler turn transitions. **Status:** PASS. **Required action:** None.
+- **Invariant:** No lifetime countdown is encoded in trigger data or hidden runtime state. **Evidence:** lifetime fields are canonical Player settings and no trigger/scheduler path is involved. **Status:** PASS. **Required action:** None.
+- **Invariant:** No wall-clock, randomness, universal middleware, or Item-specific generic contract was introduced. **Evidence:** only existing action/lifetime contracts were extended; the shared Engine contracts contain no Item names. **Status:** PASS. **Required action:** None.
+- **Invariant:** No current executable `EffectModifyForce` runtime path remains. **Evidence:** the class/module is removed; source search finds only declarative `modifyForce`, validation, migration, authoring, and tests. **Status:** PASS. **Required action:** None.
 
 ## Checkpoint Workflow
 

@@ -55,7 +55,7 @@ The helper is pure and does not mutate entities, structures, Handler state, sche
 - **Mini-Wall:** Runtime and authoring semantics are unchanged; Structure retention and participation expiry remain Handler-owned.
 - **Delayed Mine:** Runtime and authoring semantics are unchanged; tick timing, position binding, due removal, and exactly-once dispatch remain Handler-owned.
 - **Power-Dash:** Not a lifetime consumer; `remainingUses` remains action-bound and separate.
-- **Future Anker:** May later combine the accepted-force operation with a lifetime policy if characterization proves that requirement. It is not changed here.
+- **Anker:** Now combines the accepted-force operation with optional flat turn lifetime metadata. The lifetime core advances the countdown; Player/Handler retain action application and expiry ownership. Its absence of `remainingUses` keeps lifetime and action consumption separate.
 
 ## Verification
 
