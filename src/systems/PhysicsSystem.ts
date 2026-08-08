@@ -223,8 +223,8 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			const id = typeof (entity as any).getId === "function" ? entity.getId() : this.nextObjectIdentity++;
 			this.objectIdentities.set(entity, `entity:${id}`);
 		}
-		ctx.structures.forEach((structure, index) => {
-			this.objectIdentities.set(structure, `structure:${index}`);
+		ctx.structures.forEach(structure => {
+			this.objectIdentities.set(structure, `structure:${structure.getId()}`);
 		});
 	}
 
@@ -240,7 +240,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	private getPairKey(a: object, b: object): string {
 		const idA = this.getObjectIdentity(a);
 		const idB = this.getObjectIdentity(b);
-		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+		return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 	}
 
 	private handlePairCollision(

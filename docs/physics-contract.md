@@ -179,9 +179,11 @@ original positions for the impulse computation.
 ## 9. Multi-Contact Resolution (Iteration And Order)
 
 - Contact processing order is explicit and deterministic: entities in
-  manager insertion order (index order), entity/entity pairs by `(i, j)`,
-  then entity/structure pairs by structure index. *(Task 13.5 replaces the
-  single-pass sweep with a bounded iterative solver.)*
+  manager insertion order (an ephemeral local iteration order), entity/entity
+  pairs by `(i, j)`, then entity/structure pairs by local structure iteration
+  order. Persisted contact identity is independent of that order and uses the
+  canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<id>` key.
+  *(Task 13.5 replaces the single-pass sweep with a bounded iterative solver.)*
 - The solver terminates within `MAX_CONTACT_SOLVER_ITERATIONS = 16` passes,
   each pass making measurable progress; supported penetrations are resolved
   at termination. *(Task 13.5)*

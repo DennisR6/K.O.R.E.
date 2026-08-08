@@ -67,6 +67,33 @@ describe("physics snapshot continuity (13.9)", () => {
 		expect(player.getHP()).toBe(23);
 	});
 
+	test("serializes Structure contact identity by stable ID, not array position", () => {
+		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(physicsFixture()).build();
+		handler.tick();
+		const snapshot = handler.toSettings();
+		const structureIds = snapshot.mapBoundarys.map(boundary => boundary.id!);
+		expect(snapshot.physicsState?.activePairs.every(pair => !/structure:\d+$/.test(pair))).toBe(true);
+		expect(snapshot.physicsState?.activePairs.some(pair => pair.includes(`structure:${structureIds[2]}`))).toBe(true);
+
+		const reordered = { ...snapshot, mapBoundarys: [...snapshot.mapBoundarys].reverse() };
+		const restored = restore(reordered);
+		expect(restored.toSettings().physicsState).toEqual(snapshot.physicsState);
+	});
+
+	test("migrates historical index contact keys to stable Structure IDs", () => {
+		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(physicsFixture()).build();
+		handler.tick();
+		const snapshot = handler.toSettings();
+		const historical = {
+			...snapshot,
+			physicsState: {
+				activePairs: snapshot.physicsState!.activePairs.map(pair => pair.replace(/\|structure:([^|]+)$/, (_match, id: string) => `:structure:${snapshot.mapBoundarys.findIndex(boundary => boundary.id === id)}`)),
+			},
+		};
+		const restored = restore(historical);
+		expect(restored.toSettings().physicsState).toEqual(snapshot.physicsState);
+	});
+
 	test("preserves entry, separation, and re-entry state across a snapshot", () => {
 		const handler = new GameHandlerBuilder().defaultSystems().fromSettings(physicsFixture()).build();
 		handler.tick();

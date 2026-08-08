@@ -94,11 +94,11 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 		case "ai.battle": return AiBattleSystem.fromSettings(state)
 		case "ai.opponent": return AiOpponentSystem.fromSettings(state)
 		case "core.environmental": {
-			if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIndexes) || !state.structureIndexes.every(index => Number.isSafeInteger(index) && index >= 0)) throw new Error("Malformed environmental settings")
+			if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIds) || !state.structureIds.every(structureId => typeof structureId === "string" && structureId.length > 0)) throw new Error("Malformed environmental settings")
 			validateEnvironmentalMechanics(state.mechanics)
 			const lifecycle = { tick: state.tick, active: state.active, triggerUntil: state.triggerUntil, cooldownUntil: state.cooldownUntil, cyclePhase: state.cyclePhase }
 			if (!Number.isSafeInteger(lifecycle.tick) || !Array.isArray(lifecycle.active) || !Array.isArray(lifecycle.triggerUntil) || !Array.isArray(lifecycle.cooldownUntil) || !Array.isArray(lifecycle.cyclePhase)) throw new Error("Malformed environmental lifecycle state")
-			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIndexes as number[])
+			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIds as string[])
 		}
 		case "core.counter": if (Object.keys(state).length) throw new Error("Malformed counter settings"); return new CounterSystem()
 		case "core.transform": if (Object.keys(state).length) throw new Error("Malformed transform settings"); return new TransformSystem()

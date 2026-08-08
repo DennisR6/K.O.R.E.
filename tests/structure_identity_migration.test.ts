@@ -16,3 +16,13 @@ test("canonical explicit structure identity is preserved by migration", () => {
 
 	expect(migrated[0]!.id).toBe("trap-1");
 });
+
+test("repeated legacy geometry receives deterministic unique IDs", () => {
+	const migrated = migrateStructureSettings([
+		{ type: SHAPE.CIRCLE, x: 10, y: 20, r: 5, effects: [] },
+		{ type: SHAPE.CIRCLE, x: 10, y: 20, r: 5, effects: [] },
+	]);
+
+	expect(migrated[0]!.id).not.toBe(migrated[1]!.id);
+	expect(migrated[1]!.id).toBe(`${migrated[0]!.id}-1`);
+});

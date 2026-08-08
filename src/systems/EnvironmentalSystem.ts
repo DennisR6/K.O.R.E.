@@ -1,17 +1,19 @@
 import type { ISerializableSystem, IGameContext } from "./types.js";
 import type { EnvironmentalMechanic, EnvironmentalState, MovingStructure, TriggeredZone } from "../environment/environmental.js";
 import { createEnvironmentActivationEvent, dispatchTriggerActivation } from "../effects/triggerDispatcher.js";
+import { findStructureById } from "../structures/lookup.js";
 
 /** Deterministic, tick-driven map lifecycle. It never consults wall-clock time. */
 export class EnvironmentalSystem implements ISerializableSystem {
 	public readonly systemId = "core.environmental";
 	private state: EnvironmentalState;
-	constructor(private readonly mechanics: EnvironmentalMechanic[], state?: EnvironmentalState, private readonly structureIndexes: number[] = []) {
+	constructor(private readonly mechanics: EnvironmentalMechanic[], state?: EnvironmentalState, private readonly structureIds: string[] = []) {
 		this.state = state ? structuredClone(state) : { tick: 0, active: mechanics.map(mechanic => mechanic.type !== "triggered-zone"), triggerUntil: mechanics.map(() => 0), cooldownUntil: mechanics.map(() => 0), cyclePhase: mechanics.map(() => 0) };
+		if (this.structureIds.length !== mechanics.length || !this.structureIds.every(structureId => typeof structureId === "string" && structureId.length > 0)) throw new Error("Malformed environmental structure references");
 		if (this.state.active.length !== mechanics.length || this.state.triggerUntil.length !== mechanics.length || this.state.cooldownUntil.length !== mechanics.length || this.state.cyclePhase.length !== mechanics.length) throw new Error("Malformed environmental state")
 		if (!Number.isSafeInteger(this.state.tick) || !this.state.active.every(isBoolean) || !this.state.triggerUntil.every(Number.isSafeInteger) || !this.state.cooldownUntil.every(Number.isSafeInteger) || !this.state.cyclePhase.every(Number.isSafeInteger)) throw new Error("Malformed environmental lifecycle state")
 	}
-	public toSettings() { return { systemId: this.systemId, schemaVersion: 1 as const, state: { ...structuredClone(this.state), mechanics: structuredClone(this.mechanics), structureIndexes: [...this.structureIndexes] } as Record<string, unknown> }; }
+	public toSettings() { return { systemId: this.systemId, schemaVersion: 1 as const, state: { ...structuredClone(this.state), mechanics: structuredClone(this.mechanics), structureIds: [...this.structureIds] } as Record<string, unknown> }; }
 	public ticker(ctx: IGameContext): void {
 		this.state.tick++;
 		for (let index = 0; index < this.mechanics.length; index++) {
@@ -27,8 +29,8 @@ export class EnvironmentalSystem implements ISerializableSystem {
 			}
 			const changed = this.state.active[index] !== active;
 			this.state.active[index] = active;
-			const structure = ctx.structures[this.structureIndexes[index]!];
-			if (!structure) continue;
+			const structure = findStructureById(ctx.structures, this.structureIds[index]!);
+			if (!structure) throw new Error(`Unknown environmental structure '${this.structureIds[index]!}'`);
 			if (mechanic.type === "moving-structure" && "getPos" in structure && "setPos" in structure) this.move(structure as unknown as { getPos(): { x: number; y: number }; setPos(pos: { x: number; y: number }): void }, mechanic);
 			if (changed && "setPhysicsEnabled" in structure) dispatchTriggerActivation({ effectId: `environment.${mechanic.id}`, event: createEnvironmentActivationEvent("environment", index, mechanic.id, index, this.state.tick, active), apply: event => (structure as { setPhysicsEnabled(enabled: boolean): void }).setPhysicsEnabled(event.type === "environment.activation" ? event.payload.active : active) });
 			else if ("setPhysicsEnabled" in structure) (structure as { setPhysicsEnabled(enabled: boolean): void }).setPhysicsEnabled(active);

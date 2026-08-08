@@ -1256,8 +1256,10 @@ export class GameHandlerBuilder {
 		this.engine.restoreStructureLifecycles((gameSettings as EngineSettings).structureLifecycles)
 		this.engine.restoreDeferredEffects((gameSettings as EngineSettings).deferredEffects)
 		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
-			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
-			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))
+			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map(mechanic => {
+				if (!mechanic.structure.id) throw new Error(`Environmental Structure '${mechanic.id}' has no stable ID`);
+				return mechanic.structure.id;
+			})))
 		}
 
 		if ("state" in gameSettings) {

@@ -2,13 +2,13 @@
 
 Audit baseline: `0c3aee0 docs(items): record final item convergence`
 
-CocoIndex: 734 files / 7,403 chunks
+CocoIndex before remediation: 735 files / 7,426 chunks
 
-Final audit index after audit tests/documentation: 735 files / 7,426 chunks
+Remediation index: 736 files / 7,441 chunks
 
-This is a read-only ownership audit plus focused Actor Eligibility contract
-coverage. No production refactor was performed. Current source and verified
-tests remain authoritative.
+This document records the read-only ownership audit, focused Actor Eligibility
+coverage, and the subsequent narrow Structure identity remediation. Current
+source and verified tests remain authoritative.
 
 ## Architecture Inventory
 
@@ -41,14 +41,8 @@ failure requires an immediate production fix.
 
 ### P1
 
-- **Persisted structure identity uses array indexes in two systems.**
-  `PhysicsSystem.registerContactIdentities()` serializes structure contact keys
-  as `structure:${index}` (`src/systems/PhysicsSystem.ts:221-228`).
-  `EnvironmentalSystem` persists `structureIndexes` and resolves through
-  `ctx.structures[index]` (`src/systems/EnvironmentalSystem.ts:9-30`). Stable
-  structure IDs already exist, so insertion/reordering can change restored
-  contact or environmental targets. This is deferred remediation, not changed
-  in this audit.
+None remaining from the final audit. The former PhysicsSystem and
+EnvironmentalSystem Structure-index identity debt is closed below.
 
 ### P2
 
@@ -175,7 +169,7 @@ deferred until serialized system-ID compatibility is explicitly retired.
 - **Action Modifier:** PASS. Operations remain `force.scale` and `aim.random-offset`; ordering is source order then stable ID; Player lifetimes are turns only.
 - **Lifetime:** PASS. The shared core validates and advances arithmetic only; owners perform expiry/removal/meaning.
 - **Trigger:** PASS. Trigger events are activation signals, not persistent lifetime or consumption storage.
-- **Identity:** CONDITIONAL. Entity and canonical Structure IDs are stable; persisted environmental and physics structure indexes remain P1 debt.
+- **Identity:** PASS. Entity and canonical Structure IDs are stable; persisted contact and environmental references use Structure IDs, not collection positions.
 - **Determinism:** PASS for gameplay RNG. `SeededRandom` and persisted state are used for gameplay decisions. Session IDs, timestamps, asset cache busting, and initial match seed generation are non-gameplay/session concerns. Default generated Player IDs remain P2 authoring debt.
 
 ## Migration Audit
@@ -229,16 +223,37 @@ remain reusable.
 
 ## Prioritized Remediation
 
-1. P1: replace persisted PhysicsSystem and EnvironmentalSystem structure indexes
-   with stable Structure IDs, with migration and snapshot tests.
-2. P2: harden Player snapshot defensive copies and detached callback/document
+1. P2: harden Player snapshot defensive copies and detached callback/document
    contracts.
-3. P2: decide whether default Player IDs should be deterministic at canonical
+2. P2: decide whether default Player IDs should be deterministic at canonical
    authoring boundaries.
-4. P2/P3: consider a typed record/lifetime helper only after another consumer
+3. P2/P3: consider a typed record/lifetime helper only after another consumer
    demonstrates identical mechanics.
-5. P3: retire deprecated system IDs and legacy public runtime exports only under
+4. P3: retire deprecated system IDs and legacy public runtime exports only under
    explicit compatibility/version policy.
+
+## Stable Structure Identity Remediation
+
+- Historical Physics contact keys `entity:<id>:structure:<index>` migrate at
+  `migrateGameSettingsEffects()` using the historical map-boundary ordering.
+- Current Physics contact keys are sorted canonical pairs such as
+  `entity:<id>|structure:<id>`; first-contact, persistent-contact, filtering,
+  hazard, and resolution semantics are unchanged.
+- Historical Environmental system state `structureIndexes` migrates to
+  `structureIds` using the historical map-boundary ordering. Current snapshots
+  serialize `structureIds` only.
+- SDK-authored environmental structures receive explicit IDs derived from the
+  map ID and mechanic ID. Legacy repeated geometry receives deterministic
+  suffixed IDs during migration; explicit duplicate IDs are rejected.
+- Runtime environmental lookup uses `findStructureById()` and rejects missing
+  IDs rather than falling back to collection position. No persistent lookup
+  cache or second canonical identity scheme was introduced.
+- Array indexes remain allowed for local solver iteration, broad-phase work,
+  map-document filtering, and historical migration only; none define
+  cross-time or cross-boundary Structure identity.
+- Evidence: `tests/physics_snapshot_continuity.test.ts`,
+  `tests/environmental_mechanics.test.ts`, and
+  `tests/structure_identity_migration.test.ts`.
 
 ## Explicitly Rejected Refactors
 
@@ -250,7 +265,5 @@ remain reusable.
 
 ## Audit Status
 
-No P0 remediation was required. The repository is ownership-audited with
-intentional P1/P2/P3 debt classified above. A future remediation slice should
-address stable Structure IDs before broad record-container or Handler
-decomposition work.
+No P0 remediation was required. The former P1 Structure identity finding is
+remediated; intentional P2/P3 debt remains classified above.

@@ -1,7 +1,7 @@
 import { EffectType, EFFECT_SCHEMA_VERSION, type EffectSettings, type FullEffectSettings } from "../effects/types.js";
 import type { EngineSettings } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
-import { migrateStructureSettings } from "./structures.js";
+import { migratePhysicsContactPair, migrateStructureSettings } from "./structures.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import type { ItemDocument } from "../item/types.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
@@ -108,6 +108,36 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 		};
 	});
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
+	copy.environmentalMechanics = copy.environmentalMechanics?.map((mechanic, index) => {
+		const firstIndex = copy.mapBoundarys.length - (copy.environmentalMechanics?.length ?? 0);
+		const boundary = copy.mapBoundarys[firstIndex + index];
+		if (!mechanic.structure.id) {
+			if (!boundary) throw new Error(`Missing historical environmental Structure for '${mechanic.id}'`);
+			return { ...mechanic, structure: { ...mechanic.structure, id: boundary.id } };
+		}
+		if (!copy.mapBoundarys.some(candidate => candidate.id === mechanic.structure.id)) throw new Error(`Unknown environmental Structure '${mechanic.structure.id}'`);
+		return mechanic;
+	});
+	const engineCopy = copy as T & Partial<EngineSettings>;
+	if (engineCopy.physicsState && Array.isArray(engineCopy.physicsState.activePairs)) engineCopy.physicsState = { ...engineCopy.physicsState, activePairs: engineCopy.physicsState.activePairs.map((pair: string) => migratePhysicsContactPair(pair, copy.mapBoundarys)) };
+	if (engineCopy.systems) engineCopy.systems = engineCopy.systems.map(system => {
+		if (system.systemId === "core.physics") {
+			const state = system.state as Record<string, unknown>;
+			if (Array.isArray(state.contacts)) return { ...system, state: { ...state, contacts: state.contacts.map(pair => migratePhysicsContactPair(String(pair), copy.mapBoundarys)) } };
+		}
+		if (system.systemId === "core.environmental") {
+			const state = system.state as Record<string, unknown>;
+			if (Array.isArray(state.structureIndexes)) {
+				const structureIds = state.structureIndexes.map(index => {
+					if (!Number.isSafeInteger(index) || index < 0 || index >= copy.mapBoundarys.length) throw new Error("Historical environmental Structure index is out of range");
+					return copy.mapBoundarys[index]!.id!;
+				});
+				const { structureIndexes: _structureIndexes, ...rest } = state;
+				return { ...system, state: { ...rest, structureIds } };
+			}
+		}
+		return system;
+	});
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
 	if (copy.environmentalMechanics) copy.environmentalMechanics = copy.environmentalMechanics.map(mechanic => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
 	return copy;

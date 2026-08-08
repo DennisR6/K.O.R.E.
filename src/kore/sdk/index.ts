@@ -337,10 +337,11 @@ export class KoreMapBuilder {
 	private addEnvironmental(mechanic: EnvironmentalMechanic): this {
 		validateEnvironmentalMechanics([mechanic]);
 		if (this.environmentalMechanics.some(candidate => candidate.id === mechanic.id)) throw new Error(`Environmental mechanic ${mechanic.id} is already registered`);
-		this.environmentalMechanics.push(clone(mechanic));
-		const structureIndex = this.structures.length;
-		this.addStructure({ ...clone(mechanic.structure), effects: clone(mechanic.effects ?? mechanic.structure.effects) });
-		this.generatedHazardStructureIndexes.add(structureIndex);
+		const structureId = mechanic.structure.id ?? `${this.options.id}.environment.${mechanic.id}`;
+		const canonicalMechanic = { ...clone(mechanic), structure: { ...clone(mechanic.structure), id: structureId } };
+		this.environmentalMechanics.push(canonicalMechanic);
+		this.addStructure({ ...clone(canonicalMechanic.structure), effects: clone(canonicalMechanic.effects ?? canonicalMechanic.structure.effects) });
+		this.generatedHazardStructureIndexes.add(this.structures.length - 1);
 		this.built = undefined;
 		return this;
 	}

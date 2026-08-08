@@ -61,7 +61,7 @@ export interface PhysicsContact {
 
 /** JSON-safe contact lifecycle state at a completed physics-tick boundary. */
 export interface PhysicsContactState {
-	/** Sorted canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<index>` keys. */
+	/** Sorted canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<id>` keys. */
 	activePairs: string[];
 }
 
