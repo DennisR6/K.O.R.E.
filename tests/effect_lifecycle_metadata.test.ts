@@ -11,5 +11,5 @@ test("every supported core and item Effect has explicit lifecycle metadata", () 
 
 test("lifecycle metadata is static and independent from serialized settings", () => {
 	expect(getEffectLifecycle(EffectType.Movement)).toEqual({ category: "modifier", execution: "tick", persistent: true });
-	expect(getEffectLifecycle(ItemEffectType.Freeze)).toEqual({ category: "status", execution: "turn", persistent: true });
+	expect(getEffectLifecycle(ItemEffectType.TemporalModifier)).toEqual({ category: "status", execution: "turn", persistent: true });
 });

@@ -17,7 +17,7 @@ const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
-const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.Freeze, ItemEffectType.SwapPosition, ItemEffectType.TemporaryWall, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance] as const;
+const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.TemporaryWall, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
@@ -93,7 +93,7 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			if ((payload.effectType === undefined) === (payload.nestedEffect === undefined)) throw new Error("delayedEffect requires exactly one nested Effect representation");
 			if (payload.effectType !== undefined) {
 				string(payload.effectType, "delayedEffect effectType");
-				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition || payload.effectType === ItemEffectType.TemporalModifier) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
 				if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
 				validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
 			} else {
@@ -107,8 +107,6 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload"); requiredKeys(payload, ["capacity"], "shield payload"); finitePositive(payload.capacity, "shield capacity");
 			if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity)) throw new Error("shield remainingCapacity is outside capacity");
 			optionalBoolean(payload.blocksCollision, "shield blocksCollision"); return;
-		case ItemEffectType.Freeze:
-			knownKeys(payload, new Set(["speedFactor", "durationTurns", "remainingTurns"]), "freeze payload"); requiredKeys(payload, ["speedFactor", "durationTurns"], "freeze payload"); finiteRange(payload.speedFactor, 0, 1, "freeze speedFactor"); boundedTurns(payload.durationTurns, payload.remainingTurns, "freeze"); return;
 		case ItemEffectType.SwapPosition: exactKeys(payload, [], "swapPosition payload"); return;
 		case ItemEffectType.TemporaryWall:
 			knownKeys(payload, new Set(["wallId", "x", "y", "w", "h", "color", "durationTurns", "remainingTurns", "active"]), "temporaryWall payload"); requiredKeys(payload, ["wallId", "x", "y", "w", "h", "durationTurns"], "temporaryWall payload");
@@ -119,6 +117,17 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			exactKeys(payload, ["mode", "force", "range"], "magnet payload"); if (payload.mode !== "attract" && payload.mode !== "repel") throw new Error("magnet mode must be attract or repel"); finiteNonNegative(payload.force, "magnet force"); finitePositive(payload.range, "magnet range"); return;
 		case ItemEffectType.AimVariance:
 			knownKeys(payload, new Set(["maxVarianceDegrees", "seed", "randomState"]), "aimVariance payload"); requiredKeys(payload, ["maxVarianceDegrees"], "aimVariance payload"); finiteNonNegative(payload.maxVarianceDegrees, "aimVariance maxVarianceDegrees"); optionalSafeInteger(payload.seed, "aimVariance seed"); optionalSafeInteger(payload.randomState, "aimVariance randomState"); return;
+		case ItemEffectType.TemporalModifier:
+			exactKeys(payload, ["durationUnit", "duration", "effect"], "temporalModifier payload");
+			if (payload.durationUnit !== "turns") throw new Error("temporalModifier durationUnit must be turns");
+			boundedTurns(payload.duration, undefined, "temporalModifier");
+			const temporalEffect = record(payload.effect, "temporalModifier effect");
+			exactKeys(temporalEffect, ["schemaVersion", "type", "typeValue"], "temporalModifier effect");
+			if (temporalEffect.schemaVersion !== 1 || temporalEffect.type !== "movement.scale-speed") throw new Error("temporalModifier currently requires movement.scale-speed");
+			const scalePayload = record(temporalEffect.typeValue, "temporalModifier movement payload");
+			exactKeys(scalePayload, ["factor"], "temporalModifier movement payload");
+			finiteNonNegative(scalePayload.factor, "temporalModifier movement factor");
+			return;
 	}
 }
 
@@ -151,7 +160,6 @@ function requiredKeys(value: Record<string, unknown>, required: readonly string[
 function finite(value: unknown, label: string): asserts value is number { if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${label} must be finite`); }
 function finitePositive(value: unknown, label: string): asserts value is number { finite(value, label); if (value <= 0) throw new Error(`${label} must be positive`); }
 function finiteNonNegative(value: unknown, label: string): asserts value is number { finite(value, label); if (value < 0) throw new Error(`${label} must be non-negative`); }
-function finiteRange(value: unknown, min: number, max: number, label: string): asserts value is number { finite(value, label); if (value < min || value > max) throw new Error(`${label} is outside range`); }
 function string(value: unknown, label: string): asserts value is string { if (typeof value !== "string" || value.length === 0) throw new Error(`${label} must be a non-empty string`); }
 function optionalBoolean(value: unknown, label: string): void { if (value !== undefined && typeof value !== "boolean") throw new Error(`${label} must be boolean`); }
 function optionalSafeInteger(value: unknown, label: string): void { if (value !== undefined && !Number.isSafeInteger(value)) throw new Error(`${label} must be a safe integer`); }

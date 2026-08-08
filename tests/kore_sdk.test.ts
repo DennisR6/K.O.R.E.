@@ -69,7 +69,7 @@ test("SDK hazard descriptors preserve canonical documents and direct runtime beh
 test("SDK item authoring composes effects and serializes economy configuration", () => {
 	const effects = kore.composeItemEffects(
 		{ type: "modifyForce", value: { factor: 0.5 } },
-		{ type: "freeze", value: { speedFactor: 0.25, durationTurns: 2 } },
+		{ type: "temporalModifier", value: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } },
 	);
 	const item = kore.createItem({
 		id: "sdk-item",

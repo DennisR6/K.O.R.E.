@@ -20,8 +20,8 @@ test("core EffectSettings maps each implemented type to a typed payload", () => 
 
 test("typed item runtime settings retain lifecycle payload fields", () => {
 	const effect: TypedItemEffectSettings = {
-		type: ItemEffectType.Freeze,
-		typeValue: { speedFactor: 0.25, durationTurns: 2, remainingTurns: 1 },
+		type: ItemEffectType.TemporalModifier,
+		typeValue: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } },
 	};
 
 	expect(JSON.parse(JSON.stringify(effect))).toEqual(effect);

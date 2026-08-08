@@ -542,7 +542,6 @@ export declare const kore: {
             readonly spawnTrigger: any.SpawnTrigger;
             readonly delayedEffect: any.DelayedEffect;
             readonly shield: any.Shield;
-            readonly freeze: any.Freeze;
             readonly swapPosition: any.SwapPosition;
             readonly temporaryWall: any.TemporaryWall;
             readonly ghostMode: any.GhostMode;

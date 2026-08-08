@@ -1,6 +1,5 @@
 import { EffectAimVariance } from "../../effects/aimVariance.js";
 import { EffectDelayed } from "../../effects/delayedEffect.js";
-import { EffectFreeze } from "../../effects/freeze.js";
 import { EffectGhostMode } from "../../effects/ghostMode.js";
 import { EffectMagnet } from "../../effects/magnet.js";
 import { EffectModifyForce } from "../../effects/modifyForce.js";
@@ -11,11 +10,11 @@ import { EffectSwapPosition } from "../../effects/swapPosition.js";
 import { EffectTemporaryWall } from "../../effects/temporaryWall.js";
 import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../effects/types.js";
 import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
+import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../../engine/contracts/temporalModifier.js";
 
 export type RuntimeItemEffect =
 	| EffectAimVariance
 	| EffectDelayed
-	| EffectFreeze
 	| EffectGhostMode
 	| EffectMagnet
 	| EffectModifyForce
@@ -23,7 +22,8 @@ export type RuntimeItemEffect =
 	| EffectShield
 	| EffectSpawnTrigger
 	| EffectSwapPosition
-	| EffectTemporaryWall;
+	| EffectTemporaryWall
+	| TemporalModifierTemplate;
 
 /**
  * The only KORE item-content-to-runtime construction boundary. Item content
@@ -35,8 +35,6 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 	switch (settings.type) {
 		case ItemEffectType.ModifyForce:
 			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
-		case ItemEffectType.Freeze:
-			return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor"), durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.GhostMode:
 			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Magnet:
@@ -60,6 +58,8 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
 		case ItemEffectType.SwapPosition:
 			return new EffectSwapPosition();
+		case ItemEffectType.TemporalModifier:
+			return createTemporalModifierTemplate({ durationUnit: value.durationUnit as "turns", duration: integerValue(value, "duration"), effect: value.effect as never });
 		default:
 			throw new Error(`Unsupported runtime item effect '${String(settings.type)}'`);
 	}
@@ -76,6 +76,7 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 
 export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
+	if (isTemporalModifierTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
@@ -88,6 +89,7 @@ export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next
 
 export function advanceRuntimeItemEffectTick(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
+	if (isTemporalModifierTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTick?: () => unknown }).advanceTick;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectDelayed && runtime.hasFired()) return { due: false };
@@ -118,4 +120,8 @@ function stringValue(value: Record<string, unknown>, key: string): string {
 	const raw = value[key];
 	if (typeof raw !== "string" || raw.length === 0) throw new Error(`Item effect requires non-empty ${key}`);
 	return raw;
+}
+
+export function isTemporalModifierTemplate(value: RuntimeItemEffect): value is TemporalModifierTemplate {
+	return "durationUnit" in value && "duration" in value && "effect" in value;
 }

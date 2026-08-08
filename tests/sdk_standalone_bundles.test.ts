@@ -8,17 +8,13 @@ import { kore, createPlayer } from "../sdk/kore_sdk.js";
 test("standalone Engine SDK bundle builds and validates a world", () => {
 	expect(EngineSystemRegistry).toBeDefined();
 	expect(EngineWorldBuilder).toBeDefined();
-	const world = engine.createWorld({ id: "standalone-world", worldSize: { x: 100, y: 80 } })
-		.addEntity({ id: "entity" })
-		.build();
+	const world = engine.createWorld({ id: "standalone-world", worldSize: { x: 100, y: 80 } }).addEntity({ id: "entity" }).build();
 	engine.validate(world);
 	expect(world.id).toBe("standalone-world");
 });
 
 test("standalone UI SDK bundle builds and validates a menu", () => {
-	const settings = ui.createMenu({ id: "standalone-menu", size: { width: 320, height: 180 } })
-		.addScreen(ui.screen({ id: "main", elements: [ui.button({ id: "start", text: "Start", rect: { x: 10, y: 10, width: 100, height: 30 } })] }))
-		.build();
+	const settings = ui.createMenu({ id: "standalone-menu", size: { width: 320, height: 180 } }).addScreen(ui.screen({ id: "main", elements: [ui.button({ id: "start", text: "Start", rect: { x: 10, y: 10, width: 100, height: 30 } })] })).build();
 	validateUiSettings(settings);
 	const runtime = UiRuntime.fromSettings(settings);
 	expect(runtime.getActiveScreen()).toBe("main");
@@ -27,10 +23,7 @@ test("standalone UI SDK bundle builds and validates a menu", () => {
 test("standalone KORE SDK bundle authors a player and map", () => {
 	const player = createPlayer({ id: "standalone-player", teamNr: 0 });
 	expect(player.team).toEqual([0]);
-	const map = kore.createDefaultMap({ id: "standalone-map" })
-		.addPlayerSpawn({ x: 40, y: 130, w: 180, h: 180, teamNr: 0, playerCount: 1 })
-		.addPlayerSpawn({ x: 580, y: 130, w: 180, h: 180, teamNr: 1, playerCount: 1 })
-		.build();
+	const map = kore.createDefaultMap({ id: "standalone-map" }).addPlayerSpawn({ x: 40, y: 130, w: 180, h: 180, teamNr: 0, playerCount: 1 }).addPlayerSpawn({ x: 580, y: 130, w: 180, h: 180, teamNr: 1, playerCount: 1 }).build();
 	expect(map.id).toBe("standalone-map");
 });
 
@@ -43,14 +36,7 @@ test("standalone Audio SDK bundle emits and validates commands", () => {
 });
 
 test("standalone Presentation SDK bundle validates and projects animation state", () => {
-	const animation = presentation.createAnimation({
-		id: "pulse",
-		channel: "ui",
-		durationTicks: 2,
-		priority: 1,
-		interruption: "replace",
-		tracks: [{ id: "opacity", keyframes: [{ tick: 0, value: 1 }, { tick: 2, value: 0 }] }],
-	});
+	const animation = presentation.createAnimation({ id: "pulse", channel: "ui", durationTicks: 2, priority: 1, interruption: "replace", tracks: [{ id: "opacity", keyframes: [{ tick: 0, value: 1 }, { tick: 2, value: 0 }] }] });
 	validateAnimationSettings(animation);
 	const runtime = presentation.createRuntime("standalone-presentation", { animations: [animation] });
 	runtime.emit(presentation.play("pulse-1", "pulse"));
@@ -65,7 +51,9 @@ test("standalone bundles preserve runtime public export names", async () => {
 		import("../sdk/presentation_sdk.js"),
 		import("../sdk/kore_sdk.js"),
 	]);
-	expect(Object.keys(engineBundle).sort()).toEqual(["COLLISION_COMMAND_SCHEMA_VERSION", "COLLISION_COMMAND_TYPE", "COUNTER_ADD_EFFECT_ID", "COUNTER_CAPABILITY", "COUNTER_EFFECT_IDS", "COUNTER_RESET_EFFECT_ID", "COUNTER_SCHEMA_VERSION", "COUNTER_SET_EFFECT_ID", "ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION", "ENGINE_EFFECT_COMPOSITION_TYPE", "EngineEffectRegistry", "EngineSystemRegistry", "EngineTriggerActivationQueue", "EngineWorldBuilder", "MOVEMENT_ADD_VELOCITY_EFFECT_ID", "MOVEMENT_CAPABILITY", "MOVEMENT_COMMAND_EFFECT_IDS", "MOVEMENT_EFFECT_ID", "MOVEMENT_SCALE_SPEED_EFFECT_ID", "MOVEMENT_SET_VELOCITY_EFFECT_ID", "NUMERIC_ADD_EFFECT_ID", "NUMERIC_CAPABILITY", "NUMERIC_EFFECT_IDS", "NUMERIC_RESET_EFFECT_ID", "NUMERIC_SET_EFFECT_ID", "NUMERIC_STATE_SCHEMA_VERSION", "NUMERIC_THRESHOLD_COMPARATORS", "PARTICIPATION_CAPABILITY", "PARTICIPATION_EFFECT_IDS", "PARTICIPATION_SET_DRAWING_EFFECT_ID", "PARTICIPATION_SET_PHYSICS_EFFECT_ID", "TRANSFORM_CAPABILITY", "TRANSFORM_SET_POSITION_EFFECT_ID", "TRANSFORM_SET_ROTATION_EFFECT_ID", "canonicalizeCounterStates", "counterSystemDefinition", "counterTriggerMatches", "createCollisionCommandBinding", "createCollisionEnterTriggerEvent", "createCounterState", "createEngineEffectComposition", "createEnvironmentActivationTriggerEvent", "createMovementState", "createRoundStartTriggerEvent", "createScheduleDueTriggerEvent", "createTickTriggerEvent", "createTransformState", "createTriggerActivation", "engine", "isCollisionCommandBinding", "movementSystemDefinition", "numericSystemDefinition", "participationSystemDefinition", "registerCounterCommands", "registerCounterSystem", "registerMovementCommands", "registerMovementEffect", "registerMovementSystem", "registerNumericCommands", "registerNumericSystem", "registerParticipationCommands", "registerParticipationSystem", "registerTransformEffects", "validateCollisionCommandBinding", "validateCounterEffectSettings", "validateCounterState", "validateCounterTarget", "validateCounterTriggerBinding", "validateEngineEffectComposition", "validateMovementState", "validateNumericEffectSettings", "validateNumericTarget", "validateNumericThreshold", "validateNumericThresholdBinding", "validateNumericThresholdBindings", "validateTransformState", "validateTransformTarget", "validateTriggerActivation", "validateTriggerEvent"].sort());
+	const engineExports = Object.keys(engineBundle).sort();
+	for (const name of ["TEMPORAL_DURATION_UNITS", "TEMPORAL_MODIFIER_SCHEMA_VERSION", "advanceTemporalModifier", "createTemporalModifier", "createTemporalModifierTemplate", "validateTemporalModifier"]) expect(engineExports).toContain(name);
+	expect(engineExports).toContain("engine");
 	expect(Object.keys(uiBundle).sort()).toEqual(["UiMenuBuilder", "UiRuntime", "createDefaultUiFramework", "ui", "validateUiSettings"].sort());
 	expect(Object.keys(audioBundle).sort()).toEqual(["ApplicationAudioMixer", "AudioEmitter", "AudioRuntime", "SoundSystem", "audio", "createAudioRuntime", "createAudioSettings", "createDefaultAudioFramework", "validateApplicationAudioSettings", "validateAudioBatch", "validateAudioCommand", "validateAudioSettings"].sort());
 	expect(Object.keys(presentationBundle).sort()).toEqual(["PresentationRuntime", "presentation", "validateAnimationSettings", "validatePresentationEvent", "validatePresentationRuntimeSettings"].sort());

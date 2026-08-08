@@ -818,7 +818,7 @@ var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "freeze" /* Freeze */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
@@ -935,7 +935,7 @@ function validateRuntimeItemEffectSettings(value) {
         throw new Error("delayedEffect requires exactly one nested Effect representation");
       if (payload.effectType !== undefined) {
         string2(payload.effectType, "delayedEffect effectType");
-        if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */)
+        if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */ || payload.effectType === "temporalModifier" /* TemporalModifier */)
           throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
         if (payload.effectValue !== undefined)
           assertJsonValue(payload.effectValue);
@@ -957,12 +957,6 @@ function validateRuntimeItemEffectSettings(value) {
       if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity))
         throw new Error("shield remainingCapacity is outside capacity");
       optionalBoolean(payload.blocksCollision, "shield blocksCollision");
-      return;
-    case "freeze" /* Freeze */:
-      knownKeys(payload, new Set(["speedFactor", "durationTurns", "remainingTurns"]), "freeze payload");
-      requiredKeys(payload, ["speedFactor", "durationTurns"], "freeze payload");
-      finiteRange(payload.speedFactor, 0, 1, "freeze speedFactor");
-      boundedTurns(payload.durationTurns, payload.remainingTurns, "freeze");
       return;
     case "swapPosition" /* SwapPosition */:
       exactKeys2(payload, [], "swapPosition payload");
@@ -998,6 +992,13 @@ function validateRuntimeItemEffectSettings(value) {
       finiteNonNegative(payload.maxVarianceDegrees, "aimVariance maxVarianceDegrees");
       optionalSafeInteger(payload.seed, "aimVariance seed");
       optionalSafeInteger(payload.randomState, "aimVariance randomState");
+      return;
+    case "temporalModifier" /* TemporalModifier */:
+      exactKeys2(payload, ["durationUnit", "duration", "effect"], "temporalModifier payload");
+      if (payload.durationUnit !== "turns")
+        throw new Error("temporalModifier durationUnit must be turns");
+      boundedTurns(payload.duration, undefined, "temporalModifier");
+      assertJsonValue(payload.effect);
       return;
   }
 }
@@ -1096,11 +1097,6 @@ function finiteNonNegative(value, label) {
   finite2(value, label);
   if (value < 0)
     throw new Error(`${label} must be non-negative`);
-}
-function finiteRange(value, min, max, label) {
-  finite2(value, label);
-  if (value < min || value > max)
-    throw new Error(`${label} is outside range`);
 }
 function string2(value, label) {
   if (typeof value !== "string" || value.length === 0)
@@ -1952,6 +1948,72 @@ function exactKeys7(value, keys, label) {
 function knownKeys2(value, keys, label) {
   if (Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
+}
+var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
+function createTemporalModifierTemplate(input) {
+  const template = structuredClone(input);
+  if (template.durationUnit !== "turns")
+    throw new Error("Temporal modifier requires turns duration");
+  if (!Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Temporal modifier duration must be a positive integer");
+  if (!template.effect || typeof template.effect !== "object" || Array.isArray(template.effect))
+    throw new Error("Temporal modifier requires an Engine effect");
+  assertJsonValue(template.effect);
+  if (template.effect.schemaVersion !== 1 || typeof template.effect.type !== "string")
+    throw new Error("Temporal modifier Engine effect is invalid");
+  return template;
+}
+function createTemporalModifier(input) {
+  const modifier = {
+    schemaVersion: TEMPORAL_MODIFIER_SCHEMA_VERSION,
+    id: input.id,
+    target: { ...input.target },
+    effect: structuredClone(input.effect),
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration,
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateTemporalModifier(modifier);
+  return modifier;
+}
+function advanceTemporalModifier(modifier) {
+  validateTemporalModifier(modifier);
+  if (modifier.remaining <= 1)
+    return;
+  return { ...structuredClone(modifier), remaining: modifier.remaining - 1 };
+}
+function validateTemporalModifier(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Temporal modifier must be an object");
+  const modifier = value;
+  if (modifier.schemaVersion !== TEMPORAL_MODIFIER_SCHEMA_VERSION)
+    throw new Error("Unsupported temporal modifier schema version");
+  if (typeof modifier.id !== "string" || modifier.id.length === 0)
+    throw new Error("Temporal modifier requires a stable id");
+  if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0))
+    throw new Error("Temporal modifier sourceId must be non-empty");
+  if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder))
+    throw new Error("Temporal modifier sourceOrder must be a safe integer");
+  if (!modifier.target || modifier.target.type !== "entity" || typeof modifier.target.entityId !== "string" || modifier.target.entityId.length === 0)
+    throw new Error("Temporal modifier requires a stable entity target");
+  if (modifier.durationUnit !== "turns")
+    throw new Error("Temporal modifier requires turns duration");
+  const duration = modifier.duration;
+  const remaining = modifier.remaining;
+  if (typeof duration !== "number" || !Number.isSafeInteger(duration) || duration < 1)
+    throw new Error("Temporal modifier duration must be a positive integer");
+  if (typeof remaining !== "number" || !Number.isSafeInteger(remaining) || remaining < 1 || remaining > duration)
+    throw new Error("Temporal modifier remaining duration is invalid");
+  if (!modifier.effect || typeof modifier.effect !== "object" || Array.isArray(modifier.effect))
+    throw new Error("Temporal modifier requires an Engine effect");
+  assertJsonValue(modifier.effect);
+  if (modifier.effect.schemaVersion !== 1 || typeof modifier.effect.type !== "string")
+    throw new Error("Temporal modifier Engine effect is invalid");
+  const effectKeys = Object.keys(modifier.effect);
+  if (effectKeys.some((key) => !["schemaVersion", "type", "typeValue", "target"].includes(key)))
+    throw new Error("Temporal modifier Engine effect contains unexpected fields");
 }
 
 var engine = {
@@ -2931,6 +2993,8 @@ function validatePlayerMass(mass) {
 }
 function createPlayerSettings(overrides = {}) {
   validateNumericThresholdBindings(overrides.numericThresholds ?? []);
+  for (const modifier of overrides.temporalModifiers ?? [])
+    validateTemporalModifier(modifier);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -2954,6 +3018,7 @@ function createPlayerSettings(overrides = {}) {
     effects: (overrides.effects ?? []).map((effect) => ({ ...effect })),
     inventory: (overrides.inventory ?? []).map((item) => ({ ...item })),
     ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+    ...overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {},
     numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
 }
@@ -3099,47 +3164,6 @@ class EffectDelayed {
         remainingTicks: this.remainingTicks,
         fired: this.fired
       }
-    };
-  }
-}
-
-class EffectFreeze {
-  speedFactor;
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { speedFactor, durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isFinite(speedFactor) || speedFactor < 0 || speedFactor > 1)
-      throw new Error("freeze speedFactor must be between zero and one");
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1)
-      throw new Error("freeze durationTurns must be a positive integer");
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns)
-      throw new Error("freeze remainingTurns must be between zero and durationTurns");
-    this.speedFactor = speedFactor;
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  applyToVelocity(velocity) {
-    if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y))
-      throw new Error("Freeze velocity must be finite");
-    if (!this.isActive())
-      return { ...velocity };
-    return { x: velocity.x * this.speedFactor, y: velocity.y * this.speedFactor };
-  }
-  isActive() {
-    return this.remainingTurns > 0;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  toSettings() {
-    return {
-      type: "freeze" /* Freeze */,
-      typeValue: { speedFactor: this.speedFactor, durationTurns: this.durationTurns, remainingTurns: this.remainingTurns }
     };
   }
 }
@@ -3478,8 +3502,6 @@ function createRuntimeItemEffect(settings) {
   switch (settings.type) {
     case "modifyForce" /* ModifyForce */:
       return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
-    case "freeze" /* Freeze */:
-      return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor"), durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "ghostMode" /* GhostMode */:
       return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "magnet" /* Magnet */:
@@ -3509,6 +3531,8 @@ function createRuntimeItemEffect(settings) {
       return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
     case "swapPosition" /* SwapPosition */:
       return new EffectSwapPosition;
+    case "temporalModifier" /* TemporalModifier */:
+      return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
     default:
       throw new Error(`Unsupported runtime item effect '${String(settings.type)}'`);
   }
@@ -3518,6 +3542,8 @@ function resolveRuntimeItemEffects(effects) {
 }
 function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+  if (isTemporalModifierTemplate(runtime))
+    return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
   if (!advance)
     return { next: structuredClone(effect), due: false };
@@ -3533,6 +3559,8 @@ function advanceRuntimeItemEffectTurn(effect) {
 }
 function advanceRuntimeItemEffectTick(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+  if (isTemporalModifierTemplate(runtime))
+    return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTick;
   if (!advance)
     return { next: structuredClone(effect), due: false };
@@ -3566,6 +3594,9 @@ function stringValue(value, key) {
   if (typeof raw !== "string" || raw.length === 0)
     throw new Error(`Item effect requires non-empty ${key}`);
   return raw;
+}
+function isTemporalModifierTemplate(value) {
+  return "durationUnit" in value && "duration" in value && "effect" in value;
 }
 
 function dispatchTriggeredEffects(options) {
@@ -3810,6 +3841,7 @@ class Player {
   isDrawingEnabled = true;
   items = [];
   itemEffects = [];
+  temporalModifiers = [];
   numericThresholds = [];
   numericEffectDispatcher;
   effectAlways = [];
@@ -3848,6 +3880,9 @@ class Player {
     for (const effect of settings.itemEffects ?? [])
       validateRuntimeItemEffectSettings(effect);
     this.itemEffects = (settings.itemEffects ?? []).map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
+    for (const modifier of settings.temporalModifiers ?? [])
+      validateTemporalModifier(modifier);
+    this.temporalModifiers = structuredClone(settings.temporalModifiers ?? []);
     validateNumericThresholdBindings(settings.numericThresholds ?? []);
     this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
@@ -4130,6 +4165,7 @@ class Player {
       ],
       inventory: this.items.map((item) => ({ ...item })),
       ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+      ...this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {},
       ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
@@ -4209,6 +4245,22 @@ class Player {
   }
   getItemEffects() {
     return this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
+  }
+  addTemporalModifier(modifier) {
+    validateTemporalModifier(modifier);
+    this.temporalModifiers.push(structuredClone(modifier));
+  }
+  getTemporalModifiers() {
+    return structuredClone(this.temporalModifiers);
+  }
+  advanceTemporalModifiersTurn() {
+    this.temporalModifiers = this.temporalModifiers.flatMap((modifier) => {
+      const next = advanceTemporalModifier(modifier);
+      return next ? [next] : [];
+    });
+  }
+  removeTemporalModifiers(sourceIds) {
+    this.temporalModifiers = this.temporalModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
   }
   addEffect(trigger, effect) {
     switch (trigger) {
@@ -7696,7 +7748,7 @@ function clone4(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"];
 }
 function createItem(input) {
   const item = createItemDocument({
@@ -7853,7 +7905,7 @@ var freezeShotItem = createItem({
   name: "Freeze-Shot",
   description: "Temporarily slows a targeted figure.",
   type: "offensive",
-  effects: [{ type: "freeze", value: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }],
+  effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } } }],
   targetType: "entity",
   duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 2 },
@@ -9211,6 +9263,7 @@ class GameHandler {
     this.feedback.record("shot" /* Shot */, this.getTurnNumber(), { actorId, data: { angle, power } });
     const before = new Map(this.entityManager.toSettings().map((player) => [player.id, player]));
     this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyTemporalModifiers(actor);
     this.resolvingTurn = true;
     let frames = 0;
     try {
@@ -9246,6 +9299,7 @@ class GameHandler {
     if (!actor)
       throw new Error("actor not found!");
     this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+    this.applyTemporalModifiers(actor);
     const playback = this.systems.find((s) => s instanceof PlaybackSystem);
     if (!playback)
       throw new Error("playbacksystem not found!");
@@ -9265,6 +9319,14 @@ class GameHandler {
       return;
     }
     this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyTemporalModifiers(actor);
+  }
+  applyTemporalModifiers(entity) {
+    for (const modifier of entity.getTemporalModifiers()) {
+      if (modifier.target.entityId !== String(entity.getId()))
+        continue;
+      dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: modifier.effect });
+    }
   }
   tick(dt = this.dt) {
     if (this.disposed)
@@ -9442,6 +9504,7 @@ class GameHandler {
     if (this.context.currTurn !== turnNumber)
       this.entityManager.getEntities().forEach((entity) => {
         entity.resetItemUses();
+        entity.advanceTemporalModifiersTurn();
         for (const scheduled of entity.advanceItemEffectsTurn())
           this.executeDueSpawnTrigger(entity, scheduled);
       });
@@ -9774,8 +9837,13 @@ class GameHandler {
     }
     const inventory = actor.getInventory();
     consumeInventoryItem(inventory, item);
-    const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map((candidate) => [candidate.id, candidate])));
+    const installedEffects = [
+      ...targetEntity.getItemEffects(),
+      ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder }))
+    ];
+    const combination = validateItemCombination(item, installedEffects, new Map(this.items.map((candidate) => [candidate.id, candidate])));
     targetEntity.removeItemEffects(combination.removeItemIds);
+    targetEntity.removeTemporalModifiers(combination.removeItemIds);
     this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget);
     actor.setInventory(inventory);
     this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId] : [actorId], data: { itemId } });
@@ -9804,6 +9872,20 @@ class GameHandler {
         const actorPosition = actor.getPos();
         actor.setPos(targetEntity.getPos());
         targetEntity.setPos(actorPosition);
+      } else if (isTemporalModifierTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Temporal modifiers require an entity target");
+        const targetId = String(targetEntity.getId());
+        const modifier = createTemporalModifier({
+          id: `${targetId}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          target: { type: "entity", entityId: targetId },
+          effect: { ...structuredClone(effect.effect), target: { type: "entity", entityId: targetId } },
+          durationUnit: effect.durationUnit,
+          duration: effect.duration,
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        });
+        targetEntity.addTemporalModifier(modifier);
       } else {
         (targetEntity ?? actor).addItemEffect(effect.toSettings(), { itemId: item.id, order: itemOrder(item) });
       }
@@ -9847,6 +9929,8 @@ class GameHandler {
         entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
         return;
       }
+      if (isTemporalModifierTemplate(nested))
+        throw new Error("Delayed temporal modifiers are unsupported");
       entity.addItemEffect(nested.toSettings(), { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
       return;
     }
@@ -10252,8 +10336,8 @@ function hazardToBoundary(hazard) {
     y: zone.y,
     r: zone.r,
     color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-    effects: hazard.type === "kill-zone" ? [] : [hazardEffect(hazard)],
-    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : {}
+    effects: [],
+    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }
   };
 }
 function lethalCollisionCommand() {
@@ -10262,16 +10346,10 @@ function lethalCollisionCommand() {
     { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
   ]));
 }
-function hazardEffect(hazard) {
+function forceHazardCommand(hazard) {
   const config = hazard.config;
   const radians = config.angle * Math.PI / 180;
-  return {
-    schemaVersion: 1,
-    trigger: "EffectTrigger.Collision" /* Collision */,
-    triggerValue: [],
-    type: "EffectType.ModifySetting" /* ModifySetting */,
-    typeValue: { operation: "add" /* Add */, key: "velocity", value: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } }
-  };
+  return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } });
 }
 function environmentalMechanicToBoundary(mechanic) {
   return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
@@ -10480,7 +10558,7 @@ function getSelectableGameModes() {
 var CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 var CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
 var CONTENT_PACKAGE_MAX_DOCUMENTS = 256;
-var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"];
 var EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
@@ -10866,7 +10944,7 @@ class KoreMapBuilder {
     const radians = settings.angle * Math.PI / 180;
     this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
     const structureIndex = this.structures.length;
-    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: "add" /* Add */, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
     this.generatedHazardStructureIndexes.add(structureIndex);
     return this;
   }
@@ -11213,7 +11291,7 @@ var kore = {
     freeze(durationTurns = 1) {
       if (!Number.isInteger(durationTurns) || durationTurns <= 0)
         throw new Error("Freeze durationTurns must be a positive integer");
-      return { type: "freeze" /* Freeze */, typeValue: { durationTurns } };
+      return { type: "temporalModifier" /* TemporalModifier */, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };
     },
     magnet(strength, range2) {
       if (!Number.isFinite(strength) || !Number.isFinite(range2) || range2 <= 0)
@@ -11270,7 +11348,6 @@ var kore = {
       spawnTrigger: "spawnTrigger" /* SpawnTrigger */,
       delayedEffect: "delayedEffect" /* DelayedEffect */,
       shield: "shield" /* Shield */,
-      freeze: "freeze" /* Freeze */,
       swapPosition: "swapPosition" /* SwapPosition */,
       temporaryWall: "temporaryWall" /* TemporaryWall */,
       ghostMode: "ghostMode" /* GhostMode */,
@@ -11283,7 +11360,7 @@ var kore = {
   }
 };
 function isItemEffectType(value) {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"].includes(value);
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"].includes(value);
 }
 export {
   validateTriggerDefinition,

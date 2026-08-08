@@ -8,17 +8,15 @@ test("Freeze-Shot is a validated built-in enemy-targeted item", () => {
 	expect(freezeShotItem.targetValidation).toEqual({ allowSelf: false, allowAlly: false, allowEnemy: true, maxRange: 300 });
 });
 
-test("Freeze-Shot reduces target speed and expires", () => {
+test("Freeze-Shot lowers to a generic temporal movement modifier", () => {
 	const freeze = createFreezeShot();
-	expect(freeze.applyToVelocity({ x: 8, y: 4 })).toEqual({ x: 2, y: 1 });
-	freeze.advanceTurn();
-	freeze.advanceTurn();
-	expect(freeze.applyToVelocity({ x: 8, y: 4 })).toEqual({ x: 8, y: 4 });
+	expect(freeze.durationUnit).toBe("turns");
+	expect(freeze.duration).toBe(2);
+	expect(freeze.effect).toEqual({ schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } });
 });
 
 test("Freeze-Shot effect state is serializable", () => {
 	const freeze = createFreezeShot();
-	freeze.advanceTurn();
-	expect(createFreezeShot().durationTurns).toBe(2);
-	expect(freeze.toSettings().type).toBe("freeze");
+	expect(createFreezeShot().duration).toBe(2);
+	expect(JSON.parse(JSON.stringify(freeze))).toEqual(freeze);
 });

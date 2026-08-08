@@ -676,9 +676,9 @@ export const kore = {
 			if (!Number.isFinite(capacity) || capacity <= 0) throw new Error("Shield capacity must be a positive number");
 			return { type: ItemEffectType.Shield, typeValue: { capacity } };
 		},
-		freeze(durationTurns: number = 1): ItemEffectSettings {
-			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
-			return { type: ItemEffectType.Freeze, typeValue: { durationTurns } };
+	freeze(durationTurns: number = 1): ItemEffectSettings {
+		if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
+		return { type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };
 		},
 		magnet(strength: number, range: number): ItemEffectSettings {
 			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
@@ -730,7 +730,6 @@ export const kore = {
 			spawnTrigger: ItemEffectType.SpawnTrigger,
 			delayedEffect: ItemEffectType.DelayedEffect,
 			shield: ItemEffectType.Shield,
-			freeze: ItemEffectType.Freeze,
 			swapPosition: ItemEffectType.SwapPosition,
 			temporaryWall: ItemEffectType.TemporaryWall,
 			ghostMode: ItemEffectType.GhostMode,
@@ -744,7 +743,7 @@ export const kore = {
 } as const;
 
 function isItemEffectType(value: string): value is ItemEffectType {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"].includes(value);
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"].includes(value);
 }
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };

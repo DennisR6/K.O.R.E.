@@ -5,7 +5,7 @@ import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectModifyForce, applyForceModifiers } from "../src/effects/modifyForce.ts";
 import { EffectModifyRotation, applyRotationModifiers } from "../src/effects/modifyRotation.ts";
 import { EffectLockRotation } from "../src/effects/lockRotation.ts";
-import { EffectFreeze } from "../src/effects/freeze.ts";
+import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
 import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectSelectionLock } from "../src/effects/selectionLock.ts";
 import { EffectTemporaryWall } from "../src/effects/temporaryWall.ts";
@@ -31,14 +31,14 @@ test("mixed effect stacking and conflict resolution behave deterministically", (
 });
 
 test("mixed effect cleanup and expiration across turn progression", () => {
-	const freeze = new EffectFreeze({ typeValue: { speedFactor: 0.5, durationTurns: 2 } });
+	const freeze = createTemporalModifier({ id: "target:freeze:0", target: { type: "entity", entityId: "target" }, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 }, target: { type: "entity", entityId: "target" } }, durationUnit: "turns", duration: 2 });
 	const ghost = new EffectGhostMode({ typeValue: { durationTurns: 1 } });
 	const lockRot = new EffectLockRotation({ typeValue: { durationTurns: 2 } });
 	const selLock = new EffectSelectionLock({ typeValue: { durationTurns: 1 } });
 	const wall = new EffectTemporaryWall({ typeValue: { wallId: "wall1", x: 100, y: 100, w: 50, h: 10, durationTurns: 2, active: true } });
 	const trigger = new EffectSpawnTrigger({ typeValue: { triggerId: "trig1", delayTurns: 1 } });
 
-	expect(freeze.isActive()).toBe(true);
+	expect(freeze.remaining).toBe(2);
 	expect(ghost.isActive()).toBe(true);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(true);
@@ -46,14 +46,14 @@ test("mixed effect cleanup and expiration across turn progression", () => {
 	expect(trigger.hasFired()).toBe(false);
 
 	// Advance turn 1
-	freeze.advanceTurn();
+	const freezeAfterOne = advanceTemporalModifier(freeze)!;
 	ghost.advanceTurn();
 	lockRot.advanceTurn();
 	selLock.advanceTurn();
 	wall.advanceTurn();
 	expect(trigger.advanceTurn()).toBe(true);
 
-	expect(freeze.isActive()).toBe(true);
+	expect(freezeAfterOne.remaining).toBe(1);
 	expect(ghost.isActive()).toBe(false);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(false);
@@ -61,11 +61,11 @@ test("mixed effect cleanup and expiration across turn progression", () => {
 	expect(trigger.hasFired()).toBe(true);
 
 	// Advance turn 2
-	freeze.advanceTurn();
+	const freezeAfterTwo = advanceTemporalModifier(freezeAfterOne);
 	lockRot.advanceTurn();
 	expect(wall.advanceTurn()).toBe(true); // expires
 
-	expect(freeze.isActive()).toBe(false);
+	expect(freezeAfterTwo).toBeUndefined();
 	expect(lockRot.isLocked()).toBe(false);
 	expect(wall.isActive()).toBe(false);
 });

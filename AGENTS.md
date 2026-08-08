@@ -152,8 +152,8 @@ After every change, check whether this guide still reflects the implementation a
   primitive with snapshot-safe countdown state.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
-- `src/effects/freeze.ts`: serializable movement-reduction effect with turn
-  expiration and snapshot-safe state.
+- `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent
+  modifier state with stable entity targets and deterministic turn expiry.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
 - `src/effects/temporaryWall.ts`: serializable temporary-wall lifecycle with
@@ -182,7 +182,7 @@ After every change, check whether this guide still reflects the implementation a
   catalog for validated core Effect/MultiEffect payloads; it is separate from
   Effect IDs.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
-  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
+   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; it is not a dedicated runtime effect.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;
@@ -197,7 +197,9 @@ After every change, check whether this guide still reflects the implementation a
   The declarative official-item path is active for
   validation and inventory tests, and `GameHandler.useItem()` resolves ordinary
   effects through the public KORE item-runtime boundary, persisting installed
-  effect state in player snapshots; the mystery-box reward remains the special
+   effect state in player snapshots. Generic temporal modifiers are persisted
+   separately on player snapshots and applied once to an accepted movement
+   action; the mystery-box reward remains the special
   inventory-grant path.
 - `GameHandler` is the authoritative owner of delayed item-effect tick
   advancement. Due delayed effects emit transient `schedule.due` activations

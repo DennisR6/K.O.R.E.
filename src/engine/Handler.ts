@@ -34,6 +34,7 @@ import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventor
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
+import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import { TransformSystem } from "../systems/TransformSystem.js";
@@ -44,7 +45,7 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
@@ -223,6 +224,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
 		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
 		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyTemporalModifiers(actor);
 		// The resolution loop is part of the accepted turn: the completion gate
 		// must not freeze it even if a gameplay system completes the match
 		// mid-loop (the deciding tick already stored the result).
@@ -266,6 +268,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const actor = this.entityManager.getEntityById(packet.actorId);
 		if (!actor) throw new Error("actor not found!")
 		this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+		this.applyTemporalModifiers(actor);
 
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		if (!playback) throw new Error("playbacksystem not found!")
@@ -285,6 +288,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const actor = this.entityManager.getEntityById(actorId);
 		if (!actor) { console.log("Player not Found"); return }
 		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyTemporalModifiers(actor);
+	}
+
+	/** Applies active generic temporal commands once to an accepted movement action. */
+	private applyTemporalModifiers(entity: IEntity): void {
+		for (const modifier of entity.getTemporalModifiers()) {
+			if (modifier.target.entityId !== String(entity.getId())) continue;
+			dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: modifier.effect });
+		}
 	}
 
 	/**
@@ -497,6 +509,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setTurnNumber(turnNumber: number): void {
 		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => {
 			entity.resetItemUses();
+			entity.advanceTemporalModifiersTurn();
 			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
 		})
 		this.context.currTurn = turnNumber
@@ -769,8 +782,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// Validate and reserve the use before applying effects. The live inventory
 		// is committed only after all effect constructors and target checks pass.
 		consumeInventoryItem(inventory, item)
-		const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map(candidate => [candidate.id, candidate])))
+		const installedEffects = [
+			...targetEntity.getItemEffects(),
+			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+		];
+		const combination = validateItemCombination(item, installedEffects, new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
+		targetEntity.removeTemporalModifiers(combination.removeItemIds)
 		this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget)
 		actor.setInventory(inventory)
 		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
@@ -795,6 +813,19 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
+			} else if (isTemporalModifierTemplate(effect)) {
+				if (!targetEntity) throw new Error("Temporal modifiers require an entity target");
+				const targetId = String(targetEntity.getId());
+				const modifier: TemporalModifierSettings = createTemporalModifier({
+					id: `${targetId}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+					target: { type: "entity", entityId: targetId },
+					effect: { ...structuredClone(effect.effect), target: { type: "entity", entityId: targetId } },
+					durationUnit: effect.durationUnit,
+					duration: effect.duration,
+					sourceId: item.id,
+					sourceOrder: itemOrder(item),
+				});
+				targetEntity.addTemporalModifier(modifier);
 			} else {
 				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
 			}
@@ -833,6 +864,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
 				return;
 			}
+			if (isTemporalModifierTemplate(nested)) throw new Error("Delayed temporal modifiers are unsupported");
 			entity.addItemEffect(nested.toSettings() as ItemEffectSettings, { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
 			return;
 		}

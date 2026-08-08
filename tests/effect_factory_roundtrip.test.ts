@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { EffectFreeze } from "../src/effects/freeze.ts";
+import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
 import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectShield } from "../src/effects/shield.ts";
 import { MetaEffect, MultiEffect } from "../src/effects/effects.ts";
@@ -76,24 +76,13 @@ describe("effect factory hardening", () => {
 		expect(() => new MultiEffect({ schemaVersion: 1, type: EffectType.Multi, typeValue: undefined as never })).toThrow(/requires a typeValue array/);
 	});
 
-	test("freeze serialized state round-trips including remaining turns", () => {
-		const freeze = new EffectFreeze({ typeValue: { speedFactor: 0.25, durationTurns: 3 } });
-		freeze.advanceTurn();
-		freeze.advanceTurn();
-		expect(freeze.getRemainingTurns()).toBe(1);
-
-		const restored = new EffectFreeze(freeze.toSettings() as never);
-		expect(restored.toSettings()).toEqual(freeze.toSettings());
-		expect(restored.getRemainingTurns()).toBe(1);
-		expect(restored.isActive()).toBe(true);
-		expect(restored.applyToVelocity({ x: 4, y: 0 })).toEqual({ x: 1, y: 0 });
-
-		// The constructor defaults remainingTurns to the full duration.
-		const fresh = new EffectFreeze({ typeValue: { speedFactor: 0.5, durationTurns: 2 } });
-		expect(fresh.toSettings()).toEqual({
-			type: "freeze",
-			typeValue: { speedFactor: 0.5, durationTurns: 2, remainingTurns: 2 },
-		});
+	test("temporal modifier serialized state round-trips including remaining turns", () => {
+		const modifier = createTemporalModifier({ id: "target:source:0", target: { type: "entity", entityId: "target" }, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 }, target: { type: "entity", entityId: "target" } }, durationUnit: "turns", duration: 3 });
+		const afterOne = advanceTemporalModifier(modifier)!;
+		const remaining = advanceTemporalModifier(afterOne)!;
+		expect(remaining?.remaining).toBe(1);
+		const restored = JSON.parse(JSON.stringify(remaining));
+		expect(restored).toEqual(remaining);
 	});
 
 	test("shield serialized state round-trips including remaining capacity", () => {

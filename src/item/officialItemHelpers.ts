@@ -3,11 +3,12 @@ import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectTemporaryWall } from "../effects/temporaryWall.js";
-import { EffectFreeze } from "../effects/freeze.js";
 import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
 import { EffectAimVariance } from "../effects/aimVariance.js";
 import type { ForceInput } from "../effects/types.js";
+import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../engine/contracts/temporalModifier.js";
+import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import {
 	ANKER_FORCE_FACTOR, DELAYED_MINE_DELAY_TICKS, DELAYED_MINE_FORCE, DELAYED_MINE_RADIUS,
 	FALLTUER_RADIUS, FREEZE_SHOT_DURATION_TURNS, FREEZE_SHOT_SPEED_FACTOR, JAEGERMEISTER_ELIXIER_DURATION_TURNS,
@@ -26,7 +27,9 @@ export function createVerzoegerteMine(center: { x: number; y: number }, delayTic
 }
 export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } { return mine.trigger.hasFired() ? mine.force.applyToVelocity(velocity, mine.center, target) : { ...velocity }; }
 export function createMiniWall(position: { x: number; y: number }, wallId: string = "mini-wall"): EffectTemporaryWall { return new EffectTemporaryWall({ typeValue: { wallId, x: position.x, y: position.y, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }); }
-export function createFreezeShot(): EffectFreeze { return new EffectFreeze({ typeValue: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }); }
+export function createFreezeShot(): TemporalModifierTemplate {
+	return createTemporalModifierTemplate({ durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } });
+}
 export function createSelectionLock(): EffectSelectionLock { return new EffectSelectionLock({ typeValue: { durationTurns: JAEGERMEISTER_ELIXIER_DURATION_TURNS } }); }
 export function createVodkaZero(seed: number = 42): EffectAimVariance { return new EffectAimVariance({ typeValue: { maxVarianceDegrees: VODKA_ZERO_MAX_VARIANCE_DEGREES, seed } }); }
 export function applySwitch(first: PositionTargetState, second: PositionTargetState): [{ x: number; y: number }, { x: number; y: number }] { return new EffectSwapPosition().swap(first, second); }

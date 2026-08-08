@@ -25,13 +25,13 @@ export const enum ItemEffectType {
 	SpawnTrigger = "spawnTrigger",
 	DelayedEffect = "delayedEffect",
 	Shield = "shield",
-	Freeze = "freeze",
 	SwapPosition = "swapPosition",
 	TemporaryWall = "temporaryWall",
 	GhostMode = "ghostMode",
 	Magnet = "magnet",
 	SelectionLock = "selectionLock",
 	AimVariance = "aimVariance",
+	TemporalModifier = "temporalModifier",
 }
 export const enum EffectTrigger {
 	Always = "EffectTrigger.Always",
@@ -77,13 +77,13 @@ export interface ItemEffectPayloadMap {
 	[ItemEffectType.SpawnTrigger]: SpawnTriggerPayload;
 	[ItemEffectType.DelayedEffect]: DelayedEffectPayload;
 	[ItemEffectType.Shield]: ShieldPayload;
-	[ItemEffectType.Freeze]: FreezePayload;
 	[ItemEffectType.SwapPosition]: Record<string, never>;
 	[ItemEffectType.TemporaryWall]: TemporaryWallPayload;
 	[ItemEffectType.GhostMode]: GhostModePayload;
 	[ItemEffectType.Magnet]: { mode: "attract" | "repel"; force: number; range: number };
 	[ItemEffectType.SelectionLock]: LockRotationPayload;
 	[ItemEffectType.AimVariance]: { maxVarianceDegrees: number; seed?: number; randomState?: number };
+	[ItemEffectType.TemporalModifier]: { durationUnit: "turns"; duration: number; effect: Record<string, unknown> };
 }
 
 export interface LockRotationPayload {
@@ -115,12 +115,6 @@ export interface ShieldPayload {
 	capacity: number;
 	remainingCapacity?: number;
 	blocksCollision?: boolean;
-}
-
-export interface FreezePayload {
-	speedFactor: number;
-	durationTurns: number;
-	remainingTurns?: number;
 }
 
 export interface GhostModePayload {

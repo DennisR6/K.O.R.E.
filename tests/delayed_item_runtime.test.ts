@@ -70,14 +70,14 @@ test("delayedEffect rejects unsupported position nested Effects before consuming
 	const item = createItemDocument({
 		id: "delayed-position-unsupported",
 		targetType: "position",
-		effects: [{ type: ItemEffectType.DelayedEffect, value: { effectType: ItemEffectType.Freeze, effectValue: { speedFactor: 0.5, durationTurns: 1 }, delayTicks: 1 } }],
+		effects: [{ type: ItemEffectType.DelayedEffect, value: { effectType: ItemEffectType.TemporalModifier, effectValue: { durationUnit: "turns", duration: 1, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } }, delayTicks: 1 } }],
 	});
 	settings.items = [item];
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
 	const actor = handler.getEntityManager().getEntities()[0]!;
 	actor.setInventory([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);
 
-	expect(() => handler.useItem(actor.getId(), item.id, { type: "position", position: { x: 10, y: 10 } })).toThrow(/does not support position/);
+	expect(() => handler.useItem(actor.getId(), item.id, { type: "position", position: { x: 10, y: 10 } })).toThrow(/scheduled\/structural/);
 	expect(actor.getInventory()[0]!.remainingUses).toBe(1);
 });
 

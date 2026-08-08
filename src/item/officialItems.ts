@@ -10,6 +10,7 @@ import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -162,7 +163,7 @@ export const freezeShotItem: ItemDocument = createItem({
 	name: "Freeze-Shot",
 	description: "Temporarily slows a targeted figure.",
 	type: "offensive",
-	effects: [{ type: "freeze", value: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }],
+	effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } } }],
 	targetType: "entity",
 	duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 2 },
@@ -302,10 +303,10 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("delayedEffect");
 	validator.registerEffectType("temporaryWall");
-	validator.registerEffectType("freeze");
 	validator.registerEffectType("swapPosition");
 	validator.registerEffectType("selectionLock");
 	validator.registerEffectType("aimVariance");
+	validator.registerEffectType("temporalModifier");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);

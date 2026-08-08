@@ -9,6 +9,7 @@ import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { NumericStateOwner } from "../engine/contracts/numericState.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import type { TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -56,6 +57,10 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	advanceItemEffectsTurn(): ItemEffectSettings[]
 	advanceItemEffectsTick(): ItemEffectSettings[]
 	getItemEffects(): ItemEffectSettings[]
+	addTemporalModifier(modifier: TemporalModifierSettings): void
+	getTemporalModifiers(): TemporalModifierSettings[]
+	advanceTemporalModifiersTurn(): void
+	removeTemporalModifiers(sourceIds: ReadonlySet<string>): void
 	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
 	dispatchNumericAdd(stateId: string, amount: number): void;
 	dispatchNumericSet(stateId: string, value: number): void;

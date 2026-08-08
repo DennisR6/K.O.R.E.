@@ -16,7 +16,7 @@ test("core Effect validation rejects malformed and executable payloads", () => {
 });
 
 test("persistent item Effect validation checks typed lifecycle state", () => {
-	expect(() => validateRuntimeItemEffectSettings({ type: ItemEffectType.Freeze, typeValue: { speedFactor: 0.25, durationTurns: 2, remainingTurns: 1 } })).not.toThrow();
-	expect(() => validateRuntimeItemEffectSettings({ type: ItemEffectType.Freeze, typeValue: { speedFactor: 2, durationTurns: 2 } })).toThrow();
+	expect(() => validateRuntimeItemEffectSettings({ type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } })).not.toThrow();
+	expect(() => validateRuntimeItemEffectSettings({ type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "ticks", duration: 2, effect: {} } })).toThrow();
 	expect(() => validateRuntimeItemEffectSettings({ type: ItemEffectType.Shield, typeValue: { capacity: 2, remainingCapacity: 3 } })).toThrow();
 });

@@ -98,8 +98,8 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.freeze produces valid Freeze item effect settings", () => {
 			const effect = kore.effects.freeze(2);
 			expect(effect).toEqual({
-				type: ItemEffectType.Freeze,
-				typeValue: { durationTurns: 2 },
+			type: ItemEffectType.TemporalModifier,
+			typeValue: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } },
 			});
 		});
 
