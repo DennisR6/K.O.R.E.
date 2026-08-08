@@ -35,6 +35,7 @@ import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
 import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
+import { createActionModifier } from "./contracts/actionModifier.js";
 import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
 import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
@@ -50,7 +51,9 @@ import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
+import { EffectModifyForce } from "../effects/modifyForce.js";
 import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
 import { TriggerDefinitionCatalog, type TriggerDefinition } from "../item/triggerDefinitions.js";
 import type { AiSettings } from "../ai/types.js";
@@ -230,7 +233,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
 		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
-		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyAcceptedForce(actor, { angle, power });
 		this.applyTemporalModifiers(actor);
 		// The resolution loop is part of the accepted turn: the completion gate
 		// must not freeze it even if a gameplay system completes the match
@@ -274,7 +277,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 		const actor = this.entityManager.getEntityById(packet.actorId);
 		if (!actor) throw new Error("actor not found!")
-		this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+		this.applyAcceptedForce(actor, packet.input);
 		this.applyTemporalModifiers(actor);
 
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
@@ -294,8 +297,15 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot accept raw turns")
 		const actor = this.entityManager.getEntityById(actorId);
 		if (!actor) { console.log("Player not Found"); return }
-		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyAcceptedForce(actor, { angle, power });
 		this.applyTemporalModifiers(actor);
+	}
+
+	/** Applies and consumes entity-owned action modifiers at the accepted action boundary. */
+	private applyAcceptedForce(entity: IEntity, input: { angle: number; power: number }): void {
+		const effective = entity.applyPendingActionModifiers(input);
+		this.physicsStrategy.applyImpulse(entity, effective.angle, effective.power);
+		entity.consumePendingActionModifiers();
 	}
 
 	/** Applies active generic temporal commands once to an accepted movement action. */
@@ -769,8 +779,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else {
 				const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
 				if (!structure) throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
-				structure.setPhysicsEnabled(false);
-				structure.setDrawingEnabled(false);
+				this.setStructureParticipation(structure.getId(), false);
 			}
 		}
 		this.structureLifecycles = next;
@@ -794,10 +803,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		for (const lifecycle of this.structureLifecycles) {
 			if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId) continue;
 			const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
-			structure?.setPhysicsEnabled(false);
-			structure?.setDrawingEnabled(false);
+			if (structure) this.setStructureParticipation(structure.getId(), false);
 		}
 		this.structureLifecycles = this.structureLifecycles.filter(lifecycle => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+	}
+	private setStructureParticipation(structureId: string, enabled: boolean): void {
+		for (const type of [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID]) {
+			dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: { schemaVersion: 1, type, target: { type: "structure", structureId }, typeValue: { enabled } } });
+		}
 	}
 	private removeDeferredEffects(sourceIds: ReadonlySet<string>, ownerId: string): void {
 		this.deferredEffects = this.deferredEffects.filter(effect => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
@@ -842,12 +855,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const installedEffects = [
 			...targetEntity.getItemEffects(),
 			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+			...targetEntity.getPendingActionModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
 			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
 			...this.deferredEffects.filter(effect => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map(effect => ({ itemId: effect.sourceId, order: effect.sourceOrder })),
 		];
 		const combination = validateItemCombination(item, installedEffects, new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
 		targetEntity.removeTemporalModifiers(combination.removeItemIds)
+		targetEntity.removePendingActionModifiers(combination.removeItemIds)
 		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
 		this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()))
 		this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget)
@@ -896,6 +911,16 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (isStructureLifecycleTemplate(effect)) {
 				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
 				this.installStructureLifecycle(actor, item, effect, target.position);
+			} else if (effect instanceof EffectModifyForce) {
+				if (!targetEntity) throw new Error("Action modifiers require an entity target");
+				targetEntity.addPendingActionModifier(createActionModifier({
+					id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+					action: "force",
+					operation: "scale",
+					factor: effect.factor,
+					sourceId: item.id,
+					sourceOrder: itemOrder(item),
+				}));
 			} else if (isTemporalModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Temporal modifiers require an entity target");
 				const targetId = String(targetEntity.getId());

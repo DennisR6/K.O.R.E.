@@ -5,6 +5,7 @@ import { migrateStructureSettings } from "./structures.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import type { ItemDocument } from "../item/types.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { createActionModifier } from "../engine/contracts/actionModifier.js";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {
@@ -30,11 +31,28 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 	const copy = structuredClone(settings) as T;
 	copy.items = copy.items.map(migrateItemDocument);
 	copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
-	copy.players = copy.players.map(player => ({
-		...player,
-		effects: (player.effects ?? []).map(migrateFullEffectSettings),
-		...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition"].includes(effect.type as string)) } : {}),
-	}));
+	copy.players = copy.players.map(player => {
+		const historicalActionModifiers = (player.itemEffects ?? []).flatMap((effect, index) => {
+			if (effect.type !== "modifyForce") return [];
+			const factor = effect.typeValue.factor;
+			if (typeof factor !== "number") throw new Error("Historical modifyForce effect requires a numeric factor");
+			return [createActionModifier({
+				id: `${player.id}:action-modifier:${index}`,
+				action: "force",
+				operation: "scale",
+				factor,
+				remainingUses: 1,
+				sourceId: effect.itemId,
+				sourceOrder: effect.order,
+			})];
+		});
+		return {
+			...player,
+			effects: (player.effects ?? []).map(migrateFullEffectSettings),
+			...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition", "modifyForce"].includes(effect.type as string)) } : {}),
+			...(historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...(player.pendingActionModifiers ?? []), ...historicalActionModifiers] } : {}),
+		};
+	});
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
 	if (copy.environmentalMechanics) copy.environmentalMechanics = copy.environmentalMechanics.map(mechanic => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });

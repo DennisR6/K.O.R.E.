@@ -36,3 +36,25 @@ test("the migration boundary lowers historical Switch documents and drops applie
 	const settings: any = { players: [{ itemEffects: [{ type: "swapPosition", typeValue: {} }], effects: [] }], items: [item], effects: [], mapBoundarys: [] };
 	expect(migrateGameSettingsEffects(settings).players[0]!.itemEffects).toEqual([]);
 });
+
+test("the migration boundary moves historical modifyForce state into pending action modifiers", () => {
+	const settings: any = {
+		players: [{ id: "actor-1", itemEffects: [{ type: "modifyForce", typeValue: { factor: 1.5 }, itemId: "power-dash", order: 0 }], effects: [] }],
+		items: [],
+		effects: [],
+		mapBoundarys: [],
+	};
+
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.itemEffects).toEqual([]);
+	expect(migrated.players[0]!.pendingActionModifiers).toEqual([{
+		schemaVersion: 1,
+		id: "actor-1:action-modifier:0",
+		action: "force",
+		operation: "scale",
+		factor: 1.5,
+		remainingUses: 1,
+		sourceId: "power-dash",
+		sourceOrder: 0,
+	}]);
+});

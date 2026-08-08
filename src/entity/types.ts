@@ -6,6 +6,7 @@ import type { InventoryItem } from "../item/types.js";
 import type { ItemEffectSettings } from "../effects/types.js";
 import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
 import { validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
+import { validateActionModifier, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -72,6 +73,7 @@ export interface PlayerSettings {
 	inventory: InventoryItem[]
 	itemEffects?: ItemEffectSettings[]
 	temporalModifiers?: TemporalModifierSettings[]
+	pendingActionModifiers?: ActionModifierSettings[]
 	numericThresholds?: NumericThresholdBinding[]
 }
 
@@ -83,6 +85,7 @@ export function validatePlayerMass(mass: number): void {
 export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): PlayerSettings {
 	validateNumericThresholdBindings(overrides.numericThresholds ?? [])
 	for (const modifier of overrides.temporalModifiers ?? []) validateTemporalModifier(modifier)
+	for (const modifier of overrides.pendingActionModifiers ?? []) validateActionModifier(modifier)
 	const mass = overrides.mass ?? 1;
 	validatePlayerMass(mass);
 	return {
@@ -107,6 +110,7 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
 		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 		...(overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {}),
+		...(overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {}),
 		numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings()),
 	};
 }

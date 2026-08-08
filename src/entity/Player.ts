@@ -17,6 +17,7 @@ import type { AssetList } from "../assetManager/assets/assetRegistry.js";
 import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
+import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 
 
 /**
@@ -55,6 +56,7 @@ export class Player implements IEntity {
 	private items: InventoryItem[] = []
 	private itemEffects: ItemEffectSettings[] = []
 	private temporalModifiers: TemporalModifierSettings[] = []
+	private pendingActionModifiers: ActionModifierSettings[] = []
 	private numericThresholds: NumericThresholdBinding[] = []
 	private numericEffectDispatcher: ((effect: EngineEffectSettings) => void) | undefined
 
@@ -98,6 +100,8 @@ export class Player implements IEntity {
 		this.itemEffects = (settings.itemEffects ?? []).map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) }))
 		for (const modifier of settings.temporalModifiers ?? []) validateTemporalModifier(modifier)
 		this.temporalModifiers = structuredClone(settings.temporalModifiers ?? [])
+		for (const modifier of settings.pendingActionModifiers ?? []) validateActionModifier(modifier)
+		this.pendingActionModifiers = structuredClone(settings.pendingActionModifiers ?? [])
 		validateNumericThresholdBindings(settings.numericThresholds ?? [])
 		this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings())
 		this.effectAlways = []
@@ -276,6 +280,7 @@ export class Player implements IEntity {
 			inventory: this.items.map(item => ({ ...item })),
 			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 			...(this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {}),
+			...(this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {}),
 			...(this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}),
 		}
 	}
@@ -331,6 +336,21 @@ export class Player implements IEntity {
 	}
 	public removeTemporalModifiers(sourceIds: ReadonlySet<string>): void {
 		this.temporalModifiers = this.temporalModifiers.filter(modifier => !modifier.sourceId || !sourceIds.has(modifier.sourceId))
+	}
+	public addPendingActionModifier(modifier: ActionModifierSettings): void {
+		validateActionModifier(modifier)
+		this.pendingActionModifiers.push(structuredClone(modifier))
+	}
+	public getPendingActionModifiers(): ActionModifierSettings[] { return structuredClone(this.pendingActionModifiers) }
+	public applyPendingActionModifiers(input: AcceptedForceInput): AcceptedForceInput {
+		if (this.pendingActionModifiers.length === 0) return input;
+		return applyActionModifiers(input, this.pendingActionModifiers)
+	}
+	public consumePendingActionModifiers(): void {
+		this.pendingActionModifiers = consumeActionModifiers(this.pendingActionModifiers)
+	}
+	public removePendingActionModifiers(sourceIds: ReadonlySet<string>): void {
+		this.pendingActionModifiers = this.pendingActionModifiers.filter(modifier => !modifier.sourceId || !sourceIds.has(modifier.sourceId))
 	}
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
 		switch (trigger) {

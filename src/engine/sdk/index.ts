@@ -59,3 +59,5 @@ export { advanceStructureLifecycle, createStructureLifecycle, createStructureLif
 export type { StructureLifecycleDurationUnit, StructureLifecycleSettings, StructureLifecycleStructure, StructureLifecycleTemplate } from "../contracts/structureLifecycle.js";
 export { advanceDeferredEffect, createDeferredEffect, createDeferredEffectTemplate, DEFERRED_EFFECT_DURATION_UNITS, DEFERRED_EFFECT_SCHEMA_VERSION, validateDeferredEffect, validateDeferredEffectTemplate } from "../contracts/deferredEffect.js";
 export type { DeferredEffectDurationUnit, DeferredEffectSettings, DeferredEffectTemplate } from "../contracts/deferredEffect.js";
+export { applyActionModifiers, consumeActionModifiers, createActionModifier, createActionModifierTemplate, validateActionModifier, ACTION_MODIFIER_SCHEMA_VERSION } from "../contracts/actionModifier.js";
+export type { AcceptedForceInput, ActionModifierSettings, ActionModifierTemplate } from "../contracts/actionModifier.js";

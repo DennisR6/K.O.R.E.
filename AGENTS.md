@@ -185,6 +185,9 @@ After every change, check whether this guide still reflects the implementation a
   Effect IDs.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; Mini-Wall lowers to a generic timed canonical rectangle lifecycle and retains expired structures as dormant entries.
+  Power-Dash lowers `modifyForce` into the generic entity-owned
+  `pendingActionModifiers` contract and is consumed once at the accepted-shot
+  force boundary; Anker remains unqualified and is not migrated by that slice.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;

@@ -250,7 +250,7 @@ export function resolveMysteryBoxReward(options: MysteryBoxRewardOptions = {}): 
 	// The whole pool is validated, not just the drawn entry: an unknown or
 	// recursive entry is rejected even if the current seed never selects it.
 	for (const itemId of pool) validateMysteryBoxReward(itemId, options);
-	const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 100000);
+	const seed = options.seed ?? 0;
 	const index = Math.abs(seed) % pool.length;
 	return pool[index]!;
 }
@@ -290,7 +290,7 @@ export function generateRandomMapPickupPosition(worldSize: { x: number; y: numbe
 	const maxX = Math.max(minX + 1, worldSize.x - padding - 40);
 	const minY = padding;
 	const maxY = Math.max(minY + 1, worldSize.y - padding - 40);
-	const rng = seed !== undefined ? Math.abs(seed) : Math.floor(Math.random() * 100000);
+	const rng = Math.abs(seed ?? 0);
 	const x = minX + (rng % Math.floor(maxX - minX + 1));
 	const y = minY + (Math.floor(rng / 7) % Math.floor(maxY - minY + 1));
 	return { x, y, w: 40, h: 40 };
