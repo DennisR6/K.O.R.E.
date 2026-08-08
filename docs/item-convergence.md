@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked after commit: `8be3c9a refactor(items): converge delayed mine on deferred effects`
+Last reranked after commit: `3e30215 refactor(items): converge magnet on entity force movement`
 
 Repository state: clean / qualified for the completed Delayed Mine slice.
 
-CocoIndex state: refreshed after the baseline commit; current index contains 718 files and 7,070 chunks.
+CocoIndex state: refreshed after the baseline commit; current index contains 720 files and 7,107 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -26,6 +26,7 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 | Freeze-Shot | `TemporalModifier` -> `movement.scale-speed` | E | Persistent stable entity target and deterministic turn expiry. |
 | Mini-Wall | `StructureLifecycle` -> canonical dynamic Structure | E | Timed participation expiry retains the dormant structure. |
 | Delayed Mine | `DeferredEffectSettings` -> `schedule.due` -> `movement.apply-force-field` | E | Handler-owned deterministic tick lifecycle, stable position target, and shared predefined dispatcher. |
+| Magnet | Stable selected entity + canonical origin -> `movement.apply-force-to-entity` -> shared predefined dispatcher -> `MovementSystem` | E | Entity-scoped radial force; no unrelated in-range entity mutation; legacy `EffectMagnet` path removed. |
 
 ## Current Ranking
 
@@ -33,24 +34,22 @@ Already-converged Items are excluded from this active ranking.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Magnet | B | Stable entity target, movement commands, `movement.apply-force-field`, shared dispatcher | Entity-filtered or entity-scoped force field; the current position-wide field affects every active entity in range | High: removes `EffectMagnet` and the Handler branch | Medium | Recommended next Item |
-| 2 | Switch | B | Stable entity targets, `transform.set-position`, ordered `effect.composition` | Atomic read-before-write multi-entity transform | Medium-high: removes `EffectSwapPosition` and the Handler branch | Medium | Strong second candidate |
-| 3 | Wunderkiste | D | Item economy, seeded draws, stable actor identity, scheduling concepts | Reward-pool and inventory-grant semantics remain KORE content meaning | Low | Low if retained; risky to generalize | Retain as KORE-specific |
-| 4 | Anker | F | `EffectModifyForce`; `movement.scale-speed` is only an approximation | Accepted-action force modifier | Low currently; no live production consumer | High | Defer |
-| 5 | Power-Dash | F | Same potential primitives as Anker | Accepted-action force modifier | Low currently; no live production application | High | Defer with Anker |
-| 6 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer |
-| 7 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Retain until input policy evolves |
-| 8 | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Retain as shot-policy semantic |
+| 1 | Switch | B | Stable entity targets, `transform.set-position`, ordered `effect.composition` | Atomic read-before-write multi-entity transform | Medium-high: removes `EffectSwapPosition` and the Handler branch | Medium | Current next-order candidate; not implemented in this checkpoint |
+| 2 | Wunderkiste | D | Item economy, seeded draws, stable actor identity, scheduling concepts | Reward-pool and inventory-grant semantics remain KORE content meaning | Low | Low if retained; risky to generalize | Retain as KORE-specific |
+| 3 | Anker | F | `EffectModifyForce`; `movement.scale-speed` is only an approximation | Accepted-action force modifier | Low currently; no live production consumer | High | Defer |
+| 4 | Power-Dash | F | Same potential primitives as Anker | Accepted-action force modifier | Low currently; no live production application | High | Defer with Anker |
+| 5 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer |
+| 6 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Retain until input policy evolves |
+| 7 | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Retain as shot-policy semantic |
 
 ## Remaining Item Inventory
 
-The eight remaining Items below, together with the four completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
+The seven remaining Items below, together with the five completed Items above, are the complete official catalog from `createOfficialItemLoader()`.
 
 | Item | Production consumer | Current runtime path | Target / phase | Lifecycle/state | Reusable primitives | Gap / classification |
 |------|---------------------|----------------------|----------------|-----------------|---------------------|---------------------|
 | Anker | No live force application; helper and runtime factory only | Declarative `modifyForce` -> `EffectModifyForce`; `applyAnkerForce()` is a helper | Self / Item phase; intended next accepted shot | Factor `0.5`; declared two turns, but the runtime effect has no countdown | Possible `TemporalModifier` plus movement command, but not exact input semantics | Missing accepted-action force modifier; F |
 | Power-Dash | Declared in the canonical playable match, but no live force application | Declarative `modifyForce` -> `EffectModifyForce`; `applyPowerDashForce()` is a helper | Self / Item phase; intended next accepted shot | Factor `1.5`; instant declaration | Same as Anker; `movement.scale-speed` would be only a post-impulse approximation | Missing accepted-action force modifier; F |
-| Magnet | `GameHandler.applyItemEffects()` directly mutates the selected target velocity | Declarative `magnet` -> `EffectMagnet` -> direct `applyToVelocity()` branch | Entity / Item phase | Immediate attraction toward actor, range-limited; no persistent state | Stable entity target, movement commands, `movement.apply-force-field`, predefined dispatcher | Current force field is position-wide, not selected-entity scoped; B |
 | Durchlässigkeit | No `PhysicsSystem` collision-filter consumer | Declarative `ghostMode` -> `EffectGhostMode`; flag is stored and serialized | Self / Item phase | Two-turn `shouldIgnoreCollision()` state | Temporal lifetime shape only | Requires collision filter/category semantics; participation is not equivalent; F |
 | Switch | `GameHandler.applyItemEffects()` captures both positions and writes both entities | Declarative `swapPosition` -> `EffectSwapPosition` plus direct Handler mutation | Ally entity / Item phase | Instant atomic position exchange | Stable entity targets, transform commands, ordered composition | Requires generic read-before-write atomic multi-target transform; B |
 | Jägermeister-Elixier | No `UiSystem` selection-lock check | Declarative `selectionLock` -> `EffectSelectionLock`; state is stored and serialized | Enemy entity / Item phase | Two-turn lock flag | Turn lifetime only | Requires KORE input-selection policy; F |
@@ -61,38 +60,35 @@ The eight remaining Items below, together with the four completed Items above, a
 
 - The official catalog is authored in `src/item/officialItems.ts` and loaded by `createOfficialItemLoader()`.
 - The production Item boundary is `GameHandler.useItem()` and `applyItemEffects()` in `src/engine/Handler.ts`.
-- `movement.apply-force-field` is defined in `src/engine/sdk/movementCapability.ts` and currently targets a position, applying to every active entity within range.
+- `movement.apply-force-field` remains the area-wide Delayed Mine command; `movement.apply-force-to-entity` is the explicit selected-entity command used by Magnet.
 - `transform.set-position` is defined in `src/engine/sdk/transformCapability.ts`; `effect.composition` is ordered but does not provide read-before-write binding.
 - `participation.*` controls physics/drawing participation and must not be treated as Ghost Mode collision filtering.
 - The gameplay qualification suite intentionally keeps `effect-disappears-after-use` visible for incomplete Item paths rather than promoting them to qualified behavior.
 
 ## Recommended Next Item
 
-Recommended next Item: **Magnet**
+Recommended next-order Item: **Switch**
 
-Reason: Magnet has a live production consumer and the newly qualified force-field language covers its deterministic force calculation. Only the selected-entity targeting semantics remain to be made generic. This avoids inventing an accepted-action framework for Anker, Power-Dash, or Vodka-Zero and avoids the larger collision-filter gap in Ghost Mode.
+Reason: Magnet is complete. The refreshed repository-backed ranking now places Switch first because its existing atomic swap behavior is bounded by one generic read-before-write transform semantic. Switch is ranked only; it was not implemented in this checkpoint.
 
-Expected lowering:
+Expected lowering for the next ranked candidate:
 
 ```text
 KORE target validation
--> stable actor position plus stable selected entity target
--> entity-filtered movement.apply-force-field
+-> stable entity targets
+-> atomic read-before-write transform command
 -> shared predefined dispatcher
 ```
 
-Expected missing primitive: an entity-scoped or entity-filtered `movement.apply-force-field`. The existing position-wide command must not be reused unchanged because it affects unrelated active entities in range.
+Expected missing primitive: an atomic multi-target transform with current-position capture before either write. Naïve sequential `transform.set-position` composition is insufficient.
 
 Required characterization:
 
-- Exact single-target attraction behavior.
-- No effect on unrelated entities inside the radius.
-- Coincident-position and range-boundary behavior.
-- Active/inactive target validation.
-- Deterministic velocity mutation.
-- Snapshot and replay continuity.
-- Interaction ordering with other movement effects.
-- Removal of the Magnet-specific runtime branch after migration.
+- Both source positions are captured before mutation.
+- The two active entities exchange positions exactly once.
+- Inactive and self targets are rejected.
+- Stable entity IDs survive snapshot and replay.
+- Intermediate-state validity is not exposed to collision or validation code.
 
 ## Final Drift Audit
 
