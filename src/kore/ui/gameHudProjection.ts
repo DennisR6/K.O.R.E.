@@ -15,6 +15,7 @@ export interface KoreHudProjection {
 	turn: { number: number; activeTeam: number; phase: RulePhase; engineState: GameState; selectedActorId: string | null; aimAngle: number | null; power: number };
 	inventory: KoreHudItemProjection[];
 	match: { result?: MatchResult; inputLocked: boolean; waiting: boolean; paused: boolean };
+	aiThinking: boolean;
 	guidance: KoreHudWorldGuidance;
 	rejection?: string;
 }
@@ -29,6 +30,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	const aimAngle = input?.aimAngle ?? (input?.start && length >= 1 ? ((Math.atan2(dy, dx) * 180 / Math.PI + 180) % 360 + 360) % 360 : null);
 	const power = input?.chargePower ?? (input?.start ? Math.min(length / 10, 10) : 0);
 	const result = handler.getMatchResult();
+	const aiThinking = (state === GameState.Your_turn || state === GameState.Opponents_turn) && handler.getSystems().some(system => typeof (system as { isAiThinking?: unknown }).isAiThinking === "function" && (system as unknown as { isAiThinking: () => boolean }).isAiThinking());
 	const activeMarkers = (state === GameState.Your_turn || state === GameState.Opponents_turn)
 		? handler.getEntityManager().getEntities().filter(entity => !entity.isDead() && entity.getTeam().includes(rule.activeTeam)).map(entity => ({ ...entity.getPos(), radius: entity.getBounds().x }))
 		: [];
@@ -38,6 +40,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 		turn: { number: rule.turnNumber, activeTeam: rule.activeTeam, phase: rule.phase, engineState: state, selectedActorId: selectedActorId ?? null, aimAngle, power },
 		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => ({ itemId: item.itemId, remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn })),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
+		aiThinking,
 		guidance: { activeMarkers, ...(aimPreview ? { aimPreview } : {}) },
 		...(rejection ? { rejection: rejection.replace(/[\r\n]+/g, " ").slice(0, 160) } : {}),
 	};

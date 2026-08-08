@@ -41,6 +41,7 @@
     "kore.ui.hud.resume": "Fortsetzen",
     "kore.ui.hud.none": "Keine",
     "kore.ui.hud.waiting": "Warte auf Gegner/Server",
+    "kore.ui.hud.aiThinking": "Schwieriger Zug - die KI denkt noch nach...",
     "kore.ui.hud.turn": "Team {team} | {phase} | Zug {turn}",
     "kore.ui.hud.actor": "Figur: {actor}",
     "kore.ui.hud.aim": "Winkel: {aim}",

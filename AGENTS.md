@@ -259,6 +259,10 @@ After every change, check whether this guide still reflects the implementation a
   1,200-tick simulation default.
 - `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
   `decisionLimits`) and `validateAiSettings`.
+- `src/ai/worker/`: production browser Worker protocol, host lifecycle,
+  deterministic compute, provenance validation, responsiveness metrics, and
+  synchronous fallback boundary. It restores canonical snapshots and returns
+  AI intent only; browser integration is qualified for local AI scenes.
 - `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
   skips the item phase, submits one legal shot per physics phase through
   `AiTurnEmitter`, and implements the passive `IMouse` contract so the result
@@ -460,6 +464,9 @@ After every change, check whether this guide still reflects the implementation a
 - `scripts/profileAiDecisionStability.ts`: single-seed experimental profiler
   that compares Hard AI candidate selections at multiple simulation horizons
   against the current 1,200-tick reference without changing production AI.
+- `scripts/profileAiWorker.ts`: non-production worker parity and boundary
+  profiler for canonical snapshot reconstruction, transfer overhead, and
+  prepared Hard AI intent.
 - `scripts/performanceBaseline.ts`: explicit committed-baseline checker and
   updater backed by the aggregate profiler. `test:performance` never updates
   baselines; only `performance:update` does.

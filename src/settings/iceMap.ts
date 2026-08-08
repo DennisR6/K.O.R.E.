@@ -6,7 +6,8 @@ import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js
 import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { SHAPE } from "../physics/physics.js";
-import { arrangeInGrid, type SettingsMap } from "./settings.js";
+import { arrangeInGrid } from "./gridArrangement.js";
+import type { SettingsMap } from "./settings.js";
 import type { PlayerSettings } from "../entity/types.js";
 
 const debug = true

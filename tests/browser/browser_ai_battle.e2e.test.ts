@@ -115,7 +115,35 @@ test("autonomous AI battle progresses without a player pause surface", async () 
 		}
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
-	});
+});
+
+test("production Hard AI worker overlaps playback without blocking the event loop", async () => {
+	await ensureBrowserBuild();
+	const server = await startTestServer();
+	const browser = await launchBrowser();
+	try {
+		const page = await openPage(browser, server.url);
+		await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
+		await clickWorld(page, 400, 100);
+		await clickWorld(page, 249, 368);
+		await clickWorld(page, 400, 100);
+		await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
+		await waitFor(async () => (await page.evaluate(() => (window as any).game?.aiWorkerMetrics?.validResponseCount ?? 0)) > 0, 60_000, 100, "validated production worker response");
+		const metrics = await page.evaluate(() => (window as any).game?.aiWorkerMetrics ?? null);
+		expect(metrics?.workerPathAvailable).toBe(true);
+		expect(metrics?.requestCount).toBeGreaterThan(0);
+		expect(metrics?.validResponseCount).toBeGreaterThan(0);
+		expect(Number.isFinite(metrics?.workerComputeMs)).toBe(true);
+		expect(Number.isFinite(metrics?.playerVisibleDurationMs)).toBe(true);
+		expect(Number.isFinite(metrics?.precomputeHeadroomMs)).toBe(true);
+		expect(Number.isFinite(metrics?.postTurnWaitMs)).toBe(true);
+		expect(metrics?.maxEventLoopGapMs).toBeLessThan(500);
+	} finally {
+		await closeBrowser(browser);
+		await server.stop();
+	}
+	expect(server.isAlive()).toBe(false);
+});
 
 test("autonomous AI battle ignores menu coordinates while it is running", async () => {
 		await ensureBrowserBuild();
