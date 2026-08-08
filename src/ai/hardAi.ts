@@ -10,6 +10,9 @@ interface ScoredChoice {
 	aimedAtEnemy: boolean;
 }
 
+/** Maximum simulation horizon used only while ranking speculative Hard AI candidates. */
+export const HARD_AI_SPECULATIVE_MAX_TICKS = 300 as const;
+
 export class HardAi implements IAiTurnProducer {
 	public computeTurn(handler: GameHandler, aiSettings: AiSettings): AiDecision | undefined {
 		// Greedy bounded search with a seed-dependent tie-break: candidates
@@ -70,7 +73,7 @@ export class HardAi implements IAiTurnProducer {
 					simCount++;
 					let score = 0;
 					try {
-						const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power);
+						const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
 
 						// Evaluate finalState from simulation
 						for (const pSnapshot of sim.finalState) {

@@ -213,8 +213,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// 	 * @param power - Wie stark ist der Stoß?
 	// 	 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
 	// 	 */
-	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
+	public simulateTurn(actorId: string, angle: number, power: number, options: { maxTicks?: number } = {}): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
+		const maxTicks = options.maxTicks ?? 1200
+		if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new Error("Simulation maxTicks must be a positive safe integer")
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
 		// Autonomous drivers are input adapters, not physics participants.  A
 		// simulated shot must not let an AI submit nested turns in its clone.
@@ -223,11 +225,16 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
 		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
-		return g.resolveTurn({ actorId, angle, power })
+		return g.resolveTurnWithTickBudget({ actorId, angle, power }, maxTicks)
 	}
 
 	/** Resolves and commits one turn on this handler. Use this on the authoritative server. */
 	public resolveTurn({ actorId, angle, power }: IInput): TurnPacket {
+		return this.resolveTurnWithTickBudget({ actorId, angle, power }, 1200)
+	}
+
+	/** Shared resolution implementation; callers use the authoritative default or a narrow speculative budget. */
+	private resolveTurnWithTickBudget({ actorId, angle, power }: IInput, maxTicks: number): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot resolve further turns")
 		const actor = this.validateActorForAction(actorId);
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
@@ -240,7 +247,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.resolvingTurn = true;
 		let frames = 0;
 		try {
-			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++) this.tick()
+			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < maxTicks; frames++) this.tick()
 		} finally {
 			this.resolvingTurn = false;
 		}

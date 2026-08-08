@@ -27,6 +27,7 @@ export const sourceClassificationRules: readonly SdkMigrationEntry[] = [
 	{ path: "src/environment/", classification: "kore-sdk", owner: "KORE environmental mechanics", targetMilestone: 46, note: "Versioned declarative map mechanics and lifecycle contracts." },
 	{ path: "src/engine/ui-sdk/", classification: "engine-sdk", owner: "Engine UI SDK", targetMilestone: null, note: "Generic renderer-neutral UI composition." },
 	{ path: "src/engine/audio-sdk/", classification: "engine-sdk", owner: "Engine Audio SDK", targetMilestone: null, note: "Generic renderer/device-neutral audio capabilities." },
+	{ path: "src/performance/", classification: "adapter", owner: "Performance contract tooling", targetMilestone: null, note: "Versioned baseline schema and pure regression comparison for repository performance contracts." },
 	{ path: "src/kore/sdk/", classification: "kore-sdk", owner: "KORE SDK", targetMilestone: null, note: "KORE authoring APIs composed from Engine SDK primitives." },
 	{ path: "src/kore/ui/", classification: "kore-sdk", owner: "KORE UI SDK", targetMilestone: 31, note: "KORE vocabulary and UI projections." },
 	{ path: "src/kore/audio.ts", classification: "kore-sdk", owner: "KORE Audio", targetMilestone: 33, note: "KORE semantic audio vocabulary." },

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "hard-ai-ice-seed-1": {
+      "metadata": {
+        "map": "ice-map-v1",
+        "seed": 1,
+        "difficulty": "hard-vs-hard",
+        "candidateLimits": "30 simulations, 10 angles, 3 powers",
+        "simulationHorizon": 300,
+        "description": "Representative deterministic post-optimization Hard AI battle"
+      },
+      "metrics": {
+        "matchTimeMs": {
+          "kind": "wall-clock",
+          "baseline": 34213,
+          "maxRegressionPercent": 20
+        },
+        "candidateSimulationMs": {
+          "kind": "wall-clock",
+          "baseline": 28544,
+          "maxRegressionPercent": 20
+        },
+        "avgDecisionTimeMs": {
+          "kind": "wall-clock",
+          "baseline": 1784,
+          "maxRegressionPercent": 20
+        },
+        "speculativeTicks": {
+          "kind": "work",
+          "baseline": 138774,
+          "maxRegressionPercent": 5
+        },
+        "acceptedTicks": {
+          "kind": "work",
+          "baseline": 17221,
+          "maxRegressionPercent": 0
+        },
+        "candidateCount": {
+          "kind": "work",
+          "baseline": 480,
+          "maxRegressionPercent": 0
+        },
+        "collisionChecks": {
+          "kind": "work",
+          "baseline": 40159843,
+          "maxRegressionPercent": 5
+        },
+        "physicsTicks": {
+          "kind": "work",
+          "baseline": 173248,
+          "maxRegressionPercent": 0
+        },
+        "simulationCount": {
+          "kind": "work",
+          "baseline": 496,
+          "maxRegressionPercent": 0
+        }
+      }
+    }
+  }
+}

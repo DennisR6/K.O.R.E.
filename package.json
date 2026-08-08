@@ -27,6 +27,8 @@
     "test:soak": "bun run test:fuzz && bun run test:physics-fuzz",
     "test:soak:full": "bun run test:fuzz:soak && bun run test:physics-fuzz:soak && bun run test:maps:matrix && bun run test:gameplay-matrix && bun run test:gameplay-tournament",
     "test:fast": "bun run test:unit && bun run test:integration:fast && bun run test:qualification:fast",
+    "test:performance": "bun run scripts/performanceBaseline.ts check",
+    "performance:update": "bun run scripts/performanceBaseline.ts update",
     "test:release": "npx tsc --noEmit && bun run build && bun run test:fast && bun run test:integration && bun run test:qualification && bun run test:ai-replay && bun run test:browser:smoke && bun run examples:typecheck && bun run examples:verify && bun run desktop:build",
     "test:ai-replay": "bun test --timeout 120000 tests/ai_replay_lifecycle.test.ts",
     "test:fuzz": "bun test tests/ai_match_fuzz.test.ts",

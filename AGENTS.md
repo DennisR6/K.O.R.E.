@@ -68,6 +68,10 @@ This bidirectional lifecycle guarantees that runtime state is always reproducibl
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
 - `sdk/` contains generated standalone ESM runtime bundles and TypeScript declarations for the generic Engine, UI, Audio, Presentation, and KORE SDK entry points. Regenerate it with `bun run sdk:build`; do not edit generated files manually.
 - `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
+- `docs/performance-testing.md` documents the committed performance baseline
+  contract; `performance/baselines.json` is checked by
+  `bun run test:performance` and updated only by the explicit
+  `bun run performance:update` command.
 - `docs/item-convergence.md` is the durable current Item Convergence inventory and ranking. After each completed Item migration, refresh CocoIndex, rerank remaining official Items from repository evidence, update that document with the baseline commit, and select the next Item only from the refreshed ranking.
 - `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
 - `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph. `package.json` plus the tracked `bun.lock` describe the active dependency graph. Use Bun; do not casually run npm install or regenerate either lock.
@@ -250,7 +254,9 @@ After every change, check whether this guide still reflects the implementation a
   (`decisionLimits`) and resolves equal-scoring candidates through its seed
   (seeded tie-break plus a rotated fallback angle grid), keeping killing
   moves preferred and non-killing ties aimed at an enemy, so every battle
-  seed plays a different game while matches keep terminating.
+  seed plays a different game while matches keep terminating. Hard AI passes
+  its explicit 300-tick speculative horizon without changing the authoritative
+  1,200-tick simulation default.
 - `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
   `decisionLimits`) and `validateAiSettings`.
 - `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
@@ -448,6 +454,15 @@ After every change, check whether this guide still reflects the implementation a
   proper MIME types.
 - `scripts/listAssets.ts`: diagnostic tool that checks size and MIME type of
   generated JSON assets under `public/assets/json/`.
+- `scripts/profileAiBattle.ts`: aggregate headless AI-vs-AI performance
+  profiler for candidate counts, speculative/accepted ticks, physics checks,
+  and branch setup attribution; it does not change gameplay semantics.
+- `scripts/profileAiDecisionStability.ts`: single-seed experimental profiler
+  that compares Hard AI candidate selections at multiple simulation horizons
+  against the current 1,200-tick reference without changing production AI.
+- `scripts/performanceBaseline.ts`: explicit committed-baseline checker and
+  updater backed by the aggregate profiler. `test:performance` never updates
+  baselines; only `performance:update` does.
 
 ### Networking and utilities
 
@@ -731,7 +746,9 @@ very low speeds; despite its comments, it does not apply friction itself.
 5. `EmitterSystem` sends the shot and changes state to `Waiting_for_server`.
 6. Local `GameEmitter` calls `simulateTurn()` and then `tickTurn()`.
 7. `simulateTurn()` serializes and clones the engine, applies the impulse, and
-   ticks until static or 1,200 frames.
+   ticks until static or its explicit max-tick budget; the default and
+   authoritative path remain 1,200 frames, while Hard AI speculation passes
+   300.
 8. `tickTurn()` applies the live impulse and starts playback for that frame
    count.
 9. `PlaybackSystem` hard-syncs positions and velocities to the simulated final
@@ -853,6 +870,12 @@ Treat registry order changes as data-contract changes.
   generated base64 asset JSON.
 
 ## Testing Guidance
+
+Committed performance baselines live in `performance/baselines.json` and are
+checked with `bun run test:performance`. Do not update committed performance
+baselines merely to make a failing performance test pass. A baseline increase
+requires an explicit explanation of why the additional cost is intentional or
+unavoidable. Prefer fixing regressions over moving the baseline.
 
 For each commit-sized checklist task, run the named focused test file(s), nearby
 subsystem coverage, and TypeScript validation:

@@ -106,6 +106,7 @@ const qualificationPatterns = [
 	"tests/environmental_mechanics.test.ts",
 	"tests/physics_qualification_gate.test.ts",
 	"tests/physics_snapshot_continuity.test.ts",
+	"tests/hard_ai_speculative_budget.test.ts",
 ];
 
 const qualificationFastPatterns = [
@@ -117,6 +118,7 @@ const qualificationFastPatterns = [
 	"tests/environmental_mechanics.test.ts",
 	"tests/lifetime.test.ts",
 	"tests/physics_snapshot_continuity.test.ts",
+	"tests/hard_ai_speculative_budget.test.ts",
 	"tests/structure_identity_migration.test.ts",
 	"tests/system_settings_roundtrip.test.ts",
 	"tests/temporal_modifier.test.ts",
