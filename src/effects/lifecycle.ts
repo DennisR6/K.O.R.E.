@@ -35,7 +35,6 @@ export const ITEM_EFFECT_LIFECYCLE: Readonly<Record<ItemEffectType, EffectLifecy
 	[ItemEffectType.SwapPosition]: { category: "command", execution: "action", persistent: false },
 	[ItemEffectType.StructureLifecycle]: { category: "status", execution: "turn", persistent: true },
 	[ItemEffectType.GhostMode]: { category: "status", execution: "collision", persistent: true },
-	[ItemEffectType.Magnet]: { category: "command", execution: "action", persistent: false },
 	[ItemEffectType.SelectionLock]: { category: "status", execution: "turn", persistent: true },
 	[ItemEffectType.AimVariance]: { category: "modifier", execution: "action", persistent: true },
 	[ItemEffectType.TemporalModifier]: { category: "status", execution: "turn", persistent: true },

@@ -10,7 +10,7 @@ import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
-import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 export * from "./officialItemHelpers.js";
 
@@ -69,7 +69,7 @@ export const magnetItem: ItemDocument = createItem({
 	name: "Magnet",
 	description: "Attracts a targeted figure within a configured range.",
 	type: "offensive",
-	effects: [{ type: "magnet", value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
+	effects: [{ type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
 	targetType: "entity",
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 2 },
@@ -300,7 +300,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
 	validator.registerEffectType("modifyForce");
 	validator.registerEffectType("ghostMode");
-	validator.registerEffectType("magnet");
+	validator.registerEffectType(MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID);
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("deferredEffect");
 	validator.registerEffectType("structureLifecycle");

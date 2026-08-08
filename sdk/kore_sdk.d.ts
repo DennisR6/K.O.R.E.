@@ -143,6 +143,10 @@ export declare function resolveRuntimeItemEffects(...args: any[]): any;
 export declare function applyRuntimeForceEffects(...args: any[]): any;
 export declare function composeItemEffects(...effects: any[]): any;
 export declare function createItem(...args: any[]): any;
+type KoreEngineItemEffectSettings = {
+    type: string;
+    typeValue: Record<string, unknown>;
+};
 type SerializableEffect = {
     toSettings(): any;
 };
@@ -497,7 +501,7 @@ export declare const kore: {
         readonly itemEffect: (type: any, typeValue?: Record<string, unknown>) => any;
         readonly shield: (capacity: number) => any;
         readonly freeze: (durationTurns?: number) => any;
-        readonly magnet: (strength: number, range: number) => any;
+        readonly magnet: (strength: number, range: number) => KoreEngineItemEffectSettings;
         readonly temporaryWall: (lifetimeTurns?: number) => any;
         readonly ghostMode: (durationTurns?: number) => any;
         readonly modifyForce: (multiplier: number) => any;
@@ -545,7 +549,7 @@ export declare const kore: {
             readonly swapPosition: any.SwapPosition;
             readonly structureLifecycle: any.StructureLifecycle;
             readonly ghostMode: any.GhostMode;
-            readonly magnet: any.Magnet;
+            readonly magnet: "movement.apply-force-to-entity";
             readonly selectionLock: any.SelectionLock;
             readonly aimVariance: any.AimVariance;
         };

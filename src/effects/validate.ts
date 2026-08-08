@@ -16,7 +16,7 @@ const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
-const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle, ItemEffectType.DeferredEffect] as const;
+const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle, ItemEffectType.DeferredEffect] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
@@ -118,8 +118,6 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			if (structure.role !== undefined && !["solid", "containment", "both"].includes(String(structure.role))) throw new Error("structureLifecycle role is invalid");
 			return;
 		case ItemEffectType.GhostMode: knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload"); requiredKeys(payload, ["durationTurns"], "ghostMode payload"); boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode"); return;
-		case ItemEffectType.Magnet:
-			exactKeys(payload, ["mode", "force", "range"], "magnet payload"); if (payload.mode !== "attract" && payload.mode !== "repel") throw new Error("magnet mode must be attract or repel"); finiteNonNegative(payload.force, "magnet force"); finitePositive(payload.range, "magnet range"); return;
 		case ItemEffectType.AimVariance:
 			knownKeys(payload, new Set(["maxVarianceDegrees", "seed", "randomState"]), "aimVariance payload"); requiredKeys(payload, ["maxVarianceDegrees"], "aimVariance payload"); finiteNonNegative(payload.maxVarianceDegrees, "aimVariance maxVarianceDegrees"); optionalSafeInteger(payload.seed, "aimVariance seed"); optionalSafeInteger(payload.randomState, "aimVariance randomState"); return;
 		case ItemEffectType.TemporalModifier:

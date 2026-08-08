@@ -1,6 +1,5 @@
 import { EffectAimVariance } from "../../effects/aimVariance.js";
 import { EffectGhostMode } from "../../effects/ghostMode.js";
-import { EffectMagnet } from "../../effects/magnet.js";
 import { EffectModifyForce } from "../../effects/modifyForce.js";
 import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
@@ -15,7 +14,6 @@ import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../..
 export type RuntimeItemEffect =
 	| EffectAimVariance
 	| EffectGhostMode
-	| EffectMagnet
 	| EffectModifyForce
 	| EffectSelectionLock
 	| EffectShield
@@ -37,8 +35,6 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
 		case ItemEffectType.GhostMode:
 			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
-		case ItemEffectType.Magnet:
-			return new EffectMagnet({ typeValue: { mode: value.mode as "attract" | "repel", force: numberValue(value, "force"), range: numberValue(value, "range") } });
 		case ItemEffectType.SelectionLock:
 			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Shield:

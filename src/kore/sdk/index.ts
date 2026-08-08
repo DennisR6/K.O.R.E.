@@ -18,7 +18,7 @@ import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import { createCollisionCommandBinding } from "../../engine/sdk/collisionCommand.js";
 import { createEngineEffectComposition } from "../../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
-import { MOVEMENT_ADD_VELOCITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
+import { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
 export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
 export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
@@ -42,6 +42,8 @@ import {
 	type KoreMatchHeader,
 	type KoreMatchOptions,
 } from "./match.js";
+
+type KoreEngineItemEffectSettings = { type: string; typeValue: Record<string, unknown> };
 import { GAME_MODE_CATALOG_SCHEMA_VERSION, getGameModeCatalogEntry, getSelectableGameModes } from "../../rules/modeCatalog.js";
 import { canonicalizeContentPackage, hashContentPackage, loadContentPackage, resolveMapDocument, validateContentPackage } from "../../content/package.js";
 export { createRuntimeItemEffect, resolveRuntimeItemEffects, applyRuntimeForceEffects, type RuntimeItemEffect } from "./itemRuntime.js";
@@ -680,9 +682,9 @@ export const kore = {
 		if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Freeze durationTurns must be a positive integer");
 		return { type: ItemEffectType.TemporalModifier, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };
 		},
-		magnet(strength: number, range: number): ItemEffectSettings {
+		magnet(strength: number, range: number): KoreEngineItemEffectSettings {
 			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
-			return { type: ItemEffectType.Magnet, typeValue: { strength, range } };
+			return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: { mode: "attract", force: strength, range } };
 		},
 			temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
 			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary structure lifetimeTurns must be a positive integer");
@@ -731,7 +733,7 @@ export const kore = {
 			swapPosition: ItemEffectType.SwapPosition,
 			structureLifecycle: ItemEffectType.StructureLifecycle,
 			ghostMode: ItemEffectType.GhostMode,
-			magnet: ItemEffectType.Magnet,
+			magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
 			selectionLock: ItemEffectType.SelectionLock,
 			aimVariance: ItemEffectType.AimVariance,
 		},

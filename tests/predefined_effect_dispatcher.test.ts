@@ -39,3 +39,32 @@ test("predefined dispatch validates the current envelope and target before mutat
 	expect(() => handler.dispatchEngineEffect({ schemaVersion: 1, type: "movement.set-velocity", target: { type: "entity", entityId: actor.getId() }, typeValue: { x: Number.NaN, y: 1 } })).toThrow("invalid");
 	expect(actor.getVel()).toEqual(before);
 });
+
+test("entity-scoped radial force dispatch mutates only its stable entity target", () => {
+	const handler = createCanonicalPlayableMatchHandler();
+	const [target, unrelated] = handler.getEntityManager().getEntities();
+	target!.setPos({ x: 110, y: 100 });
+	unrelated!.setPos({ x: 120, y: 100 });
+	target!.setVel({ x: 1, y: 2 });
+	unrelated!.setVel({ x: 3, y: 4 });
+
+	handler.dispatchEngineEffect({
+		schemaVersion: 1,
+		type: "movement.apply-force-to-entity",
+		target: { type: "entity", entityId: target!.getId() },
+		typeValue: { origin: { x: 100, y: 100 }, mode: "attract", force: 2, range: 60 },
+	});
+
+	expect(target!.getVel()).toEqual({ x: 3, y: 2 });
+	expect(unrelated!.getVel()).toEqual({ x: 3, y: 4 });
+});
+
+test("entity-scoped radial force dispatch rejects missing and inactive targets", () => {
+	const handler = createCanonicalPlayableMatchHandler();
+	const actor = handler.getEntityManager().getEntities()[0]!;
+	const command = (entityId: string) => ({ schemaVersion: 1 as const, type: "movement.apply-force-to-entity", target: { type: "entity" as const, entityId }, typeValue: { origin: { x: 100, y: 100 }, mode: "attract", force: 2, range: 60 } });
+
+	expect(() => handler.dispatchEngineEffect(command("missing"))).toThrow("Unknown entity target");
+	actor.setPhysicsEnabled(false);
+	expect(() => handler.dispatchEngineEffect(command(String(actor.getId())))).toThrow("inactive");
+});

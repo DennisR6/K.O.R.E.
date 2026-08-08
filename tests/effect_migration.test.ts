@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { migrateEffectSettings, migrateFullEffectSettings } from "../src/migrations/effects.ts";
+import { migrateEffectSettings, migrateFullEffectSettings, migrateGameSettingsEffects, migrateItemDocument } from "../src/migrations/effects.ts";
 import { validateEffectSettings, validateFullEffectSettings } from "../src/effects/validate.ts";
 import { EffectType, EffectTrigger } from "../src/effects/types.ts";
 
@@ -20,4 +20,12 @@ test("full Effect migration preserves trigger composition without moving trigger
 
 test("the migration boundary rejects unknown historical schema versions", () => {
 	expect(() => migrateEffectSettings({ schemaVersion: 2, type: "EffectType.Damage", typeValue: { damage: 5 } })).toThrow(/Unsupported historical Effect schema version/);
+});
+
+test("the migration boundary lowers historical Magnet documents and drops already-applied runtime state", () => {
+	const item = migrateItemDocument({ schemaVersion: 1, id: "magnet", name: "Magnet", type: "offensive", effects: [{ type: "magnet", value: { strength: 2, range: 100 } }], targetType: "entity", duration: { type: "instant", value: 0 }, useLimit: { perTurn: 1, perGame: 2 } });
+	expect(item.effects).toEqual([{ type: "movement.apply-force-to-entity", value: { mode: "attract", force: 2, range: 100 } }]);
+	const settings: any = { players: [{ itemEffects: [{ type: "magnet", typeValue: { mode: "attract", force: 2, range: 100 } }], effects: [] }], items: [item], effects: [], mapBoundarys: [] };
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.itemEffects).toEqual([]);
 });

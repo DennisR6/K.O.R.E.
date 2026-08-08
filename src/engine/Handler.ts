@@ -48,7 +48,7 @@ import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../ite
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
 import { createRuntimeItemEffect, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
-import { EffectMagnet } from "../effects/magnet.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectSwapPosition } from "../effects/swapPosition.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
@@ -62,6 +62,9 @@ import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } fro
 import type { LanguageCatalog } from "../i18n/language.js";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../kore/gameplayFeedback.js";
 import type { JsonValue } from "../engine/contracts/systemSettings.js";
+
+type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };
+type LoweredItemEffect = RuntimeItemEffect | EntityForceFieldItemEffect;
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -817,7 +820,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		}
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
 		if (!targetEntity) throw new Error("Item target entity not found")
-		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
+		const runtimeEffects: LoweredItemEffect[] = item.effects.map(effect => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID
+			? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) }
+			: createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
 		for (const effect of runtimeEffects) {
 			if (effect instanceof EffectSpawnTrigger) {
 				this.triggerDefinitions.require(effect.triggerId);
@@ -848,11 +853,20 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (item.effects.some(effect => effect.type === "shield")) this.feedback.record(KoreGameplayFeedbackType.Shield, this.getTurnNumber(), { actorId, data: { itemId } });
 	}
 
-	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: RuntimeItemEffect[], item: ItemDocument, resolvedItemTarget?: ResolvedEffectTarget): void {
+	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: LoweredItemEffect[], item: ItemDocument, resolvedItemTarget?: ResolvedEffectTarget): void {
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
 		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
 		for (const effect of effects) {
-			if (isDeferredEffectTemplate(effect)) {
+			if (isEntityForceFieldItemEffect(effect)) {
+				if (target.type !== "entity" || !targetEntity) throw new Error("Entity force effects require an entity target");
+				this.dispatchEngineEffect({
+					schemaVersion: 1,
+					type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+					target: { type: "entity", entityId: String(targetEntity.getId()) },
+					typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() },
+				});
+			}
+			else if (isDeferredEffectTemplate(effect)) {
 				if (!resolvedItemTarget) throw new Error("Deferred Effects require a resolved target");
 				if (resolvedItemTarget.type !== "position") throw new Error("Deferred force fields require a position target");
 				const target = { type: "position" as const, position: { ...resolvedItemTarget.position } };
@@ -872,7 +886,6 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
 				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
 			}
-			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
 			} else if (isStructureLifecycleTemplate(effect)) {
@@ -1045,6 +1058,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			if (!this.items.some(item => item.id === itemId)) throw new Error(`Seeded item draw references unknown item '${itemId}'`)
 		}
 	}
+}
+
+function isEntityForceFieldItemEffect(effect: LoweredItemEffect): effect is EntityForceFieldItemEffect {
+	return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
 }
 
 

@@ -28,7 +28,6 @@ export const enum ItemEffectType {
 	SwapPosition = "swapPosition",
 	StructureLifecycle = "structureLifecycle",
 	GhostMode = "ghostMode",
-	Magnet = "magnet",
 	SelectionLock = "selectionLock",
 	AimVariance = "aimVariance",
 	TemporalModifier = "temporalModifier",
@@ -80,7 +79,6 @@ export interface ItemEffectPayloadMap {
 	[ItemEffectType.SwapPosition]: Record<string, never>;
 	[ItemEffectType.StructureLifecycle]: { durationUnit: "turns"; duration: number; structure: Record<string, unknown> };
 	[ItemEffectType.GhostMode]: GhostModePayload;
-	[ItemEffectType.Magnet]: { mode: "attract" | "repel"; force: number; range: number };
 	[ItemEffectType.SelectionLock]: LockRotationPayload;
 	[ItemEffectType.AimVariance]: { maxVarianceDegrees: number; seed?: number; randomState?: number };
 	[ItemEffectType.TemporalModifier]: { durationUnit: "turns"; duration: number; effect: Record<string, unknown> };

@@ -1,5 +1,6 @@
 import { createItemDocument, type ItemDocument } from "./types.js";
 import { ItemValidator } from "./validate.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 
 function clone<T>(value: T): T { return structuredClone(value); }
 
@@ -18,7 +19,7 @@ export interface KoreItemInput {
 }
 
 export function sdkItemEffectTypes(): readonly string[] {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 
 /** Creates a validated declarative item document without constructing runtime effects. */

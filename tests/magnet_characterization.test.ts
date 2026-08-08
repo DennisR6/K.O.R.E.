@@ -2,6 +2,9 @@ import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { magnetItem, MAGNET_FORCE, MAGNET_RANGE } from "../src/item/officialItems.ts";
+import { RulePhase, WinCondition } from "../src/rules/types.ts";
+import { ReplayPlayer } from "../src/replay/player.ts";
+import { ReplayRecorder } from "../src/replay/recorder.ts";
 
 const ACTOR_ID = "00000000-0000-4000-8000-000000000201" as const;
 const TARGET_ID = "00000000-0000-4000-8000-000000000202" as const;
@@ -10,6 +13,7 @@ const UNRELATED_ID = "00000000-0000-4000-8000-000000000203" as const;
 function magnetHandler() {
 	const settings = createDefaultGameSettings(2, 2);
 	settings.items = [magnetItem];
+	settings.gameMode = { id: "magnet-characterization", phases: [RulePhase.Item, RulePhase.Physics], maxItemsPerTurn: 1, winCondition: WinCondition.LastTeamStanding, itemEconomy: { fixedLoadouts: [], mapPickups: [] } };
 	settings.players[0] = { ...settings.players[0]!, id: ACTOR_ID, team: [0], position: { x: 100, y: 100 } };
 	settings.players[1] = { ...settings.players[1]!, id: TARGET_ID, team: [1], position: { x: 110, y: 100 } };
 	const unrelated = {
@@ -72,4 +76,22 @@ test("Magnet has no velocity delta at zero distance and accepts the range bounda
 	const boundary = magnetHandler();
 	boundary.target.setPos({ x: boundary.actor.getPos().x + MAGNET_RANGE, y: boundary.actor.getPos().y });
 	expect(() => boundary.handler.useItem(boundary.actor.getId(), magnetItem.id, { type: "entity", entityId: boundary.target.getId() })).not.toThrow();
+});
+
+test("Magnet snapshot and replay preserve the immediate velocity result without runtime Magnet state", () => {
+	const live = magnetHandler();
+	live.handler.setRuleState({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 0 });
+	live.handler.useItem(live.actor.getId(), magnetItem.id, { type: "entity", entityId: live.target.getId() });
+	const snapshot = live.handler.toSettings();
+	const restored = new GameHandlerBuilder().defaultSystems().fromSettings(snapshot).build();
+	expect(restored.toSettings()).toEqual(snapshot);
+	expect(snapshot.players.find(player => player.id === TARGET_ID)?.itemEffects).toBeUndefined();
+
+	const replayOrigin = magnetHandler();
+	replayOrigin.handler.setRuleState({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 0 });
+	const recorder = new ReplayRecorder(replayOrigin.handler.toSettings(), 123);
+	recorder.recordItemUse(ACTOR_ID, magnetItem.id, { type: "entity", entityId: TARGET_ID });
+	const replay = new ReplayPlayer(recorder.getReplay());
+	replay.playAll();
+	expect(replay.getHandler().getEntityManager().getEntityById(TARGET_ID)?.getVel()).toEqual(live.target.getVel());
 });

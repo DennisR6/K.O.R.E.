@@ -28,8 +28,9 @@ export const engine = {
 
 export { EngineSystemRegistry, EngineWorldBuilder };
 export { EngineEffectRegistry };
-export { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID, movementSystemDefinition, registerMovementCommands, registerMovementEffect, registerMovementSystem } from "./movementCapability.js";
-export type { MovementForceFieldPayload, MovementScaleSpeedPayload, MovementVelocityPayload } from "./movementCapability.js";
+export { MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID, movementSystemDefinition, registerMovementCommands, registerMovementEffect, registerMovementSystem } from "./movementCapability.js";
+export type { MovementForceFieldPayload, MovementForceToEntityPayload, MovementScaleSpeedPayload, MovementVelocityPayload } from "./movementCapability.js";
+export { applyRadialVelocityDelta, calculateRadialVelocityDelta } from "./movementForceField.js";
 export { TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, registerTransformEffects, validateTransformTarget } from "./transformCapability.js";
 export type { TransformSetPositionPayload, TransformSetRotationPayload } from "./transformCapability.js";
 export { COUNTER_ADD_EFFECT_ID, COUNTER_CAPABILITY, COUNTER_EFFECT_IDS, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID, counterSystemDefinition, registerCounterCommands, registerCounterSystem, validateCounterEffectSettings, validateCounterTarget } from "./counterCapability.js";

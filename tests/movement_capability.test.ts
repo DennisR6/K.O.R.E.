@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineEffectRegistry, EngineSystemRegistry, MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_ID, registerMovementCommands, registerMovementEffect } from "../src/engine/sdk/index.ts";
+import { EngineEffectRegistry, EngineSystemRegistry, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_ID, applyRadialVelocityDelta, registerMovementCommands, registerMovementEffect } from "../src/engine/sdk/index.ts";
 
 test("the movement Effect declares its capability and validates its typed payload", () => {
 	const effects = registerMovementEffect(new EngineEffectRegistry());
@@ -38,4 +38,18 @@ test("movement commands validate typed velocity and speed-scale payloads", () =>
 	expect(() => effects.validate({ type: "movement.set-velocity", typeValue: { x: 1, y: 2, extra: true } })).toThrow();
 	expect(() => effects.validate({ type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 60 } })).not.toThrow();
 	expect(() => effects.validate({ type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 0 } })).toThrow();
+});
+
+test("entity-scoped force commands validate an origin and stable entity target shape", () => {
+	const effects = registerMovementCommands(new EngineEffectRegistry());
+	const valid = { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, target: { type: "entity", entityId: "target" }, typeValue: { origin: { x: 10, y: 20 }, mode: "attract", force: 2, range: 60 } };
+	expect(() => effects.validate(valid)).not.toThrow();
+	expect(() => effects.validate({ ...valid, typeValue: { ...valid.typeValue, origin: { x: 10, y: 20 }, extra: true } })).toThrow();
+	expect(() => effects.validate({ ...valid, typeValue: { ...valid.typeValue, origin: { x: Number.NaN, y: 20 } } })).toThrow();
+});
+
+test("radial movement math is generic and preserves exact zero and range boundaries", () => {
+	expect(applyRadialVelocityDelta({ x: 1, y: 2 }, { x: 0, y: 0 }, { x: 10, y: 0 }, { mode: "attract", force: 2, range: 10 })).toEqual({ x: 3, y: 2 });
+	expect(applyRadialVelocityDelta({ x: 1, y: 2 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { mode: "attract", force: 2, range: 10 })).toEqual({ x: 1, y: 2 });
+	expect(applyRadialVelocityDelta({ x: 1, y: 2 }, { x: 0, y: 0 }, { x: 11, y: 0 }, { mode: "attract", force: 2, range: 10 })).toEqual({ x: 1, y: 2 });
 });

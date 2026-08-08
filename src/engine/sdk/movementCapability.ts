@@ -7,7 +7,8 @@ export const MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity" as const;
 export const MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity" as const;
 export const MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed" as const;
 export const MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field" as const;
-export const MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID] as const;
+export const MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity" as const;
+export const MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID] as const;
 
 export function movementSystemDefinition(): EngineSystemDefinition {
 	return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
@@ -30,6 +31,10 @@ export interface MovementForceFieldPayload {
 	mode: "attract" | "repel";
 	force: number;
 	range: number;
+}
+
+export interface MovementForceToEntityPayload extends MovementForceFieldPayload {
+	origin: MovementVelocityPayload;
 }
 
 /** Registers the generic movement contract without selecting its runtime system. */
@@ -87,6 +92,22 @@ export function registerMovementCommands(registry: EngineEffectRegistry): Engine
 				if (value.mode !== "attract" && value.mode !== "repel") throw new Error("Movement force field mode must be attract or repel");
 				if (typeof value.force !== "number" || !Number.isFinite(value.force) || value.force < 0) throw new Error("Movement force field force must be finite and non-negative");
 				if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0) throw new Error("Movement force field range must be finite and positive");
+			},
+		})
+		.register({
+			id: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+			requiresCapability: [MOVEMENT_CAPABILITY],
+			targetType: "entity",
+			lifecycleCategory: "command",
+			validatePayload: payload => {
+				const value = record(payload, "Movement entity force payload");
+				exactKeys(value, ["origin", "mode", "force", "range"], "Movement entity force payload");
+				const origin = record(value.origin, "Movement entity force origin");
+				exactKeys(origin, ["x", "y"], "Movement entity force origin");
+				if (typeof origin.x !== "number" || !Number.isFinite(origin.x) || typeof origin.y !== "number" || !Number.isFinite(origin.y)) throw new Error("Movement entity force origin must be finite");
+				if (value.mode !== "attract" && value.mode !== "repel") throw new Error("Movement entity force mode must be attract or repel");
+				if (typeof value.force !== "number" || !Number.isFinite(value.force) || value.force < 0) throw new Error("Movement entity force must be finite and non-negative");
+				if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0) throw new Error("Movement entity force range must be finite and positive");
 			},
 		});
 }

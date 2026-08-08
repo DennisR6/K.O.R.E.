@@ -798,7 +798,7 @@ var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */, "deferredEffect" /* DeferredEffect */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "ghostMode" /* GhostMode */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */, "deferredEffect" /* DeferredEffect */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
@@ -956,13 +956,6 @@ function validateRuntimeItemEffectSettings(value) {
       knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload");
       requiredKeys(payload, ["durationTurns"], "ghostMode payload");
       boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode");
-      return;
-    case "magnet" /* Magnet */:
-      exactKeys2(payload, ["mode", "force", "range"], "magnet payload");
-      if (payload.mode !== "attract" && payload.mode !== "repel")
-        throw new Error("magnet mode must be attract or repel");
-      finiteNonNegative(payload.force, "magnet force");
-      finitePositive(payload.range, "magnet range");
       return;
     case "aimVariance" /* AimVariance */:
       knownKeys(payload, new Set(["maxVarianceDegrees", "seed", "randomState"]), "aimVariance payload");
@@ -1539,12 +1532,45 @@ var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
 var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
 var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
 var MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field";
-var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID];
+var MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID];
 function movementSystemDefinition() {
   return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
 }
 function registerMovementSystem(registry) {
   return registry.register(movementSystemDefinition());
+}
+function calculateRadialVelocityDelta(origin, target, field) {
+  validateVector2(origin, "Movement force origin");
+  validateVector2(target, "Movement force target");
+  if (field.mode !== "attract" && field.mode !== "repel")
+    throw new Error("Movement force mode must be attract or repel");
+  if (!Number.isFinite(field.force) || field.force < 0)
+    throw new Error("Movement force must be finite and non-negative");
+  if (!Number.isFinite(field.range) || field.range <= 0)
+    throw new Error("Movement force range must be finite and positive");
+  const dx = target.x - origin.x;
+  const dy = target.y - origin.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0 || distance > field.range)
+    return { x: 0, y: 0 };
+  const direction = field.mode === "attract" ? 1 : -1;
+  return {
+    x: normalizeZero(dx / distance * field.force * direction),
+    y: normalizeZero(dy / distance * field.force * direction)
+  };
+}
+function applyRadialVelocityDelta(velocity, origin, target, field) {
+  validateVector2(velocity, "Movement velocity");
+  const delta = calculateRadialVelocityDelta(origin, target, field);
+  return { x: velocity.x + delta.x, y: velocity.y + delta.y };
+}
+function validateVector2(value, label) {
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
+    throw new Error(`${label} must be finite`);
+}
+function normalizeZero(value) {
+  return Object.is(value, -0) ? 0 : value;
 }
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
 var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
@@ -3285,50 +3311,6 @@ class EffectGhostMode {
   }
 }
 
-class EffectMagnet {
-  mode;
-  force;
-  range;
-  constructor(settings) {
-    const { mode, force, range: range2 } = settings.typeValue;
-    if (mode !== "attract" && mode !== "repel")
-      throw new Error("magnet mode must be attract or repel");
-    if (!Number.isFinite(force) || force < 0)
-      throw new Error("magnet force must be finite and non-negative");
-    if (!Number.isFinite(range2) || range2 <= 0)
-      throw new Error("magnet range must be finite and positive");
-    this.mode = mode;
-    this.force = force;
-    this.range = range2;
-  }
-  calculateDelta(source, target) {
-    validateVector2(source);
-    validateVector2(target);
-    const dx = target.x - source.x;
-    const dy = target.y - source.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance === 0 || distance > this.range)
-      return { x: 0, y: 0 };
-    const direction = this.mode === "attract" ? 1 : -1;
-    return { x: normalizeZero(dx / distance * this.force * direction), y: normalizeZero(dy / distance * this.force * direction) };
-  }
-  applyToVelocity(velocity, source, target) {
-    validateVector2(velocity);
-    const delta = this.calculateDelta(source, target);
-    return { x: velocity.x + delta.x, y: velocity.y + delta.y };
-  }
-  toSettings() {
-    return { type: "magnet" /* Magnet */, typeValue: { mode: this.mode, force: this.force, range: this.range } };
-  }
-}
-function validateVector2(value) {
-  if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
-    throw new Error("Magnet vectors must be finite");
-}
-function normalizeZero(value) {
-  return Object.is(value, -0) ? 0 : value;
-}
-
 class EffectModifyForce {
   factor;
   constructor(settings) {
@@ -3529,8 +3511,6 @@ function createRuntimeItemEffect(settings) {
       return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor") } });
     case "ghostMode" /* GhostMode */:
       return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
-    case "magnet" /* Magnet */:
-      return new EffectMagnet({ typeValue: { mode: value.mode, force: numberValue(value, "force"), range: numberValue(value, "range") } });
     case "selectionLock" /* SelectionLock */:
       return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "shield" /* Shield */:
@@ -5360,16 +5340,20 @@ class MovementSystem {
       for (const entity of _ctx.entities.getEntities()) {
         if (entity.isDead() || !entity.physicsEnabled())
           continue;
-        const position = entity.getPos();
-        const dx = position.x - target.position.x;
-        const dy = position.y - target.position.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance === 0 || distance > payload2.range)
-          continue;
-        const direction = payload2.mode === "attract" ? 1 : -1;
-        const velocity = entity.getVel();
-        entity.setVel({ x: velocity.x + dx / distance * payload2.force * direction, y: velocity.y + dy / distance * payload2.force * direction });
+        entity.setVel(applyRadialVelocityDelta(entity.getVel(), target.position, entity.getPos(), { mode: payload2.mode, force: payload2.force, range: payload2.range }));
       }
+      return;
+    }
+    if (effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID) {
+      if (target.type !== "entity")
+        throw new Error("Movement entity force requires an entity target");
+      if (!target.entity.physicsEnabled())
+        throw new Error(`Movement target '${target.entity.getId()}' is inactive`);
+      const payload2 = effect.typeValue;
+      const origin = payload2.origin;
+      if (!origin || typeof origin.x !== "number" || !Number.isFinite(origin.x) || typeof origin.y !== "number" || !Number.isFinite(origin.y) || payload2.mode !== "attract" && payload2.mode !== "repel" || typeof payload2.force !== "number" || !Number.isFinite(payload2.force) || payload2.force < 0 || typeof payload2.range !== "number" || !Number.isFinite(payload2.range) || payload2.range <= 0)
+        throw new Error("Movement entity force payload is invalid");
+      target.entity.setVel(applyRadialVelocityDelta(target.entity.getVel(), { x: origin.x, y: origin.y }, target.entity.getPos(), { mode: payload2.mode, force: payload2.force, range: payload2.range }));
       return;
     }
     if (target.type !== "entity")
@@ -7167,14 +7151,33 @@ function migrateFullEffectSettings(value) {
 }
 function migrateGameSettingsEffects(settings) {
   const copy = structuredClone(settings);
+  copy.items = copy.items.map(migrateItemDocument);
   copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
-  copy.players = copy.players.map((player) => ({ ...player, effects: (player.effects ?? []).map(migrateFullEffectSettings) }));
+  copy.players = copy.players.map((player) => ({
+    ...player,
+    effects: (player.effects ?? []).map(migrateFullEffectSettings),
+    ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => effect.type !== "magnet") } : {}
+  }));
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
   if (copy.triggerDefinitions)
     copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
   if (copy.environmentalMechanics)
     copy.environmentalMechanics = copy.environmentalMechanics.map((mechanic) => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
   return copy;
+}
+function migrateItemDocument(item) {
+  return {
+    ...item,
+    effects: item.effects.map((effect) => {
+      if (effect.type !== "magnet")
+        return structuredClone(effect);
+      const value = effect.value ?? {};
+      const force = typeof value.force === "number" ? value.force : value.strength;
+      if (typeof force !== "number")
+        throw new Error("Historical Magnet effect requires force or strength");
+      return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force, range: value.range } };
+    })
+  };
 }
 function isEngineEffectComposition(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
@@ -7765,7 +7768,7 @@ function clone4(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 function createItem(input) {
   const item = createItemDocument({
@@ -7838,7 +7841,7 @@ var magnetItem = createItem({
   name: "Magnet",
   description: "Attracts a targeted figure within a configured range.",
   type: "offensive",
-  effects: [{ type: "magnet", value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
+  effects: [{ type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
   targetType: "entity",
   duration: { type: "turns", value: 1 },
   useLimit: { perTurn: 1, perGame: 2 },
@@ -9891,7 +9894,7 @@ class GameHandler {
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
     if (!targetEntity)
       throw new Error("Item target entity not found");
-    const runtimeEffects = item.effects.map((effect) => createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
+    const runtimeEffects = item.effects.map((effect) => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID ? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
     for (const effect of runtimeEffects) {
       if (effect instanceof EffectSpawnTrigger) {
         this.triggerDefinitions.require(effect.triggerId);
@@ -9928,7 +9931,16 @@ class GameHandler {
     if (target.type === "entity" && !targetEntity)
       throw new Error("Item target entity not found");
     for (const effect of effects) {
-      if (isDeferredEffectTemplate(effect)) {
+      if (isEntityForceFieldItemEffect(effect)) {
+        if (target.type !== "entity" || !targetEntity)
+          throw new Error("Entity force effects require an entity target");
+        this.dispatchEngineEffect({
+          schemaVersion: 1,
+          type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+          target: { type: "entity", entityId: String(targetEntity.getId()) },
+          typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() }
+        });
+      } else if (isDeferredEffectTemplate(effect)) {
         if (!resolvedItemTarget)
           throw new Error("Deferred Effects require a resolved target");
         if (resolvedItemTarget.type !== "position")
@@ -9949,9 +9961,7 @@ class GameHandler {
         const triggerSettings = effect.toSettings();
         const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
         actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {} } }, { itemId: item.id, order: itemOrder(item) });
-      } else if (effect instanceof EffectMagnet && targetEntity)
-        targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()));
-      else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
+      } else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
         const actorPosition = actor.getPos();
         actor.setPos(targetEntity.getPos());
         targetEntity.setPos(actorPosition);
@@ -10141,6 +10151,9 @@ class GameHandler {
         throw new Error(`Seeded item draw references unknown item '${itemId}'`);
     }
   }
+}
+function isEntityForceFieldItemEffect(effect) {
+  return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
 }
 
 class GameHandlerBuilder {
@@ -10637,7 +10650,7 @@ function getSelectableGameModes() {
 var CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 var CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
 var CONTENT_PACKAGE_MAX_DOCUMENTS = 256;
-var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "swapPosition", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 var EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
@@ -11375,7 +11388,7 @@ var kore = {
     magnet(strength, range2) {
       if (!Number.isFinite(strength) || !Number.isFinite(range2) || range2 <= 0)
         throw new Error("Magnet parameters must be finite numbers with positive range");
-      return { type: "magnet" /* Magnet */, typeValue: { strength, range: range2 } };
+      return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: { mode: "attract", force: strength, range: range2 } };
     },
     temporaryWall(lifetimeTurns = 1) {
       if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0)
@@ -11430,7 +11443,7 @@ var kore = {
       swapPosition: "swapPosition" /* SwapPosition */,
       structureLifecycle: "structureLifecycle" /* StructureLifecycle */,
       ghostMode: "ghostMode" /* GhostMode */,
-      magnet: "magnet" /* Magnet */,
+      magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
       selectionLock: "selectionLock" /* SelectionLock */,
       aimVariance: "aimVariance" /* AimVariance */
     },

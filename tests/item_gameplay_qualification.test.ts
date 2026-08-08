@@ -112,8 +112,8 @@ function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
 	const effectSucceeded = JSON.stringify(observablePlayer(handler)) !== JSON.stringify({
 		position: before.players.find(player => player.id === ACTOR_ID)!.position,
 		velocity: before.players.find(player => player.id === ACTOR_ID)!.velocity,
-		hp: before.players.find(player => player.id === ACTOR_ID)!.hp,
 		isDead: !before.players.find(player => player.id === ACTOR_ID)!.isPhysicsEnabled || !before.players.find(player => player.id === ACTOR_ID)!.isDrawingEnabled,
+		hp: before.players.find(player => player.id === ACTOR_ID)!.hp,
 		effects: before.players.find(player => player.id === ACTOR_ID)!.effects,
 	});
 	const negativeSignals: string[] = [];

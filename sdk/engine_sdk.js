@@ -371,7 +371,8 @@ var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
 var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
 var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
 var MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field";
-var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID];
+var MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID];
 function movementSystemDefinition() {
   return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
 }
@@ -435,6 +436,25 @@ function registerMovementCommands(registry) {
       if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0)
         throw new Error("Movement force field range must be finite and positive");
     }
+  }).register({
+    id: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+    requiresCapability: [MOVEMENT_CAPABILITY],
+    targetType: "entity",
+    lifecycleCategory: "command",
+    validatePayload: (payload) => {
+      const value = record2(payload, "Movement entity force payload");
+      exactKeys2(value, ["origin", "mode", "force", "range"], "Movement entity force payload");
+      const origin = record2(value.origin, "Movement entity force origin");
+      exactKeys2(origin, ["x", "y"], "Movement entity force origin");
+      if (typeof origin.x !== "number" || !Number.isFinite(origin.x) || typeof origin.y !== "number" || !Number.isFinite(origin.y))
+        throw new Error("Movement entity force origin must be finite");
+      if (value.mode !== "attract" && value.mode !== "repel")
+        throw new Error("Movement entity force mode must be attract or repel");
+      if (typeof value.force !== "number" || !Number.isFinite(value.force) || value.force < 0)
+        throw new Error("Movement entity force must be finite and non-negative");
+      if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0)
+        throw new Error("Movement entity force range must be finite and positive");
+    }
   });
 }
 function validateVectorPayload(payload, label) {
@@ -457,6 +477,38 @@ function exactKeys2(value, keys, label) {
   for (const key of keys)
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
+}
+function calculateRadialVelocityDelta(origin, target, field) {
+  validateVector2(origin, "Movement force origin");
+  validateVector2(target, "Movement force target");
+  if (field.mode !== "attract" && field.mode !== "repel")
+    throw new Error("Movement force mode must be attract or repel");
+  if (!Number.isFinite(field.force) || field.force < 0)
+    throw new Error("Movement force must be finite and non-negative");
+  if (!Number.isFinite(field.range) || field.range <= 0)
+    throw new Error("Movement force range must be finite and positive");
+  const dx = target.x - origin.x;
+  const dy = target.y - origin.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0 || distance > field.range)
+    return { x: 0, y: 0 };
+  const direction = field.mode === "attract" ? 1 : -1;
+  return {
+    x: normalizeZero(dx / distance * field.force * direction),
+    y: normalizeZero(dy / distance * field.force * direction)
+  };
+}
+function applyRadialVelocityDelta(velocity, origin, target, field) {
+  validateVector2(velocity, "Movement velocity");
+  const delta = calculateRadialVelocityDelta(origin, target, field);
+  return { x: velocity.x + delta.x, y: velocity.y + delta.y };
+}
+function validateVector2(value, label) {
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
+    throw new Error(`${label} must be finite`);
+}
+function normalizeZero(value) {
+  return Object.is(value, -0) ? 0 : value;
 }
 var TRANSFORM_CAPABILITY = "transform.state";
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
@@ -1271,6 +1323,8 @@ export {
   counterTriggerMatches,
   counterSystemDefinition,
   canonicalizeCounterStates,
+  calculateRadialVelocityDelta,
+  applyRadialVelocityDelta,
   advanceTemporalModifier,
   advanceStructureLifecycle,
   advanceDeferredEffect,
@@ -1297,6 +1351,7 @@ export {
   MOVEMENT_EFFECT_ID,
   MOVEMENT_COMMAND_EFFECT_IDS,
   MOVEMENT_CAPABILITY,
+  MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
   MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID,
   MOVEMENT_ADD_VELOCITY_EFFECT_ID,
   EngineWorldBuilder,

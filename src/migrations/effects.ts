@@ -3,6 +3,8 @@ import type { EngineSettings } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import { migrateStructureSettings } from "./structures.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import type { ItemDocument } from "../item/types.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {
@@ -26,12 +28,31 @@ export function migrateFullEffectSettings(value: unknown): FullEffectSettings {
 /** Normalizes only Effect-bearing fields before strict runtime construction. */
 export function migrateGameSettingsEffects<T extends GameSettings | EngineSettings>(settings: T): T {
 	const copy = structuredClone(settings) as T;
+	copy.items = copy.items.map(migrateItemDocument);
 	copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
-	copy.players = copy.players.map(player => ({ ...player, effects: (player.effects ?? []).map(migrateFullEffectSettings) }));
+	copy.players = copy.players.map(player => ({
+		...player,
+		effects: (player.effects ?? []).map(migrateFullEffectSettings),
+		...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => (effect.type as string) !== "magnet") } : {}),
+	}));
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
 	if (copy.triggerDefinitions) copy.triggerDefinitions = copy.triggerDefinitions.map(definition => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
 	if (copy.environmentalMechanics) copy.environmentalMechanics = copy.environmentalMechanics.map(mechanic => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
 	return copy;
+}
+
+/** Upgrades the historical Magnet Item document to the generic movement command. */
+export function migrateItemDocument(item: ItemDocument): ItemDocument {
+	return {
+		...item,
+		effects: item.effects.map(effect => {
+			if (effect.type !== "magnet") return structuredClone(effect);
+			const value = effect.value ?? {};
+			const force = typeof value.force === "number" ? value.force : value.strength;
+			if (typeof force !== "number") throw new Error("Historical Magnet effect requires force or strength");
+			return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force, range: value.range } };
+		}),
+	};
 }
 
 function isEngineEffectComposition(value: unknown): value is EngineEffectComposition {

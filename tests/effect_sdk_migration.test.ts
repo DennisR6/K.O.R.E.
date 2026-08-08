@@ -106,8 +106,8 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.magnet produces valid Magnet item effect settings", () => {
 			const effect = kore.effects.magnet(500, 120);
 			expect(effect).toEqual({
-				type: ItemEffectType.Magnet,
-				typeValue: { strength: 500, range: 120 },
+				type: "movement.apply-force-to-entity",
+				typeValue: { mode: "attract", force: 500, range: 120 },
 			});
 		});
 
