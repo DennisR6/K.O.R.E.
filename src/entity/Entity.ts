@@ -11,6 +11,7 @@ import type { NumericStateOwner } from "../engine/contracts/numericState.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import type { TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import type { AcceptedForceInput, ActionModifierSettings } from "../engine/contracts/actionModifier.js";
+import type { CollisionFilterLifetimeSettings, CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).
@@ -67,6 +68,11 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	consumePendingActionModifiers(): void
 	advancePendingActionModifierLifetimes(): void
 	removePendingActionModifiers(sourceIds: ReadonlySet<string>): void
+	addCollisionFilter(filter: CollisionFilterSettings, lifetime: CollisionFilterLifetimeSettings): void
+	getCollisionFilters(): CollisionFilterSettings[]
+	getCollisionFilterLifetimes(): CollisionFilterLifetimeSettings[]
+	advanceCollisionFilterLifetimes(): void
+	removeCollisionFilters(sourceIds: ReadonlySet<string>): void
 	setNumericEffectDispatcher(dispatcher: (effect: EngineEffectSettings) => void): void;
 	dispatchNumericAdd(stateId: string, amount: number): void;
 	dispatchNumericSet(stateId: string, value: number): void;

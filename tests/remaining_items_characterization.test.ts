@@ -22,19 +22,6 @@ function buildSettings(item: typeof durchlaessigkeitItem | typeof jaegermeisterE
 	return settings as GameModeSettings & ReturnType<typeof createDefaultGameSettings>;
 }
 
-test("Ghost Mode is accepted and stored, but does not alter participation or PhysicsSystem collision behavior", () => {
-	const settings = buildSettings(durchlaessigkeitItem);
-	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
-	const actor = handler.getEntityManager().getEntities()[0]!;
-
-	handler.useItem(actor.getId(), durchlaessigkeitItem.id, { type: "self" });
-
-	expect(actor.getItemEffects()).toMatchObject([{ type: "ghostMode", typeValue: { durationTurns: 2 } }]);
-	expect(actor.physicsEnabled()).toBe(true);
-	expect(actor.drawingEnabled()).toBe(true);
-	expect(actor.isDead()).toBe(false);
-});
-
 test("Selection Lock is accepted and stored, but the shared shot boundary does not enforce selection eligibility", () => {
 	const settings = buildSettings(jaegermeisterElixierItem);
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();

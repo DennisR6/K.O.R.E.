@@ -7,6 +7,7 @@ import type { ItemEffectSettings } from "../effects/types.js";
 import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
 import { validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import { validateActionModifier, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
+import { validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -74,6 +75,8 @@ export interface PlayerSettings {
 	itemEffects?: ItemEffectSettings[]
 	temporalModifiers?: TemporalModifierSettings[]
 	pendingActionModifiers?: ActionModifierSettings[]
+	collisionFilters?: CollisionFilterSettings[]
+	collisionFilterLifetimes?: CollisionFilterLifetimeSettings[]
 	numericThresholds?: NumericThresholdBinding[]
 }
 
@@ -86,6 +89,9 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 	validateNumericThresholdBindings(overrides.numericThresholds ?? [])
 	for (const modifier of overrides.temporalModifiers ?? []) validateTemporalModifier(modifier)
 	for (const modifier of overrides.pendingActionModifiers ?? []) validateActionModifier(modifier)
+	for (const filter of overrides.collisionFilters ?? []) validateCollisionFilter(filter)
+	for (const lifetime of overrides.collisionFilterLifetimes ?? []) validateCollisionFilterLifetime(lifetime)
+	validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? [])
 	const mass = overrides.mass ?? 1;
 	validatePlayerMass(mass);
 	return {
@@ -111,6 +117,8 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 		...(overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {}),
 		...(overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {}),
+		...(overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {}),
+		...(overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {}),
 		numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings()),
 	};
 }

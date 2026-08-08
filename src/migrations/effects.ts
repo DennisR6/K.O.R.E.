@@ -7,6 +7,7 @@ import type { ItemDocument } from "../item/types.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { createActionModifier } from "../engine/contracts/actionModifier.js";
 import { SeededRandom } from "../utils/random.js";
+import { createCollisionFilter, createCollisionFilterLifetime } from "../engine/contracts/collisionFilter.js";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {
@@ -70,11 +71,25 @@ export function migrateGameSettingsEffects<T extends GameSettings | EngineSettin
 			}
 			return [];
 		});
+		const historicalCollisionFilters = (player.itemEffects ?? []).flatMap((effect, index) => {
+			if (effect.type !== "ghostMode") return [];
+			const durationTurns = effect.typeValue.durationTurns;
+			const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+			if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1) throw new Error("Historical ghostMode requires a positive duration");
+			if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns) return [];
+			const filterId = `${player.id}:collision-filter:${index}`;
+			return [{
+				filter: createCollisionFilter({ id: filterId, excludedCategories: ["entity", "structure"], sourceId: effect.itemId, sourceOrder: effect.order }),
+				lifetime: createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order }),
+			}];
+		});
 		return {
 			...player,
 			effects: (player.effects ?? []).map(migrateFullEffectSettings),
-			...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition", "modifyForce", "aimVariance"].includes(effect.type as string)) } : {}),
+			...(player.itemEffects ? { itemEffects: player.itemEffects.filter(effect => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode"].includes(effect.type as string)) } : {}),
 			...(historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...(player.pendingActionModifiers ?? []), ...historicalActionModifiers] } : {}),
+			...(historicalCollisionFilters.length || player.collisionFilters?.length ? { collisionFilters: [...(player.collisionFilters ?? []), ...historicalCollisionFilters.map(entry => entry.filter)] } : {}),
+			...(historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...(player.collisionFilterLifetimes ?? []), ...historicalCollisionFilters.map(entry => entry.lifetime)] } : {}),
 		};
 	});
 	copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map(boundary => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));

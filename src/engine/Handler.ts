@@ -36,6 +36,7 @@ import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
 import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
 import { createActionModifier } from "./contracts/actionModifier.js";
+import { createCollisionFilter, createCollisionFilterLifetime } from "./contracts/collisionFilter.js";
 import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
 import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
@@ -48,7 +49,7 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isActionModifierTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isActionModifierTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
@@ -527,6 +528,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			entity.resetItemUses();
 			entity.advanceTemporalModifiersTurn();
 			entity.advancePendingActionModifierLifetimes();
+			entity.advanceCollisionFilterLifetimes();
 			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
 		})
 		if (this.context.currTurn !== turnNumber) this.advanceStructureLifecyclesTurn();
@@ -856,6 +858,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...targetEntity.getItemEffects(),
 			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
 			...targetEntity.getPendingActionModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+			...targetEntity.getCollisionFilters().map(filter => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
 			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
 			...this.deferredEffects.filter(effect => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map(effect => ({ itemId: effect.sourceId, order: effect.sourceOrder })),
 		];
@@ -863,6 +866,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		targetEntity.removeItemEffects(combination.removeItemIds)
 		targetEntity.removeTemporalModifiers(combination.removeItemIds)
 		targetEntity.removePendingActionModifiers(combination.removeItemIds)
+		targetEntity.removeCollisionFilters(combination.removeItemIds)
 		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
 		this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()))
 		this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget)
@@ -911,6 +915,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (isStructureLifecycleTemplate(effect)) {
 				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
 				this.installStructureLifecycle(actor, item, effect, target.position);
+			} else if (isCollisionFilterTemplate(effect)) {
+				if (!targetEntity) throw new Error("Collision filters require an entity target");
+				const filterId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+				targetEntity.addCollisionFilter(
+					createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }),
+					createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }),
+				);
 			} else if (isActionModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Action modifiers require an entity target");
 				const actionModifier = effect.action === "force"

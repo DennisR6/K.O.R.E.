@@ -1,4 +1,3 @@
-import { EffectGhostMode } from "../../effects/ghostMode.js";
 import { EffectSelectionLock } from "../../effects/selectionLock.js";
 import { EffectShield } from "../../effects/shield.js";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
@@ -9,9 +8,10 @@ import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } fro
 import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../../engine/contracts/deferredEffect.js";
 import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "../../engine/contracts/actionModifier.js";
 import { SeededRandom } from "../../utils/random.js";
+import { createCollisionFilterTemplate, type CollisionFilterTemplate } from "../../engine/contracts/collisionFilter.js";
 
 export type RuntimeItemEffect =
-	| EffectGhostMode
+	| CollisionFilterTemplate
 	| ActionModifierTemplate
 	| EffectSelectionLock
 	| EffectShield
@@ -31,7 +31,7 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 		case ItemEffectType.ModifyForce:
 			return createActionModifierTemplate({ action: "force", operation: "scale", factor: numberValue(value, "factor") });
 		case ItemEffectType.GhostMode:
-			return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
+			return createCollisionFilterTemplate({ excludedCategories: ["entity", "structure"], durationUnit: "turns", duration: integerValue(value, "durationTurns") });
 		case ItemEffectType.SelectionLock:
 			return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }) } });
 		case ItemEffectType.Shield:
@@ -69,7 +69,7 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 
 export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
-	if (isActionModifierTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
+	if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
@@ -117,6 +117,10 @@ export function isDeferredEffectTemplate(value: RuntimeItemEffect): value is Def
 
 export function isActionModifierTemplate(value: RuntimeItemEffect): value is ActionModifierTemplate {
 	return "action" in value && ((value.action === "force" && "operation" in value && value.operation === "scale" && "factor" in value) || (value.action === "aim" && "operation" in value && value.operation === "random-offset" && "maxVarianceDegrees" in value && "randomState" in value));
+}
+
+export function isCollisionFilterTemplate(value: RuntimeItemEffect): value is CollisionFilterTemplate {
+	return "excludedCategories" in value && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
 }
 
 function safeIntegerValue(value: Record<string, unknown>, key: string): number {

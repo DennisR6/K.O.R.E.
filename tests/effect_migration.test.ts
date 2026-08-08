@@ -99,3 +99,17 @@ test("historical Vodka-Zero state migrates to a one-shot canonical aim modifier"
 		sourceOrder: 3,
 	})]);
 });
+
+test("historical Ghost Mode state migrates to a category filter with separate turn lifetime", () => {
+	const settings: any = {
+		players: [{ id: "actor-ghost", itemEffects: [{ type: "ghostMode", typeValue: { durationTurns: 2, remainingTurns: 1 }, itemId: "durchlaessigkeit", order: 4 }], effects: [] }],
+		items: [],
+		effects: [],
+		mapBoundarys: [],
+	};
+
+	const migrated = migrateGameSettingsEffects(settings);
+	expect(migrated.players[0]!.itemEffects).toEqual([]);
+	expect(migrated.players[0]!.collisionFilters).toEqual([expect.objectContaining({ id: "actor-ghost:collision-filter:0", excludedCategories: ["entity", "structure"], sourceId: "durchlaessigkeit", sourceOrder: 4 })]);
+	expect(migrated.players[0]!.collisionFilterLifetimes).toEqual([expect.objectContaining({ filterId: "actor-ghost:collision-filter:0", duration: 2, remaining: 1, sourceId: "durchlaessigkeit", sourceOrder: 4 })]);
+});

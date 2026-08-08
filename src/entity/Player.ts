@@ -19,6 +19,7 @@ import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
 import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
 import { advanceLifetime } from "../engine/contracts/lifetime.js";
+import { advanceCollisionFilterLifetime, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
 
 
 /**
@@ -58,6 +59,8 @@ export class Player implements IEntity {
 	private itemEffects: ItemEffectSettings[] = []
 	private temporalModifiers: TemporalModifierSettings[] = []
 	private pendingActionModifiers: ActionModifierSettings[] = []
+	private collisionFilters: CollisionFilterSettings[] = []
+	private collisionFilterLifetimes: CollisionFilterLifetimeSettings[] = []
 	private numericThresholds: NumericThresholdBinding[] = []
 	private numericEffectDispatcher: ((effect: EngineEffectSettings) => void) | undefined
 
@@ -103,6 +106,11 @@ export class Player implements IEntity {
 		this.temporalModifiers = structuredClone(settings.temporalModifiers ?? [])
 		for (const modifier of settings.pendingActionModifiers ?? []) validateActionModifier(modifier)
 		this.pendingActionModifiers = structuredClone(settings.pendingActionModifiers ?? [])
+		for (const filter of settings.collisionFilters ?? []) validateCollisionFilter(filter)
+		for (const lifetime of settings.collisionFilterLifetimes ?? []) validateCollisionFilterLifetime(lifetime)
+		validateCollisionFilterState(settings.collisionFilters ?? [], settings.collisionFilterLifetimes ?? [])
+		this.collisionFilters = structuredClone(settings.collisionFilters ?? [])
+		this.collisionFilterLifetimes = structuredClone(settings.collisionFilterLifetimes ?? [])
 		validateNumericThresholdBindings(settings.numericThresholds ?? [])
 		this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings())
 		this.effectAlways = []
@@ -282,6 +290,8 @@ export class Player implements IEntity {
 			...(this.itemEffects.length ? { itemEffects: this.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
 			...(this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {}),
 			...(this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {}),
+			...(this.collisionFilters.length ? { collisionFilters: structuredClone(this.collisionFilters) } : {}),
+			...(this.collisionFilterLifetimes.length ? { collisionFilterLifetimes: structuredClone(this.collisionFilterLifetimes) } : {}),
 			...(this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}),
 		}
 	}
@@ -360,6 +370,30 @@ export class Player implements IEntity {
 	public removePendingActionModifiers(sourceIds: ReadonlySet<string>): void {
 		this.pendingActionModifiers = this.pendingActionModifiers.filter(modifier => !modifier.sourceId || !sourceIds.has(modifier.sourceId))
 	}
+	public addCollisionFilter(filter: CollisionFilterSettings, lifetime: CollisionFilterLifetimeSettings): void {
+		validateCollisionFilter(filter)
+		validateCollisionFilterLifetime(lifetime)
+		if (lifetime.filterId !== filter.id) throw new Error("Collision filter lifetime must target its filter");
+		this.collisionFilters = [...this.collisionFilters.filter(existing => existing.id !== filter.id), structuredClone(filter)].sort(compareCollisionFilters)
+		this.collisionFilterLifetimes = [...this.collisionFilterLifetimes.filter(existing => existing.filterId !== filter.id), structuredClone(lifetime)].sort(compareCollisionFilterLifetimes)
+	}
+	public getCollisionFilters(): CollisionFilterSettings[] { return structuredClone(this.collisionFilters) }
+	public getCollisionFilterLifetimes(): CollisionFilterLifetimeSettings[] { return structuredClone(this.collisionFilterLifetimes) }
+	public advanceCollisionFilterLifetimes(): void {
+		const active: CollisionFilterLifetimeSettings[] = []
+		const activeIds = new Set<string>()
+		for (const lifetime of this.collisionFilterLifetimes) {
+			const next = advanceCollisionFilterLifetime(lifetime)
+			if (next) { active.push(next); activeIds.add(lifetime.filterId) }
+		}
+		this.collisionFilterLifetimes = active.sort(compareCollisionFilterLifetimes)
+		this.collisionFilters = this.collisionFilters.filter(filter => activeIds.has(filter.id))
+	}
+	public removeCollisionFilters(sourceIds: ReadonlySet<string>): void {
+		const removed = new Set(this.collisionFilters.filter(filter => filter.sourceId && sourceIds.has(filter.sourceId)).map(filter => filter.id))
+		this.collisionFilters = this.collisionFilters.filter(filter => !removed.has(filter.id))
+		this.collisionFilterLifetimes = this.collisionFilterLifetimes.filter(lifetime => !removed.has(lifetime.filterId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)))
+	}
 	public addEffect(trigger: EffectTrigger, effect: Effect): void {
 		switch (trigger) {
 			case EffectTrigger.Always: this.effectAlways.push(effect); break
@@ -369,6 +403,14 @@ export class Player implements IEntity {
 		}
 	}
 
+}
+
+function compareCollisionFilters(first: CollisionFilterSettings, second: CollisionFilterSettings): number {
+	return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+
+function compareCollisionFilterLifetimes(first: CollisionFilterLifetimeSettings, second: CollisionFilterLifetimeSettings): number {
+	return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 
 function isVector(value: SettingValue): value is Vector2D {

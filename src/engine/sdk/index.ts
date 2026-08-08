@@ -61,5 +61,7 @@ export { advanceDeferredEffect, createDeferredEffect, createDeferredEffectTempla
 export type { DeferredEffectDurationUnit, DeferredEffectSettings, DeferredEffectTemplate } from "../contracts/deferredEffect.js";
 export { applyActionModifiers, consumeActionModifiers, createActionModifier, createActionModifierTemplate, validateActionModifier, ACTION_MODIFIER_SCHEMA_VERSION } from "../contracts/actionModifier.js";
 export type { AcceptedForceInput, ActionModifierSettings, ActionModifierTemplate } from "../contracts/actionModifier.js";
+export { advanceCollisionFilterLifetime, createCollisionFilter, createCollisionFilterLifetime, createCollisionFilterTemplate, isCollisionAllowed, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, COLLISION_CATEGORIES, COLLISION_FILTER_SCHEMA_VERSION, COLLISION_FILTER_LIFETIME_SCHEMA_VERSION } from "../contracts/collisionFilter.js";
+export type { CollisionCategory, CollisionFilterLifetimeSettings, CollisionFilterSettings, CollisionFilterTemplate } from "../contracts/collisionFilter.js";
 export { advanceLifetime, createLifetime, validateLifetime, LIFETIME_DURATION_UNITS } from "../contracts/lifetime.js";
 export type { DurationUnit, LifetimeSettings } from "../contracts/lifetime.js";

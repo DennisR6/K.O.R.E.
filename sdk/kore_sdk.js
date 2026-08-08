@@ -2328,6 +2328,121 @@ function compareModifiers(first, second) {
 function normalizeAngle(angle) {
   return (angle % 360 + 360) % 360;
 }
+var COLLISION_FILTER_SCHEMA_VERSION = 1;
+var COLLISION_FILTER_LIFETIME_SCHEMA_VERSION = 1;
+var COLLISION_CATEGORIES = ["entity", "structure"];
+function createCollisionFilterTemplate(input) {
+  const template = structuredClone(input);
+  validateExcludedCategories(template.excludedCategories);
+  if (template.durationUnit !== "turns" || !Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Collision filter template requires a positive turn duration");
+  return template;
+}
+function createCollisionFilter(input) {
+  const filter = {
+    schemaVersion: COLLISION_FILTER_SCHEMA_VERSION,
+    id: input.id,
+    excludedCategories: [...input.excludedCategories],
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateCollisionFilter(filter);
+  return filter;
+}
+function createCollisionFilterLifetime(input) {
+  const lifetime = {
+    schemaVersion: COLLISION_FILTER_LIFETIME_SCHEMA_VERSION,
+    id: input.id,
+    filterId: input.filterId,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateCollisionFilterLifetime(lifetime);
+  return lifetime;
+}
+function advanceCollisionFilterLifetime(lifetime) {
+  validateCollisionFilterLifetime(lifetime);
+  const next = advanceLifetime(lifetimeOf4(lifetime));
+  return next ? { ...structuredClone(lifetime), ...next } : undefined;
+}
+function isCollisionAllowed(firstCategory, firstFilters, secondCategory, secondFilters) {
+  return !firstFilters.some((filter) => filter.excludedCategories.includes(secondCategory)) && !secondFilters.some((filter) => filter.excludedCategories.includes(firstCategory));
+}
+function validateCollisionFilter(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision filter must be an object");
+  const filter = value;
+  if (filter.schemaVersion !== COLLISION_FILTER_SCHEMA_VERSION)
+    throw new Error("Unsupported collision filter schema version");
+  if (typeof filter.id !== "string" || filter.id.length === 0)
+    throw new Error("Collision filter requires a stable id");
+  if (!Array.isArray(filter.excludedCategories) || filter.excludedCategories.length === 0)
+    throw new Error("Collision filter requires excluded categories");
+  validateExcludedCategories(filter.excludedCategories);
+  if (filter.sourceId !== undefined && (typeof filter.sourceId !== "string" || filter.sourceId.length === 0))
+    throw new Error("Collision filter sourceId must be non-empty");
+  if (filter.sourceOrder !== undefined && !Number.isSafeInteger(filter.sourceOrder))
+    throw new Error("Collision filter sourceOrder must be a safe integer");
+  assertJsonValue(filter);
+}
+function validateCollisionFilterLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision filter lifetime must be an object");
+  const lifetime = value;
+  if (lifetime.schemaVersion !== COLLISION_FILTER_LIFETIME_SCHEMA_VERSION)
+    throw new Error("Unsupported collision filter lifetime schema version");
+  if (typeof lifetime.id !== "string" || lifetime.id.length === 0 || typeof lifetime.filterId !== "string" || lifetime.filterId.length === 0)
+    throw new Error("Collision filter lifetime requires stable ids");
+  if (lifetime.durationUnit !== "turns")
+    throw new Error("Collision filter lifetime requires turns");
+  validateLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  if (lifetime.sourceId !== undefined && (typeof lifetime.sourceId !== "string" || lifetime.sourceId.length === 0))
+    throw new Error("Collision filter lifetime sourceId must be non-empty");
+  if (lifetime.sourceOrder !== undefined && !Number.isSafeInteger(lifetime.sourceOrder))
+    throw new Error("Collision filter lifetime sourceOrder must be a safe integer");
+  assertJsonValue(lifetime);
+}
+function validateCollisionFilterState(filters, lifetimes) {
+  const filterIds = new Set;
+  let previousFilter;
+  for (const filter of filters) {
+    validateCollisionFilter(filter);
+    if (filterIds.has(filter.id) || previousFilter && compareFilterOrder(previousFilter, filter) > 0)
+      throw new Error("Collision filters must be unique and canonically ordered");
+    filterIds.add(filter.id);
+    previousFilter = filter;
+  }
+  const lifetimeIds = new Set;
+  let previousLifetime;
+  for (const lifetime of lifetimes) {
+    validateCollisionFilterLifetime(lifetime);
+    if (!filterIds.has(lifetime.filterId))
+      throw new Error("Collision filter lifetime references an unknown filter");
+    if (lifetimeIds.has(lifetime.id) || previousLifetime && compareLifetimeOrder(previousLifetime, lifetime) > 0)
+      throw new Error("Collision filter lifetimes must be unique and canonically ordered");
+    lifetimeIds.add(lifetime.id);
+    previousLifetime = lifetime;
+  }
+}
+function lifetimeOf4(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+function validateExcludedCategories(value) {
+  if (!Array.isArray(value) || value.length === 0)
+    throw new Error("Collision filter requires excluded categories");
+  const categories = [...value].sort();
+  if (categories.some((category, index) => !COLLISION_CATEGORIES.includes(category) || index > 0 && category === categories[index - 1]))
+    throw new Error("Collision filter categories must be unique and supported");
+  if (value.some((category, index) => category !== categories[index]))
+    throw new Error("Collision filter categories must be canonicalized");
+}
+function compareFilterOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareLifetimeOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
 
 var engine = {
   createWorld(options) {
@@ -3310,6 +3425,11 @@ function createPlayerSettings(overrides = {}) {
     validateTemporalModifier(modifier);
   for (const modifier of overrides.pendingActionModifiers ?? [])
     validateActionModifier(modifier);
+  for (const filter of overrides.collisionFilters ?? [])
+    validateCollisionFilter(filter);
+  for (const lifetime of overrides.collisionFilterLifetimes ?? [])
+    validateCollisionFilterLifetime(lifetime);
+  validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? []);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -3335,6 +3455,8 @@ function createPlayerSettings(overrides = {}) {
     ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
     ...overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {},
     ...overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {},
+    ...overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {},
+    ...overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {},
     numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
 }
@@ -3353,36 +3475,6 @@ function createDefaultNumericThresholdBindings() {
       ]
     }]
   }];
-}
-
-class EffectGhostMode {
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1)
-      throw new Error("ghostMode durationTurns must be a positive integer");
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns)
-      throw new Error("ghostMode remainingTurns must be between zero and durationTurns");
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  isActive() {
-    return this.remainingTurns > 0;
-  }
-  shouldIgnoreCollision() {
-    return this.isActive();
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toSettings() {
-    return { type: "ghostMode" /* GhostMode */, typeValue: { durationTurns: this.durationTurns, remainingTurns: this.remainingTurns } };
-  }
 }
 
 class EffectSelectionLock {
@@ -3532,7 +3624,7 @@ function createRuntimeItemEffect(settings) {
     case "modifyForce" /* ModifyForce */:
       return createActionModifierTemplate({ action: "force", operation: "scale", factor: numberValue(value, "factor") });
     case "ghostMode" /* GhostMode */:
-      return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
+      return createCollisionFilterTemplate({ excludedCategories: ["entity", "structure"], durationUnit: "turns", duration: integerValue(value, "durationTurns") });
     case "selectionLock" /* SelectionLock */:
       return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
     case "shield" /* Shield */:
@@ -3561,7 +3653,7 @@ function resolveRuntimeItemEffects(effects) {
 }
 function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
-  if (isActionModifierTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
+  if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
     return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
   if (!advance)
@@ -3609,6 +3701,9 @@ function isDeferredEffectTemplate(value) {
 }
 function isActionModifierTemplate(value) {
   return "action" in value && (value.action === "force" && ("operation" in value) && value.operation === "scale" && ("factor" in value) || value.action === "aim" && ("operation" in value) && value.operation === "random-offset" && ("maxVarianceDegrees" in value) && ("randomState" in value));
+}
+function isCollisionFilterTemplate(value) {
+  return "excludedCategories" in value && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
 }
 function safeIntegerValue(value, key) {
   const raw = value[key];
@@ -3861,6 +3956,8 @@ class Player {
   itemEffects = [];
   temporalModifiers = [];
   pendingActionModifiers = [];
+  collisionFilters = [];
+  collisionFilterLifetimes = [];
   numericThresholds = [];
   numericEffectDispatcher;
   effectAlways = [];
@@ -3905,6 +4002,13 @@ class Player {
     for (const modifier of settings.pendingActionModifiers ?? [])
       validateActionModifier(modifier);
     this.pendingActionModifiers = structuredClone(settings.pendingActionModifiers ?? []);
+    for (const filter of settings.collisionFilters ?? [])
+      validateCollisionFilter(filter);
+    for (const lifetime of settings.collisionFilterLifetimes ?? [])
+      validateCollisionFilterLifetime(lifetime);
+    validateCollisionFilterState(settings.collisionFilters ?? [], settings.collisionFilterLifetimes ?? []);
+    this.collisionFilters = structuredClone(settings.collisionFilters ?? []);
+    this.collisionFilterLifetimes = structuredClone(settings.collisionFilterLifetimes ?? []);
     validateNumericThresholdBindings(settings.numericThresholds ?? []);
     this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
@@ -4189,6 +4293,8 @@ class Player {
       ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
       ...this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {},
       ...this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {},
+      ...this.collisionFilters.length ? { collisionFilters: structuredClone(this.collisionFilters) } : {},
+      ...this.collisionFilterLifetimes.length ? { collisionFilterLifetimes: structuredClone(this.collisionFilterLifetimes) } : {},
       ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
@@ -4298,6 +4404,38 @@ class Player {
   removePendingActionModifiers(sourceIds) {
     this.pendingActionModifiers = this.pendingActionModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
   }
+  addCollisionFilter(filter, lifetime) {
+    validateCollisionFilter(filter);
+    validateCollisionFilterLifetime(lifetime);
+    if (lifetime.filterId !== filter.id)
+      throw new Error("Collision filter lifetime must target its filter");
+    this.collisionFilters = [...this.collisionFilters.filter((existing) => existing.id !== filter.id), structuredClone(filter)].sort(compareCollisionFilters);
+    this.collisionFilterLifetimes = [...this.collisionFilterLifetimes.filter((existing) => existing.filterId !== filter.id), structuredClone(lifetime)].sort(compareCollisionFilterLifetimes);
+  }
+  getCollisionFilters() {
+    return structuredClone(this.collisionFilters);
+  }
+  getCollisionFilterLifetimes() {
+    return structuredClone(this.collisionFilterLifetimes);
+  }
+  advanceCollisionFilterLifetimes() {
+    const active = [];
+    const activeIds = new Set;
+    for (const lifetime of this.collisionFilterLifetimes) {
+      const next = advanceCollisionFilterLifetime(lifetime);
+      if (next) {
+        active.push(next);
+        activeIds.add(lifetime.filterId);
+      }
+    }
+    this.collisionFilterLifetimes = active.sort(compareCollisionFilterLifetimes);
+    this.collisionFilters = this.collisionFilters.filter((filter) => activeIds.has(filter.id));
+  }
+  removeCollisionFilters(sourceIds) {
+    const removed = new Set(this.collisionFilters.filter((filter) => filter.sourceId && sourceIds.has(filter.sourceId)).map((filter) => filter.id));
+    this.collisionFilters = this.collisionFilters.filter((filter) => !removed.has(filter.id));
+    this.collisionFilterLifetimes = this.collisionFilterLifetimes.filter((lifetime) => !removed.has(lifetime.filterId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)));
+  }
   addEffect(trigger, effect) {
     switch (trigger) {
       case "EffectTrigger.Always" /* Always */:
@@ -4313,6 +4451,12 @@ class Player {
         console.error("TODO", trigger);
     }
   }
+}
+function compareCollisionFilters(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareCollisionFilterLifetimes(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 function isVector(value) {
   return typeof value === "object" && value !== null && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number";
@@ -5168,7 +5312,7 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          if (this.strategy.checkCollision(entityA, entityB)) {
+          if (this.isEntityPairAllowed(entityA, entityB) && this.strategy.checkCollision(entityA, entityB)) {
             this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
           }
         }
@@ -5178,7 +5322,7 @@ class PhysicsSystem {
             continue;
           if (this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          if (this.strategy.checkCollision(entityA, structureB)) {
+          if (this.isStructurePairAllowed(entityA) && this.strategy.checkCollision(entityA, structureB)) {
             this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
           }
         }
@@ -5188,13 +5332,15 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          totalOverlap += this.getOverlapDistance(entityA, entityB);
+          if (this.isEntityPairAllowed(entityA, entityB))
+            totalOverlap += this.getOverlapDistance(entityA, entityB);
         }
         for (let j = 0;j < structures.length; j++) {
           const structureB = structures[j];
           if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          totalOverlap += this.getOverlapDistance(entityA, structureB);
+          if (this.isStructurePairAllowed(entityA))
+            totalOverlap += this.getOverlapDistance(entityA, structureB);
         }
       }
       if (totalOverlap <= 0.0001) {
@@ -5279,13 +5425,13 @@ class PhysicsSystem {
       const entity = entities[i];
       for (let j = i + 1;j < entities.length; j++) {
         const other = entities[j];
-        if (this.strategy.checkCollision(entity, other))
+        if (this.isEntityPairAllowed(entity, other) && this.strategy.checkCollision(entity, other))
           contacts.add(this.getPairKey(entity, other));
       }
       for (const structure of ctx.structures) {
         if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries))
           continue;
-        if (this.strategy.checkCollision(entity, structure))
+        if (this.isStructurePairAllowed(entity) && this.strategy.checkCollision(entity, structure))
           contacts.add(this.getPairKey(entity, structure));
       }
     }
@@ -5353,6 +5499,12 @@ class PhysicsSystem {
     if (role === "containment")
       return true;
     return containmentBoundaries.has(structureB);
+  }
+  isEntityPairAllowed(first, second) {
+    return isCollisionAllowed("entity", first.getCollisionFilters(), "entity", second.getCollisionFilters());
+  }
+  isStructurePairAllowed(entity) {
+    return isCollisionAllowed("entity", entity.getCollisionFilters(), "structure", []);
   }
   constrainToMap(entity, _ctx) {
     const pos = entity.getPos();
@@ -7283,11 +7435,28 @@ function migrateGameSettingsEffects(settings) {
       }
       return [];
     });
+    const historicalCollisionFilters = (player.itemEffects ?? []).flatMap((effect, index) => {
+      if (effect.type !== "ghostMode")
+        return [];
+      const durationTurns = effect.typeValue.durationTurns;
+      const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+      if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1)
+        throw new Error("Historical ghostMode requires a positive duration");
+      if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns)
+        return [];
+      const filterId = `${player.id}:collision-filter:${index}`;
+      return [{
+        filter: createCollisionFilter({ id: filterId, excludedCategories: ["entity", "structure"], sourceId: effect.itemId, sourceOrder: effect.order }),
+        lifetime: createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order })
+      }];
+    });
     return {
       ...player,
       effects: (player.effects ?? []).map(migrateFullEffectSettings),
-      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance"].includes(effect.type)) } : {},
-      ...historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...player.pendingActionModifiers ?? [], ...historicalActionModifiers] } : {}
+      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode"].includes(effect.type)) } : {},
+      ...historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...player.pendingActionModifiers ?? [], ...historicalActionModifiers] } : {},
+      ...historicalCollisionFilters.length || player.collisionFilters?.length ? { collisionFilters: [...player.collisionFilters ?? [], ...historicalCollisionFilters.map((entry) => entry.filter)] } : {},
+      ...historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...player.collisionFilterLifetimes ?? [], ...historicalCollisionFilters.map((entry) => entry.lifetime)] } : {}
     };
   });
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
@@ -9667,6 +9836,7 @@ class GameHandler {
         entity.resetItemUses();
         entity.advanceTemporalModifiersTurn();
         entity.advancePendingActionModifierLifetimes();
+        entity.advanceCollisionFilterLifetimes();
         for (const scheduled of entity.advanceItemEffectsTurn())
           this.executeDueSpawnTrigger(entity, scheduled);
       });
@@ -10057,6 +10227,7 @@ class GameHandler {
       ...targetEntity.getItemEffects(),
       ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
       ...targetEntity.getPendingActionModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+      ...targetEntity.getCollisionFilters().map((filter) => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
       ...this.structureLifecycles.filter((lifecycle) => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map((lifecycle) => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
       ...this.deferredEffects.filter((effect) => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map((effect) => ({ itemId: effect.sourceId, order: effect.sourceOrder }))
     ];
@@ -10064,6 +10235,7 @@ class GameHandler {
     targetEntity.removeItemEffects(combination.removeItemIds);
     targetEntity.removeTemporalModifiers(combination.removeItemIds);
     targetEntity.removePendingActionModifiers(combination.removeItemIds);
+    targetEntity.removeCollisionFilters(combination.removeItemIds);
     this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()));
     this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()));
     this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget);
@@ -10115,6 +10287,11 @@ class GameHandler {
         if (target.type !== "position")
           throw new Error("Structure lifecycles require a position target");
         this.installStructureLifecycle(actor, item, effect, target.position);
+      } else if (isCollisionFilterTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Collision filters require an entity target");
+        const filterId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+        targetEntity.addCollisionFilter(createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }), createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }));
       } else if (isActionModifierTemplate(effect)) {
         if (!targetEntity)
           throw new Error("Action modifiers require an entity target");
