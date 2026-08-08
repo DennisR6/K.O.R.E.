@@ -785,11 +785,11 @@ The repository-wide inventory after the Damage and Falltür slices is:
 | Engine | `ModifyMass` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic mass capability. |
 | Engine | `ModifySize` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic size capability. |
 | Engine | `Position` | A/F | Legacy authoring/tests remain, while the live Falltür path uses `transform.set-position`; no new migration selected here. |
-| Engine | `Velocity` | A/F | Legacy authoring/tests remain; live force zones use `ModifySetting(add velocity)` and therefore need collision-host characterization first. |
+| Engine | `Velocity` | A/F | Legacy absolute-velocity authoring/tests remain; no current production collision consumer. |
 | Engine | `Team` | D | SDK authoring/tests only; team membership remains KORE-owned with no generic target/state contract. |
 | Engine | `ModifySetting(hp)` | F/B | Compatibility-only HP shape; current damage uses `numeric.add`. |
 | Engine | `ModifySetting(participation)` | A | Migrated: live death circles, editor kill zones, and KORE kill-zone authoring now use relative `collision.command` bindings with `participation.set-*`. |
-| Engine | `ModifySetting(add velocity)` | A | Live force hazards and editor push zones; maps directly to `movement.add-velocity`. |
+| Engine | `ModifySetting(add velocity)` | F/B | Migrated: force hazards and editor push zones now use relative `collision.command` bindings with `movement.add-velocity`; general compatibility remains for historical settings. |
 | KORE item | `modifyForce` | D | Live Anker and Power-Dash outgoing-shot modifiers; retain as KORE semantics. |
 | KORE item | `spawnTrigger` | D | Live Falltür and Mystery Box scheduling; retain as KORE scheduling semantics. |
 | KORE item | `delayedEffect` | D | Live delayed mine scheduling; retain as KORE scheduling semantics. |
@@ -811,9 +811,9 @@ The ranked live candidates are:
 
 | Rank | Candidate | Reuse | Production | Legacy removal | Risk / missing boundary |
 |---:|---|---:|---:|---:|---|
-| 1 | `ModifySetting(participation)` | High: both entity and structure participation commands, death compositions, later elimination/status effects | High: every lethal collision path | High: removes two setting branches and legacy kill-zone compositions | Collision callbacks lack `IGameContext` and predefined dispatch; requires a generic collision-command host. |
-| 2 | `ModifySetting(add velocity)` | High: reuses `movement.add-velocity` for force/push hazards and future impulses | High: force hazards and editor push zones | High: removes vector-setting branch and legacy force declarations | Same missing collision-command host; cannot safely migrate declarations alone. |
-| 3 | `Physics` | Medium: could establish generic physics modifier ownership | High: every puck/map tick | Medium | Semantics include friction, drag, stop threshold, and KORE entity behavior; requires materially new ownership rather than a small primitive. |
+| 1 | `Movement` | High: existing movement state and integrate capability could serve persistent motion content | High: every active figure tick | High: could remove the remaining temporal legacy interpreter | Drift, stop-threshold, delta-time, and pre-tick ordering need characterization before deciding whether `movement.integrate` is equivalent. |
+| 2 | `Physics` | Medium: could establish generic physics modifier ownership | High: every active figure tick | Medium | Friction, drag, stop threshold, and KORE entity behavior have no current generic state owner; likely larger infrastructure. |
+| 3 | `ModifySetting(mass/size/team)` | Low until a real consumer appears | No current production content | Medium | SDK/test authoring only; do not invent object-state capabilities speculatively. |
 
 `ModifySetting(participation)` was selected and is now migrated. The reusable
 collision boundary receives the authoritative handler context, resolves the
@@ -826,9 +826,38 @@ Characterization and migration evidence is currently `tests/collision_command_ho
 `tests/setting_effect.test.ts`,
 `tests/editor_map_conversion.test.ts`, `tests/falltuer_dormant_runtime.test.ts`,
 `tests/numeric_threshold.test.ts`, and the generic dispatcher/trigger contract
-tests. The next candidate is `ModifySetting(add velocity)`, but it must be
-reevaluated against the now-qualified host before migration; its production
-content remains unchanged in this cycle.
+tests. The velocity migration is qualified by the direct legacy/current
+arithmetic comparison, target/entry tests, and the existing collision host
+qualification. A fresh inventory now ranks `Movement` above `Physics`; no
+Movement migration is included in this slice because its temporal semantics are
+not equivalent to a one-shot movement command and require a separate ownership
+characterization.
+
+### Collision Velocity Convergence
+
+Legacy force and push zones were characterized as instantaneous velocity
+additions. Their payload is a finite `{ x, y }` vector; no mass, friction,
+delta-time, or force scaling is applied. Structure collision Effects receive the
+colliding active Entity after physics depenetration/impulse and are entry-gated
+by the PhysicsSystem contact-pair lifecycle, so persistent overlap does not
+accelerate the Entity repeatedly.
+
+The current representation is now:
+
+```text
+collision.command(relative movement.add-velocity)
+→ stable Entity target binding
+→ shared predefined dispatcher
+→ MovementSystem
+→ Entity.setVel(current + delta)
+```
+
+Editor push zones, document force hazards, and KORE `addForceZone()` authoring
+all emit this representation. Snapshot and replay state remain unchanged except
+for the canonical structure binding; collision activations remain emergent and
+are not recorded separately. The broad `ModifySetting` validator and
+`Player.addSetting("velocity")` compatibility path remain for historical/test
+documents and are not current force-zone execution paths.
 
 ### Phase 9: Pong External Qualification
 
