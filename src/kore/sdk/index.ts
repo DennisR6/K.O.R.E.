@@ -15,6 +15,9 @@ import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { SHAPE, type StructureCollisionRole, type Vector2D } from "../../physics/physics.js";
 import { DOCUMENT_SCHEMA_VERSION, type HazardDocument, type MapDocument, type MapMetadata, type MapSpawnRegion, validateMapDocument } from "../../contracts/documents.js";
 import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
+import { createCollisionCommandBinding } from "../../engine/sdk/collisionCommand.js";
+import { createEngineEffectComposition } from "../../engine/sdk/composition.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
 export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
 export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
@@ -23,7 +26,7 @@ export { TriggerDefinitionCatalog, validateTriggerDefinition } from "../../item/
 export type { TriggerDefinition, TriggerDefinitionDescriptor } from "../../item/triggerDefinitions.js";
 import { RulePhase, WinCondition, validateItemEconomySettings, type FixedItemLoadout, type ItemEconomySettings, type MysteryBoxSettings, type SeededItemDrawSettings } from "../../rules/types.js";
 import { createPlayerSettings, type PlayerSettings } from "../../entity/types.js";
-import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
+import { FRICTION_TABLE, createDefaultGameSettings, type FrictionSettings, type GameSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type SettingsBackground, validateGameSettings } from "../../settings/settings.js";
 import { koreAudio } from "../audio.js";
 import { koreAi } from "../ai.js";
 import {
@@ -287,7 +290,7 @@ export class KoreMapBuilder {
 	}
 
 	/** Adds a circular obstacle or hazard structure. */
-	public addCircle(settings: { x: number; y: number; r: number; color?: string; role?: StructureCollisionRole; effects?: EffectInput[] }): this {
+	public addCircle(settings: { x: number; y: number; r: number; color?: string; role?: StructureCollisionRole; effects?: EffectInput[]; collisionCommands?: MapBoundarySettingsCircle["collisionCommands"] }): this {
 		return this.addStructure({ type: SHAPE.CIRCLE, ...settings, effects: (settings.effects ?? []).map(effect => toFullEffectSettings(effect, EffectTrigger.Collision, [])) });
 	}
 
@@ -296,10 +299,10 @@ export class KoreMapBuilder {
 		this.assertHazardZone(settings);
 		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
 		const structureIndex = this.structures.length;
-		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.multi(
-			kore.effects.modifySetting({ operation: SettingOperation.Set, key: "physicsEnabled", value: false }),
-			kore.effects.modifySetting({ operation: SettingOperation.Set, key: "drawingEnabled", value: false }),
-		)] });
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
+			{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+			{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+		]))] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
 		return this;
 	}

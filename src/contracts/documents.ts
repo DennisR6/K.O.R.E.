@@ -6,6 +6,9 @@ import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { deriveStructureId } from "../structures/identity.js";
 import type { CounterEffectSettings } from "../engine/sdk/counterCapability.js";
+import { createCollisionCommandBinding, type CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import { createEngineEffectComposition } from "../engine/sdk/composition.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 
 
 
@@ -328,12 +331,7 @@ function isDefaultEditorAi(ai: EditorAi): boolean {
 }
 
 function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
-	const effect: FullEffectSettings = hazard.type === "push_zone"
-		? pushZoneEffect(hazard)
-		: { schemaVersion: 1, trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
-			{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
-			{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
-		] }
+	const lethal = hazard.type === "kill_zone" ? [lethalCollisionCommand()] : undefined;
 	return {
 		type: SHAPE.RECTANGLE,
 		x: hazard.position.x,
@@ -341,7 +339,8 @@ function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
 		w: hazard.size.w,
 		h: hazard.size.h,
 		color: hazard.type === "kill_zone" ? "#d94b28" : "#f0a020",
-		effects: [effect],
+		effects: hazard.type === "push_zone" ? [pushZoneEffect(hazard)] : [],
+		...(lethal ? { collisionCommands: lethal } : {}),
 	}
 }
 
@@ -379,17 +378,19 @@ function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
 		y: zone.y,
 		r: zone.r,
 		color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-		effects: [hazardEffect(hazard)],
+		effects: hazard.type === "kill-zone" ? [] : [hazardEffect(hazard)],
+		...(hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : {}),
 	};
 }
 
+function lethalCollisionCommand(): CollisionCommandBinding {
+	return createCollisionCommandBinding(createEngineEffectComposition([
+		{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+		{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+	]));
+}
+
 function hazardEffect(hazard: HazardDocument): FullEffectSettings {
-	if (hazard.type === "kill-zone") {
-		return { schemaVersion: 1, trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
-			{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
-			{ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
-		] };
-	}
 	const config = hazard.config as ForceHazardConfig;
 	const radians = (config.angle * Math.PI) / 180;
 	return {

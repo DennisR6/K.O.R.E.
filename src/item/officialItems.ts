@@ -3,14 +3,13 @@ import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
 import { createItem } from "./sdkItemFactory.js";
-import { EffectType, EffectTrigger, SettingOperation, type FullEffectSettings } from "../effects/types.js";
-import { EffectModifySetting } from "../effects/modifySetting.js";
 import { SHAPE } from "../physics/physics.js";
 import type { MapBoundarySettingsCircle } from "../settings/settings.js";
 import type { TriggerDefinition } from "./triggerDefinitions.js";
 import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
+import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -90,16 +89,10 @@ export const falltuerItem: ItemDocument = createItem({
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 });
 
-const falltuerDeathCollision: FullEffectSettings = {
-	schemaVersion: 1,
-	trigger: EffectTrigger.Collision,
-	triggerValue: [],
-	type: EffectType.Multi,
-	typeValue: [
-		new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
-		new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
-	],
-};
+const falltuerDeathCollision = createCollisionCommandBinding(createEngineEffectComposition([
+	{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+	{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+]));
 
 /** One canonical dormant trap slot reused by the declarative Falltür item. */
 export const falltuerStructure: MapBoundarySettingsCircle = {
@@ -112,7 +105,8 @@ export const falltuerStructure: MapBoundarySettingsCircle = {
 	role: "solid",
 	physicsEnabled: false,
 	drawingEnabled: false,
-	effects: [falltuerDeathCollision],
+	effects: [],
+	collisionCommands: [falltuerDeathCollision],
 };
 
 const falltuerPosition = { schemaVersion: 1 as const, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };

@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { MetaEffect } from "../src/effects/effects.ts";
-import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
+import { EffectType, SettingOperation } from "../src/effects/types.ts";
+import { createCollisionCommandBinding } from "../src/engine/sdk/collisionCommand.ts";
+import { createEngineEffectComposition } from "../src/engine/sdk/composition.ts";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../src/engine/sdk/participationCapability.ts";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
@@ -20,24 +23,20 @@ test("setting effects mutate and serialize set, add, and remove operations", () 
 	expect(player.getHP()).toBe(15)
 
 	const serialized = damage.toSettings()
-	expect(serialized).toEqual({ schemaVersion: 1, type: damage.getType(), typeValue: { operation: SettingOperation.Add, key: "hp", value: -10 } })
+	expect(serialized).toEqual({ schemaVersion: 1, type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "hp", value: -10 } })
 	new MetaEffect(serialized).apply(player)
 	expect(player.getHP()).toBe(5)
 })
 
 test("a death circle marks colliding players dead and removes them from selection", () => {
-	const deathEffect = {
-		schemaVersion: 1 as const,
-		type: EffectType.Multi,
-		typeValue: [
-			new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } }).toSettings(),
-			new EffectModifySetting({ typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } }).toSettings(),
-		],
-	};
 	const player = new Player(createPlayerSettings({ position: { x: 35, y: 20 }, size: 12 }))
+	const deathCommands = [createCollisionCommandBinding(createEngineEffectComposition([
+		{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+		{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+	]))];
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()
-		.addStructure(new StructureCircle(20, 20, 10, undefined, [{ trigger: EffectTrigger.Collision, triggerValue: [], ...deathEffect }]))
+		.addStructure(new StructureCircle(20, 20, 10, undefined, [], undefined, "death-circle", true, true, deathCommands))
 		.addPlayer(player)
 		.build()
 
@@ -49,9 +48,9 @@ test("a death circle marks colliding players dead and removes them from selectio
 
 	test("ice-map death circles use serializable participation settings", () => {
 	const deathCircle = IceMap.IceMap.mapBoundarys.find(boundary => boundary.type === SHAPE.CIRCLE)!
-	expect(deathCircle.effects.some(effect =>
-		 effect.type === EffectType.Multi && Array.isArray(effect.typeValue) &&
-		 effect.typeValue.some(child => child.typeValue.key === "physicsEnabled" && child.typeValue.value === false) &&
-		 effect.typeValue.some(child => child.typeValue.key === "drawingEnabled" && child.typeValue.value === false),
-	)).toBe(true)
+	expect(deathCircle.effects).toEqual(expect.any(Array));
+	expect(deathCircle.collisionCommands?.[0]?.effect).toMatchObject({ type: "effect.composition", effects: [
+		{ type: "participation.set-physics", typeValue: { enabled: false } },
+		{ type: "participation.set-drawing", typeValue: { enabled: false } },
+	] });
 })
