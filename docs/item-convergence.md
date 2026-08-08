@@ -4,7 +4,7 @@ Last reranked after commit: `1cf5fb4 test(items): characterize mystery box rewar
 
 Repository state: clean / qualified for the completed Delayed Mine slice.
 
-CocoIndex state: refreshed after the baseline commit; current index contains 720 files and 7,111 chunks.
+CocoIndex state: refreshed after the baseline commit; current index contains 720 files and 7,114 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
