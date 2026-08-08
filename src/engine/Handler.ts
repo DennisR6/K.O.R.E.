@@ -35,6 +35,7 @@ import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
 import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
+import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import { TransformSystem } from "../systems/TransformSystem.js";
@@ -45,7 +46,7 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
@@ -145,6 +146,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private paused = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
+	private structureLifecycles: StructureLifecycleSettings[] = []
 	private readonly feedback = new GameplayFeedbackTrace();
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -512,6 +514,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			entity.advanceTemporalModifiersTurn();
 			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
 		})
+		if (this.context.currTurn !== turnNumber) this.advanceStructureLifecyclesTurn();
 		this.context.currTurn = turnNumber
 		this.ruleState.turnNumber = turnNumber
 	}
@@ -578,8 +581,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
 		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
 		this.entityManager.applySettings(settings.players)
+		this.structureLifecycles = []
 		this.initializeFixedLoadouts()
 		this.context.structures = settings.mapBoundarys.map(boundary => new FullStructure(boundary))
+		this.restoreStructureLifecycles((settings as EngineSettings).structureLifecycles)
 		this.setPhysics(new defaultPhysics(settings.friction))
 		this.setWorldSize(settings.screenResolution)
 		this.setMyTeam(settings.myTeam)
@@ -706,6 +711,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			tickRate: this.getTickRate(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
+			...(this.structureLifecycles.length ? { structureLifecycles: structuredClone(this.structureLifecycles) } : {}),
 		}
 		// The export stays a pure snapshot: only a detached copy is retained,
 		// so caller mutations of the returned settings can never leak into
@@ -748,6 +754,37 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
+	private advanceStructureLifecyclesTurn(): void {
+		const next: StructureLifecycleSettings[] = [];
+		for (const lifecycle of this.structureLifecycles) {
+			const advanced = advanceStructureLifecycle(lifecycle);
+			if (advanced) next.push(advanced);
+			else {
+				const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
+				if (!structure) throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+				structure.setPhysicsEnabled(false);
+				structure.setDrawingEnabled(false);
+			}
+		}
+		this.structureLifecycles = next;
+	}
+	public restoreStructureLifecycles(lifecycles: readonly StructureLifecycleSettings[] | undefined): void {
+		this.structureLifecycles = [];
+		for (const lifecycle of lifecycles ?? []) {
+			validateStructureLifecycle(lifecycle);
+			if (!this.context.structures.some(structure => structure.getId() === lifecycle.structureId)) throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+			this.structureLifecycles.push(structuredClone(lifecycle));
+		}
+	}
+	private removeStructureLifecycles(sourceIds: ReadonlySet<string>, targetId: string): void {
+		for (const lifecycle of this.structureLifecycles) {
+			if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId) continue;
+			const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
+			structure?.setPhysicsEnabled(false);
+			structure?.setDrawingEnabled(false);
+		}
+		this.structureLifecycles = this.structureLifecycles.filter(lifecycle => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+	}
 	/**
 	 * Consumes a declared item and validates its target through the gameplay
 	 * authority. A used mystery box additionally resolves and grants exactly
@@ -785,10 +822,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const installedEffects = [
 			...targetEntity.getItemEffects(),
 			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
 		];
 		const combination = validateItemCombination(item, installedEffects, new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
 		targetEntity.removeTemporalModifiers(combination.removeItemIds)
+		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
 		this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget)
 		actor.setInventory(inventory)
 		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
@@ -813,6 +852,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
 				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
+			} else if (isStructureLifecycleTemplate(effect)) {
+				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
+				this.installStructureLifecycle(actor, item, effect, target.position);
 			} else if (isTemporalModifierTemplate(effect)) {
 				if (!targetEntity) throw new Error("Temporal modifiers require an entity target");
 				const targetId = String(targetEntity.getId());
@@ -830,6 +872,32 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
 			}
 		}
+	}
+	private installStructureLifecycle(actor: IEntity, item: ItemDocument, template: StructureLifecycleTemplate, position: Vector2D): void {
+		const structureId = `${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+		if (this.context.structures.some(structure => structure.getId() === structureId)) throw new Error(`Structure lifecycle ID '${structureId}' already exists`);
+		this.context.structures.push(new FullStructure({
+			id: structureId,
+			type: SHAPE.RECTANGLE,
+			x: position.x,
+			y: position.y,
+			w: template.structure.w,
+			h: template.structure.h,
+			...(template.structure.color === undefined ? {} : { color: template.structure.color }),
+			role: template.structure.role ?? "solid",
+			physicsEnabled: true,
+			drawingEnabled: true,
+			effects: [],
+		}));
+		this.structureLifecycles.push(createStructureLifecycle({
+			id: `${structureId}:lifecycle`,
+			structureId,
+			durationUnit: template.durationUnit,
+			duration: template.duration,
+			sourceId: item.id,
+			sourceOrder: itemOrder(item),
+			targetId: String(actor.getId()),
+		}));
 	}
 
 	private advanceScheduledItemEffectsTick(): void {
@@ -864,7 +932,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
 				return;
 			}
-			if (isTemporalModifierTemplate(nested)) throw new Error("Delayed temporal modifiers are unsupported");
+			if (isTemporalModifierTemplate(nested) || isStructureLifecycleTemplate(nested)) throw new Error("Delayed temporal or structure lifecycles are unsupported");
 			entity.addItemEffect(nested.toSettings() as ItemEffectSettings, { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
 			return;
 		}
@@ -1090,6 +1158,7 @@ export class GameHandlerBuilder {
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
+		this.engine.restoreStructureLifecycles((gameSettings as EngineSettings).structureLifecycles)
 		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
 			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
 			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))

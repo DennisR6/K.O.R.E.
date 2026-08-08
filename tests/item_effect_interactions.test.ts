@@ -6,9 +6,9 @@ import { EffectModifyForce, applyForceModifiers } from "../src/effects/modifyFor
 import { EffectModifyRotation, applyRotationModifiers } from "../src/effects/modifyRotation.ts";
 import { EffectLockRotation } from "../src/effects/lockRotation.ts";
 import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
+import { advanceStructureLifecycle, createStructureLifecycle } from "../src/engine/contracts/structureLifecycle.ts";
 import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectSelectionLock } from "../src/effects/selectionLock.ts";
-import { EffectTemporaryWall } from "../src/effects/temporaryWall.ts";
 import { EffectSpawnTrigger } from "../src/effects/spawnTrigger.ts";
 import { createOfficialItemLoader } from "../src/item/officialItems.ts";
 import { EffectTrigger, EffectType } from "../src/effects/types.ts";
@@ -35,14 +35,13 @@ test("mixed effect cleanup and expiration across turn progression", () => {
 	const ghost = new EffectGhostMode({ typeValue: { durationTurns: 1 } });
 	const lockRot = new EffectLockRotation({ typeValue: { durationTurns: 2 } });
 	const selLock = new EffectSelectionLock({ typeValue: { durationTurns: 1 } });
-	const wall = new EffectTemporaryWall({ typeValue: { wallId: "wall1", x: 100, y: 100, w: 50, h: 10, durationTurns: 2, active: true } });
+	const wall = createStructureLifecycle({ id: "wall1:lifecycle", structureId: "wall1", durationUnit: "turns", duration: 2 });
 	const trigger = new EffectSpawnTrigger({ typeValue: { triggerId: "trig1", delayTurns: 1 } });
 
 	expect(freeze.remaining).toBe(2);
 	expect(ghost.isActive()).toBe(true);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(true);
-	expect(wall.isActive()).toBe(true);
 	expect(trigger.hasFired()).toBe(false);
 
 	// Advance turn 1
@@ -50,24 +49,22 @@ test("mixed effect cleanup and expiration across turn progression", () => {
 	ghost.advanceTurn();
 	lockRot.advanceTurn();
 	selLock.advanceTurn();
-	wall.advanceTurn();
 	expect(trigger.advanceTurn()).toBe(true);
 
 	expect(freezeAfterOne.remaining).toBe(1);
 	expect(ghost.isActive()).toBe(false);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(false);
-	expect(wall.isActive()).toBe(true);
+	expect(advanceStructureLifecycle(wall)?.remaining).toBe(1);
 	expect(trigger.hasFired()).toBe(true);
 
 	// Advance turn 2
 	const freezeAfterTwo = advanceTemporalModifier(freezeAfterOne);
 	lockRot.advanceTurn();
-	expect(wall.advanceTurn()).toBe(true); // expires
+	expect(advanceStructureLifecycle(advanceStructureLifecycle(wall)!) ).toBeUndefined(); // expires
 
 	expect(freezeAfterTwo).toBeUndefined();
 	expect(lockRot.isLocked()).toBe(false);
-	expect(wall.isActive()).toBe(false);
 });
 
 test("serialization round-trip and replay regression for mixed items and effects", () => {

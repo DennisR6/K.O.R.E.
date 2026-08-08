@@ -54,3 +54,5 @@ export type { NumericThreshold, NumericThresholdBinding, NumericThresholdCompara
 export type { EngineFrameworkSettings, EngineSystemDefinition, EngineWorldSettings };
 export { advanceTemporalModifier, createTemporalModifier, createTemporalModifierTemplate, validateTemporalModifier, TEMPORAL_DURATION_UNITS, TEMPORAL_MODIFIER_SCHEMA_VERSION } from "../contracts/temporalModifier.js";
 export type { TemporalDurationUnit, TemporalModifierSettings, TemporalModifierTarget, TemporalModifierTemplate } from "../contracts/temporalModifier.js";
+export { advanceStructureLifecycle, createStructureLifecycle, createStructureLifecycleTemplate, STRUCTURE_LIFECYCLE_DURATION_UNITS, STRUCTURE_LIFECYCLE_SCHEMA_VERSION, validateStructureLifecycle, validateStructureLifecycleTemplate } from "../contracts/structureLifecycle.js";
+export type { StructureLifecycleDurationUnit, StructureLifecycleSettings, StructureLifecycleStructure, StructureLifecycleTemplate } from "../contracts/structureLifecycle.js";

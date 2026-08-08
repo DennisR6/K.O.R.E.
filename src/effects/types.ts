@@ -26,7 +26,7 @@ export const enum ItemEffectType {
 	DelayedEffect = "delayedEffect",
 	Shield = "shield",
 	SwapPosition = "swapPosition",
-	TemporaryWall = "temporaryWall",
+	StructureLifecycle = "structureLifecycle",
 	GhostMode = "ghostMode",
 	Magnet = "magnet",
 	SelectionLock = "selectionLock",
@@ -78,7 +78,7 @@ export interface ItemEffectPayloadMap {
 	[ItemEffectType.DelayedEffect]: DelayedEffectPayload;
 	[ItemEffectType.Shield]: ShieldPayload;
 	[ItemEffectType.SwapPosition]: Record<string, never>;
-	[ItemEffectType.TemporaryWall]: TemporaryWallPayload;
+	[ItemEffectType.StructureLifecycle]: { durationUnit: "turns"; duration: number; structure: Record<string, unknown> };
 	[ItemEffectType.GhostMode]: GhostModePayload;
 	[ItemEffectType.Magnet]: { mode: "attract" | "repel"; force: number; range: number };
 	[ItemEffectType.SelectionLock]: LockRotationPayload;
@@ -120,18 +120,6 @@ export interface ShieldPayload {
 export interface GhostModePayload {
 	durationTurns: number;
 	remainingTurns?: number;
-}
-
-export interface TemporaryWallPayload {
-	wallId: string;
-	x: number;
-	y: number;
-	w: number;
-	h: number;
-	color?: string;
-	durationTurns: number;
-	remainingTurns?: number;
-	active?: boolean;
 }
 
 export type EffectSettings = {

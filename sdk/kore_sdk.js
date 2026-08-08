@@ -818,7 +818,7 @@ var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "temporaryWall" /* TemporaryWall */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "delayedEffect" /* DelayedEffect */, "shield" /* Shield */, "swapPosition" /* SwapPosition */, "ghostMode" /* GhostMode */, "magnet" /* Magnet */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */];
 function validateEffectSettings(value) {
   const effect = record2(value, "Effect settings");
   knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
@@ -935,7 +935,7 @@ function validateRuntimeItemEffectSettings(value) {
         throw new Error("delayedEffect requires exactly one nested Effect representation");
       if (payload.effectType !== undefined) {
         string2(payload.effectType, "delayedEffect effectType");
-        if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "temporaryWall" /* TemporaryWall */ || payload.effectType === "swapPosition" /* SwapPosition */ || payload.effectType === "temporalModifier" /* TemporalModifier */)
+        if (payload.effectType === "spawnTrigger" /* SpawnTrigger */ || payload.effectType === "delayedEffect" /* DelayedEffect */ || payload.effectType === "structureLifecycle" /* StructureLifecycle */ || payload.effectType === "swapPosition" /* SwapPosition */ || payload.effectType === "temporalModifier" /* TemporalModifier */)
           throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
         if (payload.effectValue !== undefined)
           assertJsonValue(payload.effectValue);
@@ -961,18 +961,22 @@ function validateRuntimeItemEffectSettings(value) {
     case "swapPosition" /* SwapPosition */:
       exactKeys2(payload, [], "swapPosition payload");
       return;
-    case "temporaryWall" /* TemporaryWall */:
-      knownKeys(payload, new Set(["wallId", "x", "y", "w", "h", "color", "durationTurns", "remainingTurns", "active"]), "temporaryWall payload");
-      requiredKeys(payload, ["wallId", "x", "y", "w", "h", "durationTurns"], "temporaryWall payload");
-      string2(payload.wallId, "temporaryWall wallId");
-      finite2(payload.x, "temporaryWall x");
-      finite2(payload.y, "temporaryWall y");
-      finitePositive(payload.w, "temporaryWall w");
-      finitePositive(payload.h, "temporaryWall h");
-      if (payload.color !== undefined)
-        string2(payload.color, "temporaryWall color");
-      boundedTurns(payload.durationTurns, payload.remainingTurns, "temporaryWall");
-      optionalBoolean(payload.active, "temporaryWall active");
+    case "structureLifecycle" /* StructureLifecycle */:
+      exactKeys2(payload, ["durationUnit", "duration", "structure"], "structureLifecycle payload");
+      if (payload.durationUnit !== "turns")
+        throw new Error("structureLifecycle durationUnit must be turns");
+      boundedTurns(payload.duration, undefined, "structureLifecycle");
+      const structure = record2(payload.structure, "structureLifecycle structure");
+      knownKeys(structure, new Set(["type", "w", "h", "color", "role"]), "structureLifecycle structure");
+      requiredKeys(structure, ["type", "w", "h"], "structureLifecycle structure");
+      if (structure.type !== "rectangle")
+        throw new Error("structureLifecycle currently requires rectangle geometry");
+      finitePositive(structure.w, "structureLifecycle width");
+      finitePositive(structure.h, "structureLifecycle height");
+      if (structure.color !== undefined)
+        string2(structure.color, "structureLifecycle color");
+      if (structure.role !== undefined && !["solid", "containment", "both"].includes(String(structure.role)))
+        throw new Error("structureLifecycle role is invalid");
       return;
     case "ghostMode" /* GhostMode */:
       knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload");
@@ -998,7 +1002,13 @@ function validateRuntimeItemEffectSettings(value) {
       if (payload.durationUnit !== "turns")
         throw new Error("temporalModifier durationUnit must be turns");
       boundedTurns(payload.duration, undefined, "temporalModifier");
-      assertJsonValue(payload.effect);
+      const temporalEffect = record2(payload.effect, "temporalModifier effect");
+      exactKeys2(temporalEffect, ["schemaVersion", "type", "typeValue"], "temporalModifier effect");
+      if (temporalEffect.schemaVersion !== 1 || temporalEffect.type !== "movement.scale-speed")
+        throw new Error("temporalModifier currently requires movement.scale-speed");
+      const scalePayload = record2(temporalEffect.typeValue, "temporalModifier movement payload");
+      exactKeys2(scalePayload, ["factor"], "temporalModifier movement payload");
+      finiteNonNegative(scalePayload.factor, "temporalModifier movement factor");
       return;
   }
 }
@@ -2014,6 +2024,82 @@ function validateTemporalModifier(value) {
   const effectKeys = Object.keys(modifier.effect);
   if (effectKeys.some((key) => !["schemaVersion", "type", "typeValue", "target"].includes(key)))
     throw new Error("Temporal modifier Engine effect contains unexpected fields");
+}
+var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
+function createStructureLifecycleTemplate(input) {
+  const template = structuredClone(input);
+  validateStructureLifecycleTemplate(template);
+  return template;
+}
+function createStructureLifecycle(input) {
+  const lifecycle = {
+    schemaVersion: STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
+    id: input.id,
+    structureId: input.structureId,
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration,
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
+    ...input.targetId === undefined ? {} : { targetId: input.targetId }
+  };
+  validateStructureLifecycle(lifecycle);
+  return lifecycle;
+}
+function advanceStructureLifecycle(lifecycle) {
+  validateStructureLifecycle(lifecycle);
+  if (lifecycle.remaining <= 1)
+    return;
+  return { ...structuredClone(lifecycle), remaining: lifecycle.remaining - 1 };
+}
+function validateStructureLifecycleTemplate(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Structure lifecycle template must be an object");
+  const template = value;
+  if (template.durationUnit !== "turns")
+    throw new Error("Structure lifecycle requires turns duration");
+  validateDuration(template.duration, "Structure lifecycle duration");
+  if (!template.structure || typeof template.structure !== "object" || Array.isArray(template.structure))
+    throw new Error("Structure lifecycle requires structure geometry");
+  const structure = template.structure;
+  if (structure.type !== "rectangle")
+    throw new Error("Structure lifecycle currently requires rectangle geometry");
+  if (typeof structure.w !== "number" || !Number.isFinite(structure.w) || structure.w <= 0)
+    throw new Error("Structure lifecycle width must be positive");
+  if (typeof structure.h !== "number" || !Number.isFinite(structure.h) || structure.h <= 0)
+    throw new Error("Structure lifecycle height must be positive");
+  if (structure.color !== undefined && typeof structure.color !== "string")
+    throw new Error("Structure lifecycle color must be a string");
+  if (structure.role !== undefined && !["solid", "containment", "both"].includes(structure.role))
+    throw new Error("Structure lifecycle role is invalid");
+  assertJsonValue(structure);
+}
+function validateStructureLifecycle(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Structure lifecycle must be an object");
+  const lifecycle = value;
+  if (lifecycle.schemaVersion !== STRUCTURE_LIFECYCLE_SCHEMA_VERSION)
+    throw new Error("Unsupported structure lifecycle schema version");
+  if (typeof lifecycle.id !== "string" || lifecycle.id.length === 0)
+    throw new Error("Structure lifecycle requires a stable id");
+  if (typeof lifecycle.structureId !== "string" || lifecycle.structureId.length === 0)
+    throw new Error("Structure lifecycle requires a stable structure id");
+  if (lifecycle.sourceId !== undefined && (typeof lifecycle.sourceId !== "string" || lifecycle.sourceId.length === 0))
+    throw new Error("Structure lifecycle sourceId must be non-empty");
+  if (lifecycle.sourceOrder !== undefined && !Number.isSafeInteger(lifecycle.sourceOrder))
+    throw new Error("Structure lifecycle sourceOrder must be a safe integer");
+  if (lifecycle.targetId !== undefined && (typeof lifecycle.targetId !== "string" || lifecycle.targetId.length === 0))
+    throw new Error("Structure lifecycle targetId must be non-empty");
+  if (lifecycle.durationUnit !== "turns")
+    throw new Error("Structure lifecycle requires turns duration");
+  validateDuration(lifecycle.duration, "Structure lifecycle duration");
+  validateDuration(lifecycle.remaining, "Structure lifecycle remaining duration");
+  if (lifecycle.remaining > lifecycle.duration)
+    throw new Error("Structure lifecycle remaining duration exceeds duration");
+}
+function validateDuration(value, label) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
+    throw new Error(`${label} must be a positive integer`);
 }
 
 var engine = {
@@ -3434,68 +3520,6 @@ function isVector(value) {
   return typeof value === "object" && value !== null && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
 }
 
-class EffectTemporaryWall {
-  wallId;
-  x;
-  y;
-  w;
-  h;
-  color;
-  durationTurns;
-  remainingTurns;
-  active;
-  constructor(settings) {
-    const value = settings.typeValue;
-    if (typeof value.wallId !== "string" || value.wallId.length === 0)
-      throw new Error("temporaryWall requires a non-empty wallId");
-    if (![value.x, value.y].every(Number.isFinite) || ![value.w, value.h].every(Number.isFinite) || value.w <= 0 || value.h <= 0)
-      throw new Error("temporaryWall requires finite position and positive dimensions");
-    if (!Number.isSafeInteger(value.durationTurns) || value.durationTurns < 1)
-      throw new Error("temporaryWall durationTurns must be a positive integer");
-    const remainingTurns = value.remainingTurns ?? value.durationTurns;
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > value.durationTurns)
-      throw new Error("temporaryWall remainingTurns must be between zero and durationTurns");
-    if (typeof value.active !== "undefined" && typeof value.active !== "boolean")
-      throw new Error("temporaryWall active must be boolean");
-    this.wallId = value.wallId;
-    this.x = value.x;
-    this.y = value.y;
-    this.w = value.w;
-    this.h = value.h;
-    this.color = value.color;
-    this.durationTurns = value.durationTurns;
-    this.remainingTurns = remainingTurns;
-    this.active = value.active ?? false;
-  }
-  spawn() {
-    this.active = true;
-    this.remainingTurns = this.durationTurns;
-    return this.toWallState();
-  }
-  advanceTurn() {
-    if (!this.active)
-      return false;
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-    if (this.remainingTurns !== 0)
-      return false;
-    this.active = false;
-    return true;
-  }
-  isActive() {
-    return this.active;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toWallState() {
-    return { wallId: this.wallId, x: this.x, y: this.y, w: this.w, h: this.h, ...this.color === undefined ? {} : { color: this.color } };
-  }
-  toSettings() {
-    return { type: "temporaryWall" /* TemporaryWall */, typeValue: { wallId: this.wallId, x: this.x, y: this.y, w: this.w, h: this.h, ...this.color === undefined ? {} : { color: this.color }, durationTurns: this.durationTurns, remainingTurns: this.remainingTurns, active: this.active } };
-  }
-}
-
 function createRuntimeItemEffect(settings) {
   validateRuntimeItemEffectSettings(settings);
   const value = settings.typeValue;
@@ -3516,23 +3540,14 @@ function createRuntimeItemEffect(settings) {
       const nested = value.effectValue;
       return new EffectDelayed({ typeValue: { ...value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested } : { nestedEffect: value.nestedEffect }, delayTicks: integerValue(value, "delayTicks"), ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget } } });
     }
-    case "temporaryWall" /* TemporaryWall */:
-      return new EffectTemporaryWall({ typeValue: {
-        wallId: stringValue(value, "wallId"),
-        x: numberValue(value, "x"),
-        y: numberValue(value, "y"),
-        w: numberValue(value, "w"),
-        h: numberValue(value, "h"),
-        durationTurns: integerValue(value, "durationTurns"),
-        ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") },
-        ...value.active === undefined ? {} : { active: value.active }
-      } });
     case "aimVariance" /* AimVariance */:
       return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
     case "swapPosition" /* SwapPosition */:
       return new EffectSwapPosition;
     case "temporalModifier" /* TemporalModifier */:
       return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
+    case "structureLifecycle" /* StructureLifecycle */:
+      return createStructureLifecycleTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), structure: value.structure });
     default:
       throw new Error(`Unsupported runtime item effect '${String(settings.type)}'`);
   }
@@ -3542,7 +3557,7 @@ function resolveRuntimeItemEffects(effects) {
 }
 function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
-  if (isTemporalModifierTemplate(runtime))
+  if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime))
     return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
   if (!advance)
@@ -3559,7 +3574,7 @@ function advanceRuntimeItemEffectTurn(effect) {
 }
 function advanceRuntimeItemEffectTick(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
-  if (isTemporalModifierTemplate(runtime))
+  if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime))
     return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTick;
   if (!advance)
@@ -3597,6 +3612,9 @@ function stringValue(value, key) {
 }
 function isTemporalModifierTemplate(value) {
   return "durationUnit" in value && "duration" in value && "effect" in value;
+}
+function isStructureLifecycleTemplate(value) {
+  return "durationUnit" in value && "duration" in value && "structure" in value;
 }
 
 function dispatchTriggeredEffects(options) {
@@ -7748,7 +7766,7 @@ function clone4(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"];
 }
 function createItem(input) {
   const item = createItemDocument({
@@ -7894,7 +7912,7 @@ var miniWallItem = createItem({
   name: "Mini-Wall",
   description: "Spawns a temporary portable wall at a selected position.",
   type: "defensive",
-  effects: [{ type: "temporaryWall", value: { wallId: "mini-wall", x: 0, y: 0, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }],
+  effects: [{ type: "structureLifecycle", value: { durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } } }],
   targetType: "position",
   duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 1 },
@@ -9208,6 +9226,7 @@ class GameHandler {
   disposed = false;
   paused = false;
   resolvingTurn = false;
+  structureLifecycles = [];
   feedback = new GameplayFeedbackTrace;
   constructor() {
     this.id = crypto.randomUUID();
@@ -9508,6 +9527,8 @@ class GameHandler {
         for (const scheduled of entity.advanceItemEffectsTurn())
           this.executeDueSpawnTrigger(entity, scheduled);
       });
+    if (this.context.currTurn !== turnNumber)
+      this.advanceStructureLifecyclesTurn();
     this.context.currTurn = turnNumber;
     this.ruleState.turnNumber = turnNumber;
   }
@@ -9583,8 +9604,10 @@ class GameHandler {
       throw new Error("A rematch requires initial game settings");
     const settings = JSON.parse(JSON.stringify(this.initialSettings));
     this.entityManager.applySettings(settings.players);
+    this.structureLifecycles = [];
     this.initializeFixedLoadouts();
     this.context.structures = settings.mapBoundarys.map((boundary) => new FullStructure(boundary));
+    this.restoreStructureLifecycles(settings.structureLifecycles);
     this.setPhysics(new defaultPhysics(settings.friction));
     this.setWorldSize(settings.screenResolution);
     this.setMyTeam(settings.myTeam);
@@ -9744,7 +9767,8 @@ class GameHandler {
       }),
       tickRate: this.getTickRate(),
       ...this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {},
-      ...this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}
+      ...this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {},
+      ...this.structureLifecycles.length ? { structureLifecycles: structuredClone(this.structureLifecycles) } : {}
     };
     this.saveSettings(JSON.parse(JSON.stringify(settings)));
     return settings;
@@ -9803,6 +9827,41 @@ class GameHandler {
   resetMapItemPickups() {
     this.mapPickupSystem.reset();
   }
+  advanceStructureLifecyclesTurn() {
+    const next = [];
+    for (const lifecycle of this.structureLifecycles) {
+      const advanced = advanceStructureLifecycle(lifecycle);
+      if (advanced)
+        next.push(advanced);
+      else {
+        const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
+        if (!structure)
+          throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+        structure.setPhysicsEnabled(false);
+        structure.setDrawingEnabled(false);
+      }
+    }
+    this.structureLifecycles = next;
+  }
+  restoreStructureLifecycles(lifecycles) {
+    this.structureLifecycles = [];
+    for (const lifecycle of lifecycles ?? []) {
+      validateStructureLifecycle(lifecycle);
+      if (!this.context.structures.some((structure) => structure.getId() === lifecycle.structureId))
+        throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+      this.structureLifecycles.push(structuredClone(lifecycle));
+    }
+  }
+  removeStructureLifecycles(sourceIds, targetId) {
+    for (const lifecycle of this.structureLifecycles) {
+      if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId)
+        continue;
+      const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
+      structure?.setPhysicsEnabled(false);
+      structure?.setDrawingEnabled(false);
+    }
+    this.structureLifecycles = this.structureLifecycles.filter((lifecycle) => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+  }
   useItem(actorId, itemId, target = { type: "self" }) {
     const actor = this.entityManager.getEntityById(actorId);
     if (!actor)
@@ -9839,11 +9898,13 @@ class GameHandler {
     consumeInventoryItem(inventory, item);
     const installedEffects = [
       ...targetEntity.getItemEffects(),
-      ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder }))
+      ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+      ...this.structureLifecycles.filter((lifecycle) => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map((lifecycle) => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder }))
     ];
     const combination = validateItemCombination(item, installedEffects, new Map(this.items.map((candidate) => [candidate.id, candidate])));
     targetEntity.removeItemEffects(combination.removeItemIds);
     targetEntity.removeTemporalModifiers(combination.removeItemIds);
+    this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()));
     this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget);
     actor.setInventory(inventory);
     this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId] : [actorId], data: { itemId } });
@@ -9872,6 +9933,10 @@ class GameHandler {
         const actorPosition = actor.getPos();
         actor.setPos(targetEntity.getPos());
         targetEntity.setPos(actorPosition);
+      } else if (isStructureLifecycleTemplate(effect)) {
+        if (target.type !== "position")
+          throw new Error("Structure lifecycles require a position target");
+        this.installStructureLifecycle(actor, item, effect, target.position);
       } else if (isTemporalModifierTemplate(effect)) {
         if (!targetEntity)
           throw new Error("Temporal modifiers require an entity target");
@@ -9890,6 +9955,33 @@ class GameHandler {
         (targetEntity ?? actor).addItemEffect(effect.toSettings(), { itemId: item.id, order: itemOrder(item) });
       }
     }
+  }
+  installStructureLifecycle(actor, item, template, position) {
+    const structureId = `${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+    if (this.context.structures.some((structure) => structure.getId() === structureId))
+      throw new Error(`Structure lifecycle ID '${structureId}' already exists`);
+    this.context.structures.push(new FullStructure({
+      id: structureId,
+      type: 2 /* RECTANGLE */,
+      x: position.x,
+      y: position.y,
+      w: template.structure.w,
+      h: template.structure.h,
+      ...template.structure.color === undefined ? {} : { color: template.structure.color },
+      role: template.structure.role ?? "solid",
+      physicsEnabled: true,
+      drawingEnabled: true,
+      effects: []
+    }));
+    this.structureLifecycles.push(createStructureLifecycle({
+      id: `${structureId}:lifecycle`,
+      structureId,
+      durationUnit: template.durationUnit,
+      duration: template.duration,
+      sourceId: item.id,
+      sourceOrder: itemOrder(item),
+      targetId: String(actor.getId())
+    }));
   }
   advanceScheduledItemEffectsTick() {
     for (const owner of this.entityManager.getEntities()) {
@@ -9929,8 +10021,8 @@ class GameHandler {
         entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
         return;
       }
-      if (isTemporalModifierTemplate(nested))
-        throw new Error("Delayed temporal modifiers are unsupported");
+      if (isTemporalModifierTemplate(nested) || isStructureLifecycleTemplate(nested))
+        throw new Error("Delayed temporal or structure lifecycles are unsupported");
       entity.addItemEffect(nested.toSettings(), { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
       return;
     }
@@ -10175,6 +10267,7 @@ class GameHandlerBuilder {
       this.engine.startTurn({ phase: gameSettings.gameMode?.phases[0] ?? "physics" /* Physics */, activeTeam: 0, turnNumber: 0, itemUses: 0 });
     }
     mapBoundarys.forEach((boundary) => this.engine.addStructure(new FullStructure(boundary)));
+    this.engine.restoreStructureLifecycles(gameSettings.structureLifecycles);
     if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
       const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
       this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)));
@@ -10558,7 +10651,7 @@ function getSelectableGameModes() {
 var CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 var CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
 var CONTENT_PACKAGE_MAX_DOCUMENTS = 256;
-var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"];
+var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"];
 var EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
@@ -11300,8 +11393,8 @@ var kore = {
     },
     temporaryWall(lifetimeTurns = 1) {
       if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0)
-        throw new Error("Temporary wall lifetimeTurns must be a positive integer");
-      return { type: "temporaryWall" /* TemporaryWall */, typeValue: { lifetimeTurns } };
+        throw new Error("Temporary structure lifetimeTurns must be a positive integer");
+      return { type: "structureLifecycle" /* StructureLifecycle */, typeValue: { durationUnit: "turns", duration: lifetimeTurns, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } } };
     },
     ghostMode(durationTurns = 1) {
       if (!Number.isInteger(durationTurns) || durationTurns <= 0)
@@ -11349,7 +11442,7 @@ var kore = {
       delayedEffect: "delayedEffect" /* DelayedEffect */,
       shield: "shield" /* Shield */,
       swapPosition: "swapPosition" /* SwapPosition */,
-      temporaryWall: "temporaryWall" /* TemporaryWall */,
+      structureLifecycle: "structureLifecycle" /* StructureLifecycle */,
       ghostMode: "ghostMode" /* GhostMode */,
       magnet: "magnet" /* Magnet */,
       selectionLock: "selectionLock" /* SelectionLock */,
@@ -11360,7 +11453,7 @@ var kore = {
   }
 };
 function isItemEffectType(value) {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"].includes(value);
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"].includes(value);
 }
 export {
   validateTriggerDefinition,

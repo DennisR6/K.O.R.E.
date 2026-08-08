@@ -17,7 +17,7 @@ const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
-const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.TemporaryWall, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier] as const;
+const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
@@ -93,7 +93,7 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			if ((payload.effectType === undefined) === (payload.nestedEffect === undefined)) throw new Error("delayedEffect requires exactly one nested Effect representation");
 			if (payload.effectType !== undefined) {
 				string(payload.effectType, "delayedEffect effectType");
-				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.TemporaryWall || payload.effectType === ItemEffectType.SwapPosition || payload.effectType === ItemEffectType.TemporalModifier) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
+				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.StructureLifecycle || payload.effectType === ItemEffectType.SwapPosition || payload.effectType === ItemEffectType.TemporalModifier) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
 				if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
 				validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
 			} else {
@@ -108,10 +108,18 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity)) throw new Error("shield remainingCapacity is outside capacity");
 			optionalBoolean(payload.blocksCollision, "shield blocksCollision"); return;
 		case ItemEffectType.SwapPosition: exactKeys(payload, [], "swapPosition payload"); return;
-		case ItemEffectType.TemporaryWall:
-			knownKeys(payload, new Set(["wallId", "x", "y", "w", "h", "color", "durationTurns", "remainingTurns", "active"]), "temporaryWall payload"); requiredKeys(payload, ["wallId", "x", "y", "w", "h", "durationTurns"], "temporaryWall payload");
-			string(payload.wallId, "temporaryWall wallId"); finite(payload.x, "temporaryWall x"); finite(payload.y, "temporaryWall y"); finitePositive(payload.w, "temporaryWall w"); finitePositive(payload.h, "temporaryWall h");
-			if (payload.color !== undefined) string(payload.color, "temporaryWall color"); boundedTurns(payload.durationTurns, payload.remainingTurns, "temporaryWall"); optionalBoolean(payload.active, "temporaryWall active"); return;
+		case ItemEffectType.StructureLifecycle:
+			exactKeys(payload, ["durationUnit", "duration", "structure"], "structureLifecycle payload");
+			if (payload.durationUnit !== "turns") throw new Error("structureLifecycle durationUnit must be turns");
+			boundedTurns(payload.duration, undefined, "structureLifecycle");
+			const structure = record(payload.structure, "structureLifecycle structure");
+			knownKeys(structure, new Set(["type", "w", "h", "color", "role"]), "structureLifecycle structure");
+			requiredKeys(structure, ["type", "w", "h"], "structureLifecycle structure");
+			if (structure.type !== "rectangle") throw new Error("structureLifecycle currently requires rectangle geometry");
+			finitePositive(structure.w, "structureLifecycle width"); finitePositive(structure.h, "structureLifecycle height");
+			if (structure.color !== undefined) string(structure.color, "structureLifecycle color");
+			if (structure.role !== undefined && !["solid", "containment", "both"].includes(String(structure.role))) throw new Error("structureLifecycle role is invalid");
+			return;
 		case ItemEffectType.GhostMode: knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload"); requiredKeys(payload, ["durationTurns"], "ghostMode payload"); boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode"); return;
 		case ItemEffectType.Magnet:
 			exactKeys(payload, ["mode", "force", "range"], "magnet payload"); if (payload.mode !== "attract" && payload.mode !== "repel") throw new Error("magnet mode must be attract or repel"); finiteNonNegative(payload.force, "magnet force"); finitePositive(payload.range, "magnet range"); return;

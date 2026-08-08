@@ -33,7 +33,7 @@ export const ITEM_EFFECT_LIFECYCLE: Readonly<Record<ItemEffectType, EffectLifecy
 	[ItemEffectType.DelayedEffect]: { category: "scheduled", execution: "tick", persistent: true },
 	[ItemEffectType.Shield]: { category: "status", execution: "collision", persistent: true },
 	[ItemEffectType.SwapPosition]: { category: "command", execution: "action", persistent: false },
-	[ItemEffectType.TemporaryWall]: { category: "status", execution: "turn", persistent: true },
+	[ItemEffectType.StructureLifecycle]: { category: "status", execution: "turn", persistent: true },
 	[ItemEffectType.GhostMode]: { category: "status", execution: "collision", persistent: true },
 	[ItemEffectType.Magnet]: { category: "command", execution: "action", persistent: false },
 	[ItemEffectType.SelectionLock]: { category: "status", execution: "turn", persistent: true },

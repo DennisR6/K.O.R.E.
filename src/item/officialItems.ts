@@ -151,7 +151,7 @@ export const miniWallItem: ItemDocument = createItem({
 	name: "Mini-Wall",
 	description: "Spawns a temporary portable wall at a selected position.",
 	type: "defensive",
-	effects: [{ type: "temporaryWall", value: { wallId: "mini-wall", x: 0, y: 0, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }],
+	effects: [{ type: "structureLifecycle", value: { durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } } }],
 	targetType: "position",
 	duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -302,7 +302,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("magnet");
 	validator.registerEffectType("spawnTrigger");
 	validator.registerEffectType("delayedEffect");
-	validator.registerEffectType("temporaryWall");
+	validator.registerEffectType("structureLifecycle");
 	validator.registerEffectType("swapPosition");
 	validator.registerEffectType("selectionLock");
 	validator.registerEffectType("aimVariance");

@@ -154,6 +154,9 @@ After every change, check whether this guide still reflects the implementation a
   blocking and snapshot-safe capacity state.
 - `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent
   modifier state with stable entity targets and deterministic turn expiry.
+- `src/engine/contracts/structureLifecycle.ts`: generic JSON-safe timed
+  canonical-structure lifecycle with stable IDs, retained dormant structures,
+  and deterministic turn expiry.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
 - `src/effects/temporaryWall.ts`: serializable temporary-wall lifecycle with
@@ -182,7 +185,7 @@ After every change, check whether this guide still reflects the implementation a
   catalog for validated core Effect/MultiEffect payloads; it is separate from
   Effect IDs.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
-   Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; it is not a dedicated runtime effect.
+  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; Mini-Wall lowers to a generic timed canonical rectangle lifecycle and retains expired structures as dormant entries.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;
@@ -201,6 +204,9 @@ After every change, check whether this guide still reflects the implementation a
    separately on player snapshots and applied once to an accepted movement
    action; the mystery-box reward remains the special
   inventory-grant path.
+- `GameHandler` owns generic timed structure lifecycles: accepted structure
+  templates create stable canonical structures, and expiry disables physics and
+  drawing while retaining the structure in snapshots.
 - `GameHandler` is the authoritative owner of delayed item-effect tick
   advancement. Due delayed effects emit transient `schedule.due` activations
   and execute against their persisted resolved target; completed schedules are
@@ -241,8 +247,9 @@ After every change, check whether this guide still reflects the implementation a
 - Canonical structures carry stable IDs plus independent serialized
   `physicsEnabled` and `drawingEnabled` participation flags. Dormant structures
   remain in the canonical collection and can be positioned and reactivated by
-  generic structure-targeted Effects; no runtime structure-spawn system is
-  used for Falltür. Historical geometry-derived IDs are assigned only by
+  generic structure-targeted Effects; no Item-specific runtime structure-spawn
+  system is used for Falltür. Timed canonical structure lifecycles may create
+  stable structures through the generic lifecycle host. Historical geometry-derived IDs are assigned only by
   `src/migrations/structures.ts`; runtime `FullStructure` construction requires
   the persisted ID.
   Relative current Engine collision commands are stored separately as validated

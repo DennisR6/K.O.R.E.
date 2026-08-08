@@ -543,7 +543,7 @@ export declare const kore: {
             readonly delayedEffect: any.DelayedEffect;
             readonly shield: any.Shield;
             readonly swapPosition: any.SwapPosition;
-            readonly temporaryWall: any.TemporaryWall;
+            readonly structureLifecycle: any.StructureLifecycle;
             readonly ghostMode: any.GhostMode;
             readonly magnet: any.Magnet;
             readonly selectionLock: any.SelectionLock;

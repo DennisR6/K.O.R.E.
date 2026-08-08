@@ -684,9 +684,9 @@ export const kore = {
 			if (!Number.isFinite(strength) || !Number.isFinite(range) || range <= 0) throw new Error("Magnet parameters must be finite numbers with positive range");
 			return { type: ItemEffectType.Magnet, typeValue: { strength, range } };
 		},
-		temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
-			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary wall lifetimeTurns must be a positive integer");
-			return { type: ItemEffectType.TemporaryWall, typeValue: { lifetimeTurns } };
+			temporaryWall(lifetimeTurns: number = 1): ItemEffectSettings {
+			if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0) throw new Error("Temporary structure lifetimeTurns must be a positive integer");
+			return { type: ItemEffectType.StructureLifecycle, typeValue: { durationUnit: "turns", duration: lifetimeTurns, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } } };
 		},
 		ghostMode(durationTurns: number = 1): ItemEffectSettings {
 			if (!Number.isInteger(durationTurns) || durationTurns <= 0) throw new Error("Ghost mode durationTurns must be a positive integer");
@@ -731,7 +731,7 @@ export const kore = {
 			delayedEffect: ItemEffectType.DelayedEffect,
 			shield: ItemEffectType.Shield,
 			swapPosition: ItemEffectType.SwapPosition,
-			temporaryWall: ItemEffectType.TemporaryWall,
+			structureLifecycle: ItemEffectType.StructureLifecycle,
 			ghostMode: ItemEffectType.GhostMode,
 			magnet: ItemEffectType.Magnet,
 			selectionLock: ItemEffectType.SelectionLock,
@@ -743,7 +743,7 @@ export const kore = {
 } as const;
 
 function isItemEffectType(value: string): value is ItemEffectType {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"].includes(value);
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"].includes(value);
 }
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };

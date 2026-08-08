@@ -2,7 +2,7 @@ import { EffectModifyForce } from "../effects/modifyForce.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectDelayed } from "../effects/delayedEffect.js";
-import { EffectTemporaryWall } from "../effects/temporaryWall.js";
+import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../engine/contracts/structureLifecycle.js";
 import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
 import { EffectAimVariance } from "../effects/aimVariance.js";
@@ -26,7 +26,9 @@ export function createVerzoegerteMine(center: { x: number; y: number }, delayTic
 	return { center: { ...center }, radius: DELAYED_MINE_RADIUS, trigger, force: new EffectMagnet({ typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } }) };
 }
 export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } { return mine.trigger.hasFired() ? mine.force.applyToVelocity(velocity, mine.center, target) : { ...velocity }; }
-export function createMiniWall(position: { x: number; y: number }, wallId: string = "mini-wall"): EffectTemporaryWall { return new EffectTemporaryWall({ typeValue: { wallId, x: position.x, y: position.y, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }); }
+export function createMiniWall(_position: { x: number; y: number }, _wallId: string = "mini-wall"): StructureLifecycleTemplate {
+	return createStructureLifecycleTemplate({ durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } });
+}
 export function createFreezeShot(): TemporalModifierTemplate {
 	return createTemporalModifierTemplate({ durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } });
 }

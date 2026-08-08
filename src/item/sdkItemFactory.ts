@@ -18,7 +18,7 @@ export interface KoreItemInput {
 }
 
 export function sdkItemEffectTypes(): readonly string[] {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier"];
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"];
 }
 
 /** Creates a validated declarative item document without constructing runtime effects. */

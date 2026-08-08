@@ -111,11 +111,11 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			});
 		});
 
-		test("kore.effects.temporaryWall produces valid TemporaryWall item effect settings", () => {
+		test("kore.effects.temporaryWall produces valid generic structure lifecycle settings", () => {
 			const effect = kore.effects.temporaryWall(3);
 			expect(effect).toEqual({
-				type: ItemEffectType.TemporaryWall,
-				typeValue: { lifetimeTurns: 3 },
+				type: ItemEffectType.StructureLifecycle,
+				typeValue: { durationUnit: "turns", duration: 3, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } },
 			});
 		});
 
