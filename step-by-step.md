@@ -778,7 +778,7 @@ The repository-wide inventory after the Damage and Falltür slices is:
 
 | Layer | Semantic | Classification | Current consumer / decision |
 |---|---|---|---|
-| Engine | `Physics` | D | Live per-entity friction/drag tick behavior; remains KORE runtime physics until a concrete generic physics-state owner exists. |
+| Engine | `Physics` | C/E | Qualified retained: serialized KORE entity-local damping modifier interpreted by `Player.tick()`; world strategy physics and collision solver remain separate owners. |
 | Engine | `NumericAdd` | A | Current HP mutation through `NumericSystem`; migrated. |
 | Engine | `Movement` | D | Characterized and retained as a KORE temporal modifier interpreted only by `MovementSystem.preTick`; distinct from generic velocity commands. |
 | Engine | `Multi` | B | Live ordered composition; retain while children converge independently. |
@@ -811,9 +811,9 @@ The ranked live candidates are:
 
 | Rank | Candidate | Reuse | Production | Legacy removal | Risk / missing boundary |
 |---:|---|---:|---:|---:|---|
-| 1 | `Physics` | Medium: could establish generic physics modifier ownership | High: every active figure tick | Medium | Friction, drag, stop threshold, and KORE entity behavior have no current generic state owner; likely larger infrastructure. |
-| 2 | `ModifySetting(mass/size/team)` | Low until a real consumer appears | No current production content | Medium | SDK/test authoring only; do not invent object-state capabilities speculatively. |
-| 3 | Item status/scheduling Effects | Low without a concrete Engine-neutral consumer | Several live KORE items | Low | Current target-sensitive lifecycle semantics remain correctly KORE-owned. |
+| 1 | `ModifySetting(mass/size/team)` | Low until a real consumer appears | No current production content | Medium | SDK/test authoring only; ineligible without a real production consumer. |
+| 2 | Item status/scheduling Effects | Low without a concrete Engine-neutral consumer | Several live KORE items | Low | Current target-sensitive lifecycle semantics remain correctly KORE-owned. |
+| 3 | Orphaned item contracts | None | No live production consumer | High only as cleanup | Separate deletion review; not a migration candidate. |
 
 `ModifySetting(participation)` was selected and is now migrated. The reusable
 collision boundary receives the authoritative handler context, resolves the
@@ -828,8 +828,11 @@ Characterization and migration evidence is currently `tests/collision_command_ho
 `tests/numeric_threshold.test.ts`, and the generic dispatcher/trigger contract
 tests. The velocity migration is qualified by the direct legacy/current
 arithmetic comparison, target/entry tests, and the existing collision host
-qualification. Legacy Movement is now explicitly retained after characterization;
-the next candidate from fresh evidence is `Physics`.
+qualification. Legacy Movement and Physics are now explicitly retained after
+characterization. No remaining Effect currently satisfies the migration rule of
+a real production consumer plus a clearly superior generic representation; the
+next convergence boundary is therefore a new consumer/ownership decision, not
+speculative mass, size, team, or item infrastructure.
 
 ### Legacy Movement Ownership Decision
 
@@ -866,6 +869,36 @@ persistent target-binding mechanism. No new primitive or hidden MovementSystem
 state is justified. Focused characterization is in
 `tests/movement_characterization.test.ts`, `tests/effect_test.ts`,
 `tests/physics_energy_invariants.test.ts`, and `tests/full_physics_fixture.test.ts`.
+
+### Physics Ownership Decision
+
+`EffectPhysics` is a continuous entity-local damping policy, not a requested
+state transition. Its direct formula is:
+
+```text
+speedVector *= friction ^ dt
+speed = length(speedVector)
+speed = max(0, speed - linearDrag * dt)
+speedVector *= speed / oldSpeed
+if length(speedVector) < stopThreshold: speedVector = (0, 0)
+```
+
+The current runtime owners are intentionally split:
+
+| Concern | Owner | Current behavior |
+|---|---|---|
+| Entity-local friction/drag/threshold payload | `EffectPhysics` + `Player.tick()` | Applies the serialized player Effect every active tick. Production `Player.tick()` passes a truthy non-object override, so the Effect uses its configured values and one simulation step. |
+| Movement integration and drift threshold | `MovementSystem` + `EffectMove` | Runs before `Player.tick()` and uses the world strategy threshold only for drift gating. |
+| World PhysicsStrategy configuration | `defaultPhysics` | Supplies world friction/drag/threshold to strategy queries and stop prediction; it does not replace entity-local damping in `PhysicsSystem.ticker()`. |
+| Collision response, CCD, depenetration, impulses | `PhysicsSystem` + `PhysicsStrategy` | Runs after entity ticks; it is not damping. |
+| Final low-speed stop | `PhysicsSystem` | Uses its own solver threshold of `0.01` at the end of the physics tick. |
+
+World and entity friction are therefore distinct scopes, not duplicate aliases.
+`kore.effects.physics()` authors the entity-local serialized modifier and remains
+a legitimate KORE SDK helper. The generic Engine registry has no qualified
+runtime `physics.*` lifecycle contract, and commandifying damping would change
+continuous phase ordering. Physics is classified as qualified retained behavior;
+no new primitive, System, or migration was justified.
 
 ### Collision Velocity Convergence
 
