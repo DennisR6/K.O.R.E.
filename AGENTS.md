@@ -164,6 +164,10 @@ After every change, check whether this guide still reflects the implementation a
   collision relation exclusions with separately persisted turn lifetimes and a
   pure pair-eligibility predicate. `PhysicsSystem` applies it before collision
   resolution and entry dispatch; it does not alter boundary elimination.
+- `src/engine/contracts/actorEligibility.ts`: generic JSON-safe entity-owned
+  actor exclusions with separately persisted turn lifetimes and a pure
+  eligibility predicate. `GameHandler.validateActorForAction()` is the shared
+  local, AI, replay, and server authority boundary.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
@@ -198,6 +202,11 @@ After every change, check whether this guide still reflects the implementation a
   generic `aim.random-offset` operation with canonical seeded state and one
   accepted-shot consumption at that same boundary; its legacy executable
   helper is historical compatibility only.
+  Jägermeister-Elixier lowers `selectionLock` into the generic
+  `actorEligibilityConstraints` plus separate turn-counted lifetime state;
+  actor eligibility is enforced below UI by the shared Handler boundary and
+  target eligibility remains independent. Its legacy executable helper is
+  historical compatibility only.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;

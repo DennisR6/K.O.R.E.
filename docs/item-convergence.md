@@ -1,10 +1,10 @@
 # Item Convergence
 
-Last reranked after Ghost Mode qualification: `01148f3 feat(engine): qualify generic collision filtering`
+Final Item Convergence checkpoint: `039f914 feat(engine): qualify actor eligibility constraints`.
 
-Repository state: Vodka-Zero and Ghost Mode are qualified through generic Engine contracts; Selection Lock remains unqualified.
+Repository state: all official Items are now qualified or explicitly retained KORE semantics; no unqualified official Item remains.
 
-CocoIndex state: refreshed after the qualification slice; current index contains 731 files and 7,326 chunks.
+CocoIndex state: refreshed after the final qualification slice; current index contains 734 files and 7,403 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
@@ -36,21 +36,20 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 
 Already-converged Items are excluded from this active ranking.
 
-Ghost Mode qualified the narrow collision-relation extension of the physics boundary. Selection Lock is the only remaining unqualified official Item.
+Selection Lock qualified the narrow actor-eligibility extension of the accepted-action authority boundary. The active unqualified ranking is empty.
 
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | High | Defer pending authoritative selection-policy qualification |
 | -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
 
 ## Remaining Item Inventory
 
-The inventory below covers the two unqualified Items and the qualified retained/converged Items relevant to the current catalog checkpoint from `createOfficialItemLoader()`.
+The inventory below covers the qualified and retained Items relevant to the current catalog checkpoint from `createOfficialItemLoader()`.
 
 | Item | Production consumer | Current runtime path | Target / phase | Lifecycle/state | Reusable primitives | Gap / classification |
 |------|---------------------|----------------------|----------------|-----------------|---------------------|---------------------|
 | Durchlässigkeit | `PhysicsSystem` pair eligibility boundary | Declarative `ghostMode` -> entity-owned `collisionFilters` + separate `collisionFilterLifetimes`; legacy `EffectGhostMode` retained only for historical/helper compatibility | Self / Item phase | Two-turn filter lifetime; excludes `entity` and `structure` relations | Collision filter contract, lifetime core, canonical Player state | Qualified; E |
-| Jägermeister-Elixier | No `UiSystem` selection-lock check | Declarative `selectionLock` -> `EffectSelectionLock`; state is stored and serialized | Enemy entity / Item phase | Two-turn lock flag | Turn lifetime only | Requires KORE input-selection policy; F |
+| Jägermeister-Elixier | Shared actor eligibility boundary | Declarative `selectionLock` -> entity-owned `actorEligibilityConstraints` + separate turn lifetimes; legacy `EffectSelectionLock` retained only for historical/helper compatibility | Enemy entity / Item phase | Two-turn actor exclusion; target eligibility remains independent | Actor eligibility contract, lifetime core, canonical Player state, shared validation | Qualified; E |
 | Vodka-Zero | Shared accepted-action boundary | Declarative `aimVariance` -> canonical `aim.random-offset`; legacy `EffectAimVariance` retained only for historical/helper compatibility | Self / Item phase | One accepted shot; `remainingUses: 1`; no time lifetime | Pending action state, seeded random primitive, stable modifier ordering | Qualified; E |
 | Wunderkiste | `GameHandler.resolveMysteryBoxUse()` plus reward resolver and inventory economy | Declarative `spawnTrigger` declaration with a special Handler reward branch | Self / Item phase | Deterministic reward ID, recursion guard, per-game inventory cap | Item economy, seeded draw state, stable actor identity, scheduling concepts | Reward selection/grant remains KORE content semantics; D |
 
@@ -68,9 +67,9 @@ The inventory below covers the two unqualified Items and the qualified retained/
 
 ## Next Item
 
-No next Item is selected. Selection Lock requires a fresh characterization pass before any implementation.
+No next Item is selected. All official Items are classified; further work belongs to a separate final drift/test-consolidation pass.
 
-Current order: **Selection Lock / Jägermeister-Elixier**.
+Current order: none.
 
 Qualified Wunderkiste ownership:
 
@@ -93,7 +92,7 @@ Required characterization:
 
 ## Active Convergence Status
 
-Power-Dash, Anker, Vodka-Zero, and Ghost Mode are qualified through generic Engine contracts. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work.
+Power-Dash, Anker, Vodka-Zero, Ghost Mode, and Selection Lock are qualified through generic Engine contracts. Wunderkiste remains a qualified retained KORE semantic.
 
 ## Final Drift Audit
 
@@ -247,7 +246,7 @@ Anker characterization and semantic qualification were completed from the curren
 - **Invariant:** No wall-clock, randomness, universal middleware, or Item-specific generic contract was introduced. **Evidence:** only existing action/lifetime contracts were extended; the shared Engine contracts contain no Item names. **Status:** PASS. **Required action:** None.
 - **Invariant:** No current executable `EffectModifyForce` runtime path remains. **Evidence:** the class/module is removed; source search finds only declarative `modifyForce`, validation, migration, authoring, and tests. **Status:** PASS. **Required action:** None.
 
-## Ghost Mode Qualification Pass
+## Final Selection Lock Qualification Pass
 
 This fresh read-only characterization was performed from the clean Vodka-Zero checkpoint after refreshing repository evidence.
 
@@ -265,12 +264,14 @@ This fresh read-only characterization was performed from the clean Vodka-Zero ch
 
 ### Selection Lock / Jägermeister-Elixier
 
-- **Current production behavior:** Enemy target validation, inventory/rule/replay recording, and serialized `selectionLock` Item state work. No UiSystem, shared input validator, AI emitter, server registry, or replay path checks the lock before accepting an actor selection/action.
+- **Pre-slice production behavior:** Enemy target validation, inventory/rule/replay recording, and serialized `selectionLock` Item state worked. UI, local input, server validation, AI, and replay accepted the locked entity as an actor.
 - **Declarative contract:** Enemy-entity target within range; `selectionLock` duration is two turns; description says the opponent figure cannot be selected during that duration.
-- **Historical behavior:** The runtime helper stores and decrements `remainingTurns`; no authoritative selection-policy consumer exists.
-- **Reusable primitives:** Target validation and turn lifetime are reusable shapes; neither provides dynamic forbidden-actor eligibility. UI-only enforcement would be non-authoritative, while Engine-only enforcement would need a shared human/AI/server/replay policy boundary.
-- **Missing semantic:** Canonical target/actor selection eligibility policy with shared enforcement across all accepted action paths.
-- **Ranking:** Missing semantic 3, reuse 1, legacy removal 3, determinism 2, clarity 3, risk 3, overall 12/18.
+- **Exact semantic:** The targeted enemy entity is excluded from acting while the constraint is active. It may remain a valid target for other Items; no target eligibility restriction is introduced.
+- **Authority:** `GameHandler.validateActorForAction()` is the shared authoritative actor boundary. Local emitter, server registry, AI emitter/candidate generation, replay, and UI projection consult the same canonical entity eligibility.
+- **Lifetime and invalid entity behavior:** The global completed-turn lifetime is two turns, using the shared lifetime core. Dead entities are already ineligible; the constraint expires normally at its turn boundary and does not create fallback or turn deadlock behavior.
+- **Canonical representation:** `PlayerSettings.actorEligibilityConstraints` stores the entity-owned exclusion; `actorEligibilityConstraintLifetimes` stores separate turn countdown state. Stable Player identity remains the owner; no actor ID, array index, DOM state, or runtime reference is persisted in the constraint.
+- **Legacy migration:** Historical `itemEffects.selectionLock` records migrate explicitly to the constraint/lifetime pair. Current runtime lowering returns the generic actor-eligibility template; `EffectSelectionLock` remains historical/helper compatibility only.
+- **Qualification:** E. Actor legality is authoritative and target validation remains independent; no UI-only bypass, Item-specific Engine system, or universal policy framework was introduced.
 
 ### Vodka-Zero
 
@@ -287,17 +288,37 @@ This fresh read-only characterization was performed from the clean Vodka-Zero ch
 - **Legacy migration:** Historical `itemEffects` `aimVariance` records migrate explicitly to `pendingActionModifiers`. `EffectAimVariance` remains only as a historical/helper compatibility decoder; it is no longer constructed by the current KORE runtime factory or installed as current live state.
 - **Qualification:** E. The smallest justified aim-domain operation was added without a Vodka-Zero-specific System, Handler branch, RNG framework, expression language, or tick lifetime.
 
-### Ghost Mode Qualification Decision
+### Selection Lock Qualification Decision
 
-- **Variant A, participation:** Rejected. It disables movement and broad physics participation, not only collision relations.
-- **Variant B, generic collision enabled/disabled:** Rejected. It is too broad and provides no relation distinction.
-- **Variant C, full category/mask layer:** Rejected for this slice. It would introduce a larger physics policy surface than the two evidenced relations require.
-- **Variant D, narrow category exclusion:** Chosen. Two generic categories are sufficient for current entity/structure pairs and leave containment logic independent.
-- **Collision event rule:** A filtered pair does not exist for the current collision lifecycle: no physical response, depenetration, collision command, hazard feedback, or entry callback. Unfiltered pairs retain existing behavior.
-- **Negative invariants:** No Ghost Mode-specific Engine System or mechanical Handler branch; no direct velocity mutation; no action modifier; no PhysicsSystem-local hidden state; no randomness or wall-clock lifetime; no client/AI/replay-specific filtering; no duplicate `itemEffects` plus filter ownership; no accidental drawing/death coupling; no universal collision policy DSL.
-- **Verification:** `tests/ghost_mode_characterization.test.ts`, `tests/collision_filter.test.ts`, `tests/ghost_mode_item.test.ts`, `tests/collision_effect_lifecycle.test.ts`, `tests/containment_structure_role.test.ts`, and `tests/effect_migration.test.ts` cover acceptance, matrix, lifetime, filtering, events, boundaries, snapshot, replay, AI, network, and migration.
+- **Variant A, UI-only:** Rejected. Direct local/server/AI/replay actor input would bypass it.
+- **Variant B, generic actor eligibility constraint:** Chosen. One entity-owned exclusion semantic matches the real consumer.
+- **Variant C, target eligibility constraint:** Rejected. The Item locks the targeted entity as an actor, not as a target.
+- **Variant D, canonical selection-policy union:** Rejected as broader than required; no forced/allowed target or actor modes are evidenced.
+- **Variant E, existing target validation:** Partial reuse only. Existing active/team/stable-ID checks remain; policy eligibility is a distinct constraint evaluated after those checks.
+- **UI behavior:** UI rejects locked actors as a projection of canonical state; it does not own the rule.
+- **Negative invariants:** No Selection Lock-specific Engine System or mechanical Handler branch; no UI-only bypass; no AI/replay/client trust; no duplicate UI and canonical owner; no runtime references or array indexes; no wall-clock/randomness; no triggerValue policy; no lifetime/consumption conflation; no universal policy engine.
+- **Verification:** `tests/selection_lock_qualification.test.ts`, `tests/actor_eligibility_qualification.test.ts`, `tests/effect_migration.test.ts`, `tests/item_authorization.test.ts`, `tests/item_emitter.test.ts`, and existing target/effect tests cover acceptance, forbidden actor, target independence, UI, server, AI, replay, snapshot, expiry, and migration.
 
-The production migration is complete; Selection Lock was not modified and remains the only unqualified official Item.
+The production migration is complete; all official Items are now qualified or explicitly retained KORE semantics.
+
+## Final Engine Language Inventory
+
+| Domain | Canonical representation | Owner/interpreter | Qualified consumers |
+|--------|--------------------------|-------------------|---------------------|
+| Movement | JSON-safe movement commands/effects | `MovementSystem` | Freeze-Shot, Magnet, Delayed Mine |
+| Transform | Stable entity/structure transform commands | `TransformSystem` | Switch, Falltür |
+| Participation | `participation.set-physics` / `set-drawing` | `ParticipationSystem` | Elimination, StructureLifecycle |
+| Numeric | Entity-owned numeric state and thresholds | `NumericSystem` | Damage, elimination, shields |
+| Action Modifier | `pendingActionModifiers` | `GameHandler` accepted-action boundary | Power-Dash, Anker, Vodka-Zero |
+| Lifetime | Flat `durationUnit` / `duration` / `remaining` | Feature owner plus pure lifetime core | Temporal, structure, deferred, collision, eligibility lifetimes |
+| Deferred Effect | Stable deferred records | `GameHandler` scheduler | Delayed Mine |
+| Structure Lifecycle | Stable canonical structure plus lifecycle record | `GameHandler` | Mini-Wall |
+| Collision Filter | Entity-owned relation exclusions | `PhysicsSystem` pair boundary | Ghost Mode |
+| Actor Eligibility | Entity-owned actor exclusion constraints | `GameHandler.validateActorForAction()` and shared projections | Selection Lock |
+| Trigger | JSON-safe activation events | Trigger dispatcher / owning host | Falltür, deferred effects, replay events |
+| Dispatcher | Predefined stable Engine command routing | System interpreters | All generic command lowerings |
+
+No unqualified official Item remains. Wunderkiste remains intentionally KORE-owned reward semantics rather than a generic Engine reward language.
 
 ## Checkpoint Workflow
 
