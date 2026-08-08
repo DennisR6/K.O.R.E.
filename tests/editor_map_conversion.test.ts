@@ -46,7 +46,7 @@ test("converts editor rectangles, circles, team spawn bounds, and collision haza
 
 	const [pushZone, killZone] = settings.mapBoundarys.slice(2);
 	expect(pushZone).toMatchObject({ type: SHAPE.RECTANGLE, x: 40, y: 40, w: 100, h: 100 });
-	expect((pushZone as MapBoundarySettingsRect).effects[0]!.typeValue).toMatchObject({ value: { x: expect.closeTo(0), y: 3 } });
+	expect(pushZone.collisionCommands?.[0]?.effect).toMatchObject({ type: "movement.add-velocity", typeValue: { x: expect.closeTo(0), y: 3 } });
 	expect(killZone.effects).toEqual([]);
 	expect(killZone.collisionCommands?.[0]?.effect).toMatchObject({ type: "effect.composition", effects: [
 		{ type: "participation.set-physics", typeValue: { enabled: false } },
@@ -61,7 +61,7 @@ test("converted rectangular zones apply push and kill collision effects", () => 
 	const killedPlayer = new Player(createPlayerSettings({ position: { x: 220, y: 220 }, size: 10 }));
 	const handler = new GameHandlerBuilder()
 		.defaultSystems(settings.friction)
-		.addStructure(new StructureRectangle(pushZone.x, pushZone.y, pushZone.w, pushZone.h, pushZone.color, pushZone.effects))
+		.addStructure(new StructureRectangle(pushZone.x, pushZone.y, pushZone.w, pushZone.h, pushZone.color, pushZone.effects, undefined, undefined, undefined, undefined, pushZone.collisionCommands))
 		.addStructure(new StructureRectangle(killZone.x, killZone.y, killZone.w, killZone.h, killZone.color, killZone.effects, undefined, undefined, undefined, undefined, killZone.collisionCommands))
 		.addPlayer(pushedPlayer)
 		.addPlayer(killedPlayer)

@@ -7,10 +7,25 @@ import { GameHandlerBuilder } from "../src/engine/Handler.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 import { Player } from "../src/entity/Player.js";
 import { StructureCircle } from "../src/structures/structureCircle.js";
+import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.js";
 
 function binding(effect: Parameters<typeof createCollisionCommandBinding>[0]) {
 	return createCollisionCommandBinding(effect);
 }
+
+function runVelocityAdd(bindingOrLegacy: "current" | "legacy"): { x: number; y: number } {
+	const player = new Player(createPlayerSettings({ position: { x: 25, y: 20 }, velocity: { x: 1, y: 4 } }));
+	const structure = bindingOrLegacy === "current"
+		? new StructureCircle(20, 20, 10, "red", [], "solid", `velocity-${bindingOrLegacy}`, true, true, [binding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: 3, y: -2 } })])
+		: new StructureCircle(20, 20, 10, "red", [{ schemaVersion: 1, trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: 3, y: -2 } } }], "solid", `velocity-${bindingOrLegacy}`, true, true);
+	const handler = new GameHandlerBuilder().defaultSystems().addStructure(structure).addPlayer(player).build();
+	handler.tick();
+	return player.getVel();
+}
+
+test("movement collision command preserves legacy velocity-add arithmetic", () => {
+	expect(runVelocityAdd("current")).toEqual(runVelocityAdd("legacy"));
+});
 
 test("collision command host routes a relative movement command to the colliding entity", () => {
 	const player = new Player(createPlayerSettings({ position: { x: 25, y: 20 }, velocity: { x: 0, y: 0 } }));

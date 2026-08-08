@@ -1,5 +1,4 @@
 import type { TurnPacket } from "../engine/types.js";
-import { EffectTrigger, EffectType, SettingOperation, type FullEffectSettings } from "../effects/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
@@ -9,6 +8,7 @@ import type { CounterEffectSettings } from "../engine/sdk/counterCapability.js";
 import { createCollisionCommandBinding, type CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
+import { MOVEMENT_ADD_VELOCITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 
 
 
@@ -339,20 +339,14 @@ function editorHazardToBoundary(hazard: EditorHazard): MapBoundarySettingsRect {
 		w: hazard.size.w,
 		h: hazard.size.h,
 		color: hazard.type === "kill_zone" ? "#d94b28" : "#f0a020",
-		effects: hazard.type === "push_zone" ? [pushZoneEffect(hazard)] : [],
-		...(lethal ? { collisionCommands: lethal } : {}),
+		effects: [],
+		...(hazard.type === "push_zone" ? { collisionCommands: [pushZoneCommand(hazard)] } : lethal ? { collisionCommands: lethal } : {}),
 	}
 }
 
-function pushZoneEffect(hazard: EditorPushHazard): FullEffectSettings {
+function pushZoneCommand(hazard: EditorPushHazard): CollisionCommandBinding {
 	const radians = (hazard.params.direction * Math.PI) / 180
-	return {
-		schemaVersion: 1,
-		trigger: EffectTrigger.Collision,
-		triggerValue: [],
-		type: EffectType.ModifySetting,
-		typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * hazard.params.force, y: Math.sin(radians) * hazard.params.force } },
-	}
+	return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * hazard.params.force, y: Math.sin(radians) * hazard.params.force } });
 }
 
 type HazardZone = { x: number; y: number; r: number };
@@ -378,8 +372,8 @@ function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
 		y: zone.y,
 		r: zone.r,
 		color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-		effects: hazard.type === "kill-zone" ? [] : [hazardEffect(hazard)],
-		...(hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : {}),
+		effects: [],
+		...(hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }),
 	};
 }
 
@@ -390,16 +384,10 @@ function lethalCollisionCommand(): CollisionCommandBinding {
 	]));
 }
 
-function hazardEffect(hazard: HazardDocument): FullEffectSettings {
+function forceHazardCommand(hazard: HazardDocument): CollisionCommandBinding {
 	const config = hazard.config as ForceHazardConfig;
 	const radians = (config.angle * Math.PI) / 180;
-	return {
-		schemaVersion: 1,
-		trigger: EffectTrigger.Collision,
-		triggerValue: [],
-		type: EffectType.ModifySetting,
-		typeValue: { operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } },
-	};
+	return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } });
 }
 
 function environmentalMechanicToBoundary(mechanic: EnvironmentalMechanic): MapBoundarySettings {

@@ -4,7 +4,7 @@ import { EffectModifySetting } from "../../effects/modifySetting.js";
 import { EffectMove, type EffectMoveInput } from "../../effects/movement.js";
 import { EffectPhysics } from "../../effects/physics.js";
 import { EffectNumericAdd } from "../../effects/numericAdd.js";
-import { EffectTrigger, EffectType, ItemEffectType, SettingOperation, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
+import { EffectTrigger, EffectType, ItemEffectType, type EffectSettings, type FullEffectSettings, type ItemEffectSettings, type ModifySettingValue } from "../../effects/types.js";
 import { GameHandler } from "../../engine/Handler.js";
 import { GameState, type EngineSettings } from "../../engine/types.js";
 import { engine, EngineSystemRegistry, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
@@ -18,6 +18,7 @@ import type { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import { createCollisionCommandBinding } from "../../engine/sdk/collisionCommand.js";
 import { createEngineEffectComposition } from "../../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
+import { MOVEMENT_ADD_VELOCITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
 export { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../../item/resolvedTarget.js";
 export type { ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type ForceField, type MovingStructure, type TimedHazard, type TriggeredZone, type EnvironmentalCycle } from "../../environment/environmental.js";
@@ -314,7 +315,7 @@ export class KoreMapBuilder {
 		const radians = settings.angle * Math.PI / 180;
 		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
 		const structureIndex = this.structures.length;
-		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: SettingOperation.Add, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
 		return this;
 	}
