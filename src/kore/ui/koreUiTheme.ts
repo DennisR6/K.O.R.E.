@@ -17,10 +17,10 @@ export interface UiStyleToken {
 
 export interface UiElementTheme {
   normal: UiStyleToken;
-  hover: UiStyleToken;
-  active: UiStyleToken;
-  focused: UiStyleToken;
-  disabled: UiStyleToken;
+  hover?: UiStyleToken;
+  active?: UiStyleToken;
+  focused?: UiStyleToken;
+  disabled?: UiStyleToken;
 }
 
 const BLUE_BUTTON_THEME: UiElementTheme = {
@@ -136,6 +136,11 @@ export function resolveKoreButtonTheme(style: string | undefined): UiElementThem
   return KORE_UI_THEME[style]!;
 }
 
+/** Resolves an interaction state, falling back to the required normal style. */
+export function resolveKoreButtonStyle(theme: UiElementTheme, state: UiElementState): UiStyleToken {
+  return theme[state] ?? theme.normal;
+}
+
 export class Canvas2DUiRenderer {
   constructor(private readonly ctx: RenderContext) { }
 
@@ -146,7 +151,7 @@ export class Canvas2DUiRenderer {
     state: UiElementState
   ): void {
     const themeGroup = resolveKoreButtonTheme(styleKey);
-    const style = themeGroup[state] ?? themeGroup.normal;
+    const style = resolveKoreButtonStyle(themeGroup, state);
 
     this.ctx.push();
 
