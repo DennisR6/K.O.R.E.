@@ -770,6 +770,65 @@ numeric threshold composition. Historical Damage documents still normalize
 through the existing versioned Effect boundary and then use the compatibility
 adapter; no new legacy runtime interpreter was added.
 
+### Fresh Effect Convergence Selection
+
+The repository-wide inventory after the Damage and Falltür slices is:
+
+| Layer | Semantic | Classification | Current consumer / decision |
+|---|---|---|---|
+| Engine | `Physics` | D | Live per-entity friction/drag tick behavior; remains KORE runtime physics until a concrete generic physics-state owner exists. |
+| Engine | `NumericAdd` | A | Current HP mutation through `NumericSystem`; migrated. |
+| Engine | `Movement` | D | Live temporal integration with drift and stop-threshold ordering; distinct from generic velocity commands. |
+| Engine | `Multi` | B | Live ordered composition; retain while children converge independently. |
+| Engine | `ModifyMass` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic mass capability. |
+| Engine | `ModifySize` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic size capability. |
+| Engine | `Position` | A/F | Legacy authoring/tests remain, while the live Falltür path uses `transform.set-position`; no new migration selected here. |
+| Engine | `Velocity` | A/F | Legacy authoring/tests remain; live force zones use `ModifySetting(add velocity)` and therefore need collision-host characterization first. |
+| Engine | `Team` | D | SDK authoring/tests only; team membership remains KORE-owned with no generic target/state contract. |
+| Engine | `ModifySetting(hp)` | F/B | Compatibility-only HP shape; current damage uses `numeric.add`. |
+| Engine | `ModifySetting(participation)` | A | Live death circles, editor kill zones, and KORE kill-zone authoring; maps directly to `participation.set-*`. |
+| Engine | `ModifySetting(add velocity)` | A | Live force hazards and editor push zones; maps directly to `movement.add-velocity`. |
+| KORE item | `modifyForce` | D | Live Anker and Power-Dash outgoing-shot modifiers; retain as KORE semantics. |
+| KORE item | `spawnTrigger` | D | Live Falltür and Mystery Box scheduling; retain as KORE scheduling semantics. |
+| KORE item | `delayedEffect` | D | Live delayed mine scheduling; retain as KORE scheduling semantics. |
+| KORE item | `shield` | D | Declarative KORE collision/damage status; no generic damage interception contract. |
+| KORE item | `freeze` | D | Live turn-scoped movement status; retain as KORE status semantics. |
+| KORE item | `swapPosition` | D | Live Switch target-sensitive two-entity command; retain as KORE semantic. |
+| KORE item | `temporaryWall` | D | Live structural lifecycle; retain as KORE structure ownership. |
+| KORE item | `ghostMode` | D | Live collision filtering status; generic collision-filter ownership is absent. |
+| KORE item | `magnet` | D | Live target-sensitive force command; retain as KORE item behavior. |
+| KORE item | `modifyRotation`, `lockRotation`, `applyTorque`, `selectionLock` | E | Validated/partly authored contracts with no live production consumer; delete only in a separate orphan cleanup after references are rechecked. |
+| KORE item | `aimVariance` | D/E | KORE seeded shot modifier with incomplete normal-shot integration; not a generic Engine candidate. |
+| Migration | historical `EffectType.Damage` | F | Accepted only by `migrateEffectSettings`; normalized to `numeric.add`, never constructed by current runtime. |
+
+Direct mutation review found physics solver depenetration, UI aiming, environmental
+motion, and item-runtime force/status calculations. These are execution mechanics
+or KORE-owned semantics, not hidden replacements for the selected core command.
+
+The ranked live candidates are:
+
+| Rank | Candidate | Reuse | Production | Legacy removal | Risk / missing boundary |
+|---:|---|---:|---:|---:|---|
+| 1 | `ModifySetting(participation)` | High: both entity and structure participation commands, death compositions, later elimination/status effects | High: every lethal collision path | High: removes two setting branches and legacy kill-zone compositions | Collision callbacks lack `IGameContext` and predefined dispatch; requires a generic collision-command host. |
+| 2 | `ModifySetting(add velocity)` | High: reuses `movement.add-velocity` for force/push hazards and future impulses | High: force hazards and editor push zones | High: removes vector-setting branch and legacy force declarations | Same missing collision-command host; cannot safely migrate declarations alone. |
+| 3 | `Physics` | Medium: could establish generic physics modifier ownership | High: every puck/map tick | Medium | Semantics include friction, drag, stop threshold, and KORE entity behavior; requires materially new ownership rather than a small primitive. |
+
+`ModifySetting(participation)` is selected as the next Effect semantic. It has the
+highest leverage and the safest behavior characterization, but implementation is
+intentionally deferred in this selection cycle: the required next boundary is a
+generic collision-trigger host that receives the authoritative handler context,
+resolves the colliding entity target, dispatches ordered predefined commands, and
+preserves collision-entry semantics. Adding a KORE-only callback or teaching
+`ParticipationSystem` about structure collision lists would hide that ownership
+problem and would not qualify a reusable Engine primitive.
+
+Characterization evidence is currently `tests/setting_effect.test.ts`,
+`tests/editor_map_conversion.test.ts`, `tests/falltuer_dormant_runtime.test.ts`,
+`tests/numeric_threshold.test.ts`, and the generic dispatcher/trigger contract
+tests. No production Effect was changed by this selection cycle. The next
+convergence commit must therefore be the generic collision-command host, followed
+by one atomic `ModifySetting(participation)` migration commit.
+
 ### Phase 9: Pong External Qualification
 
 **Status: deferred.**
