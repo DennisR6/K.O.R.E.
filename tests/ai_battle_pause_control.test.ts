@@ -49,7 +49,7 @@ test("pausing an active AI battle freezes ticks, snapshots, and AI scheduling", 
 	expect(JSON.stringify(handler.toSettings())).not.toBe(beforePause);
 });
 
-test("returning to the menu while an AI battle is paused disposes the battle", () => {
+test("autonomous AI battles ignore player pause/menu input until the result overlay exists", () => {
 	const router = new LocalMatchSceneRouter(undefined, () => 5050);
 	expect(router.startAiBattle("ice-map-v1")).toBe(true);
 	const battle = router.getHandler();
@@ -57,11 +57,11 @@ test("returning to the menu while an AI battle is paused disposes the battle", (
 	battle.tick();
 	if (battle.getState() !== GameState.Playing) throw new Error("AI fixture did not enter playback");
 	click(battle, 748, 25);
-	expect(battle.isPaused()).toBe(true);
+	expect(battle.isPaused()).toBe(false);
 	click(battle, 482, 324);
-	expect(battle.isDisposed()).toBe(true);
-	expect(router.getMapId()).toBeNull();
-	expect(router.getHandler()).not.toBe(battle);
-	for (let index = 0; index < 10; index++) battle.tick();
-	expect(battle.isDisposed()).toBe(true);
+	expect(battle.isDisposed()).toBe(false);
+	expect(router.getMapId()).toBe("ice-map-v1");
+	expect(router.getHandler()).toBe(battle);
+	battle.tick();
+	expect(battle.isDisposed()).toBe(false);
 });

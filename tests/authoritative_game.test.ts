@@ -56,7 +56,7 @@ test("Player settings round-trip all mutable state", () => {
 		friction: 0.3,
 		team: [2],
 		isPhysicsEnabled: false,
-		isDead: true,
+		isDrawingEnabled: false,
 		inventory: [{ itemId: "anchor", remainingUses: 1, usesThisTurn: 0 }],
 		effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], ...new EffectModifyMass({ typeValue: { mass: 0.25 } }).toSettings() }],
 	})
@@ -227,7 +227,7 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 		mass: 0.4,
 		size: 9,
 		team: [1],
-		isDead: true,
+		isDrawingEnabled: false,
 		isPhysicsEnabled: false,
 		inventory: [{ itemId: "item", remainingUses: 1, usesThisTurn: 0 }],
 	})

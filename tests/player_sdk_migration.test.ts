@@ -16,8 +16,8 @@ describe("Player SDK Authoring & Migration Parity", () => {
 			expect(settings.mass).toBe(1);
 			expect(settings.size).toBe(20);
 			expect(settings.shape).toBe(SHAPE.CIRCLE);
-			expect(settings.isDead).toBe(false);
 			expect(settings.isPhysicsEnabled).toBe(true);
+			expect(settings.isDrawingEnabled).toBe(true);
 
 			const jsonString = JSON.stringify(settings);
 			expect(JSON.parse(jsonString)).toEqual(settings);
@@ -119,7 +119,8 @@ describe("Player SDK Authoring & Migration Parity", () => {
 		test("dead-state and inventory reconstruction works through runtime factory", () => {
 			const settings = kore.createPlayer({
 				id: "dead-player",
-				isDead: true,
+				isPhysicsEnabled: false,
+				isDrawingEnabled: false,
 				hp: 0,
 				inventory: [{ id: "item-1", name: "Shield", usesRemaining: 1 }],
 			});
@@ -129,7 +130,8 @@ describe("Player SDK Authoring & Migration Parity", () => {
 			expect(runtimePlayer.getInventory()).toEqual([{ id: "item-1", name: "Shield", usesRemaining: 1 }]);
 
 			const roundtripSettings = runtimePlayer.toSettings();
-			expect(roundtripSettings.isDead).toBe(true);
+			expect(roundtripSettings.isPhysicsEnabled).toBe(false);
+			expect(roundtripSettings.isDrawingEnabled).toBe(false);
 			expect(roundtripSettings.inventory).toEqual([{ id: "item-1", name: "Shield", usesRemaining: 1 }]);
 		});
 	});

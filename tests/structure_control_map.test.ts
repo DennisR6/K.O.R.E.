@@ -61,7 +61,7 @@ function runShot(settings: ReturnType<typeof createCanonicalPlayableMatchSetting
 	emitter.sendShot(actor.id, angle, power);
 	let frames = 0;
 	quiet(() => { while (handler.getState() === GameState.Playing && frames < maxFrames) { handler.tick(); frames++; } });
-	return { frames, players: handler.toSettings().players.map(player => ({ position: { ...player.position }, isDead: player.isDead })) };
+	return { frames, players: handler.toSettings().players.map(player => ({ position: { ...player.position }, isDead: !player.isPhysicsEnabled || !player.isDrawingEnabled })) };
 }
 
 describe("Section 17.5 structure control map", () => {
@@ -279,7 +279,7 @@ describe("Section 17.5 structure control map", () => {
 		expect(camera.getScaleFactor()).toBeGreaterThan(0);
 		expect(camera.getWorldBounds()).toEqual({ x: 0, y: 0, w: 800, h: 450 });
 		for (const player of settings.players) {
-			expect(player.isDead).toBe(false);
+			expect(player.isPhysicsEnabled && player.isDrawingEnabled).toBe(true);
 			expect(camera.containsCircle(player.position, player.size)).toBe(true);
 		}
 	});

@@ -37,9 +37,10 @@ function winningArena() {
 			x: 1500,
 			y: 1450,
 			r: 80,
-			effects: [
-				{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-			],
+				effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+				] }],
 		},
 	];
 	settings.players[0]!.position = { x: 750, y: 365 };
@@ -151,18 +152,20 @@ describe("winner state unification", () => {
 						x: 750,
 						y: 530,
 						r: 80,
-						effects: [
-							{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-						],
+						effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+							{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+							{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+						] }],
 					},
 					{
 						type: SHAPE.CIRCLE,
 						x: 2250,
 						y: 1100,
 						r: 80,
-						effects: [
-							{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-						],
+						effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+							{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+							{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+						] }],
 					},
 				],
 				players: [

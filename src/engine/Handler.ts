@@ -15,12 +15,16 @@ import { createRuntimePlayer } from "../entity/runtimeFactory.js";
 
 import { FullStructure } from "../structures/fullStructure.js";
 import type { UUID } from "crypto";
-import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
+import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
+import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { migrateGameSettingsEffects } from "../migrations/effects.js";
+import { canonicalizeCounterStates, type CounterState } from "./contracts/counterState.js";
 
 import { GameStateManager } from "../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../ui/Background.js";
 import { PhysicsSystem } from "../systems/PhysicsSystem.js";
+import { MovementSystem } from "../systems/MovementSystem.js";
 import { BoundarySystem } from "../systems/BoundarySystem.js";
 import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
@@ -29,14 +33,30 @@ import type { MatchResult } from "../rules/types.js";
 import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
 import { MapPickupSystem } from "../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
+import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
+import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
+import { createActionModifier } from "./contracts/actionModifier.js";
+import { createCollisionFilter, createCollisionFilterLifetime } from "./contracts/collisionFilter.js";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "./contracts/actorEligibility.js";
+import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
+import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
+import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
+import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import { TransformSystem } from "../systems/TransformSystem.js";
+import { ParticipationSystem } from "../systems/ParticipationSystem.js";
+import { NumericSystem } from "../systems/NumericSystem.js";
 import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
 import { SeededRandom } from "../utils/random.js";
-import { validateItemTarget } from "../item/target.js";
+import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
+import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
-import { EffectMagnet } from "../effects/magnet.js";
-import { EffectSwapPosition } from "../effects/swapPosition.js";
+import { createRuntimeItemEffect, isActionModifierTemplate, isActorEligibilityConstraintTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
+import { TriggerDefinitionCatalog, type TriggerDefinition } from "../item/triggerDefinitions.js";
 import type { AiSettings } from "../ai/types.js";
 import type { IAiTurnProducer } from "../ai/aiEmitter.js";
 import { EasyAi } from "../ai/easyAi.js";
@@ -47,6 +67,10 @@ import type { LanguageCatalog } from "../i18n/language.js";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../kore/gameplayFeedback.js";
 import type { JsonValue } from "../engine/contracts/systemSettings.js";
 import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "./runtimeLog.js";
+
+type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };
+type EntitySwapPositionItemEffect = { type: typeof TRANSFORM_SWAP_POSITION_EFFECT_ID; typeValue: Record<string, unknown> };
+type LoweredItemEffect = RuntimeItemEffect | EntityForceFieldItemEffect | EntitySwapPositionItemEffect;
 
 /**
  * Erstellt eine spielbereite Instanz des GameHandlers (Standard-Setup).
@@ -123,6 +147,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private effectAlways: Effect[] = []
 	private effectRound: Effect[] = []
 	private effectCollision: Effect[] = []
+	private triggerDefinitions = new TriggerDefinitionCatalog()
 	private items: ItemDocument[] = []
 	private itemDrawRandom: SeededRandom | undefined
 	private mapPickupSystem = new MapPickupSystem()
@@ -134,6 +159,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	private paused = false
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
+	private structureLifecycles: StructureLifecycleSettings[] = []
+	private deferredEffects: DeferredEffectSettings[] = []
 	private readonly feedback = new GameplayFeedbackTrace();
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -158,6 +185,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			currTurn: 0,
 			activeTeam: 0,
 			myTeamNumber: 0,
+			counters: [],
+			drift: DEFAULT_DRIFT,
 			finishMatch: (result) => this.finishMatch(result),
 			log: (type, data) => this.log(type, data),
 		}
@@ -190,10 +219,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// 	 * @param power - Wie stark ist der Stoß?
 	// 	 * @returns Ein "Ticket" (TurnPacket), das genau beschreibt, was passieren wird.
 	// 	 */
-	public simulateTurn(actorId: string, angle: number, power: number): TurnPacket {
+	public simulateTurn(actorId: string, angle: number, power: number, options: { maxTicks?: number } = {}): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot simulate further turns")
 		const started = runtimeNow();
 		this.log("turn.simulation.started", { actorId, angle, power });
+		const maxTicks = options.maxTicks ?? 1200
+		if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new Error("Simulation maxTicks must be a positive safe integer")
 		const settings = JSON.parse(JSON.stringify(this.toSettings()))
 		// Autonomous drivers are input adapters, not physics participants.  A
 		// simulated shot must not let an AI submit nested turns in its clone.
@@ -202,7 +233,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			settings.systemOrder = settings.systemOrder.filter((id: string) => id !== "ai.battle" && id !== "ai.opponent")
 		}
 		const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()
-		const packet = g.resolveTurn({ actorId, angle, power });
+		const packet = g.resolveTurnWithTickBudget({ actorId, angle, power }, maxTicks);
 		this.log("turn.simulation.completed", { actorId, ticks: packet.durationFrames, durationMs: runtimeNow() - started });
 		this.log("turnPacket.created", { actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
 		return packet
@@ -210,24 +241,28 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 	/** Resolves and commits one turn on this handler. Use this on the authoritative server. */
 	public resolveTurn({ actorId, angle, power }: IInput): TurnPacket {
+		return this.resolveTurnWithTickBudget({ actorId, angle, power }, 1200)
+	}
+
+	/** Shared resolution implementation; callers use the authoritative default or a narrow speculative budget. */
+	private resolveTurnWithTickBudget({ actorId, angle, power }: IInput, maxTicks: number): TurnPacket {
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot resolve further turns")
-		const actor = this.entityManager.getEntityById(actorId)
-		if (!actor) throw new Error(`Actor ${actorId} not found`);
-		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		const actor = this.validateActorForAction(actorId);
 		this.log("input.received", { actionType: "shot", actorId, angle, power });
 		this.log("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
 		this.turnStartedAt = runtimeNow();
 		this.log("turn.started", { actorId, actionType: "shot", angle, power });
 		this.feedback.record(KoreGameplayFeedbackType.Shot, this.getTurnNumber(), { actorId, data: { angle, power } });
 		const before = new Map(this.entityManager.toSettings().map(player => [player.id, player]));
-		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyAcceptedForce(actor, { angle, power });
+		this.applyTemporalModifiers(actor);
 		// The resolution loop is part of the accepted turn: the completion gate
 		// must not freeze it even if a gameplay system completes the match
 		// mid-loop (the deciding tick already stored the result).
 		this.resolvingTurn = true;
 		let frames = 0;
 		try {
-			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++) this.tick()
+			for (; !this.physicsStrategy.isStatic(this.entityManager) && frames < maxTicks; frames++) this.tick()
 		} finally {
 			this.resolvingTurn = false;
 		}
@@ -236,7 +271,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			const previous = before.get(player.id);
 			if (!previous) continue;
 			if (player.hp < previous.hp) this.feedback.record(KoreGameplayFeedbackType.Damage, this.getTurnNumber(), { targetIds: [player.id], data: { amount: previous.hp - player.hp } });
-			if (player.isDead && !previous.isDead) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
+			if ((!player.isPhysicsEnabled || !player.isDrawingEnabled) && previous.isPhysicsEnabled && previous.isDrawingEnabled) this.feedback.record(KoreGameplayFeedbackType.Elimination, this.getTurnNumber(), { targetIds: [player.id] });
 		}
 		this.feedback.record(KoreGameplayFeedbackType.Turn, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
 		const packet: TurnPacket = {
@@ -248,6 +283,20 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.log("turn.simulation.completed", { actorId, ticks: frames, durationMs: runtimeNow() - (this.turnStartedAt ?? runtimeNow()) });
 		this.log("turnPacket.created", { actorId, frameCount: frames, playerCount: finalState.length });
 		return packet;
+	}
+
+	/** Shared authoritative actor eligibility boundary for all action transports. */
+	public validateActorForAction(actorId: string): IEntity {
+		const actor = this.entityManager.getEntityById(actorId);
+		if (!actor) throw new Error(`Actor ${actorId} not found`);
+		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`);
+		if (!actor.isActorEligible()) throw new Error(`Actor ${actorId} is locked from selection`);
+		return actor;
+	}
+
+	public isActorEligibleForAction(actorId: string): boolean {
+		try { this.validateActorForAction(actorId); return true; }
+		catch { return false; }
 	}
 
 	/**
@@ -269,7 +318,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 
 		const actor = this.entityManager.getEntityById(packet.actorId);
 		if (!actor) throw new Error("actor not found!")
-		this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+		this.applyAcceptedForce(actor, packet.input);
+		this.applyTemporalModifiers(actor);
 
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		if (!playback) throw new Error("playbacksystem not found!")
@@ -294,7 +344,23 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (this.context.state === GameState.Game_over) throw new Error("A completed match cannot accept raw turns")
 		const actor = this.entityManager.getEntityById(actorId);
 		if (!actor) { console.log("Player not Found"); return }
-		this.physicsStrategy.applyImpulse(actor, angle, power);
+		this.applyAcceptedForce(actor, { angle, power });
+		this.applyTemporalModifiers(actor);
+	}
+
+	/** Applies and consumes entity-owned action modifiers at the accepted action boundary. */
+	private applyAcceptedForce(entity: IEntity, input: { angle: number; power: number }): void {
+		const effective = entity.applyPendingActionModifiers(input);
+		this.physicsStrategy.applyImpulse(entity, effective.angle, effective.power);
+		entity.consumePendingActionModifiers();
+	}
+
+	/** Applies active generic temporal commands once to an accepted movement action. */
+	private applyTemporalModifiers(entity: IEntity): void {
+		for (const modifier of entity.getTemporalModifiers()) {
+			if (modifier.target.entityId !== String(entity.getId())) continue;
+			dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: modifier.effect });
+		}
 	}
 
 	/**
@@ -320,8 +386,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// the match mid-loop.
 		if (this.context.state === GameState.Game_over && !this.resolvingTurn) return
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
-		for (const e of this.entityManager.getEntities()) { this.effectAlways.forEach(eff => { eff.apply(e) }) }
+		this.advanceDeferredEffectsTick();
+		for (const e of this.entityManager.getEntities()) {
+			if (this.effectAlways.length === 0) continue;
+			dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: effect => effect.apply(e) });
+		}
 		const drift = this.settings?.drift ?? DEFAULT_DRIFT
+		this.context.drift = drift
+		this.systems.forEach(s => s.preTick?.(this.context, dt, this.physicsStrategy.getFriction()))
 		for (const e of this.entityManager.getEntities()) { e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold()) }
 		this.systems.forEach(s => s.ticker(this.context, dt, this.physicsStrategy.getFriction()))
 		this.mapPickupSystem.ticker(this.context, dt, this.physicsStrategy.getFriction())
@@ -462,6 +534,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	// ENGINE KONTROLLE
 
 	public getContext(): IGameContext { return { ...this.context }; }
+	public getCounters(): CounterState[] { return this.context.counters.map(counter => ({ ...counter })); }
+	public getCounter(counterId: string): CounterState {
+		const counter = this.context.counters.find(candidate => candidate.id === counterId);
+		if (!counter) throw new Error(`Unknown counter target '${counterId}'`);
+		return { ...counter };
+	}
+	public dispatchEngineEffect(effect: unknown): void { dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect }); }
 	public addSystem(system: ISystem) { this.systems.push(system) }
 	/** Snapshot-only inspection; callers must not mutate the returned systems. */
 	public getSystems(): readonly ISystem[] { return this.systems }
@@ -485,11 +564,22 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			const ids = [a, b].filter((value): value is IEntity & IPhysics<SHAPE> => typeof (value as IEntity).getId === "function").map(value => value.getId())
 			this.recordFeedback(KoreGameplayFeedbackType.Collision, { ...(ids[0] ? { actorId: ids[0] } : {}), ...(ids.length > 1 ? { targetIds: ids.slice(1) } : {}) })
 			if (ids.length === 1) this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true } })
+			const structure = [a, b].find(value => typeof (value as IStructure).getCollisionCommands === "function") as IStructure | undefined;
+			const entity = [a, b].find(value => typeof (value as IEntity).getId === "function" && typeof (value as IEntity).getTeam === "function") as IEntity | undefined;
+			if (structure && entity) dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
 		}
 	}
 	public setWorldSize(worldSize: Vector2D): void { this.context.worldSize = { ...worldSize } }
 	public setTurnNumber(turnNumber: number): void {
-		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => { entity.resetItemUses(); entity.advanceItemEffectsTurn() })
+		if (this.context.currTurn !== turnNumber) this.entityManager.getEntities().forEach(entity => {
+			entity.resetItemUses();
+			entity.advanceTemporalModifiersTurn();
+			entity.advancePendingActionModifierLifetimes();
+			entity.advanceCollisionFilterLifetimes();
+			entity.advanceActorEligibilityConstraintLifetimes();
+			for (const scheduled of entity.advanceItemEffectsTurn()) this.executeDueSpawnTrigger(entity, scheduled);
+		})
+		if (this.context.currTurn !== turnNumber) this.advanceStructureLifecyclesTurn();
 		this.context.currTurn = turnNumber
 		this.ruleState.turnNumber = turnNumber
 	}
@@ -519,6 +609,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.setTurnNumber(ruleState.turnNumber)
 		this.setActiveTeam(ruleState.activeTeam)
 		this.setRuleState(ruleState)
+		const event = createRoundStartEvent(String(this.id), ruleState.turnNumber, ruleState.activeTeam, ruleState.phase)
+		for (const entity of this.entityManager.getEntities()) {
+			entity.onRound(event)
+			if (this.effectRound.length > 0) dispatchTriggeredEffects({ effects: this.effectRound, event, apply: effect => effect.apply(entity) })
+		}
 		this.drawItemsForActiveTeam()
 	}
 	public getMatchResult(): MatchResult | undefined { return this.matchResult && { ...this.matchResult } }
@@ -551,14 +646,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!this.initialSettings) throw new Error("A rematch requires initial game settings")
 		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
 		this.entityManager.applySettings(settings.players)
+		this.structureLifecycles = []
+		this.deferredEffects = []
 		this.initializeFixedLoadouts()
 		this.context.structures = settings.mapBoundarys.map(boundary => new FullStructure(boundary))
+		this.restoreStructureLifecycles((settings as EngineSettings).structureLifecycles)
 		this.setPhysics(new defaultPhysics(settings.friction))
 		this.setWorldSize(settings.screenResolution)
 		this.setMyTeam(settings.myTeam)
 		this.setTeamSize(settings.allTeamSize)
 		this.setItems(settings.items)
 		this.loadEffects(settings.effects)
+		this.loadTriggerDefinitions(settings.triggerDefinitions ?? [])
 		this.initializeItemDraws()
 		this.resetMapItemPickups()
 		const initialPhase = settings.gameMode?.phases?.[0] ?? RulePhase.Physics
@@ -587,7 +686,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public setPaused(paused: boolean): void { this.paused = paused }
 	public isPaused(): boolean { return this.paused }
 	public getActiveTeam(): number { return this.context.activeTeam }
-	public start(state?: GameState): this { this.context.state = state ?? GameState.Your_turn; return this }
+	public start(state?: GameState): this {
+		this.context.state = state ?? GameState.Your_turn;
+		for (const entity of this.entityManager.getEntities()) entity.setNumericEffectDispatcher(effect => this.dispatchEngineEffect(effect));
+		return this;
+	}
 	public addStructure(structure: IStructure | IStructure & IPhysics<SHAPE>) {
 		this.context.structures.push(structure)
 		// if ("getShape" in structure) this.physicsStrategy.addToQueue(PhysicsLevel.Map, structure)
@@ -656,6 +759,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			effects,
 			items: this.items.map(item => ({ ...item })),
 			players: this.entityManager.toSettings(),
+			counters: canonicalizeCounterStates(this.context.counters),
 			minPlayers: this.settings?.minPlayers ?? 0,
 			maxPlayers: this.settings?.maxPlayers ?? 0,
 			allTeamSize: this.teamSize,
@@ -664,6 +768,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...(this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {}),
 			...(this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {}),
 			...(this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {}),
+			...(this.triggerDefinitions.describe().length ? { triggerDefinitions: this.triggerDefinitions.toSettings() } : {}),
 			turnNumber: this.getContext().currTurn,
 			activeTeam: this.getActiveTeam(),
 			ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
@@ -684,6 +789,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			tickRate: this.getTickRate(),
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
+			...(this.structureLifecycles.length ? { structureLifecycles: structuredClone(this.structureLifecycles) } : {}),
+			...(this.deferredEffects.length ? { deferredEffects: structuredClone(this.deferredEffects) } : {}),
 		}
 		// The export stays a pure snapshot: only a detached copy is retained,
 		// so caller mutations of the returned settings can never leak into
@@ -701,6 +808,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public addEffectEveryTick(effect: Effect): void { this.effectAlways.push(effect) }
 	public addEffectEveryRound(effect: Effect): void { this.effectRound.push(effect) }
 	public addEffectEveryCollision(effect: Effect): void { this.effectCollision.push(effect) }
+	public loadTriggerDefinitions(definitions: readonly TriggerDefinition[]): void {
+		const catalog = new TriggerDefinitionCatalog();
+		definitions.forEach(definition => catalog.register(definition));
+		this.triggerDefinitions = catalog;
+	}
 	public setTeamSize(size: number): void { this.teamSize = size }
 	public setItems(items: ItemDocument[]): void {
 		items.forEach(validateItemDocument)
@@ -721,17 +833,61 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 	public restoreMapItemPickups(state: ItemPickupState | undefined): void { this.mapPickupSystem.restore(state) }
 	public resetMapItemPickups(): void { this.mapPickupSystem.reset() }
+	private advanceStructureLifecyclesTurn(): void {
+		const next: StructureLifecycleSettings[] = [];
+		for (const lifecycle of this.structureLifecycles) {
+			const advanced = advanceStructureLifecycle(lifecycle);
+			if (advanced) next.push(advanced);
+			else {
+				const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
+				if (!structure) throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+				this.setStructureParticipation(structure.getId(), false);
+			}
+		}
+		this.structureLifecycles = next;
+	}
+	public restoreStructureLifecycles(lifecycles: readonly StructureLifecycleSettings[] | undefined): void {
+		this.structureLifecycles = [];
+		for (const lifecycle of lifecycles ?? []) {
+			validateStructureLifecycle(lifecycle);
+			if (!this.context.structures.some(structure => structure.getId() === lifecycle.structureId)) throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+			this.structureLifecycles.push(structuredClone(lifecycle));
+		}
+	}
+	public restoreDeferredEffects(effects: readonly DeferredEffectSettings[] | undefined): void {
+		this.deferredEffects = [];
+		for (const effect of effects ?? []) {
+			validateDeferredEffect(effect);
+			this.deferredEffects.push(structuredClone(effect));
+		}
+	}
+	private removeStructureLifecycles(sourceIds: ReadonlySet<string>, targetId: string): void {
+		for (const lifecycle of this.structureLifecycles) {
+			if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId) continue;
+			const structure = this.context.structures.find(candidate => candidate.getId() === lifecycle.structureId);
+			if (structure) this.setStructureParticipation(structure.getId(), false);
+		}
+		this.structureLifecycles = this.structureLifecycles.filter(lifecycle => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+	}
+	private setStructureParticipation(structureId: string, enabled: boolean): void {
+		for (const type of [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID]) {
+			dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: { schemaVersion: 1, type, target: { type: "structure", structureId }, typeValue: { enabled } } });
+		}
+	}
+	private removeDeferredEffects(sourceIds: ReadonlySet<string>, ownerId: string): void {
+		this.deferredEffects = this.deferredEffects.filter(effect => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
+	}
 	/**
 	 * Consumes a declared item and validates its target through the gameplay
 	 * authority. A used mystery box additionally resolves and grants exactly
 	 * one deterministic reward; every validation runs before any mutation.
 	 */
 	public useItem(actorId: string, itemId: string, target: unknown = { type: "self" }): void {
-		const actor = this.entityManager.getEntityById(actorId)
-		if (!actor) throw new Error(`Actor ${actorId} not found`)
+		const actor = this.validateActorForAction(actorId)
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
+		const resolvedItemTarget = item.effects.some(effect => effect.type === ItemEffectType.DeferredEffect || effect.type === ItemEffectType.SpawnTrigger) ? resolveEffectTarget(target, { actor }) : undefined
 		if (item.id === MYSTERY_BOX_ITEM_ID) {
 			this.resolveMysteryBoxUse(actor, item)
 			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -739,30 +895,209 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		}
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
 		if (!targetEntity) throw new Error("Item target entity not found")
-		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) }))
+		const runtimeEffects: LoweredItemEffect[] = item.effects.map(effect => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID
+			? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) }
+			: effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID
+				? { type: TRANSFORM_SWAP_POSITION_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) }
+				: createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
+		for (const effect of runtimeEffects) {
+			if (effect instanceof EffectSpawnTrigger) {
+				this.triggerDefinitions.require(effect.triggerId);
+				if (effect.structureId !== undefined) {
+					if (!this.context.structures.some(structure => structure.getId() === effect.structureId)) throw new Error(`Unknown structure target '${effect.structureId}'`);
+					if (resolvedItemTarget?.type !== "position") throw new Error("Structure spawnTrigger requires a position target");
+				} else if (resolvedItemTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+			}
+		}
 		const inventory = actor.getInventory()
 		// Validate and reserve the use before applying effects. The live inventory
 		// is committed only after all effect constructors and target checks pass.
 		consumeInventoryItem(inventory, item)
-		const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map(candidate => [candidate.id, candidate])))
+		const installedEffects = [
+			...targetEntity.getItemEffects(),
+			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+			...targetEntity.getPendingActionModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+			...targetEntity.getCollisionFilters().map(filter => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
+			...targetEntity.getActorEligibilityConstraints().map(constraint => ({ itemId: constraint.sourceId, order: constraint.sourceOrder })),
+			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
+			...this.deferredEffects.filter(effect => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map(effect => ({ itemId: effect.sourceId, order: effect.sourceOrder })),
+		];
+		const combination = validateItemCombination(item, installedEffects, new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
-		this.applyItemEffects(actor, target, runtimeEffects, item)
+		targetEntity.removeTemporalModifiers(combination.removeItemIds)
+		targetEntity.removePendingActionModifiers(combination.removeItemIds)
+		targetEntity.removeCollisionFilters(combination.removeItemIds)
+		targetEntity.removeActorEligibilityConstraints(combination.removeItemIds)
+		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
+		this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()))
+		this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget)
 		actor.setInventory(inventory)
 		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
 		if (item.effects.some(effect => effect.type === "shield")) this.feedback.record(KoreGameplayFeedbackType.Shield, this.getTurnNumber(), { actorId, data: { itemId } });
 	}
 
-	private applyItemEffects(actor: IEntity, target: { type: string; entityId?: string; position?: { x: number; y: number } }, effects: RuntimeItemEffect[], item: ItemDocument): void {
+	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: LoweredItemEffect[], item: ItemDocument, resolvedItemTarget?: ResolvedEffectTarget): void {
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
 		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
 		for (const effect of effects) {
-			if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
-			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
-				const actorPosition = actor.getPos(); actor.setPos(targetEntity.getPos()); targetEntity.setPos(actorPosition)
+			if (isEntityForceFieldItemEffect(effect)) {
+				if (target.type !== "entity" || !targetEntity) throw new Error("Entity force effects require an entity target");
+				this.dispatchEngineEffect({
+					schemaVersion: 1,
+					type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+					target: { type: "entity", entityId: String(targetEntity.getId()) },
+					typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() },
+				});
+			}
+			else if (isEntitySwapPositionItemEffect(effect)) {
+				if (target.type !== "entity" || !targetEntity) throw new Error("Swap position effects require an entity target");
+				this.dispatchEngineEffect({ schemaVersion: 1, type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: String(actor.getId()) }, typeValue: { otherEntityId: String(targetEntity.getId()) } });
+			}
+			else if (isDeferredEffectTemplate(effect)) {
+				if (!resolvedItemTarget) throw new Error("Deferred Effects require a resolved target");
+				if (resolvedItemTarget.type !== "position") throw new Error("Deferred force fields require a position target");
+				const target = { type: "position" as const, position: { ...resolvedItemTarget.position } };
+				this.deferredEffects.push(createDeferredEffect({
+					id: `${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+					durationUnit: effect.durationUnit,
+					duration: effect.duration,
+					effect: { ...structuredClone(effect.effect), target },
+					sourceId: item.id,
+					sourceOrder: itemOrder(item),
+					ownerId: String(actor.getId()),
+				}));
+			}
+			else if (effect instanceof EffectSpawnTrigger) {
+				if (!resolvedItemTarget) throw new Error("spawnTrigger requires a resolved target");
+				const triggerSettings = effect.toSettings();
+				const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
+				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
+			}
+			else if (isStructureLifecycleTemplate(effect)) {
+				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");
+				this.installStructureLifecycle(actor, item, effect, target.position);
+			} else if (isCollisionFilterTemplate(effect)) {
+				if (!targetEntity) throw new Error("Collision filters require an entity target");
+				const filterId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+				targetEntity.addCollisionFilter(
+					createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }),
+					createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }),
+				);
+			} else if (isActorEligibilityConstraintTemplate(effect)) {
+				if (!targetEntity) throw new Error("Actor eligibility constraints require an entity target");
+				const constraintId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+				targetEntity.addActorEligibilityConstraint(
+					createActorEligibilityConstraint({ id: constraintId, mode: effect.mode, sourceId: item.id, sourceOrder: itemOrder(item) }),
+					createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }),
+				);
+			} else if (isActionModifierTemplate(effect)) {
+				if (!targetEntity) throw new Error("Action modifiers require an entity target");
+				const actionModifier = effect.action === "force"
+					? createActionModifier({
+						id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+						action: "force",
+						operation: "scale",
+						factor: effect.factor,
+						...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
+						...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
+						sourceId: item.id,
+						sourceOrder: itemOrder(item),
+					})
+					: createActionModifier({
+						id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+						action: "aim",
+						operation: "random-offset",
+						maxVarianceDegrees: effect.maxVarianceDegrees,
+						randomState: effect.randomState,
+						...(item.duration.type === "turns" ? { durationUnit: "turns" as const, duration: item.duration.value, remaining: item.duration.value } : {}),
+						...(item.duration.type !== "turns" ? { remainingUses: 1 } : {}),
+						sourceId: item.id,
+						sourceOrder: itemOrder(item),
+					});
+				targetEntity.addPendingActionModifier(actionModifier);
+			} else if (isTemporalModifierTemplate(effect)) {
+				if (!targetEntity) throw new Error("Temporal modifiers require an entity target");
+				const targetId = String(targetEntity.getId());
+				const modifier: TemporalModifierSettings = createTemporalModifier({
+					id: `${targetId}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+					target: { type: "entity", entityId: targetId },
+					effect: { ...structuredClone(effect.effect), target: { type: "entity", entityId: targetId } },
+					durationUnit: effect.durationUnit,
+					duration: effect.duration,
+					sourceId: item.id,
+					sourceOrder: itemOrder(item),
+				});
+				targetEntity.addTemporalModifier(modifier);
 			} else {
 				(targetEntity ?? actor).addItemEffect(effect.toSettings() as never, { itemId: item.id, order: itemOrder(item) })
 			}
 		}
+	}
+	private installStructureLifecycle(actor: IEntity, item: ItemDocument, template: StructureLifecycleTemplate, position: Vector2D): void {
+		const structureId = `${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+		if (this.context.structures.some(structure => structure.getId() === structureId)) throw new Error(`Structure lifecycle ID '${structureId}' already exists`);
+		this.context.structures.push(new FullStructure({
+			id: structureId,
+			type: SHAPE.RECTANGLE,
+			x: position.x,
+			y: position.y,
+			w: template.structure.w,
+			h: template.structure.h,
+			...(template.structure.color === undefined ? {} : { color: template.structure.color }),
+			role: template.structure.role ?? "solid",
+			physicsEnabled: true,
+			drawingEnabled: true,
+			effects: [],
+		}));
+		this.structureLifecycles.push(createStructureLifecycle({
+			id: `${structureId}:lifecycle`,
+			structureId,
+			durationUnit: template.durationUnit,
+			duration: template.duration,
+			sourceId: item.id,
+			sourceOrder: itemOrder(item),
+			targetId: String(actor.getId()),
+		}));
+	}
+
+	private advanceDeferredEffectsTick(): void {
+		const due: DeferredEffectSettings[] = [];
+		const next: DeferredEffectSettings[] = [];
+		for (const deferred of this.deferredEffects) {
+			const advanced = advanceDeferredEffect(deferred);
+			if (advanced) next.push(advanced);
+			else due.push(deferred);
+		}
+		this.deferredEffects = next;
+		for (const [index, deferred] of due.entries()) {
+			const event = createScheduleDueEvent(deferred.ownerId ?? deferred.id, index, deferred.id, "tick", 0);
+			dispatchTriggerActivation({ effectId: "engine.deferredEffect", event, apply: () => dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: deferred.effect }) });
+		}
+	}
+
+	private executeDueSpawnTrigger(owner: IEntity, scheduled: ItemEffectSettings): void {
+		if (scheduled.type !== ItemEffectType.SpawnTrigger) return;
+		const value = scheduled.typeValue;
+		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
+		const definition = this.triggerDefinitions.get(String(value.triggerId));
+		if (!definition) return;
+		const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+		if ("effects" in definition.effect) {
+			const composition = definition.effect as EngineEffectComposition;
+			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => dispatchPredefinedComposition({ ctx: this.context, systems: this.systems, composition, positionOverride: value.resolvedPosition as { x: number; y: number } | undefined }) });
+			return;
+		}
+		if (target?.type === "structure") {
+			const structure = this.context.structures.find(candidate => candidate.getId() === target.structureId);
+			if (!structure) throw new Error(`Unknown structure target '${target.structureId}'`);
+			const position = value.resolvedPosition as { x: number; y: number } | undefined;
+			dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect as EffectSettings).apply(structure as unknown as IPhysics<SHAPE>, position) });
+			return;
+		}
+		if (!target || target.type !== "entity") return;
+		const entity = this.entityManager.getEntityById(target.entityId);
+		if (!entity || entity.isDead()) return;
+		dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect as EffectSettings).apply(entity) });
 	}
 
 	private mysteryBoxRewardOptions(actorId: string): MysteryBoxRewardOptions {
@@ -849,6 +1184,14 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 }
 
+function isEntityForceFieldItemEffect(effect: LoweredItemEffect): effect is EntityForceFieldItemEffect {
+	return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
+}
+
+function isEntitySwapPositionItemEffect(effect: LoweredItemEffect): effect is EntitySwapPositionItemEffect {
+	return "type" in effect && effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID;
+}
+
 
 
 export class GameHandlerBuilder {
@@ -883,6 +1226,10 @@ export class GameHandlerBuilder {
 
 		this
 			.addPhysics(physics)
+			.addSystem(new MovementSystem())
+			.addSystem(new NumericSystem())
+			.addSystem(new ParticipationSystem())
+			.addSystem(new TransformSystem())
 			.addSystem(new PlaybackSystem())
 			.addSystem(physicsSystem)
 			.addSystem(new BoundarySystem())
@@ -891,6 +1238,9 @@ export class GameHandlerBuilder {
 	}
 
 	public fromSettings(gameSettings: EngineSettings | GameSettings): this {
+		gameSettings = migrateGameSettingsEffects(gameSettings)
+		const counters = canonicalizeCounterStates((gameSettings as GameSettings).counters ?? [])
+		gameSettings = { ...gameSettings, counters }
 		const drift = gameSettings.drift ?? DEFAULT_DRIFT
 		validateDrift(drift)
 		const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1)
@@ -904,6 +1254,7 @@ export class GameHandlerBuilder {
 		this.engine.setId(gameSettings.id)
 		this.engine.setTickRate((gameSettings as EngineSettings).tickRate ?? 1)
 		this.engine.setWorldSize(worldSize)
+		this.engine.getContext().counters.splice(0, this.engine.getContext().counters.length, ...counters)
 		this.engine.setPhysics(new defaultPhysics(gameSettings.friction))
 		const snapshot = gameSettings as EngineSettings
 		if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
@@ -915,6 +1266,9 @@ export class GameHandlerBuilder {
 			for (const id of systemSettings.map(system => system.systemId).filter(id => id !== "core.simulator")) restored.set(id, createSystemFromSettings(byId.get(id)!, restored))
 			if (byId.has("core.simulator")) restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator")!, restored))
 			this.engine.replaceSystems(systemOrder.map(id => restored.get(id)!))
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.numeric")) this.engine.addSystem(new NumericSystem())
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.participation")) this.engine.addSystem(new ParticipationSystem())
+			if (!this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.transform") && gameSettings.items.some(item => item.effects.some(effect => effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID))) this.engine.addSystem(new TransformSystem())
 			const restoredPhysics = this.engine.getSystems().find(system => (system as ISerializableSystem).systemId === "core.physics") as PhysicsSystem | undefined
 			if (!restoredPhysics) throw new Error("System snapshot must include core.physics")
 			restoredPhysics.strategy = this.engine.getPhysics()
@@ -930,6 +1284,10 @@ export class GameHandlerBuilder {
 		this.engine.setItems(gameSettings.items)
 		this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? [])
 		this.engine.loadEffects(gameSettings.effects)
+		this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? [])
+		if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some(definition => "effects" in definition.effect) && !this.engine.getSystems().some(system => (system as ISerializableSystem).systemId === "core.transform")) {
+			this.engine.addSystem(new TransformSystem())
+		}
 
 		// Player
 		players.forEach((player) => this.addPlayer(createRuntimePlayer(player)))
@@ -941,9 +1299,13 @@ export class GameHandlerBuilder {
 
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
+		this.engine.restoreStructureLifecycles((gameSettings as EngineSettings).structureLifecycles)
+		this.engine.restoreDeferredEffects((gameSettings as EngineSettings).deferredEffects)
 		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
-			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
-			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))
+			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map(mechanic => {
+				if (!mechanic.structure.id) throw new Error(`Environmental Structure '${mechanic.id}' has no stable ID`);
+				return mechanic.structure.id;
+			})))
 		}
 
 		if ("state" in gameSettings) {

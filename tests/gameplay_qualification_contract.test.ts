@@ -43,9 +43,10 @@ describe("Section 15.1 gameplay qualification contract", () => {
 
 	test("the completed delivery record links gameplay qualification to its documents and focused test", () => {
 		const plan = read("step-by-step.md");
-		expect(plan).toContain("## 15. Gameplay Qualification And Human Playtest Validation");
-		expect(plan).toContain("docs/gameplay-qualification.md");
-		expect(plan).toContain("docs/playtest-protocol.md");
-		expect(plan).toContain("tests/gameplay_qualification_contract.test.ts");
+		expect(plan).toContain("| 15 | `[x]`");
+		expect(plan).toContain("steps/15-gameplay_qualification_and_human_playtest_validation.md");
+		expect(read("docs/gameplay-qualification.md").length).toBeGreaterThan(0);
+		expect(read("docs/playtest-protocol.md").length).toBeGreaterThan(0);
+		expect(read("requirements.md")).toContain("| R-17 | Section 15 gameplay release qualification");
 	});
 });

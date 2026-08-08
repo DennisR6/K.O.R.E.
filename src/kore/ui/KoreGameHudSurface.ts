@@ -30,7 +30,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	public applyProjection(projection: KoreHudProjection): void {
 		this.projection = structuredClone(projection); const turn = projection.turn;
 		this.setText(KoreHudElement.Turn, formatLanguage(this.language, LANGUAGE_KEYS.HudTurn, { team: turn.activeTeam + 1, phase: turn.phase, turn: turn.number + 1 }));
-		this.setText(KoreHudElement.State, projection.match.waiting ? this.language.strings[LANGUAGE_KEYS.HudWaiting] : hudStateText(turn.engineState, this.language));
+		this.setText(KoreHudElement.State, projection.aiThinking ? this.language.strings[LANGUAGE_KEYS.HudAiThinking] : projection.match.waiting ? this.language.strings[LANGUAGE_KEYS.HudWaiting] : hudStateText(turn.engineState, this.language));
 		this.setText(KoreHudElement.Aim, `${formatLanguage(this.language, LANGUAGE_KEYS.HudActor, { actor: turn.selectedActorId ?? this.language.strings[LANGUAGE_KEYS.HudNone] })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudAim, { aim: turn.aimAngle === null ? this.language.strings[LANGUAGE_KEYS.HudNone] : `${turn.aimAngle.toFixed(1)}°` })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudPower, { power: Math.round(turn.power * 10) / 10 })}`);
 		const itemsVisible = turn.phase === RulePhase.Item && !projection.match.result;
 		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && !projection.match.inputLocked && this.capabilities.canSkipItemPhase);

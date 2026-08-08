@@ -52,7 +52,7 @@ describe("offline match contract", () => {
 			{ label: "empty players", mutate: value => { value.players = []; } },
 			{ label: "invalid result", mutate: value => { value.result = { status: "ongoing", winnerTeam: null, reason: "last-team-standing", turnNumber: 1 }; } },
 			{ label: "missing replay", mutate: value => { value.replay = undefined; } },
-			{ label: "dead replay origin", mutate: value => { const replay = new ReplayRecorder(createCanonicalPlayableMatchSettings(), 1).getReplay(); (replay.initialSettings as { players: Array<{ isDead?: boolean }> }).players[0]!.isDead = true; value.replay = replay; } },
+			{ label: "inactive replay origin", mutate: value => { const replay = new ReplayRecorder(createCanonicalPlayableMatchSettings(), 1).getReplay(); const player = (replay.initialSettings as { players: Array<{ isPhysicsEnabled: boolean; isDrawingEnabled: boolean }> }).players[0]!; player.isPhysicsEnabled = false; player.isDrawingEnabled = false; value.replay = replay; } },
 		];
 		for (const entry of cases) {
 			const value = JSON.parse(JSON.stringify(base)) as Record<string, unknown>;

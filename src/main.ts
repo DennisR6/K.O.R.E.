@@ -350,6 +350,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		// The catalog map ID of the active local match, or null in the menu.
 		get mapId() { return router?.getMapId() ?? null; },
 		get logs() { return [...getActiveHandler().getLogs()]; },
+		get aiWorkerMetrics() { return router?.getAiWorkerMetrics(); },
 		audio: browserAudioManager
 	};
 }

@@ -5,6 +5,8 @@ import { GameState, type IMouse, type IInputEmitter } from "../engine/types.js";
 import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "../systems/types.js";
 import { koreAi } from "../kore/ai.js";
+import type { HardAiWorkerHost } from "./worker/host.js";
+import { isValidInput } from "../input/validate.js";
 
 /**
  * Autonomous KI-vs-KI battle driver.
@@ -33,6 +35,7 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		private readonly targetEmitter: IInputEmitter | undefined,
 		aiTeam0: AiSettings,
 		aiTeam1: AiSettings,
+		private readonly workerHost?: HardAiWorkerHost,
 	) {
 		this.emitter0 = koreAi.createTurnEmitter(aiTeam0);
 		this.emitter1 = koreAi.createTurnEmitter(aiTeam1);
@@ -67,21 +70,32 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			return;
 		}
 		if (rule.phase !== RulePhase.Physics) return;
+		if (this.workerHost?.isAvailable()) {
+			const prepared = this.workerHost.consumePreparedAction();
+			if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(team)) {
+				this.targetEmitter.sendShot(prepared.actorId, prepared.angle, prepared.power);
+				return;
+			}
+			if (this.workerHost.isThinking()) return;
+		}
 		const emitter = team === 0 ? this.emitter0 : this.emitter1;
 		const aiSettings = team === 0 ? this.settings0 : this.settings1;
+		const fallbackStart = performance.now();
 		const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
+		if (this.workerHost) this.workerHost.noteSynchronousFallback(performance.now() - fallbackStart);
 		if (!submitted) {
 			// Defensive fallback: the hard AI always submits while its team has
 			// living actors and enemies exist; a neutral straight shot keeps a
 			// battle moving if a future producer returns no decision.
 			console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
-			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team));
+			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team) && this.handler!.isActorEligibleForAction(entity.getId()));
 			if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
 		}
 	}
 
 	/** Exposes the authoritative shot emitter for recorder/analysis introspection. */
 	public getEmitter(): IInputEmitter | undefined { return this.targetEmitter; }
+	public isAiThinking(): boolean { return this.workerHost?.isThinking() ?? false; }
 
 	// Passive mouse contract: a battle never accepts pointer input, but the
 	// result overlay wraps this handler as its gameplay pass-through.

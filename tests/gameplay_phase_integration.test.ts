@@ -12,10 +12,13 @@ test("canonical gameplay exposes inventory, item allowance, skip, and physics tr
 	const itemUI = new ItemPhaseUI(handler, emitter);
 
 	expect(itemUI.getPhaseState()).toMatchObject({ phase: RulePhase.Item, activeTeam: 0, canUseItems: true, canSkip: true });
-	expect(itemUI.getItems(actor.getId())).toEqual([{ itemId: "power-dash", remainingUses: 1, usesThisTurn: 0 }]);
+	expect(itemUI.getItems(actor.getId())).toEqual([
+		{ itemId: "power-dash", remainingUses: 1, usesThisTurn: 0 },
+		{ itemId: "mystery-box", remainingUses: 1, usesThisTurn: 0 },
+	]);
 	itemUI.use(actor.getId(), "power-dash");
 	expect(itemUI.getPhaseState().itemUses).toBe(1);
-	expect(itemUI.getItems(actor.getId())).toEqual([]);
+	expect(itemUI.getItems(actor.getId())).toEqual([{ itemId: "mystery-box", remainingUses: 1, usesThisTurn: 0 }]);
 	expect(() => itemUI.use(actor.getId(), "power-dash")).toThrow("allowance");
 
 	itemUI.skip();

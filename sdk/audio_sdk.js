@@ -76,6 +76,23 @@ class EngineSystemRegistry {
     if (expected.join("|") !== value.systemOrder.join("|"))
       throw new Error("Framework system order violates dependencies");
   }
+  validateEffectSupport(settings, effects, catalog) {
+    this.validate(settings);
+    const selected = new Set(settings.systemOrder);
+    const definitions = [...selected].map((id) => this.definitions.get(id));
+    for (const effect of effects) {
+      catalog.validate(effect);
+      const typed = effect;
+      const definition = catalog.get(typed.type);
+      const accepted = definitions.some((candidate) => candidate.acceptsEffects?.includes(typed.type) === true);
+      if (!accepted)
+        throw new Error(`No selected system accepts effect '${typed.type}'`);
+      for (const capability of definition.requiresCapability ?? []) {
+        if (!definitions.some((candidate) => provides(candidate, capability)))
+          throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
+      }
+    }
+  }
 }
 function validateDefinition(definition) {
   if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
@@ -86,6 +103,8 @@ function validateDefinition(definition) {
     if (list !== undefined && (!Array.isArray(list) || list.some((value) => typeof value !== "string" || value.length === 0)))
       throw new Error(`Invalid system definition '${definition.id}'`);
   }
+  if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid accepted Effects for '${definition.id}'`);
   assertJsonValue(definition.state ?? {});
 }
 function provides(definition, capability) {
@@ -147,12 +166,49 @@ function clone(value) {
   return structuredClone(value);
 }
 
+var COUNTER_SCHEMA_VERSION = 1;
+function createCounterState(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState(state);
+  return state;
+}
+function validateCounterState(value) {
+  if (!isRecord(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 class EngineWorldBuilder {
   id;
   worldSize;
   entities = [];
   structures = [];
   effects = [];
+  counters = [];
   background;
   framework;
   constructor(id, worldSize) {
@@ -181,12 +237,16 @@ class EngineWorldBuilder {
     this.effects.push(clone2(effect));
     return this;
   }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates([counter]));
+    return this;
+  }
   useFramework(framework) {
     this.framework = clone2(framework);
     return this;
   }
   build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), ...this.framework ? { framework: clone2(this.framework) } : {} };
+    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), counters: canonicalizeCounterStates(this.counters), ...this.framework ? { framework: clone2(this.framework) } : {} };
   }
   buildJson(space = 2) {
     return JSON.stringify(this.build(), null, space);
@@ -199,6 +259,112 @@ function clone2(value) {
   return structuredClone(value);
 }
 
+class EngineEffectRegistry {
+  definitions = new Map;
+  register(definition) {
+    validateDefinition2(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate effect definition '${definition.id}'`);
+    this.definitions.set(definition.id, { ...definition, ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {} });
+    return this;
+  }
+  get(id) {
+    return this.definitions.get(id);
+  }
+  validate(effect) {
+    if (!effect || typeof effect !== "object" || Array.isArray(effect))
+      throw new Error("Malformed effect settings");
+    const value = effect;
+    if (typeof value.type !== "string" || !this.definitions.has(value.type))
+      throw new Error(`Unknown effect '${String(value.type)}'`);
+    if (value.schemaVersion !== undefined && value.schemaVersion !== 1)
+      throw new Error(`Unsupported effect schema version for '${value.type}'`);
+    assertJsonValue(value.typeValue);
+    this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    if (value.target !== undefined)
+      this.definitions.get(value.type).validateTarget?.(value.target);
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
+      id: definition.id,
+      schemaVersion: definition.schemaVersion ?? 1,
+      ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {},
+      ...definition.targetType ? { targetType: definition.targetType } : {},
+      ...definition.lifecycleCategory ? { lifecycleCategory: definition.lifecycleCategory } : {}
+    }));
+  }
+}
+function validateDefinition2(definition) {
+  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid effect definition ID");
+  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
+    throw new Error("Unsupported effect definition version");
+  for (const value of [definition.targetType, definition.lifecycleCategory])
+    if (value !== undefined && (typeof value !== "string" || value.length === 0))
+      throw new Error(`Invalid effect definition '${definition.id}'`);
+  if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid effect capabilities for '${definition.id}'`);
+  if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
+    throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
+}
+
+function createTransformState(input) {
+  const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
+  validateTransformState(state);
+  return structuredClone(state);
+}
+function createMovementState(input) {
+  const state = { schemaVersion: 1, velocity: { ...input.velocity }, angularVelocity: input.angularVelocity ?? 0, enabled: input.enabled ?? true };
+  validateMovementState(state);
+  return structuredClone(state);
+}
+function validateTransformState(value) {
+  const state = record(value, "Transform state");
+  exactKeys(state, ["schemaVersion", "position", "rotation"], "Transform state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Transform state schema version");
+  validateVector(state.position, "Transform position");
+  finite(state.rotation, "Transform rotation");
+}
+function validateMovementState(value) {
+  const state = record(value, "Movement state");
+  exactKeys(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Movement state schema version");
+  validateVector(state.velocity, "Movement velocity");
+  finite(state.angularVelocity, "Movement angularVelocity");
+  if (typeof state.enabled !== "boolean")
+    throw new Error("Movement enabled must be boolean");
+}
+function validateVector(value, label) {
+  const vector = record(value, label);
+  exactKeys(vector, ["x", "y"], label);
+  finite(vector.x, `${label} x`);
+  finite(vector.y, `${label} y`);
+}
+function record(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -206,6 +372,14 @@ var engine = {
   createSystemRegistry() {
     return new EngineSystemRegistry;
   },
+  createEffectRegistry() {
+    return new EngineEffectRegistry;
+  },
+  createTransformState,
+  createMovementState,
+  createCounterState,
+  canonicalizeCounterStates,
+  validateCounterState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);

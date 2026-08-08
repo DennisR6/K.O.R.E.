@@ -1,4 +1,5 @@
 import { assertJsonValue, type JsonValue } from "../contracts/systemSettings.js";
+import { canonicalizeCounterStates, type CounterState } from "../contracts/counterState.js";
 import type { EngineFrameworkSettings } from "./systemRegistry.js";
 
 /** Generic JSON-safe world settings with no KORE gameplay assumptions. */
@@ -10,6 +11,7 @@ export interface EngineWorldSettings {
 	entities: JsonValue[];
 	structures: JsonValue[];
 	effects: JsonValue[];
+	counters: CounterState[];
 	framework?: EngineFrameworkSettings;
 }
 
@@ -18,6 +20,7 @@ export class EngineWorldBuilder {
 	private readonly entities: JsonValue[] = [];
 	private readonly structures: JsonValue[] = [];
 	private readonly effects: JsonValue[] = [];
+	private readonly counters: CounterState[] = [];
 	private background: JsonValue | undefined;
 	private framework: EngineFrameworkSettings | undefined;
 
@@ -28,9 +31,10 @@ export class EngineWorldBuilder {
 	public addEntity(entity: JsonValue): this { assertJsonValue(entity); this.entities.push(clone(entity)); return this; }
 	public addStructure(structure: JsonValue): this { assertJsonValue(structure); this.structures.push(clone(structure)); return this; }
 	public addEffect(effect: JsonValue): this { assertJsonValue(effect); this.effects.push(clone(effect)); return this; }
+	public addCounter(counter: CounterState): this { this.counters.push(...canonicalizeCounterStates([counter])); return this; }
 	public useFramework(framework: EngineFrameworkSettings): this { this.framework = clone(framework); return this; }
 	public build(): EngineWorldSettings {
-		return { schemaVersion: 1, id: this.id, worldSize: clone(this.worldSize), ...(this.background === undefined ? {} : { background: clone(this.background) }), entities: clone(this.entities), structures: clone(this.structures), effects: clone(this.effects), ...(this.framework ? { framework: clone(this.framework) } : {}) };
+		return { schemaVersion: 1, id: this.id, worldSize: clone(this.worldSize), ...(this.background === undefined ? {} : { background: clone(this.background) }), entities: clone(this.entities), structures: clone(this.structures), effects: clone(this.effects), counters: canonicalizeCounterStates(this.counters), ...(this.framework ? { framework: clone(this.framework) } : {}) };
 	}
 	public buildJson(space: number = 2): string { return JSON.stringify(this.build(), null, space); }
 }

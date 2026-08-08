@@ -10,6 +10,9 @@ interface ScoredChoice {
 	aimedAtEnemy: boolean;
 }
 
+/** Maximum simulation horizon used only while ranking speculative Hard AI candidates. */
+export const HARD_AI_SPECULATIVE_MAX_TICKS = 300 as const;
+
 export class HardAi implements IAiTurnProducer {
 	public computeTurn(handler: GameHandler, aiSettings: AiSettings): AiDecision | undefined {
 		// Greedy bounded search with a seed-dependent tie-break: candidates
@@ -21,7 +24,7 @@ export class HardAi implements IAiTurnProducer {
 		const random = new SeededRandom(aiSettings.seed);
 
 		const entities = handler.getEntityManager().getEntities();
-		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
 		const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
 
 		if (aiActors.length === 0 || enemyActors.length === 0) return undefined;
@@ -38,6 +41,7 @@ export class HardAi implements IAiTurnProducer {
 		let simCount = 0;
 		let bestScore = -Infinity;
 		const bestChoices: ScoredChoice[] = [];
+		const simulatedScores = new Map<string, number>();
 
 		for (const aiActor of aiActors) {
 			if (simCount >= maxSimulations) break;
@@ -68,20 +72,25 @@ export class HardAi implements IAiTurnProducer {
 					if (simCount >= maxSimulations) break;
 
 					simCount++;
-					let score = 0;
-					try {
-						const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power);
+					const simulationKey = `${aiActor.getId()}:${candidate.angle}:${power}`;
+					let score = simulatedScores.get(simulationKey);
+					if (score === undefined) {
+						score = 0;
+						try {
+							const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
 
-						// Evaluate finalState from simulation
-						for (const pSnapshot of sim.finalState) {
-							if (pSnapshot.team.includes(aiSettings.team)) {
-								if (pSnapshot.isDead) score -= 10000; // Penalize AI death
-							} else {
-								if (pSnapshot.isDead) score += 5000; // Reward enemy elimination
+							// Evaluate finalState from simulation
+							for (const pSnapshot of sim.finalState) {
+								if (pSnapshot.team.includes(aiSettings.team)) {
+									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score -= 10000; // Penalize AI elimination
+								} else {
+									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score += 5000; // Reward enemy elimination
+								}
 							}
+						} catch {
+							score = -20000;
 						}
-					} catch {
-						score = -20000;
+						simulatedScores.set(simulationKey, score);
 					}
 
 					if (score > bestScore) {

@@ -34,7 +34,7 @@ export class AiTurnEmitter {
 		if (decision.itemUse) {
 			const { actorId, itemId, target } = decision.itemUse;
 			const actor = handler.getEntityManager().getEntityById(actorId);
-			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team)) {
+			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId)) {
 				handler.log("input.accepted", { actionType: "item", actorId, team: aiSettings.team });
 				targetEmitter.sendItemUse?.(actorId, itemId, target);
 				actionSubmitted = true;
@@ -44,7 +44,7 @@ export class AiTurnEmitter {
 		if (decision.shot) {
 			const { actorId, angle, power } = decision.shot;
 			const actor = handler.getEntityManager().getEntityById(actorId);
-			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && isValidInput({ actorId, angle, power })) {
+			if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId) && isValidInput({ actorId, angle, power })) {
 				handler.log("input.accepted", { actionType: "shot", actorId, angle, power, team: aiSettings.team });
 				targetEmitter.sendShot(actorId, angle, power);
 				actionSubmitted = true;

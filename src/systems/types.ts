@@ -2,10 +2,20 @@ import type { GameState, IInput, TurnPacket } from "../engine/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { MatchResult } from "../rules/types.js";
-import type { IStructure } from "../structures/types.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
+import type { CounterState } from "../engine/contracts/counterState.js";
+import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import type { IEntity } from "../entity/Entity.js";
+import type { IStructure } from "../structures/types.js";
 export type { SystemSettings } from "../engine/contracts/systemSettings.js";
+
+export type ResolvedPredefinedTarget =
+	| { type: "counter"; counter: CounterState }
+	| { type: "entity"; entity: IEntity }
+	| { type: "numeric"; entity: IEntity; stateId: string }
+	| { type: "position"; position: Vector2D }
+	| { type: "structure"; structure: IStructure; positionOverride?: Vector2D };
 
 /** Versioned, data-only identity of a registered engine system. */
 type SystemSettings = CanonicalSystemSettings;
@@ -16,6 +26,12 @@ type SystemSettings = CanonicalSystemSettings;
  */
 export interface ISerializableSystem<T extends SystemSettings = SystemSettings> extends ISystem, ISettingsSerialize<T> {
 	readonly systemId: string;
+}
+
+/** Trusted runtime interpreter contract for Engine-owned predefined systems. */
+export interface IPredefinedEffectSystem extends ISerializableSystem {
+	acceptsEffect(effectId: string): boolean;
+	applyEffect(ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): EngineEffectSettings[] | void;
 }
 
 /**
@@ -40,6 +56,9 @@ export interface IGameContext {
 	currTurn: number
 	activeTeam: number
 	myTeamNumber: number
+	/** Canonical world-level numeric facts; systems may interpret, never own, them. */
+	counters: CounterState[]
+	drift?: number
 	/**
 	 * Atomically completes the match with the given result.
 	 *
@@ -60,6 +79,9 @@ export interface IGameContext {
  * damit der GameLoop sie einheitlich aufrufen kann.
  */
 export interface ISystem {
+	/** Optional deterministic phase before entity-local ticks. */
+	preTick?(ctx: IGameContext, dt: number, friction: number): void;
+
 	/**
 	 * Wird in jedem Frame aufgerufen, um die Logik zu berechnen.
 	 * @param ctx - Der aktuelle Spielkontext (Datenquelle).

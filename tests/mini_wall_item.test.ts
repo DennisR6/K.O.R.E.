@@ -7,16 +7,11 @@ test("Mini-Wall is a validated built-in position-targeted item", () => {
 	expect(loader.get("mini-wall")).toEqual(miniWallItem);
 });
 
-test("Mini-Wall spawns and cleans up its temporary wall", () => {
+test("Mini-Wall lowers to a generic timed rectangle lifecycle", () => {
 	const wall = createMiniWall({ x: 100, y: 120 }, "wall-1");
-	expect(wall.spawn()).toEqual({ wallId: "wall-1", x: 100, y: 120, w: 80, h: 10 });
-	wall.advanceTurn();
-	wall.advanceTurn();
-	expect(wall.isActive()).toBe(true);
-	expect(wall.advanceTurn()).toBe(true);
-	expect(wall.isActive()).toBe(false);
+	expect(wall).toEqual({ durationUnit: "turns", duration: 3, structure: { type: "rectangle", w: 80, h: 10, role: "solid" } });
 });
 
-test("Mini-Wall rejects invalid placement", () => {
-	expect(() => createMiniWall({ x: Number.NaN, y: 0 })).toThrow("finite");
+test("Mini-Wall authoring keeps placement in the validated gameplay target", () => {
+	expect(createMiniWall({ x: Number.NaN, y: 0 }).structure).toEqual({ type: "rectangle", w: 80, h: 10, role: "solid" });
 });

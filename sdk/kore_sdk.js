@@ -1,56 +1,4 @@
-class EffectModifySetting {
-  settings;
-  constructor({ typeValue }) {
-    this.settings = typeValue;
-  }
-  apply(entity, override) {
-    if (!isSettingMutable(entity))
-      return;
-    const settings = override ?? this.settings;
-    switch (settings.operation) {
-      case "set":
-        entity.setSetting(settings.key, settings.value);
-        break;
-      case "add":
-        entity.addSetting(settings.key, settings.value);
-        break;
-      case "remove":
-        entity.removeSetting(settings.key, settings.value);
-        break;
-    }
-  }
-  getType() {
-    return "EffectType.ModifySetting" /* ModifySetting */;
-  }
-  toSettings() {
-    return {
-      type: "EffectType.ModifySetting" /* ModifySetting */,
-      typeValue: { ...this.settings }
-    };
-  }
-}
-function isSettingMutable(entity) {
-  return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
-}
-
-class EffectDamage {
-  damage;
-  constructor({ typeValue }) {
-    this.damage = typeValue.damage;
-  }
-  getType() {
-    return "EffectType.Damage" /* Damage */;
-  }
-  apply(entity, override) {
-    let dmg = this.damage;
-    if (override)
-      dmg = override.damage;
-    new EffectModifySetting({ typeValue: { operation: "add" /* Add */, key: "hp", value: -dmg } }).apply(entity);
-  }
-  toSettings() {
-    return { typeValue: { damage: this.damage }, type: "EffectType.Damage" /* Damage */ };
-  }
-}
+var EFFECT_SCHEMA_VERSION = 1;
 
 class EffectModifyMass {
   mass;
@@ -69,6 +17,7 @@ class EffectModifyMass {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.ModifyMass" /* ModifyMass */,
       typeValue: { mass: this.mass }
     };
@@ -96,6 +45,7 @@ class EffectModifyPosition {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Position" /* Position */,
       typeValue: {
         x: this.x,
@@ -129,6 +79,7 @@ class EffectModifySize {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.ModifySize" /* ModifySize */,
       typeValue: {
         size: this.size
@@ -161,6 +112,7 @@ class EffectModifyTeam {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Team" /* Team */,
       typeValue: {
         team: this.team
@@ -190,6 +142,7 @@ class EffectModifyVelocity {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Velocity" /* Velocity */,
       typeValue: {
         x: this.x,
@@ -197,6 +150,57 @@ class EffectModifyVelocity {
       }
     };
   }
+}
+
+class EffectModifySetting {
+  settings;
+  constructor({ typeValue }) {
+    this.settings = typeValue;
+  }
+  apply(entity, override) {
+    if (!isSettingMutable(entity))
+      return;
+    const settings = override === undefined ? this.settings : isModifySettingValue(override) ? override : this.settings;
+    if (settings.operation === "add" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+      entity.dispatchNumericAdd("hp", settings.value);
+      return;
+    }
+    if (settings.operation === "set" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericSet" in entity && typeof entity.dispatchNumericSet === "function") {
+      entity.dispatchNumericSet("hp", settings.value);
+      return;
+    }
+    if (settings.operation === "remove" && settings.key === "hp" && typeof settings.value === "number" && "dispatchNumericAdd" in entity && typeof entity.dispatchNumericAdd === "function") {
+      entity.dispatchNumericAdd("hp", -settings.value);
+      return;
+    }
+    switch (settings.operation) {
+      case "set":
+        entity.setSetting(settings.key, settings.value);
+        break;
+      case "add":
+        entity.addSetting(settings.key, settings.value);
+        break;
+      case "remove":
+        entity.removeSetting(settings.key, settings.value);
+        break;
+    }
+  }
+  getType() {
+    return "EffectType.ModifySetting" /* ModifySetting */;
+  }
+  toSettings() {
+    return {
+      schemaVersion: 1,
+      type: "EffectType.ModifySetting" /* ModifySetting */,
+      typeValue: { ...this.settings }
+    };
+  }
+}
+function isModifySettingValue(value) {
+  return typeof value === "object" && value !== null && "operation" in value && "key" in value && "value" in value;
+}
+function isSettingMutable(entity) {
+  return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
 }
 
 var PHYSICS_CONTACT_SLOP = 0.05;
@@ -267,7 +271,7 @@ class EffectMove {
     return "EffectType.Movement" /* Movement */;
   }
   toSettings() {
-    return { type: "EffectType.Movement" /* Movement */, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } };
+    return { schemaVersion: 1, type: "EffectType.Movement" /* Movement */, typeValue: { deltaTime: this.dt, x: this.x, y: this.y } };
   }
 }
 
@@ -675,6 +679,7 @@ class EffectPhysics {
   }
   toSettings() {
     return {
+      schemaVersion: 1,
       type: "EffectType.Physics" /* Physics */,
       typeValue: {
         friction: this.friction,
@@ -685,8 +690,400 @@ class EffectPhysics {
   }
 }
 
+class EffectNumericAdd {
+  stateId;
+  amount;
+  constructor({ typeValue }) {
+    this.stateId = typeValue.stateId;
+    this.amount = typeValue.amount;
+  }
+  apply(entity) {
+    if (!("getNumericValue" in entity))
+      return;
+    if (!("dispatchNumericAdd" in entity) || typeof entity.dispatchNumericAdd !== "function")
+      throw new Error("numeric.add requires an attached numeric effect dispatcher");
+    entity.dispatchNumericAdd(this.stateId, this.amount);
+  }
+  getType() {
+    return "numeric.add" /* NumericAdd */;
+  }
+  toSettings() {
+    return { schemaVersion: 1, type: "numeric.add" /* NumericAdd */, typeValue: { stateId: this.stateId, amount: this.amount } };
+  }
+}
+
 function createRuntimeEffect(settings) {
-  return new MetaEffect(settings);
+  return new MetaEffect({ schemaVersion: settings.schemaVersion, type: settings.type, typeValue: settings.typeValue });
+}
+
+var TRIGGER_KEYS = new Set(["trigger", "triggerValue"]);
+function validateTriggerSettings(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error("Trigger settings must be an object");
+  const trigger = value;
+  for (const key of Object.keys(trigger))
+    if (!TRIGGER_KEYS.has(key))
+      throw new Error(`Trigger settings contain unknown field '${key}'`);
+  if (trigger.trigger !== "EffectTrigger.Always" /* Always */ && trigger.trigger !== "EffectTrigger.Collision" /* Collision */ && trigger.trigger !== "EffectTrigger.Round" /* Round */)
+    throw new Error(`Unknown effect trigger '${String(trigger.trigger)}'`);
+  if (!Array.isArray(trigger.triggerValue) || trigger.triggerValue.length !== 0)
+    throw new Error(`Trigger '${String(trigger.trigger)}' requires an empty payload`);
+}
+
+function createEntityResolvedTarget(entityId) {
+  const target = { schemaVersion: 1, type: "entity", entityId };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
+function createPositionResolvedTarget(position) {
+  const target = { schemaVersion: 1, type: "position", position: { ...position } };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
+function createStructureResolvedTarget(structureId) {
+  const target = { schemaVersion: 1, type: "structure", structureId };
+  validateResolvedEffectTarget(target);
+  return structuredClone(target);
+}
+function validateResolvedEffectTarget(value) {
+  const target = record(value, "Resolved Effect target");
+  if (target.schemaVersion !== 1)
+    throw new Error("Unsupported resolved Effect target schema version");
+  if (target.type === "entity") {
+    exactKeys(target, ["schemaVersion", "type", "entityId"], "Resolved entity target");
+    string(target.entityId, "Resolved entity target entityId");
+    return;
+  }
+  if (target.type === "position") {
+    exactKeys(target, ["schemaVersion", "type", "position"], "Resolved position target");
+    const position = record(target.position, "Resolved position target position");
+    exactKeys(position, ["x", "y"], "Resolved position");
+    finite(position.x, "Resolved position x");
+    finite(position.y, "Resolved position y");
+    return;
+  }
+  if (target.type === "structure") {
+    exactKeys(target, ["schemaVersion", "type", "structureId"], "Resolved structure target");
+    string(target.structureId, "Resolved structure target structureId");
+    return;
+  }
+  throw new Error(`Unsupported resolved Effect target type '${String(target.type)}'`);
+}
+function record(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function string(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function finite(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+
+var CORE_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue"]);
+var FULL_EFFECT_KEYS = new Set(["schemaVersion", "type", "typeValue", "trigger", "triggerValue"]);
+var ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
+var PLAYER_SETTING_KEYS = new Set(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
+var STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
+var CORE_EFFECT_TYPES = ["EffectType.Physics" /* Physics */, "numeric.add" /* NumericAdd */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
+var ITEM_EFFECT_TYPES = ["modifyForce" /* ModifyForce */, "modifyRotation" /* ModifyRotation */, "lockRotation" /* LockRotation */, "applyTorque" /* ApplyTorque */, "spawnTrigger" /* SpawnTrigger */, "shield" /* Shield */, "ghostMode" /* GhostMode */, "selectionLock" /* SelectionLock */, "aimVariance" /* AimVariance */, "temporalModifier" /* TemporalModifier */, "structureLifecycle" /* StructureLifecycle */, "deferredEffect" /* DeferredEffect */];
+function validateEffectSettings(value) {
+  const effect = record2(value, "Effect settings");
+  knownKeys(effect, CORE_EFFECT_KEYS, "Effect settings");
+  if (effect.schemaVersion !== EFFECT_SCHEMA_VERSION)
+    throw new Error(`Unsupported Effect schema version: ${String(effect.schemaVersion)}`);
+  if (!CORE_EFFECT_TYPES.includes(effect.type))
+    throw new Error(`Unknown effect type "${String(effect.type)}"`);
+  if (effect.type === "EffectType.Multi" /* Multi */) {
+    if (!Array.isArray(effect.typeValue))
+      throw new Error("EffectType.Multi requires a typeValue array of effect settings");
+    effect.typeValue.forEach(validateEffectSettings);
+    return;
+  }
+  const payload = record2(effect.typeValue, `Effect '${String(effect.type)}' payload`);
+  switch (effect.type) {
+    case "EffectType.Physics" /* Physics */:
+      exactKeys2(payload, ["friction", "linearDrag", "stopThreshold"], "Physics payload");
+      finite2(payload.friction, "Physics friction");
+      finite2(payload.linearDrag, "Physics linearDrag");
+      finite2(payload.stopThreshold, "Physics stopThreshold");
+      return;
+    case "numeric.add" /* NumericAdd */:
+      exactKeys2(payload, ["stateId", "amount"], "Numeric add payload");
+      if (typeof payload.stateId !== "string" || payload.stateId.length === 0)
+        throw new Error("Numeric add stateId must be a non-empty string");
+      finite2(payload.amount, "Numeric add amount");
+      return;
+    case "EffectType.Movement" /* Movement */:
+      exactKeys2(payload, ["deltaTime", "x", "y"], "Movement payload");
+      finite2(payload.deltaTime, "Movement deltaTime");
+      finite2(payload.x, "Movement x");
+      finite2(payload.y, "Movement y");
+      return;
+    case "EffectType.ModifyMass" /* ModifyMass */:
+      exactKeys2(payload, ["mass"], "Mass payload");
+      finitePositive(payload.mass, "Mass");
+      return;
+    case "EffectType.ModifySize" /* ModifySize */:
+      exactKeys2(payload, ["size"], "Size payload");
+      finitePositive(payload.size, "Size");
+      return;
+    case "EffectType.Position" /* Position */:
+    case "EffectType.Velocity" /* Velocity */:
+      exactKeys2(payload, ["x", "y"], `${String(effect.type)} payload`);
+      finite2(payload.x, "Vector x");
+      finite2(payload.y, "Vector y");
+      return;
+    case "EffectType.Team" /* Team */:
+      exactKeys2(payload, ["team"], "Team payload");
+      if (!Array.isArray(payload.team) || !payload.team.every((team) => Number.isSafeInteger(team) && team >= 0))
+        throw new Error("Team payload requires non-negative integer teams");
+      return;
+    case "EffectType.ModifySetting" /* ModifySetting */:
+      validateModifySetting(payload);
+      return;
+    default:
+      throw new Error(`Unsupported effect type '${String(effect.type)}'`);
+  }
+}
+function validateFullEffectSettings(value) {
+  const full = record2(value, "Full effect settings");
+  knownKeys(full, FULL_EFFECT_KEYS, "Full effect settings");
+  validateTriggerSettings({ trigger: full.trigger, triggerValue: full.triggerValue });
+  validateEffectSettings({ schemaVersion: full.schemaVersion, type: full.type, typeValue: full.typeValue });
+}
+function validateRuntimeItemEffectSettings(value) {
+  const effect = record2(value, "Item effect settings");
+  knownKeys(effect, ITEM_EFFECT_KEYS, "Item effect settings");
+  if (effect.itemId !== undefined && (typeof effect.itemId !== "string" || effect.itemId.length === 0))
+    throw new Error("Item effect itemId must be a non-empty string");
+  if (effect.order !== undefined && !Number.isSafeInteger(effect.order))
+    throw new Error("Item effect order must be a safe integer");
+  if (!ITEM_EFFECT_TYPES.includes(effect.type))
+    throw new Error(`Unknown item effect type '${String(effect.type)}'`);
+  const payload = record2(effect.typeValue, `Item effect '${String(effect.type)}' payload`);
+  switch (effect.type) {
+    case "modifyForce" /* ModifyForce */:
+      exactKeys2(payload, ["factor"], "modifyForce payload");
+      finiteNonNegative(payload.factor, "modifyForce factor");
+      return;
+    case "modifyRotation" /* ModifyRotation */:
+      exactKeys2(payload, ["degrees"], "modifyRotation payload");
+      finite2(payload.degrees, "modifyRotation degrees");
+      return;
+    case "lockRotation" /* LockRotation */:
+    case "selectionLock" /* SelectionLock */:
+      validateTurns(payload, String(effect.type));
+      return;
+    case "applyTorque" /* ApplyTorque */:
+      exactKeys2(payload, ["torque"], "applyTorque payload");
+      finite2(payload.torque, "applyTorque torque");
+      return;
+    case "spawnTrigger" /* SpawnTrigger */:
+      knownKeys(payload, new Set(["triggerId", "delayTurns", "structureId", "remainingTurns", "fired", "resolvedTarget", "resolvedPosition"]), "spawnTrigger payload");
+      requiredKeys(payload, ["triggerId", "delayTurns"], "spawnTrigger payload");
+      string2(payload.triggerId, "spawnTrigger triggerId");
+      boundedDelayTurns(payload.delayTurns, payload.remainingTurns, "spawnTrigger");
+      if (payload.structureId !== undefined)
+        string2(payload.structureId, "spawnTrigger structureId");
+      if (payload.resolvedTarget !== undefined)
+        validateResolvedEffectTarget(payload.resolvedTarget);
+      if (payload.resolvedPosition !== undefined) {
+        const position = record2(payload.resolvedPosition, "spawnTrigger resolvedPosition");
+        exactKeys2(position, ["x", "y"], "spawnTrigger resolvedPosition");
+        finite2(position.x, "spawnTrigger resolvedPosition x");
+        finite2(position.y, "spawnTrigger resolvedPosition y");
+      }
+      optionalBoolean(payload.fired, "spawnTrigger fired");
+      return;
+    case "deferredEffect" /* DeferredEffect */:
+      exactKeys2(payload, ["durationUnit", "duration", "effect"], "deferredEffect payload");
+      if (payload.durationUnit !== "ticks")
+        throw new Error("deferredEffect durationUnit must be ticks");
+      boundedTurns(payload.duration, undefined, "deferredEffect");
+      const deferred = record2(payload.effect, "deferredEffect effect");
+      exactKeys2(deferred, ["schemaVersion", "type", "typeValue"], "deferredEffect effect");
+      if (deferred.schemaVersion !== 1 || deferred.type !== "movement.apply-force-field")
+        throw new Error("deferredEffect currently requires movement.apply-force-field");
+      const field = record2(deferred.typeValue, "deferredEffect force field");
+      exactKeys2(field, ["mode", "force", "range"], "deferredEffect force field");
+      if (field.mode !== "attract" && field.mode !== "repel")
+        throw new Error("deferredEffect force field mode is invalid");
+      finiteNonNegative(field.force, "deferredEffect force field force");
+      finitePositive(field.range, "deferredEffect force field range");
+      return;
+    case "shield" /* Shield */:
+      knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload");
+      requiredKeys(payload, ["capacity"], "shield payload");
+      finitePositive(payload.capacity, "shield capacity");
+      if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity))
+        throw new Error("shield remainingCapacity is outside capacity");
+      optionalBoolean(payload.blocksCollision, "shield blocksCollision");
+      return;
+    case "structureLifecycle" /* StructureLifecycle */:
+      exactKeys2(payload, ["durationUnit", "duration", "structure"], "structureLifecycle payload");
+      if (payload.durationUnit !== "turns")
+        throw new Error("structureLifecycle durationUnit must be turns");
+      boundedTurns(payload.duration, undefined, "structureLifecycle");
+      const structure = record2(payload.structure, "structureLifecycle structure");
+      knownKeys(structure, new Set(["type", "w", "h", "color", "role"]), "structureLifecycle structure");
+      requiredKeys(structure, ["type", "w", "h"], "structureLifecycle structure");
+      if (structure.type !== "rectangle")
+        throw new Error("structureLifecycle currently requires rectangle geometry");
+      finitePositive(structure.w, "structureLifecycle width");
+      finitePositive(structure.h, "structureLifecycle height");
+      if (structure.color !== undefined)
+        string2(structure.color, "structureLifecycle color");
+      if (structure.role !== undefined && !["solid", "containment", "both"].includes(String(structure.role)))
+        throw new Error("structureLifecycle role is invalid");
+      return;
+    case "ghostMode" /* GhostMode */:
+      knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), "ghostMode payload");
+      requiredKeys(payload, ["durationTurns"], "ghostMode payload");
+      boundedTurns(payload.durationTurns, payload.remainingTurns, "ghostMode");
+      return;
+    case "aimVariance" /* AimVariance */:
+      knownKeys(payload, new Set(["maxVarianceDegrees", "seed", "randomState"]), "aimVariance payload");
+      requiredKeys(payload, ["maxVarianceDegrees"], "aimVariance payload");
+      finiteNonNegative(payload.maxVarianceDegrees, "aimVariance maxVarianceDegrees");
+      optionalSafeInteger(payload.seed, "aimVariance seed");
+      optionalSafeInteger(payload.randomState, "aimVariance randomState");
+      return;
+    case "temporalModifier" /* TemporalModifier */:
+      exactKeys2(payload, ["durationUnit", "duration", "effect"], "temporalModifier payload");
+      if (payload.durationUnit !== "turns")
+        throw new Error("temporalModifier durationUnit must be turns");
+      boundedTurns(payload.duration, undefined, "temporalModifier");
+      const temporalEffect = record2(payload.effect, "temporalModifier effect");
+      exactKeys2(temporalEffect, ["schemaVersion", "type", "typeValue"], "temporalModifier effect");
+      if (temporalEffect.schemaVersion !== 1 || temporalEffect.type !== "movement.scale-speed")
+        throw new Error("temporalModifier currently requires movement.scale-speed");
+      const scalePayload = record2(temporalEffect.typeValue, "temporalModifier movement payload");
+      exactKeys2(scalePayload, ["factor"], "temporalModifier movement payload");
+      finiteNonNegative(scalePayload.factor, "temporalModifier movement factor");
+      return;
+  }
+}
+function validateModifySetting(payload) {
+  exactKeys2(payload, ["operation", "key", "value"], "ModifySetting payload");
+  if (payload.operation !== "set" /* Set */ && payload.operation !== "add" /* Add */ && payload.operation !== "remove" /* Remove */)
+    throw new Error("ModifySetting operation is invalid");
+  if (typeof payload.key !== "string" || !PLAYER_SETTING_KEYS.has(payload.key) && !STRUCTURE_SETTING_KEYS.has(payload.key))
+    throw new Error("ModifySetting key is not allowlisted");
+  validateSettingValue(payload.key, payload.value);
+}
+function validateSettingValue(key, value) {
+  if (value === undefined)
+    return;
+  if (["hp", "mass", "size", "friction"].includes(key)) {
+    finite2(value, `ModifySetting ${key}`);
+    return;
+  }
+  if (["position", "velocity"].includes(key)) {
+    const vector = record2(value, `ModifySetting ${key}`);
+    exactKeys2(vector, ["x", "y"], `ModifySetting ${key}`);
+    finite2(vector.x, `${key} x`);
+    finite2(vector.y, `${key} y`);
+    return;
+  }
+  if (["physicsEnabled", "drawingEnabled"].includes(key)) {
+    if (typeof value !== "boolean")
+      throw new Error(`ModifySetting ${key} requires a boolean`);
+    return;
+  }
+  if (key === "team") {
+    if (!Array.isArray(value) || !value.every((team) => Number.isSafeInteger(team) && team >= 0))
+      throw new Error("ModifySetting team requires non-negative integer teams");
+    return;
+  }
+  if (typeof value !== "boolean")
+    throw new Error(`ModifySetting ${key} requires a boolean`);
+}
+function validateTurns(payload, label) {
+  knownKeys(payload, new Set(["durationTurns", "remainingTurns"]), `${label} payload`);
+  requiredKeys(payload, ["durationTurns"], `${label} payload`);
+  boundedTurns(payload.durationTurns, payload.remainingTurns, label);
+}
+function boundedTurns(duration, remaining, label) {
+  if (!Number.isSafeInteger(duration) || duration < 1)
+    throw new Error(`${label} durationTurns must be a positive integer`);
+  if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
+    throw new Error(`${label} remainingTurns is outside durationTurns`);
+}
+function boundedDelayTurns(duration, remaining, label) {
+  if (!Number.isSafeInteger(duration) || duration < 0)
+    throw new Error(`${label} delayTurns must be a non-negative integer`);
+  if (remaining !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > duration))
+    throw new Error(`${label} remainingTurns is outside delayTurns`);
+}
+function record2(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function knownKeys(value, allowed, label) {
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+}
+function exactKeys2(value, allowed, label) {
+  const set = new Set(allowed);
+  for (const key of Object.keys(value))
+    if (!set.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of allowed)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function requiredKeys(value, required, label) {
+  for (const key of required)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite2(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+function finitePositive(value, label) {
+  finite2(value, label);
+  if (value <= 0)
+    throw new Error(`${label} must be positive`);
+}
+function finiteNonNegative(value, label) {
+  finite2(value, label);
+  if (value < 0)
+    throw new Error(`${label} must be non-negative`);
+}
+function string2(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function optionalBoolean(value, label) {
+  if (value !== undefined && typeof value !== "boolean")
+    throw new Error(`${label} must be boolean`);
+}
+function optionalSafeInteger(value, label) {
+  if (value !== undefined && !Number.isSafeInteger(value))
+    throw new Error(`${label} must be a safe integer`);
+}
+
+function orderInstalledEffects(effects) {
+  return effects.map((effect, index) => ({ effect, index })).sort((a, b) => (a.effect.order ?? 0) - (b.effect.order ?? 0) || a.index - b.index).map((entry) => entry.effect);
+}
+function preserveEffectDeclarationOrder(effects) {
+  return [...effects];
 }
 
 class MultiEffect {
@@ -695,7 +1092,7 @@ class MultiEffect {
     const children = effect.typeValue;
     if (!Array.isArray(children))
       throw new Error("EffectType.Multi requires a typeValue array of effect settings");
-    this.children = children.map((child) => createRuntimeEffect(child));
+    this.children = preserveEffectDeclarationOrder(children).map((child) => createRuntimeEffect(child));
   }
   apply(entity, override) {
     for (const child of this.children)
@@ -705,22 +1102,23 @@ class MultiEffect {
     return "EffectType.Multi" /* Multi */;
   }
   toSettings() {
-    return { type: "EffectType.Multi" /* Multi */, typeValue: this.children.map((child) => child.toSettings()) };
+    return { schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: this.children.map((child) => child.toSettings()) };
   }
 }
 
 class MetaEffect {
   eff;
   constructor(effect) {
+    validateEffectSettings(effect);
     switch (effect.type) {
-      case "EffectType.Damage" /* Damage */:
-        this.eff = new EffectDamage(effect);
-        return;
       case "EffectType.Movement" /* Movement */:
         this.eff = new EffectMove(effect);
         return;
       case "EffectType.Physics" /* Physics */:
         this.eff = new EffectPhysics(effect);
+        return;
+      case "numeric.add" /* NumericAdd */:
+        this.eff = new EffectNumericAdd(effect);
         return;
       case "EffectType.Multi" /* Multi */:
         this.eff = new MultiEffect(effect);
@@ -837,6 +1235,23 @@ class EngineSystemRegistry {
     if (expected.join("|") !== value.systemOrder.join("|"))
       throw new Error("Framework system order violates dependencies");
   }
+  validateEffectSupport(settings, effects, catalog) {
+    this.validate(settings);
+    const selected = new Set(settings.systemOrder);
+    const definitions = [...selected].map((id) => this.definitions.get(id));
+    for (const effect of effects) {
+      catalog.validate(effect);
+      const typed = effect;
+      const definition = catalog.get(typed.type);
+      const accepted = definitions.some((candidate) => candidate.acceptsEffects?.includes(typed.type) === true);
+      if (!accepted)
+        throw new Error(`No selected system accepts effect '${typed.type}'`);
+      for (const capability of definition.requiresCapability ?? []) {
+        if (!definitions.some((candidate) => provides(candidate, capability)))
+          throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
+      }
+    }
+  }
 }
 function validateDefinition(definition) {
   if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
@@ -847,6 +1262,8 @@ function validateDefinition(definition) {
     if (list !== undefined && (!Array.isArray(list) || list.some((value) => typeof value !== "string" || value.length === 0)))
       throw new Error(`Invalid system definition '${definition.id}'`);
   }
+  if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid accepted Effects for '${definition.id}'`);
   assertJsonValue(definition.state ?? {});
 }
 function provides(definition, capability) {
@@ -908,12 +1325,49 @@ function clone(value) {
   return structuredClone(value);
 }
 
+var COUNTER_SCHEMA_VERSION = 1;
+function createCounterState(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState(state);
+  return state;
+}
+function validateCounterState(value) {
+  if (!isRecord(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 class EngineWorldBuilder {
   id;
   worldSize;
   entities = [];
   structures = [];
   effects = [];
+  counters = [];
   background;
   framework;
   constructor(id, worldSize) {
@@ -942,12 +1396,16 @@ class EngineWorldBuilder {
     this.effects.push(clone2(effect));
     return this;
   }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates([counter]));
+    return this;
+  }
   useFramework(framework) {
     this.framework = clone2(framework);
     return this;
   }
   build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), ...this.framework ? { framework: clone2(this.framework) } : {} };
+    return { schemaVersion: 1, id: this.id, worldSize: clone2(this.worldSize), ...this.background === undefined ? {} : { background: clone2(this.background) }, entities: clone2(this.entities), structures: clone2(this.structures), effects: clone2(this.effects), counters: canonicalizeCounterStates(this.counters), ...this.framework ? { framework: clone2(this.framework) } : {} };
   }
   buildJson(space = 2) {
     return JSON.stringify(this.build(), null, space);
@@ -960,6 +1418,1132 @@ function clone2(value) {
   return structuredClone(value);
 }
 
+class EngineEffectRegistry {
+  definitions = new Map;
+  register(definition) {
+    validateDefinition2(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate effect definition '${definition.id}'`);
+    this.definitions.set(definition.id, { ...definition, ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {} });
+    return this;
+  }
+  get(id) {
+    return this.definitions.get(id);
+  }
+  validate(effect) {
+    if (!effect || typeof effect !== "object" || Array.isArray(effect))
+      throw new Error("Malformed effect settings");
+    const value = effect;
+    if (typeof value.type !== "string" || !this.definitions.has(value.type))
+      throw new Error(`Unknown effect '${String(value.type)}'`);
+    if (value.schemaVersion !== undefined && value.schemaVersion !== 1)
+      throw new Error(`Unsupported effect schema version for '${value.type}'`);
+    assertJsonValue(value.typeValue);
+    this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue(value.target);
+    if (value.target !== undefined)
+      this.definitions.get(value.type).validateTarget?.(value.target);
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
+      id: definition.id,
+      schemaVersion: definition.schemaVersion ?? 1,
+      ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {},
+      ...definition.targetType ? { targetType: definition.targetType } : {},
+      ...definition.lifecycleCategory ? { lifecycleCategory: definition.lifecycleCategory } : {}
+    }));
+  }
+}
+function validateDefinition2(definition) {
+  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid effect definition ID");
+  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
+    throw new Error("Unsupported effect definition version");
+  for (const value of [definition.targetType, definition.lifecycleCategory])
+    if (value !== undefined && (typeof value !== "string" || value.length === 0))
+      throw new Error(`Invalid effect definition '${definition.id}'`);
+  if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid effect capabilities for '${definition.id}'`);
+  if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
+    throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
+}
+
+function createTransformState(input) {
+  const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
+  validateTransformState(state);
+  return structuredClone(state);
+}
+function createMovementState(input) {
+  const state = { schemaVersion: 1, velocity: { ...input.velocity }, angularVelocity: input.angularVelocity ?? 0, enabled: input.enabled ?? true };
+  validateMovementState(state);
+  return structuredClone(state);
+}
+function validateTransformState(value) {
+  const state = record3(value, "Transform state");
+  exactKeys3(state, ["schemaVersion", "position", "rotation"], "Transform state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Transform state schema version");
+  validateVector(state.position, "Transform position");
+  finite3(state.rotation, "Transform rotation");
+}
+function validateMovementState(value) {
+  const state = record3(value, "Movement state");
+  exactKeys3(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Movement state schema version");
+  validateVector(state.velocity, "Movement velocity");
+  finite3(state.angularVelocity, "Movement angularVelocity");
+  if (typeof state.enabled !== "boolean")
+    throw new Error("Movement enabled must be boolean");
+}
+function validateVector(value, label) {
+  const vector = record3(value, label);
+  exactKeys3(vector, ["x", "y"], label);
+  finite3(vector.x, `${label} x`);
+  finite3(vector.y, `${label} y`);
+}
+function record3(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys3(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite3(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+
+var MOVEMENT_CAPABILITY = "movement.state";
+var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
+var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
+var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
+var MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field";
+var MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID];
+function movementSystemDefinition() {
+  return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
+}
+function registerMovementSystem(registry) {
+  return registry.register(movementSystemDefinition());
+}
+function calculateRadialVelocityDelta(origin, target, field) {
+  validateVector2(origin, "Movement force origin");
+  validateVector2(target, "Movement force target");
+  if (field.mode !== "attract" && field.mode !== "repel")
+    throw new Error("Movement force mode must be attract or repel");
+  if (!Number.isFinite(field.force) || field.force < 0)
+    throw new Error("Movement force must be finite and non-negative");
+  if (!Number.isFinite(field.range) || field.range <= 0)
+    throw new Error("Movement force range must be finite and positive");
+  const dx = target.x - origin.x;
+  const dy = target.y - origin.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0 || distance > field.range)
+    return { x: 0, y: 0 };
+  const direction = field.mode === "attract" ? 1 : -1;
+  return {
+    x: normalizeZero(dx / distance * field.force * direction),
+    y: normalizeZero(dy / distance * field.force * direction)
+  };
+}
+function applyRadialVelocityDelta(velocity, origin, target, field) {
+  validateVector2(velocity, "Movement velocity");
+  const delta = calculateRadialVelocityDelta(origin, target, field);
+  return { x: velocity.x + delta.x, y: velocity.y + delta.y };
+}
+function validateVector2(value, label) {
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
+    throw new Error(`${label} must be finite`);
+}
+function normalizeZero(value) {
+  return Object.is(value, -0) ? 0 : value;
+}
+var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
+var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
+var TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position";
+class EngineTriggerActivationQueue {
+  maxActivations;
+  pending = [];
+  processed = 0;
+  constructor(maxActivations = 1024) {
+    this.maxActivations = maxActivations;
+    if (!Number.isSafeInteger(maxActivations) || maxActivations < 1)
+      throw new Error("Trigger activation budget must be a positive safe integer");
+  }
+  enqueue(activation) {
+    validateTriggerActivation(activation);
+    this.enqueueValidated(activation);
+  }
+  enqueueValidated(activation) {
+    if (this.pending.length + this.processed >= this.maxActivations)
+      throw new Error("Trigger activation budget exceeded");
+    this.pending.push(activation);
+  }
+  process(dispatch) {
+    if (typeof dispatch !== "function")
+      throw new Error("Trigger dispatcher must be a function");
+    let processedNow = 0;
+    while (this.pending.length > 0) {
+      const activation = this.pending.shift();
+      this.processed++;
+      processedNow++;
+      dispatch(structuredClone(activation));
+    }
+    return processedNow;
+  }
+  pendingCount() {
+    return this.pending.length;
+  }
+}
+function createTickTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "tick", sourceId: input.sourceId, sequence: input.sequence, payload: { dt: input.dt } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createCollisionEnterTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "collision.enter",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { entityId: input.entityId, otherId: input.otherId, contactKey: input.contactKey }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createTriggerActivation(input) {
+  const activation = { schemaVersion: 1, effectId: input.effectId, event: structuredClone(input.event) };
+  validateTriggerActivation(activation);
+  return structuredClone(activation);
+}
+function createRoundStartTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "round.start",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { turnNumber: input.turnNumber, activeTeam: input.activeTeam, phase: input.phase }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createEnvironmentActivationTriggerEvent(input) {
+  const event = {
+    schemaVersion: 1,
+    type: "environment.activation",
+    sourceId: input.sourceId,
+    sequence: input.sequence,
+    payload: { mechanicId: input.mechanicId, mechanicIndex: input.mechanicIndex, tick: input.tick, active: input.active }
+  };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function createScheduleDueTriggerEvent(input) {
+  const event = { schemaVersion: 1, type: "schedule.due", sourceId: input.sourceId, sequence: input.sequence, payload: { scheduleId: input.scheduleId, clock: input.clock, value: input.value } };
+  validateTriggerEvent(event);
+  return structuredClone(event);
+}
+function validateTriggerActivation(value) {
+  const activation = record4(value, "Trigger activation");
+  exactKeys4(activation, ["schemaVersion", "effectId", "event"], "Trigger activation");
+  if (activation.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger activation schema version");
+  string3(activation.effectId, "Trigger activation effectId");
+  validateTriggerEvent(activation.event);
+}
+function validateTriggerEvent(value) {
+  const event = record4(value, "Trigger event");
+  exactKeys4(event, ["schemaVersion", "type", "sourceId", "sequence", "payload"], "Trigger event");
+  if (event.schemaVersion !== 1)
+    throw new Error("Unsupported Trigger event schema version");
+  string3(event.sourceId, "Trigger event sourceId");
+  safeSequence(event.sequence, "Trigger event sequence");
+  if (event.type === "tick") {
+    const payload = record4(event.payload, "Tick trigger payload");
+    exactKeys4(payload, ["dt"], "Tick trigger payload");
+    finiteNonNegative2(payload.dt, "Tick trigger dt");
+    return;
+  }
+  if (event.type === "collision.enter") {
+    const payload = record4(event.payload, "Collision trigger payload");
+    exactKeys4(payload, ["entityId", "otherId", "contactKey"], "Collision trigger payload");
+    string3(payload.entityId, "Collision trigger entityId");
+    string3(payload.otherId, "Collision trigger otherId");
+    string3(payload.contactKey, "Collision trigger contactKey");
+    return;
+  }
+  if (event.type === "round.start") {
+    const payload = record4(event.payload, "Round trigger payload");
+    exactKeys4(payload, ["turnNumber", "activeTeam", "phase"], "Round trigger payload");
+    safeSequence(payload.turnNumber, "Round trigger turnNumber");
+    safeSequence(payload.activeTeam, "Round trigger activeTeam");
+    string3(payload.phase, "Round trigger phase");
+    return;
+  }
+  if (event.type === "environment.activation") {
+    const payload = record4(event.payload, "Environment activation payload");
+    exactKeys4(payload, ["mechanicId", "mechanicIndex", "tick", "active"], "Environment activation payload");
+    string3(payload.mechanicId, "Environment activation mechanicId");
+    safeSequence(payload.mechanicIndex, "Environment activation mechanicIndex");
+    safeSequence(payload.tick, "Environment activation tick");
+    if (typeof payload.active !== "boolean")
+      throw new Error("Environment activation active must be boolean");
+    return;
+  }
+  if (event.type === "schedule.due") {
+    const payload = record4(event.payload, "Schedule due payload");
+    exactKeys4(payload, ["scheduleId", "clock", "value"], "Schedule due payload");
+    string3(payload.scheduleId, "Schedule due scheduleId");
+    if (payload.clock !== "tick" && payload.clock !== "turn")
+      throw new Error("Schedule due clock must be tick or turn");
+    safeSequence(payload.value, "Schedule due value");
+    return;
+  }
+  throw new Error(`Unknown Trigger event type '${String(event.type)}'`);
+}
+function record4(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys4(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function string3(value, label) {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${label} must be a non-empty string`);
+}
+function safeSequence(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0)
+    throw new Error(`${label} must be a non-negative safe integer`);
+}
+function finiteNonNegative2(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error(`${label} must be a finite non-negative number`);
+}
+
+var COUNTER_SET_EFFECT_ID = "counter.set";
+var COUNTER_ADD_EFFECT_ID = "counter.add";
+var COUNTER_RESET_EFFECT_ID = "counter.reset";
+var COUNTER_EFFECT_IDS = [COUNTER_SET_EFFECT_ID, COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID];
+function validateCounterEffectSettings(value) {
+  const effect = record5(value, "Counter effect");
+  exactKeys5(effect, ["schemaVersion", "type", "target", "typeValue"], "Counter effect");
+  if (effect.schemaVersion !== COUNTER_SCHEMA_VERSION)
+    throw new Error("Unsupported counter effect schema version");
+  validateCounterTargetValue(effect.target);
+  if (effect.type === COUNTER_SET_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter set", "value");
+  else if (effect.type === COUNTER_ADD_EFFECT_ID)
+    validateNumericPayload(effect.typeValue, "Counter add", "amount");
+  else if (effect.type === COUNTER_RESET_EFFECT_ID)
+    exactKeys5(record5(effect.typeValue, "Counter reset payload"), [], "Counter reset payload");
+  else
+    throw new Error(`Unknown counter effect '${String(effect.type)}'`);
+}
+function validateCounterTriggerBinding(value) {
+  const binding = record5(value, "Counter trigger binding");
+  if (typeof binding.trigger !== "string" || !["tick", "collision.enter", "round.start", "environment.activation", "schedule.due"].includes(binding.trigger))
+    throw new Error("Counter trigger binding has an unknown trigger");
+  validateCounterEffectSettings(binding.effect);
+}
+function counterTriggerMatches(binding, event) {
+  validateCounterTriggerBinding(binding);
+  validateTriggerEvent(event);
+  return binding.trigger === event.type;
+}
+function validateCounterTargetValue(target) {
+  const value = record5(target, "Counter target");
+  exactKeys5(value, ["type", "counterId"], "Counter target");
+  if (value.type !== "counter")
+    throw new Error("Counter target type must be 'counter'");
+  if (typeof value.counterId !== "string" || value.counterId.length === 0)
+    throw new Error("Counter target requires a non-empty counterId");
+}
+function validateNumericPayload(payload, label, key) {
+  const value = record5(payload, `${label} payload`);
+  exactKeys5(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record5(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys5(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unexpected fields`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+var PARTICIPATION_CAPABILITY = "participation.state";
+var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
+var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
+var PARTICIPATION_EFFECT_IDS = [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID];
+function participationSystemDefinition() {
+  return { id: "core.participation", provides: [PARTICIPATION_CAPABILITY], acceptsEffects: [...PARTICIPATION_EFFECT_IDS] };
+}
+function registerParticipationSystem(registry) {
+  return registry.register(participationSystemDefinition());
+}
+var NUMERIC_CAPABILITY = "numeric.state";
+var NUMERIC_SET_EFFECT_ID = "numeric.set";
+var NUMERIC_ADD_EFFECT_ID = "numeric.add";
+var NUMERIC_RESET_EFFECT_ID = "numeric.reset";
+var NUMERIC_EFFECT_IDS = [NUMERIC_SET_EFFECT_ID, NUMERIC_ADD_EFFECT_ID, NUMERIC_RESET_EFFECT_ID];
+function numericSystemDefinition() {
+  return { id: "core.numeric", provides: [NUMERIC_CAPABILITY], acceptsEffects: [...NUMERIC_EFFECT_IDS] };
+}
+function registerNumericSystem(registry) {
+  return registry.register(numericSystemDefinition());
+}
+function validateNumericTarget(value) {
+  const target = record6(value, "Numeric target");
+  exactKeys6(target, ["type", "entityId", "stateId"], "Numeric target");
+  if (target.type !== "numeric")
+    throw new Error("Numeric target type must be 'numeric'");
+  if (typeof target.entityId !== "string" || target.entityId.length === 0)
+    throw new Error("Numeric target requires a non-empty entityId");
+  if (typeof target.stateId !== "string" || target.stateId.length === 0)
+    throw new Error("Numeric target requires a non-empty stateId");
+}
+function validateNumericEffectSettings(value) {
+  const effect = record6(value, "Numeric effect");
+  exactKeys6(effect, ["schemaVersion", "type", "target", "typeValue"], "Numeric effect");
+  if (effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric effect schema version");
+  validateNumericTarget(effect.target);
+  if (effect.type === NUMERIC_SET_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric set", "value");
+  else if (effect.type === NUMERIC_ADD_EFFECT_ID)
+    validateNumericPayload2(effect.typeValue, "Numeric add", "amount");
+  else if (effect.type === NUMERIC_RESET_EFFECT_ID)
+    exactKeys6(record6(effect.typeValue, "Numeric reset payload"), [], "Numeric reset payload");
+  else
+    throw new Error(`Unknown numeric effect '${String(effect.type)}'`);
+}
+function validateNumericPayload2(payload, label, key) {
+  const value = record6(payload, `${label} payload`);
+  exactKeys6(value, [key], `${label} payload`);
+  if (typeof value[key] !== "number" || !Number.isFinite(value[key]))
+    throw new Error(`${label} ${key} must be finite`);
+}
+function record6(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys6(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
+var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
+function createEngineEffectComposition(effects) {
+  const composition = { schemaVersion: 1, type: ENGINE_EFFECT_COMPOSITION_TYPE, effects: structuredClone([...effects]) };
+  validateEngineEffectComposition(composition);
+  return composition;
+}
+function validateEngineEffectComposition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed Engine effect composition");
+  const composition = value;
+  if (Object.keys(composition).some((key) => !["schemaVersion", "type", "effects"].includes(key)) || Object.keys(composition).length !== 3)
+    throw new Error("Malformed Engine effect composition");
+  if (composition.schemaVersion !== 1 || composition.type !== ENGINE_EFFECT_COMPOSITION_TYPE || !Array.isArray(composition.effects))
+    throw new Error("Unsupported Engine effect composition");
+  composition.effects.forEach((effect) => {
+    assertJsonValue(effect);
+    if (!effect || typeof effect !== "object" || Array.isArray(effect) || typeof effect.type !== "string")
+      throw new Error("Composition children must be Engine effects");
+  });
+}
+var COLLISION_COMMAND_TYPE = "collision.command";
+function createCollisionCommandBinding(effect) {
+  const binding = { schemaVersion: 1, type: COLLISION_COMMAND_TYPE, effect: structuredClone(effect) };
+  validateCollisionCommandBinding(binding);
+  return binding;
+}
+function validateCollisionCommandBinding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed collision command binding");
+  const binding = value;
+  if (Object.keys(binding).some((key) => !["schemaVersion", "type", "effect"].includes(key)) || Object.keys(binding).length !== 3)
+    throw new Error("Malformed collision command binding");
+  if (binding.schemaVersion !== 1 || binding.type !== COLLISION_COMMAND_TYPE)
+    throw new Error("Unsupported collision command binding");
+  validateRelativeEffect(binding.effect);
+}
+function validateRelativeEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision command effect must be an object");
+  const effect = value;
+  if (effect.type === "effect.composition") {
+    validateEngineEffectComposition(effect);
+    for (const child of effect.effects)
+      validateRelativeEffect(child);
+    return;
+  }
+  if (typeof effect.type !== "string" || effect.type.length === 0 || effect.schemaVersion !== 1 || !("typeValue" in effect) || "target" in effect)
+    throw new Error("Collision command must be a target-relative Engine effect");
+  assertJsonValue(effect.typeValue);
+}
+var NUMERIC_STATE_SCHEMA_VERSION = 1;
+var NUMERIC_THRESHOLD_COMPARATORS = ["below", "below-or-equal", "above", "above-or-equal"];
+function validateNumericThresholdBindings(value) {
+  if (!Array.isArray(value))
+    throw new Error("Numeric threshold bindings must be an array");
+  const bindings = value.map((binding) => {
+    validateNumericThresholdBinding(binding);
+    return structuredClone(binding);
+  });
+  if (new Set(bindings.map((binding) => binding.id)).size !== bindings.length)
+    throw new Error("Numeric threshold IDs must be unique");
+}
+function validateNumericThresholdBinding(value) {
+  const binding = record7(value, "Numeric threshold binding");
+  knownKeys2(binding, ["schemaVersion", "id", "resetValue", "thresholds"], "Numeric threshold binding");
+  if (binding.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  identifier(binding.id, "Numeric threshold ID");
+  if (binding.resetValue !== undefined && (typeof binding.resetValue !== "number" || !Number.isFinite(binding.resetValue)))
+    throw new Error("Numeric resetValue must be finite");
+  if (!Array.isArray(binding.thresholds))
+    throw new Error("Numeric threshold binding requires thresholds");
+  binding.thresholds.forEach(validateNumericThreshold);
+}
+function validateNumericThreshold(value) {
+  const threshold = record7(value, "Numeric threshold");
+  exactKeys7(threshold, ["schemaVersion", "comparator", "value", "effects"], "Numeric threshold");
+  if (threshold.schemaVersion !== NUMERIC_STATE_SCHEMA_VERSION)
+    throw new Error("Unsupported numeric threshold schema version");
+  if (!NUMERIC_THRESHOLD_COMPARATORS.includes(threshold.comparator))
+    throw new Error("Unknown numeric threshold comparator");
+  if (typeof threshold.value !== "number" || !Number.isFinite(threshold.value))
+    throw new Error("Numeric threshold value must be finite");
+  if (!Array.isArray(threshold.effects) || threshold.effects.length === 0)
+    throw new Error("Numeric threshold requires at least one follow-up effect");
+  threshold.effects.forEach(validateRelativeEffect2);
+}
+function validateRelativeEffect2(value) {
+  const effect = record7(value, "Numeric threshold effect");
+  if (Object.keys(effect).some((key) => !["schemaVersion", "type", "typeValue"].includes(key)) || Object.keys(effect).length !== 3)
+    throw new Error("Numeric threshold effects cannot declare their own target");
+  if (effect.schemaVersion !== undefined && effect.schemaVersion !== 1)
+    throw new Error("Unsupported numeric threshold effect schema version");
+  if (typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Numeric threshold effect requires a type");
+  assertJsonValue(effect.typeValue);
+}
+function identifier(value, label) {
+  if (typeof value !== "string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(value))
+    throw new Error(`${label} must be a stable identifier`);
+}
+function record7(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys7(value, keys, label) {
+  if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
+function knownKeys2(value, keys, label) {
+  if (Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`${label} contains unexpected fields`);
+}
+var LIFETIME_DURATION_UNITS = ["turns", "ticks"];
+function createLifetime(input) {
+  const lifetime = {
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration
+  };
+  validateLifetime(lifetime);
+  return lifetime;
+}
+function advanceLifetime(lifetime) {
+  validateLifetime(lifetime);
+  if (lifetime.remaining <= 1)
+    return;
+  return { ...lifetime, remaining: lifetime.remaining - 1 };
+}
+function validateLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Lifetime must be an object");
+  const lifetime = value;
+  if (!LIFETIME_DURATION_UNITS.includes(lifetime.durationUnit))
+    throw new Error("Lifetime duration unit is invalid");
+  if (!Number.isSafeInteger(lifetime.duration) || lifetime.duration < 1)
+    throw new Error("Lifetime duration must be a positive integer");
+  if (!Number.isSafeInteger(lifetime.remaining) || lifetime.remaining < 1 || lifetime.remaining > lifetime.duration)
+    throw new Error("Lifetime remaining duration is invalid");
+}
+
+var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
+function createTemporalModifierTemplate(input) {
+  const template = structuredClone(input);
+  if (template.durationUnit !== "turns")
+    throw new Error("Temporal modifier requires turns duration");
+  if (!Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Temporal modifier duration must be a positive integer");
+  if (!template.effect || typeof template.effect !== "object" || Array.isArray(template.effect))
+    throw new Error("Temporal modifier requires an Engine effect");
+  assertJsonValue(template.effect);
+  if (template.effect.schemaVersion !== 1 || typeof template.effect.type !== "string")
+    throw new Error("Temporal modifier Engine effect is invalid");
+  return template;
+}
+function createTemporalModifier(input) {
+  const modifier = {
+    schemaVersion: TEMPORAL_MODIFIER_SCHEMA_VERSION,
+    id: input.id,
+    target: { ...input.target },
+    effect: structuredClone(input.effect),
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateTemporalModifier(modifier);
+  return modifier;
+}
+function advanceTemporalModifier(modifier) {
+  validateTemporalModifier(modifier);
+  const next = advanceLifetime(lifetimeOf(modifier));
+  return next ? { ...structuredClone(modifier), ...next } : undefined;
+}
+function validateTemporalModifier(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Temporal modifier must be an object");
+  const modifier = value;
+  if (modifier.schemaVersion !== TEMPORAL_MODIFIER_SCHEMA_VERSION)
+    throw new Error("Unsupported temporal modifier schema version");
+  if (typeof modifier.id !== "string" || modifier.id.length === 0)
+    throw new Error("Temporal modifier requires a stable id");
+  if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0))
+    throw new Error("Temporal modifier sourceId must be non-empty");
+  if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder))
+    throw new Error("Temporal modifier sourceOrder must be a safe integer");
+  if (!modifier.target || modifier.target.type !== "entity" || typeof modifier.target.entityId !== "string" || modifier.target.entityId.length === 0)
+    throw new Error("Temporal modifier requires a stable entity target");
+  if (modifier.durationUnit !== "turns")
+    throw new Error("Temporal modifier requires turns duration");
+  validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+  if (!modifier.effect || typeof modifier.effect !== "object" || Array.isArray(modifier.effect))
+    throw new Error("Temporal modifier requires an Engine effect");
+  assertJsonValue(modifier.effect);
+  if (modifier.effect.schemaVersion !== 1 || typeof modifier.effect.type !== "string")
+    throw new Error("Temporal modifier Engine effect is invalid");
+  const effectKeys = Object.keys(modifier.effect);
+  if (effectKeys.some((key) => !["schemaVersion", "type", "typeValue", "target"].includes(key)))
+    throw new Error("Temporal modifier Engine effect contains unexpected fields");
+}
+function lifetimeOf(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
+function createStructureLifecycleTemplate(input) {
+  const template = structuredClone(input);
+  validateStructureLifecycleTemplate(template);
+  return template;
+}
+function createStructureLifecycle(input) {
+  const lifecycle = {
+    schemaVersion: STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
+    id: input.id,
+    structureId: input.structureId,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
+    ...input.targetId === undefined ? {} : { targetId: input.targetId }
+  };
+  validateStructureLifecycle(lifecycle);
+  return lifecycle;
+}
+function advanceStructureLifecycle(lifecycle) {
+  validateStructureLifecycle(lifecycle);
+  const next = advanceLifetime(lifetimeOf2(lifecycle));
+  return next ? { ...structuredClone(lifecycle), ...next } : undefined;
+}
+function validateStructureLifecycleTemplate(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Structure lifecycle template must be an object");
+  const template = value;
+  if (template.durationUnit !== "turns")
+    throw new Error("Structure lifecycle requires turns duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
+  if (!template.structure || typeof template.structure !== "object" || Array.isArray(template.structure))
+    throw new Error("Structure lifecycle requires structure geometry");
+  const structure = template.structure;
+  if (structure.type !== "rectangle")
+    throw new Error("Structure lifecycle currently requires rectangle geometry");
+  if (typeof structure.w !== "number" || !Number.isFinite(structure.w) || structure.w <= 0)
+    throw new Error("Structure lifecycle width must be positive");
+  if (typeof structure.h !== "number" || !Number.isFinite(structure.h) || structure.h <= 0)
+    throw new Error("Structure lifecycle height must be positive");
+  if (structure.color !== undefined && typeof structure.color !== "string")
+    throw new Error("Structure lifecycle color must be a string");
+  if (structure.role !== undefined && !["solid", "containment", "both"].includes(structure.role))
+    throw new Error("Structure lifecycle role is invalid");
+  assertJsonValue(structure);
+}
+function validateStructureLifecycle(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Structure lifecycle must be an object");
+  const lifecycle = value;
+  if (lifecycle.schemaVersion !== STRUCTURE_LIFECYCLE_SCHEMA_VERSION)
+    throw new Error("Unsupported structure lifecycle schema version");
+  if (typeof lifecycle.id !== "string" || lifecycle.id.length === 0)
+    throw new Error("Structure lifecycle requires a stable id");
+  if (typeof lifecycle.structureId !== "string" || lifecycle.structureId.length === 0)
+    throw new Error("Structure lifecycle requires a stable structure id");
+  if (lifecycle.sourceId !== undefined && (typeof lifecycle.sourceId !== "string" || lifecycle.sourceId.length === 0))
+    throw new Error("Structure lifecycle sourceId must be non-empty");
+  if (lifecycle.sourceOrder !== undefined && !Number.isSafeInteger(lifecycle.sourceOrder))
+    throw new Error("Structure lifecycle sourceOrder must be a safe integer");
+  if (lifecycle.targetId !== undefined && (typeof lifecycle.targetId !== "string" || lifecycle.targetId.length === 0))
+    throw new Error("Structure lifecycle targetId must be non-empty");
+  if (lifecycle.durationUnit !== "turns")
+    throw new Error("Structure lifecycle requires turns duration");
+  validateLifetime({ durationUnit: lifecycle.durationUnit, duration: lifecycle.duration, remaining: lifecycle.remaining });
+}
+function lifetimeOf2(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
+function createDeferredEffectTemplate(input) {
+  const template = structuredClone(input);
+  validateDeferredEffectTemplate(template);
+  return template;
+}
+function createDeferredEffect(input) {
+  const deferred = {
+    schemaVersion: DEFERRED_EFFECT_SCHEMA_VERSION,
+    id: input.id,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    effect: structuredClone(input.effect),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
+    ...input.ownerId === undefined ? {} : { ownerId: input.ownerId }
+  };
+  validateDeferredEffect(deferred);
+  return deferred;
+}
+function advanceDeferredEffect(effect) {
+  validateDeferredEffect(effect);
+  const next = advanceLifetime(lifetimeOf3(effect));
+  return next ? { ...structuredClone(effect), ...next } : undefined;
+}
+function validateDeferredEffectTemplate(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect template must be an object");
+  const template = value;
+  if (template.durationUnit !== "ticks")
+    throw new Error("Deferred effect requires ticks duration");
+  validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
+  validateEngineEffect(template.effect);
+}
+function validateDeferredEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect must be an object");
+  const effect = value;
+  if (effect.schemaVersion !== DEFERRED_EFFECT_SCHEMA_VERSION)
+    throw new Error("Unsupported deferred effect schema version");
+  if (typeof effect.id !== "string" || effect.id.length === 0)
+    throw new Error("Deferred effect requires a stable id");
+  if (effect.sourceId !== undefined && (typeof effect.sourceId !== "string" || effect.sourceId.length === 0))
+    throw new Error("Deferred effect sourceId must be non-empty");
+  if (effect.sourceOrder !== undefined && !Number.isSafeInteger(effect.sourceOrder))
+    throw new Error("Deferred effect sourceOrder must be a safe integer");
+  if (effect.ownerId !== undefined && (typeof effect.ownerId !== "string" || effect.ownerId.length === 0))
+    throw new Error("Deferred effect ownerId must be non-empty");
+  if (effect.durationUnit !== "ticks")
+    throw new Error("Deferred effect requires ticks duration");
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.duration });
+  validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.remaining });
+  validateEngineEffect(effect.effect);
+}
+function validateEngineEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect requires an Engine effect");
+  const effect = value;
+  if (effect.schemaVersion !== 1 || typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Deferred Engine effect is invalid");
+  assertJsonValue(effect.typeValue);
+  if (effect.target !== undefined)
+    assertJsonValue(effect.target);
+}
+function lifetimeOf3(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+class SeededRandom {
+  state;
+  constructor(seed) {
+    if (!Number.isSafeInteger(seed))
+      throw new RangeError("Seed must be a safe integer");
+    this.state = seed >>> 0;
+  }
+  next() {
+    this.state = this.state + 1831565813 >>> 0;
+    let value = this.state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  }
+  nextInt(maxExclusive) {
+    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
+      throw new RangeError("Maximum must be a positive safe integer");
+    }
+    return Math.floor(this.next() * maxExclusive);
+  }
+  getState() {
+    return this.state;
+  }
+  static fromState(state) {
+    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
+      throw new RangeError("Random state must be an unsigned 32-bit integer");
+    }
+    const random = new SeededRandom(0);
+    random.state = state;
+    return random;
+  }
+}
+
+var ACTION_MODIFIER_SCHEMA_VERSION = 1;
+function createActionModifierTemplate(input) {
+  const template = structuredClone(input);
+  if (template.action === "force" && template.operation === "scale")
+    validateFactor(template.factor);
+  else if (template.action === "aim" && template.operation === "random-offset") {
+    validateVariance(template.maxVarianceDegrees);
+    validateRandomState(template.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  return template;
+}
+function createActionModifier(input) {
+  const modifier = { schemaVersion: ACTION_MODIFIER_SCHEMA_VERSION, ...structuredClone(input) };
+  validateActionModifier(modifier);
+  return modifier;
+}
+function applyActionModifiers(input, modifiers) {
+  validateAcceptedForceInput(input);
+  if (modifiers.length === 0)
+    return { angle: normalizeAngle(input.angle), power: input.power };
+  return [...modifiers].sort(compareModifiers).reduce((current, modifier) => {
+    validateActionModifier(modifier);
+    if (modifier.action === "force" && modifier.operation === "scale")
+      return { angle: current.angle, power: current.power * modifier.factor };
+    const random = SeededRandom.fromState(modifier.randomState);
+    const offset = (random.next() * 2 - 1) * modifier.maxVarianceDegrees;
+    return { angle: normalizeAngle(current.angle + offset), power: current.power };
+  }, { angle: normalizeAngle(input.angle), power: input.power });
+}
+function consumeActionModifiers(modifiers) {
+  return [...modifiers].sort(compareModifiers).flatMap((modifier) => {
+    validateActionModifier(modifier);
+    const next = structuredClone(modifier);
+    if (next.action === "aim" && next.operation === "random-offset") {
+      const random = SeededRandom.fromState(next.randomState);
+      random.next();
+      next.randomState = random.getState();
+    }
+    if (next.remainingUses === undefined || next.remainingUses <= 1)
+      return next.remainingUses === undefined ? [next] : [];
+    return [{ ...next, remainingUses: next.remainingUses - 1 }];
+  });
+}
+function validateActionModifier(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Action modifier must be an object");
+  const modifier = value;
+  if (modifier.schemaVersion !== ACTION_MODIFIER_SCHEMA_VERSION)
+    throw new Error("Unsupported action modifier schema version");
+  if (typeof modifier.id !== "string" || modifier.id.length === 0)
+    throw new Error("Action modifier requires a stable id");
+  if (modifier.action === "force" && modifier.operation === "scale")
+    validateFactor(modifier.factor);
+  else if (modifier.action === "aim" && modifier.operation === "random-offset") {
+    validateVariance(modifier.maxVarianceDegrees);
+    validateRandomState(modifier.randomState);
+  } else
+    throw new Error("Unsupported action modifier operation");
+  if (modifier.remainingUses !== undefined && (!Number.isSafeInteger(modifier.remainingUses) || modifier.remainingUses < 1))
+    throw new Error("Action modifier remaining uses must be a positive integer");
+  const hasLifetime = modifier.durationUnit !== undefined || modifier.duration !== undefined || modifier.remaining !== undefined;
+  if (hasLifetime) {
+    if (modifier.durationUnit === undefined || modifier.duration === undefined || modifier.remaining === undefined)
+      throw new Error("Action modifier lifetime is incomplete");
+    if (modifier.durationUnit !== "turns")
+      throw new Error("Action modifier lifetime requires turns");
+    validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+  }
+  if (modifier.remainingUses === undefined && !hasLifetime)
+    throw new Error("Action modifier requires consumption or lifetime");
+  if (modifier.sourceId !== undefined && (typeof modifier.sourceId !== "string" || modifier.sourceId.length === 0))
+    throw new Error("Action modifier sourceId must be non-empty");
+  if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder))
+    throw new Error("Action modifier sourceOrder must be a safe integer");
+  assertJsonValue(modifier);
+}
+function validateFactor(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier factor must be a finite non-negative number");
+}
+function validateVariance(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new Error("Action modifier variance must be a finite non-negative number");
+}
+function validateRandomState(value) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 4294967295)
+    throw new Error("Action modifier random state must be an unsigned 32-bit integer");
+}
+function validateAcceptedForceInput(input) {
+  if (!Number.isFinite(input.angle) || !Number.isFinite(input.power) || input.power < 0)
+    throw new Error("Accepted force input must have a finite angle and non-negative power");
+}
+function compareModifiers(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function normalizeAngle(angle) {
+  return (angle % 360 + 360) % 360;
+}
+var COLLISION_FILTER_SCHEMA_VERSION = 1;
+var COLLISION_FILTER_LIFETIME_SCHEMA_VERSION = 1;
+var COLLISION_CATEGORIES = ["entity", "structure"];
+function createCollisionFilterTemplate(input) {
+  const template = structuredClone(input);
+  validateExcludedCategories(template.excludedCategories);
+  if (template.durationUnit !== "turns" || !Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Collision filter template requires a positive turn duration");
+  return template;
+}
+function createCollisionFilter(input) {
+  const filter = {
+    schemaVersion: COLLISION_FILTER_SCHEMA_VERSION,
+    id: input.id,
+    excludedCategories: [...input.excludedCategories],
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateCollisionFilter(filter);
+  return filter;
+}
+function createCollisionFilterLifetime(input) {
+  const lifetime = {
+    schemaVersion: COLLISION_FILTER_LIFETIME_SCHEMA_VERSION,
+    id: input.id,
+    filterId: input.filterId,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateCollisionFilterLifetime(lifetime);
+  return lifetime;
+}
+function advanceCollisionFilterLifetime(lifetime) {
+  validateCollisionFilterLifetime(lifetime);
+  const next = advanceLifetime(lifetimeOf4(lifetime));
+  return next ? { ...structuredClone(lifetime), ...next } : undefined;
+}
+function isCollisionAllowed(firstCategory, firstFilters, secondCategory, secondFilters) {
+  return !firstFilters.some((filter) => filter.excludedCategories.includes(secondCategory)) && !secondFilters.some((filter) => filter.excludedCategories.includes(firstCategory));
+}
+function validateCollisionFilter(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision filter must be an object");
+  const filter = value;
+  if (filter.schemaVersion !== COLLISION_FILTER_SCHEMA_VERSION)
+    throw new Error("Unsupported collision filter schema version");
+  if (typeof filter.id !== "string" || filter.id.length === 0)
+    throw new Error("Collision filter requires a stable id");
+  if (!Array.isArray(filter.excludedCategories) || filter.excludedCategories.length === 0)
+    throw new Error("Collision filter requires excluded categories");
+  validateExcludedCategories(filter.excludedCategories);
+  if (filter.sourceId !== undefined && (typeof filter.sourceId !== "string" || filter.sourceId.length === 0))
+    throw new Error("Collision filter sourceId must be non-empty");
+  if (filter.sourceOrder !== undefined && !Number.isSafeInteger(filter.sourceOrder))
+    throw new Error("Collision filter sourceOrder must be a safe integer");
+  assertJsonValue(filter);
+}
+function validateCollisionFilterLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Collision filter lifetime must be an object");
+  const lifetime = value;
+  if (lifetime.schemaVersion !== COLLISION_FILTER_LIFETIME_SCHEMA_VERSION)
+    throw new Error("Unsupported collision filter lifetime schema version");
+  if (typeof lifetime.id !== "string" || lifetime.id.length === 0 || typeof lifetime.filterId !== "string" || lifetime.filterId.length === 0)
+    throw new Error("Collision filter lifetime requires stable ids");
+  if (lifetime.durationUnit !== "turns")
+    throw new Error("Collision filter lifetime requires turns");
+  validateLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  if (lifetime.sourceId !== undefined && (typeof lifetime.sourceId !== "string" || lifetime.sourceId.length === 0))
+    throw new Error("Collision filter lifetime sourceId must be non-empty");
+  if (lifetime.sourceOrder !== undefined && !Number.isSafeInteger(lifetime.sourceOrder))
+    throw new Error("Collision filter lifetime sourceOrder must be a safe integer");
+  assertJsonValue(lifetime);
+}
+function validateCollisionFilterState(filters, lifetimes) {
+  const filterIds = new Set;
+  let previousFilter;
+  for (const filter of filters) {
+    validateCollisionFilter(filter);
+    if (filterIds.has(filter.id) || previousFilter && compareFilterOrder(previousFilter, filter) > 0)
+      throw new Error("Collision filters must be unique and canonically ordered");
+    filterIds.add(filter.id);
+    previousFilter = filter;
+  }
+  const lifetimeIds = new Set;
+  let previousLifetime;
+  for (const lifetime of lifetimes) {
+    validateCollisionFilterLifetime(lifetime);
+    if (!filterIds.has(lifetime.filterId))
+      throw new Error("Collision filter lifetime references an unknown filter");
+    if (lifetimeIds.has(lifetime.id) || previousLifetime && compareLifetimeOrder(previousLifetime, lifetime) > 0)
+      throw new Error("Collision filter lifetimes must be unique and canonically ordered");
+    lifetimeIds.add(lifetime.id);
+    previousLifetime = lifetime;
+  }
+}
+function lifetimeOf4(value) {
+  return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
+}
+function validateExcludedCategories(value) {
+  if (!Array.isArray(value) || value.length === 0)
+    throw new Error("Collision filter requires excluded categories");
+  const categories = [...value].sort();
+  if (categories.some((category, index) => !COLLISION_CATEGORIES.includes(category) || index > 0 && category === categories[index - 1]))
+    throw new Error("Collision filter categories must be unique and supported");
+  if (value.some((category, index) => category !== categories[index]))
+    throw new Error("Collision filter categories must be canonicalized");
+}
+function compareFilterOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareLifetimeOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+var ACTOR_ELIGIBILITY_SCHEMA_VERSION = 1;
+var ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION = 1;
+function createActorEligibilityConstraint(input) {
+  const constraint = {
+    schemaVersion: ACTOR_ELIGIBILITY_SCHEMA_VERSION,
+    id: input.id,
+    mode: input.mode,
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateActorEligibilityConstraint(constraint);
+  return constraint;
+}
+function createActorEligibilityConstraintLifetime(input) {
+  const lifetime = {
+    schemaVersion: ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION,
+    id: input.id,
+    constraintId: input.constraintId,
+    ...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }
+  };
+  validateActorEligibilityConstraintLifetime(lifetime);
+  return lifetime;
+}
+function createActorEligibilityConstraintTemplate(input) {
+  const template = structuredClone(input);
+  if (template.mode !== "excluded" || template.durationUnit !== "turns" || !Number.isSafeInteger(template.duration) || template.duration < 1)
+    throw new Error("Actor eligibility constraint requires a positive turn duration");
+  return template;
+}
+function advanceActorEligibilityConstraintLifetime(lifetime) {
+  validateActorEligibilityConstraintLifetime(lifetime);
+  const next = advanceLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  return next ? { ...structuredClone(lifetime), ...next } : undefined;
+}
+function isActorEligible(constraints) {
+  return !constraints.some((constraint) => constraint.mode === "excluded");
+}
+function validateActorEligibilityConstraint(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Actor eligibility constraint must be an object");
+  const constraint = value;
+  if (constraint.schemaVersion !== ACTOR_ELIGIBILITY_SCHEMA_VERSION)
+    throw new Error("Unsupported actor eligibility constraint schema version");
+  if (typeof constraint.id !== "string" || constraint.id.length === 0)
+    throw new Error("Actor eligibility constraint requires a stable id");
+  if (constraint.mode !== "excluded")
+    throw new Error("Unsupported actor eligibility constraint mode");
+  if (constraint.sourceId !== undefined && (typeof constraint.sourceId !== "string" || constraint.sourceId.length === 0))
+    throw new Error("Actor eligibility constraint sourceId must be non-empty");
+  if (constraint.sourceOrder !== undefined && !Number.isSafeInteger(constraint.sourceOrder))
+    throw new Error("Actor eligibility constraint sourceOrder must be a safe integer");
+  assertJsonValue(constraint);
+}
+function validateActorEligibilityConstraintLifetime(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Actor eligibility constraint lifetime must be an object");
+  const lifetime = value;
+  if (lifetime.schemaVersion !== ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION)
+    throw new Error("Unsupported actor eligibility lifetime schema version");
+  if (typeof lifetime.id !== "string" || lifetime.id.length === 0 || typeof lifetime.constraintId !== "string" || lifetime.constraintId.length === 0)
+    throw new Error("Actor eligibility lifetime requires stable ids");
+  if (lifetime.durationUnit !== "turns")
+    throw new Error("Actor eligibility constraint lifetime requires turns");
+  validateLifetime({ durationUnit: lifetime.durationUnit, duration: lifetime.duration, remaining: lifetime.remaining });
+  if (lifetime.sourceId !== undefined && (typeof lifetime.sourceId !== "string" || lifetime.sourceId.length === 0))
+    throw new Error("Actor eligibility lifetime sourceId must be non-empty");
+  if (lifetime.sourceOrder !== undefined && !Number.isSafeInteger(lifetime.sourceOrder))
+    throw new Error("Actor eligibility lifetime sourceOrder must be a safe integer");
+  assertJsonValue(lifetime);
+}
+function validateActorEligibilityState(constraints, lifetimes) {
+  const ids = new Set;
+  let previous;
+  for (const constraint of constraints) {
+    validateActorEligibilityConstraint(constraint);
+    if (ids.has(constraint.id) || previous && compareConstraintOrder(previous, constraint) > 0)
+      throw new Error("Actor eligibility constraints must be unique and canonically ordered");
+    ids.add(constraint.id);
+    previous = constraint;
+  }
+  const lifetimeIds = new Set;
+  let previousLifetime;
+  for (const lifetime of lifetimes) {
+    validateActorEligibilityConstraintLifetime(lifetime);
+    if (!ids.has(lifetime.constraintId))
+      throw new Error("Actor eligibility lifetime references an unknown constraint");
+    if (lifetimeIds.has(lifetime.id) || previousLifetime && compareLifetimeOrder2(previousLifetime, lifetime) > 0)
+      throw new Error("Actor eligibility lifetimes must be unique and canonically ordered");
+    lifetimeIds.add(lifetime.id);
+    previousLifetime = lifetime;
+  }
+}
+function compareConstraintOrder(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareLifetimeOrder2(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -967,6 +2551,14 @@ var engine = {
   createSystemRegistry() {
     return new EngineSystemRegistry;
   },
+  createEffectRegistry() {
+    return new EngineEffectRegistry;
+  },
+  createTransformState,
+  createMovementState,
+  createCounterState,
+  canonicalizeCounterStates,
+  validateCounterState,
   createEntity(settings) {
     assertJsonValue(settings);
     return structuredClone(settings);
@@ -1549,7 +3141,7 @@ function isTextInputElement(value) {
 function positive(value) {
   return Number.isFinite(value) && value > 0;
 }
-function isRecord(value) {
+function isRecord2(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 function clone3(value) {
@@ -1623,12 +3215,12 @@ function validateUiSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     throw new Error("Invalid UI settings");
   const value = settings;
-  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
+  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord2(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
     throw new Error("Invalid UI settings");
   const screenIds = new Set;
   const seenScreens = new WeakSet;
   for (const screen of value.screens) {
-    if (!isRecord(screen))
+    if (!isRecord2(screen))
       throw new Error("Invalid UI screen");
     if (typeof screen.id !== "string" || screen.id.length === 0 || screenIds.has(screen.id))
       throw new Error("Invalid UI screen");
@@ -1658,14 +3250,14 @@ function validateUiSettings(settings) {
     throw new Error("UI navigation history references an unknown screen");
   if (value.theme !== undefined)
     assertJsonValue(value.theme);
-  if (!value.framework || !isRecord(value.framework))
+  if (!value.framework || !isRecord2(value.framework))
     throw new Error("UI framework is required");
   const expected = createDefaultUiFramework().systemOrder;
   if (!Array.isArray(value.framework.systemOrder) || value.framework.systemOrder.join("|") !== expected.join("|"))
     throw new Error("Unsupported UI framework order");
 }
 function validateElement(value, ids, screenIds, path, ancestors, requireScreenTargets) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "malformed element");
   if (ancestors.has(value))
     throw invalidElement(path, "cyclic element tree");
@@ -1720,7 +3312,7 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
   }
 }
 function validateLayout(value, path) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid layout");
   if (typeof value.type !== "string" || !LAYOUT_TYPES.has(value.type))
     throw invalidElement(path, "invalid layout type");
@@ -1744,7 +3336,7 @@ function validatePadding(value, path) {
       return;
     throw invalidElement(path, "invalid padding");
   }
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid padding");
   for (const key of Object.keys(value))
     if (!PADDING_KEYS.has(key))
@@ -1754,7 +3346,7 @@ function validatePadding(value, path) {
       throw invalidElement(path, "invalid padding");
 }
 function validateRect(value, path) {
-  if (!isRecord(value))
+  if (!isRecord2(value))
     throw invalidElement(path, "invalid rect");
   for (const key of Object.keys(value))
     if (!RECT_KEYS.has(key))
@@ -1928,6 +3520,21 @@ function validatePlayerMass(mass) {
     throw new Error("Player mass must be a finite positive number");
 }
 function createPlayerSettings(overrides = {}) {
+  validateNumericThresholdBindings(overrides.numericThresholds ?? []);
+  for (const modifier of overrides.temporalModifiers ?? [])
+    validateTemporalModifier(modifier);
+  for (const modifier of overrides.pendingActionModifiers ?? [])
+    validateActionModifier(modifier);
+  for (const filter of overrides.collisionFilters ?? [])
+    validateCollisionFilter(filter);
+  for (const lifetime of overrides.collisionFilterLifetimes ?? [])
+    validateCollisionFilterLifetime(lifetime);
+  validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? []);
+  for (const constraint of overrides.actorEligibilityConstraints ?? [])
+    validateActorEligibilityConstraint(constraint);
+  for (const lifetime of overrides.actorEligibilityConstraintLifetimes ?? [])
+    validateActorEligibilityConstraintLifetime(lifetime);
+  validateActorEligibilityState(overrides.actorEligibilityConstraints ?? [], overrides.actorEligibilityConstraintLifetimes ?? []);
   const mass = overrides.mass ?? 1;
   validatePlayerMass(mass);
   return {
@@ -1947,303 +3554,34 @@ function createPlayerSettings(overrides = {}) {
     shape: 0 /* CIRCLE */,
     hoop: overrides.hoop ?? 17 /* pictureReifenPNG */,
     isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
-    isDead: overrides.isDead ?? false,
+    isDrawingEnabled: overrides.isDrawingEnabled ?? true,
     effects: (overrides.effects ?? []).map((effect) => ({ ...effect })),
     inventory: (overrides.inventory ?? []).map((item) => ({ ...item })),
-    ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}
+    ...overrides.itemEffects ? { itemEffects: overrides.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+    ...overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {},
+    ...overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {},
+    ...overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {},
+    ...overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {},
+    ...overrides.actorEligibilityConstraints ? { actorEligibilityConstraints: structuredClone(overrides.actorEligibilityConstraints) } : {},
+    ...overrides.actorEligibilityConstraintLifetimes ? { actorEligibilityConstraintLifetimes: structuredClone(overrides.actorEligibilityConstraintLifetimes) } : {},
+    numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings())
   };
 }
-
-class SeededRandom {
-  state;
-  constructor(seed) {
-    if (!Number.isSafeInteger(seed))
-      throw new RangeError("Seed must be a safe integer");
-    this.state = seed >>> 0;
-  }
-  next() {
-    this.state = this.state + 1831565813 >>> 0;
-    let value = this.state;
-    value = Math.imul(value ^ value >>> 15, value | 1);
-    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
-  }
-  nextInt(maxExclusive) {
-    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
-      throw new RangeError("Maximum must be a positive safe integer");
-    }
-    return Math.floor(this.next() * maxExclusive);
-  }
-  getState() {
-    return this.state;
-  }
-  static fromState(state) {
-    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
-      throw new RangeError("Random state must be an unsigned 32-bit integer");
-    }
-    const random = new SeededRandom(0);
-    random.state = state;
-    return random;
-  }
-}
-
-class EffectAimVariance {
-  maxVarianceDegrees;
-  random;
-  constructor(settings) {
-    const { maxVarianceDegrees, seed = 1337, randomState } = settings.typeValue;
-    if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0) {
-      throw new Error("aimVariance maxVarianceDegrees must be a finite non-negative number");
-    }
-    this.maxVarianceDegrees = maxVarianceDegrees;
-    this.random = randomState !== undefined ? SeededRandom.fromState(randomState) : new SeededRandom(seed);
-  }
-  applyToForce(force) {
-    if (!Number.isFinite(force.angle) || !Number.isFinite(force.power) || force.power < 0) {
-      throw new Error("Force input must have a finite angle and non-negative power");
-    }
-    const rnd = this.random.next();
-    const offset = (rnd * 2 - 1) * this.maxVarianceDegrees;
-    return {
-      angle: normalizeAngle(force.angle + offset),
-      power: force.power
-    };
-  }
-  toSettings() {
-    return {
-      type: "aimVariance" /* AimVariance */,
-      typeValue: {
-        maxVarianceDegrees: this.maxVarianceDegrees,
-        randomState: this.random.getState()
-      }
-    };
-  }
-}
-function normalizeAngle(angle) {
-  return (angle % 360 + 360) % 360;
-}
-
-class EffectDelayed {
-  effectType;
-  effectValue;
-  delayTicks;
-  remainingTicks;
-  fired;
-  constructor(settings) {
-    const { effectType, effectValue, delayTicks, remainingTicks = delayTicks, fired = false } = settings.typeValue;
-    if (typeof effectType !== "string" || effectType.length === 0)
-      throw new Error("delayedEffect requires a non-empty effectType");
-    if (!Number.isSafeInteger(delayTicks) || delayTicks < 0)
-      throw new Error("delayedEffect delayTicks must be a non-negative integer");
-    if (!Number.isSafeInteger(remainingTicks) || remainingTicks < 0 || remainingTicks > delayTicks)
-      throw new Error("delayedEffect remainingTicks must be between zero and delayTicks");
-    if (typeof fired !== "boolean")
-      throw new Error("delayedEffect fired must be boolean");
-    if (fired && remainingTicks !== 0)
-      throw new Error("A fired delayedEffect must have zero remaining ticks");
-    this.effectType = effectType;
-    this.effectValue = effectValue === undefined ? undefined : structuredClone(effectValue);
-    this.delayTicks = delayTicks;
-    this.remainingTicks = remainingTicks;
-    this.fired = fired;
-  }
-  advanceTick() {
-    if (this.fired)
-      return false;
-    if (this.remainingTicks > 0)
-      this.remainingTicks--;
-    if (this.remainingTicks !== 0)
-      return false;
-    this.fired = true;
-    return true;
-  }
-  hasFired() {
-    return this.fired;
-  }
-  getRemainingTicks() {
-    return this.remainingTicks;
-  }
-  toSettings() {
-    return {
-      type: "delayedEffect" /* DelayedEffect */,
-      typeValue: {
-        effectType: this.effectType,
-        effectValue: this.effectValue === undefined ? undefined : structuredClone(this.effectValue),
-        delayTicks: this.delayTicks,
-        remainingTicks: this.remainingTicks,
-        fired: this.fired
-      }
-    };
-  }
-}
-
-class EffectFreeze {
-  speedFactor;
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { speedFactor, durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isFinite(speedFactor) || speedFactor < 0 || speedFactor > 1)
-      throw new Error("freeze speedFactor must be between zero and one");
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1)
-      throw new Error("freeze durationTurns must be a positive integer");
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns)
-      throw new Error("freeze remainingTurns must be between zero and durationTurns");
-    this.speedFactor = speedFactor;
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  applyToVelocity(velocity) {
-    if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y))
-      throw new Error("Freeze velocity must be finite");
-    if (!this.isActive())
-      return { ...velocity };
-    return { x: velocity.x * this.speedFactor, y: velocity.y * this.speedFactor };
-  }
-  isActive() {
-    return this.remainingTurns > 0;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  toSettings() {
-    return {
-      type: "freeze" /* Freeze */,
-      typeValue: { speedFactor: this.speedFactor, durationTurns: this.durationTurns, remainingTurns: this.remainingTurns }
-    };
-  }
-}
-
-class EffectGhostMode {
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1)
-      throw new Error("ghostMode durationTurns must be a positive integer");
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns)
-      throw new Error("ghostMode remainingTurns must be between zero and durationTurns");
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  isActive() {
-    return this.remainingTurns > 0;
-  }
-  shouldIgnoreCollision() {
-    return this.isActive();
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toSettings() {
-    return { type: "ghostMode" /* GhostMode */, typeValue: { durationTurns: this.durationTurns, remainingTurns: this.remainingTurns } };
-  }
-}
-
-class EffectMagnet {
-  mode;
-  force;
-  range;
-  constructor(settings) {
-    const { mode, force, range: range2 } = settings.typeValue;
-    if (mode !== "attract" && mode !== "repel")
-      throw new Error("magnet mode must be attract or repel");
-    if (!Number.isFinite(force) || force < 0)
-      throw new Error("magnet force must be finite and non-negative");
-    if (!Number.isFinite(range2) || range2 <= 0)
-      throw new Error("magnet range must be finite and positive");
-    this.mode = mode;
-    this.force = force;
-    this.range = range2;
-  }
-  calculateDelta(source, target) {
-    validateVector(source);
-    validateVector(target);
-    const dx = target.x - source.x;
-    const dy = target.y - source.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance === 0 || distance > this.range)
-      return { x: 0, y: 0 };
-    const direction = this.mode === "attract" ? 1 : -1;
-    return { x: normalizeZero(dx / distance * this.force * direction), y: normalizeZero(dy / distance * this.force * direction) };
-  }
-  applyToVelocity(velocity, source, target) {
-    validateVector(velocity);
-    const delta = this.calculateDelta(source, target);
-    return { x: velocity.x + delta.x, y: velocity.y + delta.y };
-  }
-  toSettings() {
-    return { type: "magnet" /* Magnet */, typeValue: { mode: this.mode, force: this.force, range: this.range } };
-  }
-}
-function validateVector(value) {
-  if (!Number.isFinite(value.x) || !Number.isFinite(value.y))
-    throw new Error("Magnet vectors must be finite");
-}
-function normalizeZero(value) {
-  return Object.is(value, -0) ? 0 : value;
-}
-
-class EffectModifyForce {
-  factor;
-  constructor(settings) {
-    if (!Number.isFinite(settings.typeValue.factor) || settings.typeValue.factor < 0) {
-      throw new Error("modifyForce factor must be a finite non-negative number");
-    }
-    this.factor = settings.typeValue.factor;
-  }
-  applyToForce(force) {
-    if (!Number.isFinite(force.angle) || !Number.isFinite(force.power) || force.power < 0) {
-      throw new Error("Force input must have a finite angle and non-negative power");
-    }
-    return { angle: normalizeAngle2(force.angle), power: force.power * this.factor };
-  }
-  toSettings() {
-    return { type: "modifyForce" /* ModifyForce */, typeValue: { factor: this.factor } };
-  }
-}
-function normalizeAngle2(angle) {
-  return (angle % 360 + 360) % 360;
-}
-
-class EffectSelectionLock {
-  durationTurns;
-  remainingTurns;
-  constructor(settings) {
-    const { durationTurns, remainingTurns = durationTurns } = settings.typeValue;
-    if (!Number.isSafeInteger(durationTurns) || durationTurns < 1) {
-      throw new Error("selectionLock durationTurns must be a positive integer");
-    }
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > durationTurns) {
-      throw new Error("selectionLock remainingTurns must be between zero and durationTurns");
-    }
-    this.durationTurns = durationTurns;
-    this.remainingTurns = remainingTurns;
-  }
-  isLocked() {
-    return this.remainingTurns > 0;
-  }
-  advanceTurn() {
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toSettings() {
-    return {
-      type: "selectionLock" /* SelectionLock */,
-      typeValue: { durationTurns: this.durationTurns, remainingTurns: this.remainingTurns }
-    };
-  }
+function createDefaultNumericThresholdBindings() {
+  return [{
+    schemaVersion: 1,
+    id: "hp",
+    thresholds: [{
+      schemaVersion: 1,
+      comparator: "below-or-equal",
+      value: 0,
+      effects: [
+        { schemaVersion: 1, type: "movement.set-velocity", typeValue: { x: 0, y: 0 } },
+        { schemaVersion: 1, type: "participation.set-physics", typeValue: { enabled: false } },
+        { schemaVersion: 1, type: "participation.set-drawing", typeValue: { enabled: false } }
+      ]
+    }]
+  }];
 }
 
 class EffectShield {
@@ -2293,10 +3631,13 @@ class EffectShield {
 class EffectSpawnTrigger {
   triggerId;
   delayTurns;
+  structureId;
+  resolvedTarget;
+  resolvedPosition;
   remainingTurns;
   fired;
   constructor(settings) {
-    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false } = settings.typeValue;
+    const { triggerId, delayTurns, remainingTurns = delayTurns, fired = false, resolvedTarget, structureId, resolvedPosition } = settings.typeValue;
     if (typeof triggerId !== "string" || triggerId.length === 0)
       throw new Error("spawnTrigger requires a non-empty triggerId");
     if (!Number.isSafeInteger(delayTurns) || delayTurns < 0)
@@ -2309,8 +3650,15 @@ class EffectSpawnTrigger {
       throw new Error("A fired spawnTrigger must have zero remaining turns");
     this.triggerId = triggerId;
     this.delayTurns = delayTurns;
+    if (structureId !== undefined && (typeof structureId !== "string" || structureId.length === 0))
+      throw new Error("spawnTrigger structureId must be a non-empty string");
+    this.structureId = structureId;
     this.remainingTurns = remainingTurns;
     this.fired = fired;
+    this.resolvedTarget = resolvedTarget === undefined ? undefined : structuredClone(resolvedTarget);
+    if (resolvedPosition !== undefined && (!Number.isFinite(resolvedPosition.x) || !Number.isFinite(resolvedPosition.y)))
+      throw new Error("spawnTrigger resolvedPosition must be finite");
+    this.resolvedPosition = resolvedPosition === undefined ? undefined : { ...resolvedPosition };
   }
   advanceTurn() {
     if (this.fired)
@@ -2334,6 +3682,9 @@ class EffectSpawnTrigger {
       typeValue: {
         triggerId: this.triggerId,
         delayTurns: this.delayTurns,
+        ...this.structureId === undefined ? {} : { structureId: this.structureId },
+        ...this.resolvedTarget === undefined ? {} : { resolvedTarget: structuredClone(this.resolvedTarget) },
+        ...this.resolvedPosition === undefined ? {} : { resolvedPosition: { ...this.resolvedPosition } },
         remainingTurns: this.remainingTurns,
         fired: this.fired
       }
@@ -2341,134 +3692,33 @@ class EffectSpawnTrigger {
   }
 }
 
-class EffectSwapPosition {
-  toSettings() {
-    return { type: "swapPosition" /* SwapPosition */, typeValue: {} };
-  }
-  swap(first, second) {
-    validateTarget(first);
-    validateTarget(second);
-    if (first.id === second.id)
-      throw new Error("Cannot swap an entity with itself");
-    return [{ ...second.position }, { ...first.position }];
-  }
-  teleport(target, destination) {
-    validateTarget(target);
-    if (!isVector(destination))
-      throw new Error("Teleport destination must have finite coordinates");
-    return { ...destination };
-  }
-}
-function validateTarget(target) {
-  if (typeof target.id !== "string" || target.id.length === 0)
-    throw new Error("Position target requires a non-empty id");
-  if (!target.active)
-    throw new Error("Position target must be active");
-  if (!isVector(target.position))
-    throw new Error("Position target must have finite coordinates");
-}
-function isVector(value) {
-  return typeof value === "object" && value !== null && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
-}
-
-class EffectTemporaryWall {
-  wallId;
-  x;
-  y;
-  w;
-  h;
-  color;
-  durationTurns;
-  remainingTurns;
-  active;
-  constructor(settings) {
-    const value = settings.typeValue;
-    if (typeof value.wallId !== "string" || value.wallId.length === 0)
-      throw new Error("temporaryWall requires a non-empty wallId");
-    if (![value.x, value.y].every(Number.isFinite) || ![value.w, value.h].every(Number.isFinite) || value.w <= 0 || value.h <= 0)
-      throw new Error("temporaryWall requires finite position and positive dimensions");
-    if (!Number.isSafeInteger(value.durationTurns) || value.durationTurns < 1)
-      throw new Error("temporaryWall durationTurns must be a positive integer");
-    const remainingTurns = value.remainingTurns ?? value.durationTurns;
-    if (!Number.isSafeInteger(remainingTurns) || remainingTurns < 0 || remainingTurns > value.durationTurns)
-      throw new Error("temporaryWall remainingTurns must be between zero and durationTurns");
-    if (typeof value.active !== "undefined" && typeof value.active !== "boolean")
-      throw new Error("temporaryWall active must be boolean");
-    this.wallId = value.wallId;
-    this.x = value.x;
-    this.y = value.y;
-    this.w = value.w;
-    this.h = value.h;
-    this.color = value.color;
-    this.durationTurns = value.durationTurns;
-    this.remainingTurns = remainingTurns;
-    this.active = value.active ?? false;
-  }
-  spawn() {
-    this.active = true;
-    this.remainingTurns = this.durationTurns;
-    return this.toWallState();
-  }
-  advanceTurn() {
-    if (!this.active)
-      return false;
-    if (this.remainingTurns > 0)
-      this.remainingTurns--;
-    if (this.remainingTurns !== 0)
-      return false;
-    this.active = false;
-    return true;
-  }
-  isActive() {
-    return this.active;
-  }
-  getRemainingTurns() {
-    return this.remainingTurns;
-  }
-  toWallState() {
-    return { wallId: this.wallId, x: this.x, y: this.y, w: this.w, h: this.h, ...this.color === undefined ? {} : { color: this.color } };
-  }
-  toSettings() {
-    return { type: "temporaryWall" /* TemporaryWall */, typeValue: { wallId: this.wallId, x: this.x, y: this.y, w: this.w, h: this.h, ...this.color === undefined ? {} : { color: this.color }, durationTurns: this.durationTurns, remainingTurns: this.remainingTurns, active: this.active } };
-  }
-}
-
 function createRuntimeItemEffect(settings) {
+  validateRuntimeItemEffectSettings(settings);
   const value = settings.typeValue;
   switch (settings.type) {
     case "modifyForce" /* ModifyForce */:
-      return new EffectModifyForce({ typeValue: { factor: numberValue(value, "factor", "multiplier") } });
-    case "freeze" /* Freeze */:
-      return new EffectFreeze({ typeValue: { speedFactor: numberValue(value, "speedFactor", "factor", 0.25), durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
+      return createActionModifierTemplate({ action: "force", operation: "scale", factor: numberValue(value, "factor") });
     case "ghostMode" /* GhostMode */:
-      return new EffectGhostMode({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
-    case "magnet" /* Magnet */:
-      return new EffectMagnet({ typeValue: { mode: value.mode === undefined ? "attract" : value.mode, force: numberValue(value, "force", "strength"), range: numberValue(value, "range") } });
+      return createCollisionFilterTemplate({ excludedCategories: ["entity", "structure"], durationUnit: "turns", duration: integerValue(value, "durationTurns") });
     case "selectionLock" /* SelectionLock */:
-      return new EffectSelectionLock({ typeValue: { durationTurns: integerValue(value, "durationTurns"), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") } } });
+      return createActorEligibilityConstraintTemplate({ mode: "excluded", durationUnit: "turns", duration: integerValue(value, "durationTurns") });
     case "shield" /* Shield */:
       return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
     case "spawnTrigger" /* SpawnTrigger */:
-      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId", "triggerType"), delayTurns: integerValue(value, "delayTurns", "delayTicks", 0), ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired } } });
-    case "delayedEffect" /* DelayedEffect */: {
-      const nested = value.effectValue ?? value.effect;
-      return new EffectDelayed({ typeValue: { effectType: stringValue(value, "effectType"), effectValue: nested, delayTicks: integerValue(value, "delayTicks") } });
-    }
-    case "temporaryWall" /* TemporaryWall */:
-      return new EffectTemporaryWall({ typeValue: {
-        wallId: stringValue(value, "wallId"),
-        x: numberValue(value, "x", undefined, 0),
-        y: numberValue(value, "y", undefined, 0),
-        w: numberValue(value, "w", undefined, 1),
-        h: numberValue(value, "h", undefined, 1),
-        durationTurns: integerValue(value, "durationTurns", "lifetimeTurns"),
-        ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") },
-        ...value.active === undefined ? {} : { active: value.active }
-      } });
+      return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }, ...value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }, ...value.fired === undefined ? {} : { fired: value.fired }, ...value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget }, ...value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition } } });
     case "aimVariance" /* AimVariance */:
-      return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
-    case "swapPosition" /* SwapPosition */:
-      return new EffectSwapPosition;
+      return createActionModifierTemplate({
+        action: "aim",
+        operation: "random-offset",
+        maxVarianceDegrees: numberValue(value, "maxVarianceDegrees"),
+        randomState: value.randomState === undefined ? new SeededRandom(value.seed === undefined ? 1337 : safeIntegerValue(value, "seed")).getState() : safeIntegerValue(value, "randomState")
+      });
+    case "temporalModifier" /* TemporalModifier */:
+      return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
+    case "structureLifecycle" /* StructureLifecycle */:
+      return createStructureLifecycleTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), structure: value.structure });
+    case "deferredEffect" /* DeferredEffect */:
+      return createDeferredEffectTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
     default:
       throw new Error(`Unsupported runtime item effect '${String(settings.type)}'`);
   }
@@ -2476,37 +3726,110 @@ function createRuntimeItemEffect(settings) {
 function resolveRuntimeItemEffects(effects) {
   return effects.map((effect) => createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
 }
-function advanceRuntimeItemEffect(effect) {
+function advanceRuntimeItemEffectTurn(effect) {
   const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) });
+  if (isActionModifierTemplate(runtime) || isCollisionFilterTemplate(runtime) || isActorEligibilityConstraintTemplate(runtime) || isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime))
+    return { next: structuredClone(effect), due: false };
   const advance = runtime.advanceTurn;
-  if (advance)
-    advance.call(runtime);
+  if (!advance)
+    return { next: structuredClone(effect), due: false };
+  if (runtime instanceof EffectSpawnTrigger && runtime.hasFired())
+    return { due: false };
+  if (advance.call(runtime) === true)
+    return { due: true };
   const next = runtime.toSettings();
   const value = next.typeValue;
   if (value.remainingTurns === 0 || value.active === false || value.fired === true)
-    return;
-  return { ...effect, typeValue: structuredClone(value) };
+    return { due: false };
+  return { next: { ...effect, typeValue: structuredClone(value) }, due: false };
 }
 function applyRuntimeForceEffects(force, effects) {
-  return effects.reduce((current, effect) => effect instanceof EffectModifyForce ? effect.applyToForce(current) : current, force);
+  const modifiers = effects.flatMap((effect, index) => isActionModifierTemplate(effect) && effect.action === "force" ? [createActionModifier({ id: `runtime-action-modifier:${index}`, action: "force", operation: "scale", factor: effect.factor, remainingUses: 1, sourceOrder: index })] : []);
+  return applyActionModifiers(force, modifiers);
 }
-function numberValue(value, key, alias, fallback) {
-  const raw = value[key] ?? (alias ? value[alias] : undefined) ?? fallback;
+function numberValue(value, key) {
+  const raw = value[key];
   if (typeof raw !== "number")
     throw new Error(`Item effect requires numeric ${key}`);
   return raw;
 }
-function integerValue(value, key, alias, fallback) {
-  const raw = numberValue(value, key, alias, fallback);
+function integerValue(value, key) {
+  const raw = numberValue(value, key);
   if (!Number.isSafeInteger(raw))
     throw new Error(`Item effect requires integer ${key}`);
   return raw;
 }
-function stringValue(value, key, alias) {
-  const raw = value[key] ?? (alias ? value[alias] : undefined);
+function stringValue(value, key) {
+  const raw = value[key];
   if (typeof raw !== "string" || raw.length === 0)
     throw new Error(`Item effect requires non-empty ${key}`);
   return raw;
+}
+function isTemporalModifierTemplate(value) {
+  return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.scale-speed";
+}
+function isStructureLifecycleTemplate(value) {
+  return "durationUnit" in value && "duration" in value && "structure" in value;
+}
+function isDeferredEffectTemplate(value) {
+  return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.apply-force-field";
+}
+function isActionModifierTemplate(value) {
+  return "action" in value && (value.action === "force" && ("operation" in value) && value.operation === "scale" && ("factor" in value) || value.action === "aim" && ("operation" in value) && value.operation === "random-offset" && ("maxVarianceDegrees" in value) && ("randomState" in value));
+}
+function isCollisionFilterTemplate(value) {
+  return "excludedCategories" in value && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
+}
+function isActorEligibilityConstraintTemplate(value) {
+  return "mode" in value && value.mode === "excluded" && "durationUnit" in value && value.durationUnit === "turns" && "duration" in value;
+}
+function safeIntegerValue(value, key) {
+  const raw = value[key];
+  if (typeof raw !== "number" || !Number.isSafeInteger(raw))
+    throw new Error(`Item effect requires safe integer ${key}`);
+  return raw;
+}
+
+function dispatchTriggeredEffects(options) {
+  if (options.effects.length === 0)
+    return;
+  const queue = new TrustedTriggerActivationQueue(Math.max(1, options.effects.length));
+  for (const [index2, effect] of options.effects.entries()) {
+    queue.enqueueTrusted({ schemaVersion: 1, effectId: `${effect.getType()}#${index2}`, event: options.event });
+  }
+  let index = 0;
+  queue.process((activation) => {
+    const effect = options.effects[index++];
+    if (!effect)
+      throw new Error("Trigger activation effect index is out of range");
+    options.apply(effect, activation.event);
+  });
+}
+
+class TrustedTriggerActivationQueue extends EngineTriggerActivationQueue {
+  enqueueTrusted(activation) {
+    this.enqueueValidated(activation);
+  }
+}
+function createTickEvent(sourceId, dt) {
+  return createTickTriggerEvent({ sourceId, sequence: 0, dt });
+}
+function createCollisionEnterEvent(sourceId, entityId, otherId, contactKey) {
+  return createCollisionEnterTriggerEvent({ sourceId, sequence: 0, entityId, otherId, contactKey });
+}
+function createRoundStartEvent(sourceId, turnNumber, activeTeam, phase) {
+  return createRoundStartTriggerEvent({ sourceId, sequence: turnNumber, turnNumber, activeTeam, phase });
+}
+function createEnvironmentActivationEvent(sourceId, sequence, mechanicId, mechanicIndex, tick, active) {
+  return createEnvironmentActivationTriggerEvent({ sourceId, sequence, mechanicId, mechanicIndex, tick, active });
+}
+function createScheduleDueEvent(sourceId, sequence, scheduleId, clock, value) {
+  return createScheduleDueTriggerEvent({ sourceId, sequence, scheduleId, clock, value });
+}
+function dispatchTriggerActivation(options) {
+  const queue = new TrustedTriggerActivationQueue(1);
+  queue.enqueueTrusted({ schemaVersion: 1, effectId: options.effectId, event: options.event });
+  queue.process((activation) => options.apply(activation.event));
 }
 
 function createItemDocument(overrides = {}) {
@@ -2706,9 +4029,17 @@ class Player {
   shape = 0 /* CIRCLE */;
   hoop;
   isPhysicsEnabled = true;
-  dead = false;
+  isDrawingEnabled = true;
   items = [];
   itemEffects = [];
+  temporalModifiers = [];
+  pendingActionModifiers = [];
+  collisionFilters = [];
+  collisionFilterLifetimes = [];
+  actorEligibilityConstraints = [];
+  actorEligibilityConstraintLifetimes = [];
+  numericThresholds = [];
+  numericEffectDispatcher;
   effectAlways = [];
   effectCollision = [];
   effectRound = [];
@@ -2740,9 +4071,33 @@ class Player {
     this.shape = settings.shape;
     this.hoop = settings.hoop;
     this.isPhysicsEnabled = settings.isPhysicsEnabled;
-    this.dead = settings.isDead;
+    this.isDrawingEnabled = settings.isDrawingEnabled;
     this.items = settings.inventory.map((item) => ({ ...item }));
+    for (const effect of settings.itemEffects ?? [])
+      validateRuntimeItemEffectSettings(effect);
     this.itemEffects = (settings.itemEffects ?? []).map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
+    for (const modifier of settings.temporalModifiers ?? [])
+      validateTemporalModifier(modifier);
+    this.temporalModifiers = structuredClone(settings.temporalModifiers ?? []);
+    for (const modifier of settings.pendingActionModifiers ?? [])
+      validateActionModifier(modifier);
+    this.pendingActionModifiers = structuredClone(settings.pendingActionModifiers ?? []);
+    for (const filter of settings.collisionFilters ?? [])
+      validateCollisionFilter(filter);
+    for (const lifetime of settings.collisionFilterLifetimes ?? [])
+      validateCollisionFilterLifetime(lifetime);
+    validateCollisionFilterState(settings.collisionFilters ?? [], settings.collisionFilterLifetimes ?? []);
+    this.collisionFilters = structuredClone(settings.collisionFilters ?? []);
+    this.collisionFilterLifetimes = structuredClone(settings.collisionFilterLifetimes ?? []);
+    for (const constraint of settings.actorEligibilityConstraints ?? [])
+      validateActorEligibilityConstraint(constraint);
+    for (const lifetime of settings.actorEligibilityConstraintLifetimes ?? [])
+      validateActorEligibilityConstraintLifetime(lifetime);
+    validateActorEligibilityState(settings.actorEligibilityConstraints ?? [], settings.actorEligibilityConstraintLifetimes ?? []);
+    this.actorEligibilityConstraints = structuredClone(settings.actorEligibilityConstraints ?? []);
+    this.actorEligibilityConstraintLifetimes = structuredClone(settings.actorEligibilityConstraintLifetimes ?? []);
+    validateNumericThresholdBindings(settings.numericThresholds ?? []);
+    this.numericThresholds = structuredClone(settings.numericThresholds ?? createDefaultNumericThresholdBindings());
     this.effectAlways = [];
     this.effectCollision = [];
     this.effectRound = [];
@@ -2750,20 +4105,20 @@ class Player {
       this.addEffect(effect.trigger, createRuntimeEffect(effect));
   }
   draw(ctx) {
-    if (this.dead)
+    if (!this.isDrawingEnabled)
       return;
     ctx.drawImage(this.hoop, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
     ctx.drawImage(this.playericon, this.position.x - this.size, this.position.y - this.size, this.size * 2, this.size * 2);
   }
-  tick(deltaTime, _globalFriction, drift = 0, stopThreshold = 0) {
-    if (this.dead || !this.isPhysicsEnabled)
+  tick(_deltaTime, _globalFriction, _drift = 0, _stopThreshold = 0) {
+    if (!this.isPhysicsEnabled)
       return;
-    this.effectAlways.forEach((effect) => {
-      if (effect.getType() == "EffectType.Movement" /* Movement */)
-        effect.apply(this, { x: this.velocity.x, y: this.velocity.y, deltaTime, drift, rotation: this.rotation, stopThreshold });
+    if (this.effectAlways.length === 0)
+      return;
+    dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), _deltaTime), apply: (effect) => {
       if (effect.getType() == "EffectType.Physics" /* Physics */)
         effect.apply(this, 12);
-    });
+    } });
   }
   setId(id) {
     this.id = id;
@@ -2821,13 +4176,43 @@ class Player {
   getSize() {
     return { x: this.size, y: this.size };
   }
-  addHP(hp) {
-    this.hp += hp;
-    if (this.hp <= 0)
-      this.setIsDead(true);
-  }
   getHP() {
     return this.hp;
+  }
+  getNumericValue(stateId) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    return this.hp;
+  }
+  setNumericValue(stateId, value) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!Number.isFinite(value))
+      throw new Error("Numeric state value must be finite");
+    this.hp = value;
+  }
+  setNumericEffectDispatcher(dispatcher) {
+    this.numericEffectDispatcher = dispatcher;
+  }
+  dispatchNumericAdd(stateId, amount) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!this.numericEffectDispatcher)
+      throw new Error("Numeric effect dispatcher is not attached");
+    this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.add", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { amount } });
+  }
+  dispatchNumericSet(stateId, value) {
+    if (stateId !== "hp")
+      throw new Error(`Unknown numeric state '${stateId}'`);
+    if (!this.numericEffectDispatcher)
+      throw new Error("Numeric effect dispatcher is not attached");
+    this.numericEffectDispatcher({ schemaVersion: 1, type: "numeric.set", target: { type: "numeric", entityId: String(this.id), stateId }, typeValue: { value } });
+  }
+  getNumericResetValue(stateId) {
+    return this.numericThresholds.find((binding) => binding.id === stateId)?.resetValue;
+  }
+  getNumericThresholds(stateId) {
+    return this.numericThresholds.filter((binding) => binding.id === stateId).map((binding) => structuredClone(binding));
   }
   setColor(color) {
     this.color = color;
@@ -2845,19 +4230,26 @@ class Player {
     return this.shape;
   }
   onCollision({ entity }) {
-    this.effectCollision.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({
+      effects: this.effectCollision,
+      event: createCollisionEnterEvent(String(this.id), String(this.id), "collision", `${String(this.id)}:collision`),
+      apply: (effect) => effect.apply(entity)
+    });
   }
   getTeam() {
     return this.team;
   }
   isActive() {
-    return !this.dead;
+    return this.isPhysicsEnabled && this.isDrawingEnabled;
   }
   physicsEnabled() {
     return this.isPhysicsEnabled;
   }
-  setHP(hp) {
-    this.hp = hp;
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
@@ -2867,10 +4259,6 @@ class Player {
   }
   setSetting(key, value) {
     switch (key) {
-      case "hp":
-        if (typeof value === "number")
-          this.setHPAndDeath(value);
-        break;
       case "mass":
         if (typeof value === "number")
           this.setMass(value);
@@ -2884,33 +4272,30 @@ class Player {
           this.setFriction(value);
         break;
       case "position":
-        if (isVector2(value))
+        if (isVector(value))
           this.setPos(value);
         break;
       case "velocity":
-        if (isVector2(value))
+        if (isVector(value))
           this.setVel(value);
         break;
       case "team":
         if (Array.isArray(value) && value.every(Number.isFinite))
           this.setTeam([...value]);
         break;
-      case "dead":
-        if (typeof value === "boolean")
-          this.setIsDead(value);
-        break;
       case "physicsEnabled":
         if (typeof value === "boolean")
           this.setPhysicsEnabled(value);
+        break;
+      case "drawingEnabled":
+        if (typeof value === "boolean")
+          this.setDrawingEnabled(value);
         break;
     }
   }
   addSetting(key, value) {
     if (typeof value === "number") {
       switch (key) {
-        case "hp":
-          this.setHPAndDeath(this.hp + value);
-          return;
         case "mass":
           this.setMass(this.mass + value);
           return;
@@ -2922,7 +4307,7 @@ class Player {
           return;
       }
     }
-    if (isVector2(value)) {
+    if (isVector(value)) {
       if (key === "position")
         this.setPos({ x: this.position.x + value.x, y: this.position.y + value.y });
       if (key === "velocity")
@@ -2934,9 +4319,6 @@ class Player {
   removeSetting(key, value) {
     if (typeof value === "number") {
       switch (key) {
-        case "hp":
-          this.setHPAndDeath(this.hp - value);
-          return;
         case "mass":
           this.setMass(this.mass - value);
           return;
@@ -2948,7 +4330,7 @@ class Player {
           return;
       }
     }
-    if (isVector2(value)) {
+    if (isVector(value)) {
       if (key === "position")
         this.setPos({ x: this.position.x - value.x, y: this.position.y - value.y });
       if (key === "velocity")
@@ -2956,10 +4338,10 @@ class Player {
     }
     if (key === "team" && Array.isArray(value) && value.every(Number.isFinite))
       this.team = this.team.filter((team) => !value.includes(team));
-    if (key === "dead")
-      this.setIsDead(false);
     if (key === "physicsEnabled")
       this.setPhysicsEnabled(false);
+    if (key === "drawingEnabled")
+      this.setDrawingEnabled(false);
   }
   toSettings() {
     const sett0 = this.effectAlways.map((x) => {
@@ -2988,14 +4370,21 @@ class Player {
       friction: this.friction,
       shape: this.shape,
       isPhysicsEnabled: this.isPhysicsEnabled,
-      isDead: this.dead,
+      isDrawingEnabled: this.isDrawingEnabled,
       effects: [
         ...sett0,
         ...sett1,
         ...sett2
       ],
       inventory: this.items.map((item) => ({ ...item })),
-      ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}
+      ...this.itemEffects.length ? { itemEffects: this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {},
+      ...this.temporalModifiers.length ? { temporalModifiers: structuredClone(this.temporalModifiers) } : {},
+      ...this.pendingActionModifiers.length ? { pendingActionModifiers: structuredClone(this.pendingActionModifiers) } : {},
+      ...this.collisionFilters.length ? { collisionFilters: structuredClone(this.collisionFilters) } : {},
+      ...this.collisionFilterLifetimes.length ? { collisionFilterLifetimes: structuredClone(this.collisionFilterLifetimes) } : {},
+      ...this.actorEligibilityConstraints.length ? { actorEligibilityConstraints: structuredClone(this.actorEligibilityConstraints) } : {},
+      ...this.actorEligibilityConstraintLifetimes.length ? { actorEligibilityConstraintLifetimes: structuredClone(this.actorEligibilityConstraintLifetimes) } : {},
+      ...this.numericThresholds.length ? { numericThresholds: structuredClone(this.numericThresholds) } : {}
     };
   }
   setTeam(team) {
@@ -3008,7 +4397,8 @@ class Player {
     this.bouncyness = bouncyness;
   }
   setIsDead(dead) {
-    this.dead = dead;
+    this.setPhysicsEnabled(!dead);
+    this.setDrawingEnabled(!dead);
     if (dead)
       this.setVel({ x: 0, y: 0 });
   }
@@ -3025,26 +4415,150 @@ class Player {
     return this.items.map((item) => ({ ...item }));
   }
   isDead() {
-    return this.dead;
+    return !this.isActive();
   }
   getEffects() {
     return [...this.effectAlways, ...this.effectCollision];
   }
+  getAlwaysEffects() {
+    return [...this.effectAlways];
+  }
+  onRound(event) {
+    if (!this.isActive())
+      return;
+    dispatchTriggeredEffects({ effects: this.effectRound, event, apply: (effect) => effect.apply(this) });
+  }
   addItemEffect(effect, source) {
     this.itemEffects.push({ ...effect, ...source ?? {}, typeValue: structuredClone(effect.typeValue) });
-    this.itemEffects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    this.itemEffects = orderInstalledEffects(this.itemEffects);
   }
   removeItemEffects(itemIds) {
     this.itemEffects = this.itemEffects.filter((effect) => !effect.itemId || !itemIds.has(effect.itemId));
   }
   advanceItemEffectsTurn() {
-    this.itemEffects = this.itemEffects.flatMap((effect) => {
-      const next = advanceRuntimeItemEffect(effect);
-      return next ? [{ ...next, ...effect.itemId ? { itemId: effect.itemId } : {}, ...effect.order === undefined ? {} : { order: effect.order } }] : [];
-    });
+    const due = [];
+    const next = [];
+    for (const effect of this.itemEffects) {
+      const result = advanceRuntimeItemEffectTurn(effect);
+      if (result.due)
+        due.push(effect);
+      else if (result.next)
+        next.push({ ...result.next, ...effect.itemId ? { itemId: effect.itemId } : {}, ...effect.order === undefined ? {} : { order: effect.order } });
+    }
+    this.itemEffects = next;
+    return due.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
   }
   getItemEffects() {
     return this.itemEffects.map((effect) => ({ ...effect, typeValue: structuredClone(effect.typeValue) }));
+  }
+  addTemporalModifier(modifier) {
+    validateTemporalModifier(modifier);
+    this.temporalModifiers.push(structuredClone(modifier));
+  }
+  getTemporalModifiers() {
+    return structuredClone(this.temporalModifiers);
+  }
+  advanceTemporalModifiersTurn() {
+    this.temporalModifiers = this.temporalModifiers.flatMap((modifier) => {
+      const next = advanceTemporalModifier(modifier);
+      return next ? [next] : [];
+    });
+  }
+  removeTemporalModifiers(sourceIds) {
+    this.temporalModifiers = this.temporalModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
+  }
+  addPendingActionModifier(modifier) {
+    validateActionModifier(modifier);
+    this.pendingActionModifiers.push(structuredClone(modifier));
+  }
+  getPendingActionModifiers() {
+    return structuredClone(this.pendingActionModifiers);
+  }
+  applyPendingActionModifiers(input) {
+    if (this.pendingActionModifiers.length === 0)
+      return input;
+    return applyActionModifiers(input, this.pendingActionModifiers);
+  }
+  consumePendingActionModifiers() {
+    this.pendingActionModifiers = consumeActionModifiers(this.pendingActionModifiers);
+  }
+  advancePendingActionModifierLifetimes() {
+    this.pendingActionModifiers = this.pendingActionModifiers.flatMap((modifier) => {
+      if (modifier.durationUnit === undefined)
+        return [modifier];
+      const next = advanceLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
+      return next ? [{ ...modifier, ...next }] : [];
+    });
+  }
+  removePendingActionModifiers(sourceIds) {
+    this.pendingActionModifiers = this.pendingActionModifiers.filter((modifier) => !modifier.sourceId || !sourceIds.has(modifier.sourceId));
+  }
+  addCollisionFilter(filter, lifetime) {
+    validateCollisionFilter(filter);
+    validateCollisionFilterLifetime(lifetime);
+    if (lifetime.filterId !== filter.id)
+      throw new Error("Collision filter lifetime must target its filter");
+    this.collisionFilters = [...this.collisionFilters.filter((existing) => existing.id !== filter.id), structuredClone(filter)].sort(compareCollisionFilters);
+    this.collisionFilterLifetimes = [...this.collisionFilterLifetimes.filter((existing) => existing.filterId !== filter.id), structuredClone(lifetime)].sort(compareCollisionFilterLifetimes);
+  }
+  getCollisionFilters() {
+    return structuredClone(this.collisionFilters);
+  }
+  getCollisionFilterLifetimes() {
+    return structuredClone(this.collisionFilterLifetimes);
+  }
+  advanceCollisionFilterLifetimes() {
+    const active = [];
+    const activeIds = new Set;
+    for (const lifetime of this.collisionFilterLifetimes) {
+      const next = advanceCollisionFilterLifetime(lifetime);
+      if (next) {
+        active.push(next);
+        activeIds.add(lifetime.filterId);
+      }
+    }
+    this.collisionFilterLifetimes = active.sort(compareCollisionFilterLifetimes);
+    this.collisionFilters = this.collisionFilters.filter((filter) => activeIds.has(filter.id));
+  }
+  removeCollisionFilters(sourceIds) {
+    const removed = new Set(this.collisionFilters.filter((filter) => filter.sourceId && sourceIds.has(filter.sourceId)).map((filter) => filter.id));
+    this.collisionFilters = this.collisionFilters.filter((filter) => !removed.has(filter.id));
+    this.collisionFilterLifetimes = this.collisionFilterLifetimes.filter((lifetime) => !removed.has(lifetime.filterId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)));
+  }
+  addActorEligibilityConstraint(constraint, lifetime) {
+    validateActorEligibilityConstraint(constraint);
+    validateActorEligibilityConstraintLifetime(lifetime);
+    if (lifetime.constraintId !== constraint.id)
+      throw new Error("Actor eligibility lifetime must target its constraint");
+    this.actorEligibilityConstraints = [...this.actorEligibilityConstraints.filter((existing) => existing.id !== constraint.id), structuredClone(constraint)].sort(compareActorConstraints);
+    this.actorEligibilityConstraintLifetimes = [...this.actorEligibilityConstraintLifetimes.filter((existing) => existing.constraintId !== constraint.id), structuredClone(lifetime)].sort(compareActorLifetimes);
+  }
+  getActorEligibilityConstraints() {
+    return structuredClone(this.actorEligibilityConstraints);
+  }
+  getActorEligibilityConstraintLifetimes() {
+    return structuredClone(this.actorEligibilityConstraintLifetimes);
+  }
+  advanceActorEligibilityConstraintLifetimes() {
+    const active = [];
+    const activeIds = new Set;
+    for (const lifetime of this.actorEligibilityConstraintLifetimes) {
+      const next = advanceActorEligibilityConstraintLifetime(lifetime);
+      if (next) {
+        active.push(next);
+        activeIds.add(lifetime.constraintId);
+      }
+    }
+    this.actorEligibilityConstraintLifetimes = active.sort(compareActorLifetimes);
+    this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter((constraint) => activeIds.has(constraint.id));
+  }
+  removeActorEligibilityConstraints(sourceIds) {
+    const removed = new Set(this.actorEligibilityConstraints.filter((constraint) => constraint.sourceId && sourceIds.has(constraint.sourceId)).map((constraint) => constraint.id));
+    this.actorEligibilityConstraints = this.actorEligibilityConstraints.filter((constraint) => !removed.has(constraint.id));
+    this.actorEligibilityConstraintLifetimes = this.actorEligibilityConstraintLifetimes.filter((lifetime) => !removed.has(lifetime.constraintId) && (!lifetime.sourceId || !sourceIds.has(lifetime.sourceId)));
+  }
+  isActorEligible() {
+    return isActorEligible(this.actorEligibilityConstraints);
   }
   addEffect(trigger, effect) {
     switch (trigger) {
@@ -3061,13 +4575,20 @@ class Player {
         console.error("TODO", trigger);
     }
   }
-  setHPAndDeath(hp) {
-    this.hp = hp;
-    if (hp <= 0)
-      this.setIsDead(true);
-  }
 }
-function isVector2(value) {
+function compareCollisionFilters(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareCollisionFilterLifetimes(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareActorConstraints(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function compareActorLifetimes(first, second) {
+  return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
+}
+function isVector(value) {
   return typeof value === "object" && value !== null && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number";
 }
 
@@ -3194,12 +4715,12 @@ var DEFAULT_ITEM_ECONOMY = {
   mapPickups: []
 };
 function validateItemEconomySettings(settings) {
-  if (!isRecord2(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
+  if (!isRecord3(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
     throw new Error("Item economy requires fixed loadouts and map pickups arrays");
   }
   const teams = new Set;
   for (const loadout of settings.fixedLoadouts) {
-    if (!isRecord2(loadout))
+    if (!isRecord3(loadout))
       throw new Error("Item loadouts require a non-negative team and items array");
     const team = loadout.team;
     const items = loadout.items;
@@ -3210,7 +4731,7 @@ function validateItemEconomySettings(settings) {
       throw new Error("Item economy allows only one loadout per team");
     teams.add(team);
     for (const item of items) {
-      if (!isRecord2(item))
+      if (!isRecord3(item))
         throw new Error("Fixed loadout items require an id and positive use count");
       const itemId = item.itemId;
       const uses = item.uses;
@@ -3223,7 +4744,7 @@ function validateItemEconomySettings(settings) {
     validateItemPickup(pickup);
   if (settings.randomDraw !== undefined) {
     const draw = settings.randomDraw;
-    if (!isRecord2(draw))
+    if (!isRecord3(draw))
       throw new Error("Seeded item draws require a safe seed, non-empty item pool, and positive draws per turn");
     const seed = draw.seed;
     const itemIds = draw.itemIds;
@@ -3234,7 +4755,7 @@ function validateItemEconomySettings(settings) {
   }
   if (settings.mysteryBox !== undefined) {
     const box = settings.mysteryBox;
-    if (!isRecord2(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
+    if (!isRecord3(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
       throw new Error("Mystery box rewards require a non-empty candidate pool");
     }
     if (box.allowMysteryBoxReward !== undefined && typeof box.allowMysteryBoxReward !== "boolean") {
@@ -3242,7 +4763,7 @@ function validateItemEconomySettings(settings) {
     }
   }
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -3266,7 +4787,7 @@ class AiTurnEmitter {
     if (decision.itemUse) {
       const { actorId, itemId, target } = decision.itemUse;
       const actor = handler.getEntityManager().getEntityById(actorId);
-      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team)) {
+      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId)) {
         targetEmitter.sendItemUse?.(actorId, itemId, target);
         actionSubmitted = true;
       }
@@ -3274,7 +4795,7 @@ class AiTurnEmitter {
     if (decision.shot) {
       const { actorId, angle, power } = decision.shot;
       const actor = handler.getEntityManager().getEntityById(actorId);
-      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && isValidInput({ actorId, angle, power })) {
+      if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId) && isValidInput({ actorId, angle, power })) {
         targetEmitter.sendShot(actorId, angle, power);
         actionSubmitted = true;
       }
@@ -3285,7 +4806,7 @@ class AiTurnEmitter {
 
 class EasyAi {
   computeTurn(handler, aiSettings) {
-    const aiActors = handler.getEntityManager().getEntities().filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = handler.getEntityManager().getEntities().filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     if (aiActors.length === 0)
       return;
     const random = new SeededRandom(aiSettings.seed + handler.getTurnNumber() * 31);
@@ -3307,7 +4828,7 @@ class HardAi {
   computeTurn(handler, aiSettings) {
     const random = new SeededRandom(aiSettings.seed);
     const entities = handler.getEntityManager().getEntities();
-    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
@@ -3349,10 +4870,10 @@ class HardAi {
             const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power);
             for (const pSnapshot of sim.finalState) {
               if (pSnapshot.team.includes(aiSettings.team)) {
-                if (pSnapshot.isDead)
+                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
                   score -= 1e4;
               } else {
-                if (pSnapshot.isDead)
+                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
                   score += 5000;
               }
             }
@@ -3392,7 +4913,7 @@ class HardAi {
 class MediumAi {
   computeTurn(handler, aiSettings) {
     const entities = handler.getEntityManager().getEntities();
-    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+    const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
@@ -3445,11 +4966,11 @@ class MediumAi {
   }
 }
 
-function isRecord3(value) {
+function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function validateAiSettings(settings) {
-  if (!isRecord3(settings)) {
+  if (!isRecord4(settings)) {
     throw new Error("AI settings must be an object");
   }
   if (settings.difficulty !== "easy" && settings.difficulty !== "medium" && settings.difficulty !== "hard") {
@@ -3462,7 +4983,7 @@ function validateAiSettings(settings) {
     throw new Error("AI team must be a non-negative integer");
   }
   if (settings.decisionLimits !== undefined) {
-    if (!isRecord3(settings.decisionLimits)) {
+    if (!isRecord4(settings.decisionLimits)) {
       throw new Error("AI decision limits must be an object");
     }
     const { maxSimulations, maxAngleSamples, maxForceSamples } = settings.decisionLimits;
@@ -3558,7 +5079,7 @@ class AiBattleSystem {
     const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
     if (!submitted) {
       console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
-      const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(team));
+      const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(team) && this.handler.isActorEligibleForAction(entity.getId()));
       if (actor)
         this.targetEmitter.sendShot(actor.getId(), 0, 4);
     }
@@ -3606,7 +5127,7 @@ class AiOpponentSystem {
       return;
     if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
       return;
-    const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(this.settings.team));
+    const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler.isActorEligibleForAction(entity.getId()));
     if (actor)
       this.targetEmitter.sendShot(actor.getId(), 0, 4);
   }
@@ -3872,8 +5393,9 @@ class PhysicsSystem {
     const stepSize = CCD_MAX_STEP_SIZE;
     const substeps = maxDisplacement > stepSize ? Math.min(Math.ceil(maxDisplacement / stepSize), MAX_CCD_SUBSTEPS) : 1;
     const contactedPairsThisTick = new Set;
+    const filterSnapshot = new Map(ctx.entities.getEntities().map((entity) => [entity, this.getCollisionFilters(entity)]));
     if (substeps <= 1) {
-      this.resolveAllCollisions(ctx, contactedPairsThisTick);
+      this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
     } else {
       for (const e of activeEntities) {
         const vel = e.getVel();
@@ -3895,7 +5417,7 @@ class PhysicsSystem {
             y: pos.y + vel.y * subDt
           });
         }
-        this.resolveAllCollisions(ctx, contactedPairsThisTick);
+        this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
       }
     }
     let totalMovement = 0;
@@ -3909,9 +5431,9 @@ class PhysicsSystem {
         totalMovement += speed;
       }
     });
-    this.activeContactPairs = this.collectCurrentContactPairs(ctx);
+    this.activeContactPairs = this.collectCurrentContactPairs(ctx, filterSnapshot);
   }
-  resolveAllCollisions(ctx, contactedPairsThisTick = new Set) {
+  resolveAllCollisions(ctx, contactedPairsThisTick = new Set, filterSnapshot = new Map) {
     const { entities, structures } = ctx;
     const enitityArr = entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(structures));
@@ -3921,7 +5443,7 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          if (this.strategy.checkCollision(entityA, entityB)) {
+          if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot) && this.strategy.checkCollision(entityA, entityB)) {
             this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
           }
         }
@@ -3931,7 +5453,7 @@ class PhysicsSystem {
             continue;
           if (this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          if (this.strategy.checkCollision(entityA, structureB)) {
+          if (this.isStructurePairAllowed(entityA, filterSnapshot) && this.strategy.checkCollision(entityA, structureB)) {
             this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
           }
         }
@@ -3941,13 +5463,15 @@ class PhysicsSystem {
         const entityA = enitityArr[i];
         for (let j = i + 1;j < enitityArr.length; j++) {
           const entityB = enitityArr[j];
-          totalOverlap += this.getOverlapDistance(entityA, entityB);
+          if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot))
+            totalOverlap += this.getOverlapDistance(entityA, entityB);
         }
         for (let j = 0;j < structures.length; j++) {
           const structureB = structures[j];
           if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries))
             continue;
-          totalOverlap += this.getOverlapDistance(entityA, structureB);
+          if (this.isStructurePairAllowed(entityA, filterSnapshot))
+            totalOverlap += this.getOverlapDistance(entityA, structureB);
         }
       }
       if (totalOverlap <= 0.0001) {
@@ -4020,11 +5544,11 @@ class PhysicsSystem {
       }
     } else {
       contactedPairs.add(pairKey);
-      this.onCollision?.(entityA, entityB);
       this.strategy.handleCollision(entityA, entityB);
+      this.onCollision?.(entityA, entityB);
     }
   }
-  collectCurrentContactPairs(ctx) {
+  collectCurrentContactPairs(ctx, filterSnapshot) {
     const contacts = new Set;
     const entities = ctx.entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(ctx.structures));
@@ -4032,13 +5556,13 @@ class PhysicsSystem {
       const entity = entities[i];
       for (let j = i + 1;j < entities.length; j++) {
         const other = entities[j];
-        if (this.strategy.checkCollision(entity, other))
+        if (this.isEntityPairAllowed(entity, other, filterSnapshot) && this.strategy.checkCollision(entity, other))
           contacts.add(this.getPairKey(entity, other));
       }
       for (const structure of ctx.structures) {
         if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries))
           continue;
-        if (this.strategy.checkCollision(entity, structure))
+        if (this.isStructurePairAllowed(entity, filterSnapshot) && this.strategy.checkCollision(entity, structure))
           contacts.add(this.getPairKey(entity, structure));
       }
     }
@@ -4107,6 +5631,16 @@ class PhysicsSystem {
       return true;
     return containmentBoundaries.has(structureB);
   }
+  isEntityPairAllowed(first, second, filterSnapshot) {
+    return isCollisionAllowed("entity", filterSnapshot?.get(first) ?? this.getCollisionFilters(first), "entity", filterSnapshot?.get(second) ?? this.getCollisionFilters(second));
+  }
+  isStructurePairAllowed(entity, filterSnapshot) {
+    return isCollisionAllowed("entity", filterSnapshot?.get(entity) ?? this.getCollisionFilters(entity), "structure", []);
+  }
+  getCollisionFilters(entity) {
+    const candidate = entity;
+    return typeof candidate.getCollisionFilters === "function" ? candidate.getCollisionFilters() : [];
+  }
   constrainToMap(entity, _ctx) {
     const pos = entity.getPos();
     const radius = entity.getBounds().x;
@@ -4125,6 +5659,88 @@ class PhysicsSystem {
       entity.setPos({ x: bounds.maxY - radius, y: pos.y });
       entity.setVel({ x: 0, y: entity.getVel().y });
     }
+  }
+}
+
+class MovementSystem {
+  systemId = "core.movement";
+  preTick(ctx, dt) {
+    for (const entity of ctx.entities.getEntities()) {
+      if (entity.isDead() || !entity.physicsEnabled())
+        continue;
+      const settings = entity.toSettings();
+      let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
+      const movementEffects = entity.getAlwaysEffects().filter((effect) => effect.getType() === "EffectType.Movement" /* Movement */);
+      if (movementEffects.length === 0)
+        continue;
+      dispatchTriggeredEffects({ effects: movementEffects, event: createTickEvent(String(entity.getId()), dt), apply: (effect) => {
+        effect.apply(entity, { x: movement.velocity.x, y: movement.velocity.y, deltaTime: dt, rotation: settings.rotation, drift: ctx.drift ?? 0, stopThreshold: ctx.physics.getStopThreshold() });
+        movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
+      } });
+    }
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return MOVEMENT_COMMAND_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (effect.type === MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID) {
+      if (target.type !== "position")
+        throw new Error("Movement force field requires a position target");
+      const payload2 = effect.typeValue;
+      if (payload2.mode !== "attract" && payload2.mode !== "repel" || typeof payload2.force !== "number" || !Number.isFinite(payload2.force) || payload2.force < 0 || typeof payload2.range !== "number" || !Number.isFinite(payload2.range) || payload2.range <= 0)
+        throw new Error("Movement force field payload is invalid");
+      for (const entity of _ctx.entities.getEntities()) {
+        if (entity.isDead() || !entity.physicsEnabled())
+          continue;
+        entity.setVel(applyRadialVelocityDelta(entity.getVel(), target.position, entity.getPos(), { mode: payload2.mode, force: payload2.force, range: payload2.range }));
+      }
+      return;
+    }
+    if (effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID) {
+      if (target.type !== "entity")
+        throw new Error("Movement entity force requires an entity target");
+      if (!target.entity.physicsEnabled())
+        throw new Error(`Movement target '${target.entity.getId()}' is inactive`);
+      const payload2 = effect.typeValue;
+      const origin = payload2.origin;
+      if (!origin || typeof origin.x !== "number" || !Number.isFinite(origin.x) || typeof origin.y !== "number" || !Number.isFinite(origin.y) || payload2.mode !== "attract" && payload2.mode !== "repel" || typeof payload2.force !== "number" || !Number.isFinite(payload2.force) || payload2.force < 0 || typeof payload2.range !== "number" || !Number.isFinite(payload2.range) || payload2.range <= 0)
+        throw new Error("Movement entity force payload is invalid");
+      target.entity.setVel(applyRadialVelocityDelta(target.entity.getVel(), { x: origin.x, y: origin.y }, target.entity.getPos(), { mode: payload2.mode, force: payload2.force, range: payload2.range }));
+      return;
+    }
+    if (target.type !== "entity")
+      throw new Error("Movement effect requires an entity target");
+    if (!target.entity.physicsEnabled())
+      throw new Error(`Movement target '${target.entity.getId()}' is inactive`);
+    const payload = effect.typeValue;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      throw new Error("Movement command requires an object payload");
+    const value = payload;
+    if (effect.type === MOVEMENT_SET_VELOCITY_EFFECT_ID) {
+      if (typeof value.x !== "number" || !Number.isFinite(value.x) || typeof value.y !== "number" || !Number.isFinite(value.y) || Object.keys(value).length !== 2)
+        throw new Error("Movement set-velocity payload is invalid");
+      target.entity.setVel({ x: value.x, y: value.y });
+      return;
+    }
+    if (effect.type === MOVEMENT_ADD_VELOCITY_EFFECT_ID) {
+      if (typeof value.x !== "number" || !Number.isFinite(value.x) || typeof value.y !== "number" || !Number.isFinite(value.y) || Object.keys(value).length !== 2)
+        throw new Error("Movement add-velocity payload is invalid");
+      const velocity = target.entity.getVel();
+      target.entity.setVel({ x: velocity.x + value.x, y: velocity.y + value.y });
+      return;
+    }
+    if (effect.type === MOVEMENT_SCALE_SPEED_EFFECT_ID) {
+      if (typeof value.factor !== "number" || !Number.isFinite(value.factor) || value.factor < 0 || Object.keys(value).length !== 1)
+        throw new Error("Movement scale-speed payload is invalid");
+      const velocity = target.entity.getVel();
+      target.entity.setVel({ x: velocity.x * value.factor, y: velocity.y * value.factor });
+      return;
+    }
+    throw new Error(`Unknown movement effect '${effect.type}'`);
+  }
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
   }
 }
 
@@ -4330,7 +5946,7 @@ var KoreInputAction;
   KoreInputAction2["ItemUse"] = "itemUse";
 })(KoreInputAction ||= {});
 function validateKoreInputMessage(value) {
-  if (!isRecord4(value) || typeof value.command !== "string" || !isRecord4(value.payload))
+  if (!isRecord5(value) || typeof value.command !== "string" || !isRecord5(value.payload))
     throw new Error("Invalid KORE input command");
   const payload = value.payload;
   if (value.command === "kore.input.action-pressed" /* ActionPressed */) {
@@ -4355,7 +5971,7 @@ function validateKoreInputMessage(value) {
   }
   throw new Error(`Unknown KORE input command '${value.command}'`);
 }
-function isRecord4(value) {
+function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isJsonValue(value) {
@@ -4365,7 +5981,7 @@ function isJsonValue(value) {
     return Number.isFinite(value);
   if (Array.isArray(value))
     return value.every(isJsonValue);
-  return isRecord4(value) && Object.values(value).every(isJsonValue);
+  return isRecord5(value) && Object.values(value).every(isJsonValue);
 }
 
 class UiSystem {
@@ -4434,7 +6050,7 @@ class UiSystem {
     }
     if (this.aimAngle !== null && this.chargePower !== null && this.selectedActorId !== null) {
       const actor2 = ctx.entities.getEntityById(this.selectedActorId);
-      if (actor2 && !actor2.isDead() && (actor2.getTeam().length === 0 || actor2.getTeam().includes(ctx.activeTeam))) {
+      if (actor2 && !actor2.isDead() && actor2.isActorEligible() && (actor2.getTeam().length === 0 || actor2.getTeam().includes(ctx.activeTeam))) {
         const input2 = { actorId: this.selectedActorId, angle: this.aimAngle, power: this.chargePower };
         if (!isValidInput(input2)) {
           this.clearAimAndCharge();
@@ -4452,7 +6068,7 @@ class UiSystem {
     if (!this.start)
       return;
     const actor = ctx.entities.getEntityAt(this.start.x, this.start.y);
-    if (!actor || actor.isDead() || actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam)) {
+    if (!actor || actor.isDead() || !actor.isActorEligible() || actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam)) {
       this.clearInput();
       return;
     }
@@ -4539,13 +6155,16 @@ class EnvironmentalSystem {
         this.state.cyclePhase[index] = phase;
         active = mechanic.phases[phase].enabled;
       }
+      const changed = this.state.active[index] !== active;
       this.state.active[index] = active;
       const structure = ctx.structures[this.structureIndexes[index]];
       if (!structure)
         continue;
       if (mechanic.type === "moving-structure" && "getPos" in structure && "setPos" in structure)
         this.move(structure, mechanic);
-      if ("setPhysicsEnabled" in structure)
+      if (changed && "setPhysicsEnabled" in structure)
+        dispatchTriggerActivation({ effectId: `environment.${mechanic.id}`, event: createEnvironmentActivationEvent("environment", index, mechanic.id, index, this.state.tick, active), apply: (event) => structure.setPhysicsEnabled(event.type === "environment.activation" ? event.payload.active : active) });
+      else if ("setPhysicsEnabled" in structure)
         structure.setPhysicsEnabled(active);
     }
   }
@@ -4580,13 +6199,189 @@ function isBoolean(value) {
   return typeof value === "boolean";
 }
 
+class CounterSystem {
+  systemId = "core.counter";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return COUNTER_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(ctx, effect, target) {
+    if (target.type !== "counter")
+      throw new Error("Counter effect requires a counter target");
+    this.apply(ctx, effect);
+  }
+  apply(ctx, effect) {
+    validateCounterEffectSettings(effect);
+    const counter = ctx.counters.find((candidate) => candidate.id === effect.target.counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${effect.target.counterId}'`);
+    const nextValue = effect.type === "counter.set" ? effect.typeValue.value : effect.type === "counter.add" ? counter.value + effect.typeValue.amount : 0;
+    if (!Number.isFinite(nextValue))
+      throw new Error("Counter mutation produced a non-finite value");
+    counter.value = nextValue;
+  }
+  applyEffects(ctx, effects) {
+    effects.forEach((effect) => this.apply(ctx, effect));
+  }
+  applyTriggered(ctx, bindings, event) {
+    const queue = new EngineTriggerActivationQueue(Math.max(1, bindings.length));
+    bindings.forEach((binding, index) => {
+      if (counterTriggerMatches(binding, event))
+        queue.enqueue(createTriggerActivation({ effectId: `counter-binding-${index}`, event }));
+    });
+    queue.process((activation) => {
+      const index = Number(activation.effectId.slice("counter-binding-".length));
+      const binding = bindings[index];
+      if (!binding)
+        throw new Error("Counter trigger activation binding is out of range");
+      this.apply(ctx, binding.effect);
+    });
+  }
+  read(ctx, counterId) {
+    const counter = ctx.counters.find((candidate) => candidate.id === counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${counterId}'`);
+    return { ...counter };
+  }
+  normalize(ctx) {
+    const counters = canonicalizeCounterStates(ctx.counters);
+    ctx.counters.splice(0, ctx.counters.length, ...counters);
+  }
+}
+
+class TransformSystem {
+  systemId = "core.transform";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return effectId === TRANSFORM_SET_POSITION_EFFECT_ID || effectId === TRANSFORM_SET_ROTATION_EFFECT_ID || effectId === TRANSFORM_SWAP_POSITION_EFFECT_ID;
+  }
+  applyEffect(_ctx, effect, target) {
+    if (!effect.typeValue || typeof effect.typeValue !== "object" || Array.isArray(effect.typeValue))
+      throw new Error("Transform command requires an object payload");
+    if (effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID) {
+      if (target.type !== "entity")
+        throw new Error("Transform swap position requires an entity target");
+      const value2 = effect.typeValue;
+      if (Object.keys(value2).length !== 1 || typeof value2.otherEntityId !== "string" || value2.otherEntityId.length === 0)
+        throw new Error("Transform swap position payload is invalid");
+      if (value2.otherEntityId === String(target.entity.getId()))
+        throw new Error("Transform swap position requires distinct entities");
+      const other = _ctx.entities.getEntityById(value2.otherEntityId);
+      if (!other)
+        throw new Error(`Unknown transform swap entity '${value2.otherEntityId}'`);
+      const firstPosition = target.entity.getPos();
+      const secondPosition = other.getPos();
+      if (!finitePosition(firstPosition) || !finitePosition(secondPosition))
+        throw new Error("Transform swap positions must be finite");
+      target.entity.setPos(secondPosition);
+      other.setPos(firstPosition);
+      return;
+    }
+    if (effect.type === TRANSFORM_SET_POSITION_EFFECT_ID) {
+      const value2 = effect.typeValue;
+      if (typeof value2.x !== "number" || !Number.isFinite(value2.x) || typeof value2.y !== "number" || !Number.isFinite(value2.y) || Object.keys(value2).some((key) => key !== "x" && key !== "y") || !Object.keys(value2).includes("x") || !Object.keys(value2).includes("y"))
+        throw new Error("Transform position payload is invalid");
+      const position = target.type === "structure" && target.positionOverride ? target.positionOverride : { x: value2.x, y: value2.y };
+      if (target.type === "entity")
+        target.entity.setPos(position);
+      else if (target.type === "structure")
+        target.structure.setPos(position);
+      else
+        throw new Error("Transform position requires an entity or structure target");
+      return;
+    }
+    if (target.type !== "entity")
+      throw new Error("Transform rotation requires an entity target");
+    const value = effect.typeValue;
+    if (typeof value.rotation !== "number" || !Number.isFinite(value.rotation) || Object.keys(value).length !== 1)
+      throw new Error("Transform rotation payload is invalid");
+    target.entity.setRotation(value.rotation);
+  }
+}
+function finitePosition(value) {
+  return Number.isFinite(value.x) && Number.isFinite(value.y);
+}
+
+class ParticipationSystem {
+  systemId = "core.participation";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return PARTICIPATION_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (target.type !== "entity" && target.type !== "structure")
+      throw new Error("Participation effect requires an entity or structure target");
+    const payload = effect.typeValue;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      throw new Error("Participation payload must be an object");
+    const value = payload;
+    if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
+      throw new Error("Participation payload is invalid");
+    if (effect.type === PARTICIPATION_SET_PHYSICS_EFFECT_ID)
+      target.type === "entity" ? target.entity.setPhysicsEnabled(value.enabled) : target.structure.setPhysicsEnabled(value.enabled);
+    else if (effect.type === PARTICIPATION_SET_DRAWING_EFFECT_ID)
+      target.type === "entity" ? target.entity.setDrawingEnabled(value.enabled) : target.structure.setDrawingEnabled(value.enabled);
+    else
+      throw new Error(`Unknown participation effect '${effect.type}'`);
+  }
+}
+
+class NumericSystem {
+  systemId = "core.numeric";
+  toSettings() {
+    return { systemId: this.systemId, schemaVersion: 1, state: {} };
+  }
+  ticker(_ctx, _dt, _friction) {}
+  acceptsEffect(effectId) {
+    return NUMERIC_EFFECT_IDS.includes(effectId);
+  }
+  applyEffect(_ctx, effect, target) {
+    if (target.type !== "numeric")
+      throw new Error("Numeric effect requires a numeric target");
+    validateNumericEffectSettings(effect);
+    const owner = target.entity;
+    const previous = owner.getNumericValue(target.stateId);
+    const next = effect.type === NUMERIC_RESET_EFFECT_ID ? owner.getNumericResetValue(target.stateId) : effect.type === NUMERIC_SET_EFFECT_ID ? effect.typeValue.value : effect.type === NUMERIC_ADD_EFFECT_ID ? previous + effect.typeValue.amount : undefined;
+    if (next === undefined)
+      throw new Error(`Numeric reset requires resetValue for '${target.stateId}'`);
+    if (!Number.isFinite(next))
+      throw new Error("Numeric mutation produced a non-finite value");
+    owner.setNumericValue(target.stateId, next);
+    return owner.getNumericThresholds(target.stateId).flatMap((binding) => binding.thresholds).filter((threshold) => crossedThreshold(previous, next, threshold)).flatMap((threshold) => threshold.effects.map((effect2) => structuredClone(effect2)));
+  }
+}
+function crossedThreshold(previous, current, threshold) {
+  return !matches(previous, threshold) && matches(current, threshold);
+}
+function matches(value, threshold) {
+  switch (threshold.comparator) {
+    case "below":
+      return value < threshold.value;
+    case "below-or-equal":
+      return value <= threshold.value;
+    case "above":
+      return value > threshold.value;
+    case "above-or-equal":
+      return value >= threshold.value;
+  }
+}
+
 var ENVIRONMENT_SCHEMA_VERSION = 1;
 function validateEnvironmentalMechanics(value) {
   if (!Array.isArray(value))
     throw new Error("Invalid environmental mechanics");
   const ids = new Set;
   for (const mechanic of value) {
-    if (!isRecord5(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
+    if (!isRecord6(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
       throw new Error("Invalid environmental mechanic identity");
     ids.add(mechanic.id);
     if (!isBoundary(mechanic.structure) || !Array.isArray(mechanic.effects ?? []))
@@ -4605,11 +6400,11 @@ function validateEnvironmentalMechanics(value) {
           throw new Error("Invalid triggered zone timing");
         break;
       case "moving-structure":
-        if (!isVector3(mechanic.to) || !positiveInteger(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
+        if (!isVector2(mechanic.to) || !positiveInteger(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
           throw new Error("Invalid moving structure path");
         break;
       case "environmental-cycle":
-        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord5(phase) || !positiveInteger(phase.durationTicks) || typeof phase.enabled !== "boolean"))
+        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord6(phase) || !positiveInteger(phase.durationTicks) || typeof phase.enabled !== "boolean"))
           throw new Error("Invalid environmental cycle");
         break;
       default:
@@ -4617,29 +6412,29 @@ function validateEnvironmentalMechanics(value) {
     }
   }
 }
-function isRecord5(value) {
+function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function finite(value) {
+function finite4(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
 function positiveInteger(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
-function isVector3(value) {
-  return isRecord5(value) && finite(value.x) && finite(value.y);
+function isVector2(value) {
+  return isRecord6(value) && finite4(value.x) && finite4(value.y);
 }
 function isZone(value) {
-  return isRecord5(value) && finite(value.x) && finite(value.y) && finite(value.r) && value.r > 0;
+  return isRecord6(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord5(value) || !finite(value.x) || !finite(value.y) || !Array.isArray(value.effects))
+  if (!isRecord6(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
-    return finite(value.r) && value.r > 0;
+    return finite4(value.r) && value.r > 0;
   if (value.type === 2 /* RECTANGLE */)
-    return finite(value.w) && finite(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && finite(value.x2) && finite(value.y2);
+    return finite4(value.w) && finite4(value.h) && value.w > 0 && value.h > 0;
+  return value.type === 1 /* LINE */ && finite4(value.x2) && finite4(value.y2);
 }
 
 function validateSystemSettings(value) {
@@ -4686,6 +6481,10 @@ function createSystemFromSettings(settings, restored = new Map) {
   validateSystemSettings(settings);
   const state = settings.state;
   switch (settings.systemId) {
+    case "core.movement":
+      if (Object.keys(state).length)
+        throw new Error("Malformed movement settings");
+      return new MovementSystem;
     case "core.playback": {
       const system = new PlaybackSystem;
       if (!Number.isSafeInteger(state.remainingFrames) || typeof state.syncPending !== "boolean" || typeof state.completionPending !== "boolean" || !(state.finalState === null || Array.isArray(state.finalState)))
@@ -4761,6 +6560,22 @@ function createSystemFromSettings(settings, restored = new Map) {
         throw new Error("Malformed environmental lifecycle state");
       return new EnvironmentalSystem(state.mechanics, lifecycle, state.structureIndexes);
     }
+    case "core.counter":
+      if (Object.keys(state).length)
+        throw new Error("Malformed counter settings");
+      return new CounterSystem;
+    case "core.transform":
+      if (Object.keys(state).length)
+        throw new Error("Malformed transform settings");
+      return new TransformSystem;
+    case "core.participation":
+      if (Object.keys(state).length)
+        throw new Error("Malformed participation settings");
+      return new ParticipationSystem;
+    case "core.numeric":
+      if (Object.keys(state).length)
+        throw new Error("Malformed numeric settings");
+      return new NumericSystem;
     default:
       throw new Error(`Unknown system ID '${settings.systemId}'`);
   }
@@ -4776,7 +6591,10 @@ function createPlayerStartPoints(team, players) {
 }
 var friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
 var defaultEffects = [{ trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }];
-var deadly = { trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], ...new EffectModifySetting({ typeValue: { operation: "set" /* Set */, key: "dead", value: true } }).toSettings() };
+var deadly = createCollisionCommandBinding(createEngineEffectComposition([
+  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+]));
 var IceMap = {
   schemaVersion: 1,
   screenResolution: { x, y },
@@ -4784,22 +6602,78 @@ var IceMap = {
   background: { type: "image", url: 2 /* slipStirkeMapIceJPG */ },
   drift: 0,
   mapBoundarys: [
-    { type: 2 /* RECTANGLE */, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
-    { type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] },
-    { type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: [...defaultEffects, deadly] }
+    { id: "ice.wall.left", type: 2 /* RECTANGLE */, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-left", type: 2 /* RECTANGLE */, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-right", type: 2 /* RECTANGLE */, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-left", type: 2 /* RECTANGLE */, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-right", type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.right", type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.center", type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.hazard.top-left", type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.top-right", type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-right", type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-left", type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-top", type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-bottom", type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] }
   ]
 };
 var iceMap_default = { createPlayerStartPoints, IceMap };
+
+class TriggerDefinitionCatalog {
+  definitions = new Map;
+  register(definition) {
+    validateTriggerDefinition(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate trigger definition '${definition.id}'`);
+    this.definitions.set(definition.id, structuredClone(definition));
+    return this;
+  }
+  get(id) {
+    const definition = this.definitions.get(id);
+    return definition === undefined ? undefined : structuredClone(definition);
+  }
+  require(id) {
+    const definition = this.get(id);
+    if (!definition)
+      throw new Error(`Unknown trigger definition '${id}'`);
+    return definition;
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
+  }
+  toSettings() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => structuredClone(definition));
+  }
+}
+function validateTriggerDefinition(value) {
+  const definition = record8(value, "Trigger definition");
+  exactKeys8(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  if (definition.schemaVersion !== 1)
+    throw new Error("Unsupported trigger definition schema version");
+  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid trigger definition ID");
+  if (isEngineComposition(definition.effect))
+    validateEngineEffectComposition(definition.effect);
+  else
+    validateEffectSettings(definition.effect);
+}
+function isEngineComposition(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
+}
+function record8(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys8(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
 
 var DEFAULT_DRIFT = 0;
 function validateDrift(drift) {
@@ -4812,22 +6686,25 @@ function validateFigureCounts(playerCount, figuresPerPlayer) {
   }
 }
 function validateGameSettings(settings) {
-  if (!isRecord6(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
+  if (!isRecord7(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
     throw new Error("Invalid game settings document");
-  if (!isVector4(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
+  if (!isVector3(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
     throw new Error("Invalid screen resolution");
-  if (!isRecord6(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
+  if (!isRecord7(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
     throw new Error("Invalid friction settings");
   validateDrift(settings.drift);
   validateFigureCounts(settings.playerCount, settings.figuresPerPlayer);
   if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam))
     throw new Error("Invalid team settings");
-  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord6(player) && isVector4(player.position) && isVector4(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
+  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord7(player) && isVector3(player.position) && isVector3(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
     throw new Error("Invalid player settings");
   if (!isBackground(settings.background))
     throw new Error("Invalid background settings");
   if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary2))
     throw new Error("Invalid map boundary settings");
+  const structureIds = settings.mapBoundarys.flatMap((boundary) => boundary.id === undefined ? [] : [boundary.id]);
+  if (new Set(structureIds).size !== structureIds.length)
+    throw new Error("Structure IDs must be unique");
   if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect))
     throw new Error("Invalid effect settings");
   if (!Array.isArray(settings.items))
@@ -4854,15 +6731,19 @@ function validateGameSettings(settings) {
     validateAiSettings(settings.ai);
   if (settings.environmentalMechanics !== undefined)
     validateEnvironmentalMechanics(settings.environmentalMechanics);
+  if (settings.triggerDefinitions !== undefined)
+    settings.triggerDefinitions.forEach(validateTriggerDefinition);
+  if (settings.counters !== undefined)
+    canonicalizeCounterStates(settings.counters);
 }
-function isRecord6(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector4(value) {
-  return isRecord6(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
+function isVector3(value) {
+  return isRecord7(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isBackground(value) {
-  if (!isRecord6(value))
+  if (!isRecord7(value))
     return false;
   if (value.type === "color")
     return typeof value.color === "string";
@@ -4881,12 +6762,30 @@ function isTeam(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 function isEffect(value) {
-  const types = ["EffectType.Physics" /* Physics */, "EffectType.Damage" /* Damage */, "EffectType.Movement" /* Movement */, "EffectType.Multi" /* Multi */, "EffectType.ModifyMass" /* ModifyMass */, "EffectType.ModifySize" /* ModifySize */, "EffectType.Position" /* Position */, "EffectType.Velocity" /* Velocity */, "EffectType.Team" /* Team */, "EffectType.ModifySetting" /* ModifySetting */];
-  const triggers = ["EffectTrigger.Always" /* Always */, "EffectTrigger.Collision" /* Collision */, "EffectTrigger.Round" /* Round */];
-  return isRecord6(value) && types.includes(value.type) && triggers.includes(value.trigger);
+  try {
+    validateFullEffectSettings(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 function isBoundary2(value) {
-  if (!isRecord6(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
+  if (!isRecord7(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
+    return false;
+  if (value.collisionCommands !== undefined) {
+    if (!Array.isArray(value.collisionCommands))
+      return false;
+    try {
+      value.collisionCommands.forEach(validateCollisionCommandBinding);
+    } catch {
+      return false;
+    }
+  }
+  if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))
+    return false;
+  if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
+    return false;
+  if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean")
     return false;
   if (value.role !== undefined && !isStructureCollisionRole(value.role))
     return false;
@@ -4976,6 +6875,16 @@ function arrangeInGrid(players, rect, padding = 0) {
   });
 }
 
+function deriveStructureId(settings) {
+  if (settings.id !== undefined)
+    return settings.id;
+  const canonical = settings.type === 0 ? [settings.type, settings.x, settings.y, settings.r, settings.role ?? ""].join("|") : settings.type === 2 ? [settings.type, settings.x, settings.y, settings.w, settings.h, settings.role ?? ""].join("|") : [settings.type, settings.x, settings.y, settings.x2, settings.y2].join("|");
+  let hash = 2166136261;
+  for (let index = 0;index < canonical.length; index++)
+    hash = Math.imul(hash ^ canonical.charCodeAt(index), 16777619) >>> 0;
+  return `structure-${hash.toString(16).padStart(8, "0")}`;
+}
+
 class StructureCircle {
   position;
   r;
@@ -4985,12 +6894,16 @@ class StructureCircle {
   bounce;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   friction;
   collisionEffects = [];
   alwaysEffects = [];
   roundEffects = [];
   collisionRole;
-  constructor(x2, y2, r, color, effects, role) {
+  collisionCommands;
+  constructor(x2, y2, r, color, effects, role, id, physicsEnabled, drawingEnabled, collisionCommands = []) {
     this.position = { x: x2, y: y2 };
     this.r = r;
     this.shape = 0 /* CIRCLE */;
@@ -4998,16 +6911,21 @@ class StructureCircle {
     this.bounce = Infinity;
     this.vel = { x: 0, y: 0 };
     this.collisionRole = role;
+    this.id = id ?? deriveStructureId({ type: 0 /* CIRCLE */, x: x2, y: y2, r, color, effects, role });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
+    this.collisionCommands = structuredClone(collisionCommands);
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
-          this.collisionEffects.push(new MetaEffect(eff));
+          this.collisionEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Round" /* Round */:
-          this.roundEffects.push(new MetaEffect(eff));
+          this.roundEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Always" /* Always */:
-          this.alwaysEffects.push(new MetaEffect(eff));
+          this.alwaysEffects.push(createRuntimeEffect(eff));
           continue;
         default:
           console.trace("this is not implemted yet");
@@ -5017,7 +6935,7 @@ class StructureCircle {
     this.toSettings();
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.push();
     ctx.setFillColor(this.color);
@@ -5027,9 +6945,6 @@ class StructureCircle {
   }
   tick(_dt) {}
   setPos(pos) {
-    if (this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9 || (this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)) {
-      console.error("STRUCTURE: Position weicht massiv ab!");
-    }
     this.position.x = pos.x;
     this.position.y = pos.y;
   }
@@ -5065,7 +6980,7 @@ class StructureCircle {
     return this.bounce;
   }
   onCollision({ entity }) {
-    this.collisionEffects.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.circle", "entity", "structure.circle", "structure.circle:collision"), apply: (effect) => effect.apply(entity) });
   }
   getColor() {
     return this.color;
@@ -5075,6 +6990,35 @@ class StructureCircle {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
+  }
+  getCollisionCommands() {
+    return this.collisionCommands;
   }
   setColor(color) {
     this.color = color;
@@ -5100,6 +7044,13 @@ class StructureCircle {
     };
     if (this.collisionRole !== undefined)
       out.role = this.collisionRole;
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
+    if (this.collisionCommands.length > 0)
+      out.collisionCommands = structuredClone(this.collisionCommands);
     return out;
   }
   getType() {
@@ -5122,9 +7073,12 @@ class StructureLine {
   color;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   effects = [];
   friction;
-  constructor(x2, y2, x22, y22, color, effects = []) {
+  constructor(x2, y2, x22, y22, color, effects = [], id, physicsEnabled, drawingEnabled, _collisionCommands = []) {
     if (!Number.isFinite(x2) || !Number.isFinite(y2) || !Number.isFinite(x22) || !Number.isFinite(y22)) {
       throw new Error("Line structures must have finite coordinates");
     }
@@ -5138,6 +7092,10 @@ class StructureLine {
     this.shape = 1 /* LINE */;
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
+    this.id = id ?? deriveStructureId({ type: 1 /* LINE */, x: x2, y: y2, x2: x22, y2: y22, color, effects: [] });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
     this.effects = [];
     for (const effect of effects) {
       switch (effect.type) {
@@ -5147,7 +7105,7 @@ class StructureLine {
     }
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.setFillColor(this.color);
     ctx.setStrokeColor(this.color);
@@ -5196,6 +7154,35 @@ class StructureLine {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
+  }
+  getCollisionCommands() {
+    return [];
   }
   setColor(color) {
     this.color = color;
@@ -5204,7 +7191,13 @@ class StructureLine {
     return;
   }
   toSettings() {
-    return { type: 1 /* LINE */, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+    const out = { type: 1 /* LINE */, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
+    return out;
   }
   getEffects() {
     return [];
@@ -5236,9 +7229,13 @@ class StructureRectangle {
   color;
   vel;
   isPhysicsEnabled = true;
+  isDrawingEnabled = true;
+  id;
+  serializeState;
   collisionRole;
+  collisionCommands;
   friction;
-  constructor(x2, y2, w, h, color, effects = [], role) {
+  constructor(x2, y2, w, h, color, effects = [], role, id, physicsEnabled, drawingEnabled, collisionCommands = []) {
     this.x = x2;
     this.y = y2;
     this.w = w;
@@ -5248,16 +7245,21 @@ class StructureRectangle {
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
     this.collisionRole = role;
+    this.id = id ?? deriveStructureId({ type: 2 /* RECTANGLE */, x: x2, y: y2, w, h, color, effects, role });
+    this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+    this.isPhysicsEnabled = physicsEnabled ?? true;
+    this.isDrawingEnabled = drawingEnabled ?? true;
+    this.collisionCommands = structuredClone(collisionCommands);
     for (const eff of effects) {
       switch (eff.trigger) {
         case "EffectTrigger.Collision" /* Collision */:
-          this.collisionEffects.push(new MetaEffect(eff));
+          this.collisionEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Round" /* Round */:
-          this.roundEffects.push(new MetaEffect(eff));
+          this.roundEffects.push(createRuntimeEffect(eff));
           continue;
         case "EffectTrigger.Always" /* Always */:
-          this.alwaysEffects.push(new MetaEffect(eff));
+          this.alwaysEffects.push(createRuntimeEffect(eff));
           continue;
         default:
           console.log("this is not implemted yet");
@@ -5266,7 +7268,7 @@ class StructureRectangle {
     }
   }
   draw(ctx) {
-    if (!this.color)
+    if (!this.color || !this.isDrawingEnabled)
       return;
     ctx.push();
     ctx.setFillColor(this.color);
@@ -5290,7 +7292,7 @@ class StructureRectangle {
     return this.vel;
   }
   onCollision({ entity }) {
-    this.collisionEffects.forEach((effect) => effect.apply(entity));
+    dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.rectangle", "entity", "structure.rectangle", "structure.rectangle:collision"), apply: (effect) => effect.apply(entity) });
   }
   setVel(vel) {
     this.vel = vel;
@@ -5320,6 +7322,35 @@ class StructureRectangle {
   }
   setPhysicsEnabled(physicsEnabled) {
     this.isPhysicsEnabled = physicsEnabled;
+    this.serializeState = true;
+  }
+  drawingEnabled() {
+    return this.isDrawingEnabled;
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.isDrawingEnabled = drawingEnabled;
+    this.serializeState = true;
+  }
+  getId() {
+    return this.id;
+  }
+  setSetting(key, value) {
+    if (typeof value !== "boolean")
+      return;
+    if (key === "physicsEnabled")
+      this.setPhysicsEnabled(value);
+    else if (key === "drawingEnabled")
+      this.setDrawingEnabled(value);
+  }
+  addSetting(key, value) {
+    this.setSetting(key, value);
+  }
+  removeSetting(key, value) {
+    if (typeof value === "boolean")
+      this.setSetting(key, !value);
+  }
+  getCollisionCommands() {
+    return this.collisionCommands;
   }
   setColor(color) {
     this.color = color;
@@ -5346,6 +7377,13 @@ class StructureRectangle {
     };
     if (this.collisionRole !== undefined)
       out.role = this.collisionRole;
+    if (this.serializeState) {
+      out.id = this.id;
+      out.physicsEnabled = this.isPhysicsEnabled;
+      out.drawingEnabled = this.isDrawingEnabled;
+    }
+    if (this.collisionCommands.length > 0)
+      out.collisionCommands = structuredClone(this.collisionCommands);
     return out;
   }
   getType() {
@@ -5361,15 +7399,17 @@ class StructureRectangle {
 class FullStructure {
   str;
   constructor(str) {
+    if (str.id === undefined)
+      throw new Error("Runtime structures require an explicit canonical ID");
     switch (str.type) {
       case 0 /* CIRCLE */:
-        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role);
+        this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
       case 2 /* RECTANGLE */:
-        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role);
+        this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
       case 1 /* LINE */:
-        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects);
+        this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
     }
   }
@@ -5381,6 +7421,27 @@ class FullStructure {
   }
   draw(ctx) {
     this.str.draw(ctx);
+  }
+  getId() {
+    return this.str.getId();
+  }
+  drawingEnabled() {
+    return this.str.drawingEnabled();
+  }
+  setDrawingEnabled(drawingEnabled) {
+    this.str.setDrawingEnabled(drawingEnabled);
+  }
+  setSetting(key, value) {
+    this.str.setSetting(key, value);
+  }
+  addSetting(key, value) {
+    this.str.addSetting(key, value);
+  }
+  removeSetting(key, value) {
+    this.str.removeSetting(key, value);
+  }
+  getCollisionCommands() {
+    return this.str.getCollisionCommands();
   }
   getFriction() {
     return this.str.getFriction();
@@ -5436,6 +7497,148 @@ class FullStructure {
   isPhysicsObj() {
     return typeof this.str.getShape() === "function";
   }
+}
+
+function migrateStructureSettings(boundaries) {
+  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+}
+
+function migrateEffectSettings(value) {
+  if (!isRecord8(value))
+    throw new Error("Effect migration requires an object");
+  if (value.schemaVersion !== undefined && value.schemaVersion !== EFFECT_SCHEMA_VERSION)
+    throw new Error(`Unsupported historical Effect schema version: ${String(value.schemaVersion)}`);
+  if (value.type === "EffectType.Damage") {
+    const payload = isRecord8(value.typeValue) ? value.typeValue : undefined;
+    if (!payload || typeof payload.damage !== "number" || !Number.isFinite(payload.damage) || payload.damage < 0)
+      throw new Error("Historical Damage payload is invalid");
+    return { schemaVersion: EFFECT_SCHEMA_VERSION, type: "numeric.add" /* NumericAdd */, typeValue: { stateId: "hp", amount: -payload.damage } };
+  }
+  const effect = { schemaVersion: EFFECT_SCHEMA_VERSION, type: value.type, typeValue: structuredClone(value.typeValue) };
+  if (effect.type === "EffectType.Multi" && Array.isArray(effect.typeValue))
+    effect.typeValue = effect.typeValue.map(migrateEffectSettings);
+  return effect;
+}
+function migrateFullEffectSettings(value) {
+  if (!isRecord8(value))
+    throw new Error("Full Effect migration requires an object");
+  return { ...migrateEffectSettings(value), trigger: value.trigger, triggerValue: structuredClone(value.triggerValue) };
+}
+function migrateGameSettingsEffects(settings) {
+  const copy = structuredClone(settings);
+  copy.items = copy.items.map(migrateItemDocument);
+  const itemsById = new Map(copy.items.map((item) => [item.id, item]));
+  copy.effects = (copy.effects ?? []).map(migrateFullEffectSettings);
+  copy.players = copy.players.map((player) => {
+    const historicalActionModifiers = (player.itemEffects ?? []).flatMap((effect, index) => {
+      const sourceItem = effect.itemId === undefined ? undefined : itemsById.get(effect.itemId);
+      if (effect.type === "modifyForce") {
+        const factor = effect.typeValue.factor;
+        if (typeof factor !== "number")
+          throw new Error("Historical modifyForce effect requires a numeric factor");
+        return [createActionModifier({
+          id: `${player.id}:action-modifier:${index}`,
+          action: "force",
+          operation: "scale",
+          factor,
+          ...sourceItem?.duration.type === "turns" ? { durationUnit: "turns", duration: sourceItem.duration.value, remaining: sourceItem.duration.value } : { remainingUses: 1 },
+          sourceId: effect.itemId,
+          sourceOrder: effect.order
+        })];
+      }
+      if (effect.type === "aimVariance") {
+        const maxVarianceDegrees = effect.typeValue.maxVarianceDegrees;
+        if (typeof maxVarianceDegrees !== "number" || !Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0)
+          throw new Error("Historical aimVariance requires a finite non-negative max variance");
+        const rawState = effect.typeValue.randomState;
+        const seed = effect.typeValue.seed;
+        if (rawState !== undefined && (typeof rawState !== "number" || !Number.isSafeInteger(rawState) || rawState < 0 || rawState > 4294967295))
+          throw new Error("Historical aimVariance random state must be an unsigned 32-bit integer");
+        if (seed !== undefined && (typeof seed !== "number" || !Number.isSafeInteger(seed)))
+          throw new Error("Historical aimVariance seed must be a safe integer");
+        const randomState = rawState === undefined ? new SeededRandom(seed === undefined ? 1337 : seed).getState() : rawState;
+        return [createActionModifier({
+          id: `${player.id}:action-modifier:${index}`,
+          action: "aim",
+          operation: "random-offset",
+          maxVarianceDegrees,
+          randomState,
+          remainingUses: 1,
+          sourceId: effect.itemId,
+          sourceOrder: effect.order
+        })];
+      }
+      return [];
+    });
+    const historicalCollisionFilters = (player.itemEffects ?? []).flatMap((effect, index) => {
+      if (effect.type !== "ghostMode")
+        return [];
+      const durationTurns = effect.typeValue.durationTurns;
+      const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+      if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1)
+        throw new Error("Historical ghostMode requires a positive duration");
+      if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns)
+        return [];
+      const filterId = `${player.id}:collision-filter:${index}`;
+      return [{
+        filter: createCollisionFilter({ id: filterId, excludedCategories: ["entity", "structure"], sourceId: effect.itemId, sourceOrder: effect.order }),
+        lifetime: createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order })
+      }];
+    });
+    const historicalActorConstraints = (player.itemEffects ?? []).flatMap((effect, index) => {
+      if (effect.type !== "selectionLock")
+        return [];
+      const durationTurns = effect.typeValue.durationTurns;
+      const remainingTurns = effect.typeValue.remainingTurns ?? durationTurns;
+      if (typeof durationTurns !== "number" || !Number.isSafeInteger(durationTurns) || durationTurns < 1)
+        throw new Error("Historical selectionLock requires a positive duration");
+      if (typeof remainingTurns !== "number" || !Number.isSafeInteger(remainingTurns) || remainingTurns < 1 || remainingTurns > durationTurns)
+        return [];
+      const constraintId = `${player.id}:actor-eligibility:${index}`;
+      return [{
+        constraint: createActorEligibilityConstraint({ id: constraintId, mode: "excluded", sourceId: effect.itemId, sourceOrder: effect.order }),
+        lifetime: createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: "turns", duration: durationTurns, remaining: remainingTurns, sourceId: effect.itemId, sourceOrder: effect.order })
+      }];
+    });
+    return {
+      ...player,
+      effects: (player.effects ?? []).map(migrateFullEffectSettings),
+      ...player.itemEffects ? { itemEffects: player.itemEffects.filter((effect) => !["magnet", "swapPosition", "modifyForce", "aimVariance", "ghostMode", "selectionLock"].includes(effect.type)) } : {},
+      ...historicalActionModifiers.length || player.pendingActionModifiers?.length ? { pendingActionModifiers: [...player.pendingActionModifiers ?? [], ...historicalActionModifiers] } : {},
+      ...historicalCollisionFilters.length || player.collisionFilters?.length ? { collisionFilters: [...player.collisionFilters ?? [], ...historicalCollisionFilters.map((entry) => entry.filter)] } : {},
+      ...historicalCollisionFilters.length || player.collisionFilterLifetimes?.length ? { collisionFilterLifetimes: [...player.collisionFilterLifetimes ?? [], ...historicalCollisionFilters.map((entry) => entry.lifetime)] } : {},
+      ...historicalActorConstraints.length || player.actorEligibilityConstraints?.length ? { actorEligibilityConstraints: [...player.actorEligibilityConstraints ?? [], ...historicalActorConstraints.map((entry) => entry.constraint)] } : {},
+      ...historicalActorConstraints.length || player.actorEligibilityConstraintLifetimes?.length ? { actorEligibilityConstraintLifetimes: [...player.actorEligibilityConstraintLifetimes ?? [], ...historicalActorConstraints.map((entry) => entry.lifetime)] } : {}
+    };
+  });
+  copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
+  if (copy.triggerDefinitions)
+    copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
+  if (copy.environmentalMechanics)
+    copy.environmentalMechanics = copy.environmentalMechanics.map((mechanic) => mechanic.effects === undefined ? mechanic : { ...mechanic, effects: mechanic.effects.map(migrateFullEffectSettings) });
+  return copy;
+}
+function migrateItemDocument(item) {
+  return {
+    ...item,
+    effects: item.effects.map((effect) => {
+      if (effect.type === "swapPosition")
+        return { type: "transform.swap-position", value: {} };
+      if (effect.type !== "magnet")
+        return structuredClone(effect);
+      const value = effect.value ?? {};
+      const force = typeof value.force === "number" ? value.force : value.strength;
+      if (typeof force !== "number")
+        throw new Error("Historical Magnet effect requires force or strength");
+      return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force, range: value.range } };
+    })
+  };
+}
+function isEngineEffectComposition(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
+}
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function getBackgoundSystem(settings) {
@@ -5582,6 +7785,126 @@ function clonePickupState(state) {
   };
 }
 
+function dispatchPredefinedEffect(options) {
+  if ((options.depth ?? 0) > 32)
+    throw new Error("Predefined effect follow-up depth exceeded");
+  const effect = validateEnvelope(options.effect);
+  const interpreters = options.systems.filter(isPredefinedEffectSystem).filter((system) => system.acceptsEffect(effect.type));
+  if (interpreters.length === 0)
+    throw new Error(`No predefined system accepts effect '${effect.type}'`);
+  if (interpreters.length > 1)
+    throw new Error(`Multiple predefined systems accept effect '${effect.type}'`);
+  const target = resolveTarget(options.ctx, effect.target, options.positionOverride);
+  const followUps = interpreters[0].applyEffect(options.ctx, effect, target);
+  for (const followUp of followUps ?? []) {
+    const bound = followUp.target === undefined ? { ...followUp, target: targetReference(target) } : followUp;
+    dispatchPredefinedEffect({ ...options, effect: bound, depth: (options.depth ?? 0) + 1 });
+  }
+}
+function dispatchPredefinedComposition(options) {
+  validateEngineEffectComposition(options.composition);
+  for (const effect of options.composition.effects)
+    dispatchPredefinedEffect({ ...options, effect, positionOverride: options.positionOverride });
+}
+function resolveTarget(ctx, value, positionOverride) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Engine effect requires a target");
+  const target = value;
+  if (target.type === "counter") {
+    if (typeof target.counterId !== "string" || target.counterId.length === 0)
+      throw new Error("Counter target requires a non-empty counterId");
+    const counter = ctx.counters.find((candidate) => candidate.id === target.counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${target.counterId}'`);
+    return { type: "counter", counter };
+  }
+  if (target.type === "entity") {
+    if (typeof target.entityId !== "string" || target.entityId.length === 0)
+      throw new Error("Entity target requires a non-empty entityId");
+    const entity = ctx.entities.getEntityById(target.entityId);
+    if (!entity)
+      throw new Error(`Unknown entity target '${target.entityId}'`);
+    return { type: "entity", entity };
+  }
+  if (target.type === "numeric") {
+    if (typeof target.entityId !== "string" || target.entityId.length === 0)
+      throw new Error("Numeric target requires a non-empty entityId");
+    if (typeof target.stateId !== "string" || target.stateId.length === 0)
+      throw new Error("Numeric target requires a non-empty stateId");
+    const entity = ctx.entities.getEntityById(target.entityId);
+    if (!entity)
+      throw new Error(`Unknown numeric entity target '${target.entityId}'`);
+    return { type: "numeric", entity, stateId: target.stateId };
+  }
+  if (target.type === "position") {
+    const position = target.position;
+    if (typeof position.x !== "number" || !Number.isFinite(position.x) || typeof position.y !== "number" || !Number.isFinite(position.y))
+      throw new Error("Position target requires finite coordinates");
+    return { type: "position", position: { x: position.x, y: position.y } };
+  }
+  if (target.type === "structure") {
+    if (typeof target.structureId !== "string" || target.structureId.length === 0)
+      throw new Error("Structure target requires a non-empty structureId");
+    const structure = ctx.structures.find((candidate) => candidate.getId() === target.structureId);
+    if (!structure)
+      throw new Error(`Unknown structure target '${target.structureId}'`);
+    return { type: "structure", structure, ...positionOverride ? { positionOverride: { ...positionOverride } } : {} };
+  }
+  throw new Error(`Unknown predefined target type '${String(target.type)}'`);
+}
+function targetReference(target) {
+  if (target.type === "entity")
+    return { type: "entity", entityId: String(target.entity.getId()) };
+  if (target.type === "numeric")
+    return { type: "entity", entityId: String(target.entity.getId()) };
+  if (target.type === "structure")
+    return { type: "structure", structureId: String(target.structure.getId()) };
+  throw new Error("Counter targets cannot receive relative follow-up effects");
+}
+function validateEnvelope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed Engine effect");
+  const effect = value;
+  if (typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Engine effect requires a type");
+  if (effect.schemaVersion !== 1)
+    throw new Error("Unsupported Engine effect schema version");
+  if (!("typeValue" in effect))
+    throw new Error("Engine effect requires a payload");
+  if (!("target" in effect))
+    throw new Error("Engine effect requires a target");
+  return structuredClone(effect);
+}
+function isPredefinedEffectSystem(system) {
+  return "acceptsEffect" in system && typeof system.acceptsEffect === "function" && "applyEffect" in system && typeof system.applyEffect === "function";
+}
+
+function dispatchCollisionCommands(options) {
+  const target = { type: "entity", entityId: String(options.target.getId()) };
+  for (const binding of options.commands) {
+    const effect = binding.effect;
+    if (effect.type === "effect.composition" && "effects" in effect) {
+      dispatchPredefinedComposition({
+        ctx: options.ctx,
+        systems: options.systems,
+        composition: bindComposition(effect, target)
+      });
+    } else {
+      dispatchPredefinedEffect({
+        ctx: options.ctx,
+        systems: options.systems,
+        effect: { ...effect, target }
+      });
+    }
+  }
+}
+function bindComposition(composition, target) {
+  return {
+    ...composition,
+    effects: composition.effects.map((effect) => ({ ...effect, target }))
+  };
+}
+
 var ALLOW_ALL_TARGETS = {
   allowSelf: true,
   allowAlly: true,
@@ -5589,7 +7912,7 @@ var ALLOW_ALL_TARGETS = {
 };
 function validateItemTarget(item, target, context) {
   const validation = item.targetValidation ?? ALLOW_ALL_TARGETS;
-  if (!isRecord7(target) || typeof target.type !== "string") {
+  if (!isRecord9(target) || typeof target.type !== "string") {
     throw new Error("Item target must be an object with a valid type");
   }
   if (target.type !== item.targetType) {
@@ -5613,6 +7936,18 @@ function validateItemTarget(item, target, context) {
       throw new Error("Item target has an unsupported type");
   }
 }
+function resolveEffectTarget(target, context) {
+  switch (target.type) {
+    case "self":
+      return createEntityResolvedTarget(String(context.actor.getId()));
+    case "entity":
+      return createEntityResolvedTarget(target.entityId);
+    case "position":
+      return createPositionResolvedTarget(target.position);
+    case "zone":
+      throw new Error("Delayed Effects do not support zone targets without a stable zone contract");
+  }
+}
 function validateEntityTarget(target, validation, context) {
   if (typeof target.entityId !== "string" || target.entityId.length === 0) {
     throw new Error("Entity targets require a non-empty entityId");
@@ -5632,13 +7967,13 @@ function validateEntityTarget(target, validation, context) {
   validateRange(context.actor.getPos(), entity.getPos(), validation.maxRange);
 }
 function validatePositionTarget(position, maxRange, context) {
-  if (!isVector5(position))
+  if (!isVector4(position))
     throw new Error("Position targets require finite x and y coordinates");
   validateWorldPosition(position, context.worldSize);
   validateRange(context.actor.getPos(), position, maxRange);
 }
 function validateZoneTarget(target, maxRange, context) {
-  if (!isVector5(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
+  if (!isVector4(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
     throw new Error("Zone targets require a finite center and positive radius");
   }
   validateWorldPosition(target.center, context.worldSize);
@@ -5660,11 +7995,11 @@ function validateWorldPosition(position, worldSize) {
 function sharesTeam(first, second) {
   return first.getTeam().some((team) => second.getTeam().includes(team));
 }
-function isRecord7(value) {
+function isRecord9(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector5(value) {
-  return isRecord7(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
+function isVector4(value) {
+  return isRecord9(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
 }
 
 function itemInteractionMode(item, otherItemId) {
@@ -5888,7 +8223,7 @@ function clone4(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", TRANSFORM_SWAP_POSITION_EFFECT_ID, "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 function createItem(input) {
   const item = createItemDocument({
@@ -5916,6 +8251,10 @@ var GHOST_MODE_DURATION_TURNS = 2;
 var MAGNET_RANGE = 200;
 var MAGNET_FORCE = 2;
 var FALLTUER_RADIUS = 25;
+var FALLTUER_DURATION_TURNS = 2;
+var FALLTUER_STRUCTURE_ID = "falltuer-slot-0";
+var FALLTUER_ACTIVATE_TRIGGER_ID = "falltuer.activate";
+var FALLTUER_DEACTIVATE_TRIGGER_ID = "falltuer.deactivate";
 var POWER_DASH_FACTOR = 1.5;
 var DELAYED_MINE_DELAY_TICKS = 3;
 var DELAYED_MINE_RADIUS = 60;
@@ -5957,7 +8296,7 @@ var magnetItem = createItem({
   name: "Magnet",
   description: "Attracts a targeted figure within a configured range.",
   type: "offensive",
-  effects: [{ type: "magnet", value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
+  effects: [{ type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
   targetType: "entity",
   duration: { type: "turns", value: 1 },
   useLimit: { perTurn: 1, perGame: 2 },
@@ -5966,14 +8305,43 @@ var magnetItem = createItem({
 var falltuerItem = createItem({
   id: "falltuer",
   name: "Falltür",
-  description: "Spawns a kill zone at a selected position.",
+  description: "Activates a kill zone at a selected position.",
   type: "trap",
-  effects: [{ type: "spawnTrigger", value: { triggerId: "falltuer-kill-zone", delayTurns: 0, radius: FALLTUER_RADIUS } }],
+  effects: [
+    { type: "spawnTrigger", value: { triggerId: FALLTUER_ACTIVATE_TRIGGER_ID, delayTurns: 0, structureId: FALLTUER_STRUCTURE_ID } },
+    { type: "spawnTrigger", value: { triggerId: FALLTUER_DEACTIVATE_TRIGGER_ID, delayTurns: FALLTUER_DURATION_TURNS, structureId: FALLTUER_STRUCTURE_ID } }
+  ],
   targetType: "position",
-  duration: { type: "turns", value: 1 },
+  duration: { type: "turns", value: FALLTUER_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 1 },
   targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 }
 });
+var falltuerDeathCollision = createCollisionCommandBinding(createEngineEffectComposition([
+  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+]));
+var falltuerStructure = {
+  id: FALLTUER_STRUCTURE_ID,
+  type: 0 /* CIRCLE */,
+  x: 0,
+  y: 0,
+  r: FALLTUER_RADIUS,
+  color: "#7c3aed",
+  role: "solid",
+  physicsEnabled: false,
+  drawingEnabled: false,
+  effects: [],
+  collisionCommands: [falltuerDeathCollision]
+};
+var falltuerPosition = { schemaVersion: 1, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };
+var falltuerEnablePhysics = { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+var falltuerEnableDrawing = { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+var falltuerDisablePhysics = { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+var falltuerDisableDrawing = { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure", structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+var falltuerTriggerDefinitions = [
+  { schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing]) },
+  { schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerDisablePhysics, falltuerDisableDrawing]) }
+];
 var powerDashItem = createItem({
   id: "power-dash",
   name: "Power-Dash",
@@ -5990,7 +8358,7 @@ var verzoegerteMineItem = createItem({
   name: "Verzögerte Mine",
   description: "Creates a delayed repelling force explosion at a selected position.",
   type: "trap",
-  effects: [{ type: "delayedEffect", value: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks: DELAYED_MINE_DELAY_TICKS } }],
+  effects: [{ type: "deferredEffect", value: { durationUnit: "ticks", duration: DELAYED_MINE_DELAY_TICKS, effect: { schemaVersion: 1, type: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } } } }],
   targetType: "position",
   duration: { type: "turns", value: 1 },
   useLimit: { perTurn: 1, perGame: 1 },
@@ -6001,7 +8369,7 @@ var miniWallItem = createItem({
   name: "Mini-Wall",
   description: "Spawns a temporary portable wall at a selected position.",
   type: "defensive",
-  effects: [{ type: "temporaryWall", value: { wallId: "mini-wall", x: 0, y: 0, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }],
+  effects: [{ type: "structureLifecycle", value: { durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } } }],
   targetType: "position",
   duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 1 },
@@ -6012,7 +8380,7 @@ var freezeShotItem = createItem({
   name: "Freeze-Shot",
   description: "Temporarily slows a targeted figure.",
   type: "offensive",
-  effects: [{ type: "freeze", value: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }],
+  effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } } }],
   targetType: "entity",
   duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
   useLimit: { perTurn: 1, perGame: 2 },
@@ -6023,7 +8391,7 @@ var switchItem = createItem({
   name: "Switch",
   description: "Swaps the active figure's position with a targeted ally.",
   type: "utility",
-  effects: [{ type: "swapPosition", value: {} }],
+  effects: [{ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, value: {} }],
   targetType: "entity",
   duration: { type: "instant", value: 0 },
   useLimit: { perTurn: 1, perGame: 1 },
@@ -6080,7 +8448,7 @@ function resolveMysteryBoxReward(options = {}) {
     throw new Error("Mystery Box pool must not be empty");
   for (const itemId of pool)
     validateMysteryBoxReward(itemId, options);
-  const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 1e5);
+  const seed = options.seed ?? 0;
   const index = Math.abs(seed) % pool.length;
   return pool[index];
 }
@@ -6309,6 +8677,8 @@ class AuthoritativeGameplayRenderer {
       this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
   }
   drawStructure(renderer, structure) {
+    if (structure.drawingEnabled === false)
+      return;
     const role = structure.role;
     const color = structure.color ?? "#64748b";
     if (role !== "containment") {
@@ -6358,7 +8728,7 @@ class AuthoritativeGameplayRenderer {
   drawPlayer(renderer, player, activeTeam) {
     const position = player.position;
     renderer.push();
-    if (player.isDead) {
+    if (!player.isPhysicsEnabled && !player.isDrawingEnabled) {
       renderer.setFillColor("#64748b");
       renderer.setStrokeColor("#cbd5e1");
       renderer.drawCircle(position.x, position.y, player.size);
@@ -6914,14 +9284,14 @@ function clone5(value) {
 }
 
 function validateAnimationSettings(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
+  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
     throw new Error("Malformed animation settings");
   assertKeys(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
   validateId2(value.id, "animation ID");
   validateId2(value.channel, "animation channel");
   const ids = new Set;
   for (const track of value.tracks) {
-    if (!isRecord8(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
+    if (!isRecord10(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
       throw new Error("Malformed animation track");
     assertKeys(track, ["id", "keyframes"], "animation track");
     validateId2(track.id, "animation track ID");
@@ -6930,7 +9300,7 @@ function validateAnimationSettings(value) {
     ids.add(track.id);
     let previous = -1;
     for (const keyframe of track.keyframes) {
-      if (!isRecord8(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
+      if (!isRecord10(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
         throw new Error("Invalid animation keyframe");
       assertKeys(keyframe, ["tick", "value"], "animation keyframe");
       assertJsonValue(keyframe.value);
@@ -6942,7 +9312,7 @@ function validateAnimationSettings(value) {
   assertJsonValue(value);
 }
 function validatePresentationEvent(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
+  if (!isRecord10(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
     throw new Error("Malformed presentation event");
   assertKeys(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
   validateId2(value.eventId, "presentation event ID");
@@ -6963,12 +9333,12 @@ function validatePresentationEvent(value) {
   assertJsonValue(value);
 }
 function validatePresentationRuntimeSettings(value) {
-  if (!isRecord8(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
+  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
     throw new Error("Malformed presentation runtime settings");
   assertKeys(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
   validateId2(value.runtimeId, "presentation runtime ID");
   for (const active of value.active) {
-    if (!isRecord8(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
+    if (!isRecord10(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
       throw new Error("Malformed active animation");
     assertKeys(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
     validateId2(active.instanceId, "presentation instance ID");
@@ -7109,7 +9479,7 @@ function assertKeys(value, allowed, name) {
     if (!keys.has(key))
       throw new Error(`Unknown ${name} field '${key}'`);
 }
-function isRecord8(value) {
+function isRecord10(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 function integer(value) {
@@ -7303,6 +9673,7 @@ class GameHandler {
   effectAlways = [];
   effectRound = [];
   effectCollision = [];
+  triggerDefinitions = new TriggerDefinitionCatalog;
   items = [];
   itemDrawRandom;
   mapPickupSystem = new MapPickupSystem;
@@ -7312,6 +9683,8 @@ class GameHandler {
   disposed = false;
   paused = false;
   resolvingTurn = false;
+  structureLifecycles = [];
+  deferredEffects = [];
   feedback = new GameplayFeedbackTrace;
   constructor() {
     this.id = crypto.randomUUID();
@@ -7327,6 +9700,8 @@ class GameHandler {
       currTurn: 0,
       activeTeam: 0,
       myTeamNumber: 0,
+      counters: [],
+      drift: DEFAULT_DRIFT,
       finishMatch: (result) => this.finishMatch(result)
     };
     this.entityManager = em;
@@ -7357,14 +9732,11 @@ class GameHandler {
   resolveTurn({ actorId, angle, power }) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot resolve further turns");
-    const actor = this.entityManager.getEntityById(actorId);
-    if (!actor)
-      throw new Error(`Actor ${actorId} not found`);
-    if (actor.isDead())
-      throw new Error(`Actor ${actorId} is not active`);
+    const actor = this.validateActorForAction(actorId);
     this.feedback.record("shot" /* Shot */, this.getTurnNumber(), { actorId, data: { angle, power } });
     const before = new Map(this.entityManager.toSettings().map((player) => [player.id, player]));
-    this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyAcceptedForce(actor, { angle, power });
+    this.applyTemporalModifiers(actor);
     this.resolvingTurn = true;
     let frames = 0;
     try {
@@ -7380,7 +9752,7 @@ class GameHandler {
         continue;
       if (player.hp < previous.hp)
         this.feedback.record("damage" /* Damage */, this.getTurnNumber(), { targetIds: [player.id], data: { amount: previous.hp - player.hp } });
-      if (player.isDead && !previous.isDead)
+      if ((!player.isPhysicsEnabled || !player.isDrawingEnabled) && previous.isPhysicsEnabled && previous.isDrawingEnabled)
         this.feedback.record("elimination" /* Elimination */, this.getTurnNumber(), { targetIds: [player.id] });
     }
     this.feedback.record("turn" /* Turn */, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
@@ -7391,6 +9763,24 @@ class GameHandler {
       finalState
     };
   }
+  validateActorForAction(actorId) {
+    const actor = this.entityManager.getEntityById(actorId);
+    if (!actor)
+      throw new Error(`Actor ${actorId} not found`);
+    if (actor.isDead())
+      throw new Error(`Actor ${actorId} is not active`);
+    if (!actor.isActorEligible())
+      throw new Error(`Actor ${actorId} is locked from selection`);
+    return actor;
+  }
+  isActorEligibleForAction(actorId) {
+    try {
+      this.validateActorForAction(actorId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
   playTurn(packet, onComplete) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot play further turns");
@@ -7399,7 +9789,8 @@ class GameHandler {
     const actor = this.entityManager.getEntityById(packet.actorId);
     if (!actor)
       throw new Error("actor not found!");
-    this.getPhysics().applyImpulse(actor, packet.input.angle, packet.input.power);
+    this.applyAcceptedForce(actor, packet.input);
+    this.applyTemporalModifiers(actor);
     const playback = this.systems.find((s) => s instanceof PlaybackSystem);
     if (!playback)
       throw new Error("playbacksystem not found!");
@@ -7418,7 +9809,20 @@ class GameHandler {
       console.log("Player not Found");
       return;
     }
-    this.physicsStrategy.applyImpulse(actor, angle, power);
+    this.applyAcceptedForce(actor, { angle, power });
+    this.applyTemporalModifiers(actor);
+  }
+  applyAcceptedForce(entity, input) {
+    const effective = entity.applyPendingActionModifiers(input);
+    this.physicsStrategy.applyImpulse(entity, effective.angle, effective.power);
+    entity.consumePendingActionModifiers();
+  }
+  applyTemporalModifiers(entity) {
+    for (const modifier of entity.getTemporalModifiers()) {
+      if (modifier.target.entityId !== String(entity.getId()))
+        continue;
+      dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: modifier.effect });
+    }
   }
   tick(dt = this.dt) {
     if (this.disposed)
@@ -7428,12 +9832,15 @@ class GameHandler {
     if (this.context.state === "GameState.Game_over" /* Game_over */ && !this.resolvingTurn)
       return;
     this.preTickers.forEach((t) => t.tick(dt, this.physicsStrategy.getFriction()));
+    this.advanceDeferredEffectsTick();
     for (const e of this.entityManager.getEntities()) {
-      this.effectAlways.forEach((eff) => {
-        eff.apply(e);
-      });
+      if (this.effectAlways.length === 0)
+        continue;
+      dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: (effect) => effect.apply(e) });
     }
     const drift = this.settings?.drift ?? DEFAULT_DRIFT;
+    this.context.drift = drift;
+    this.systems.forEach((s) => s.preTick?.(this.context, dt, this.physicsStrategy.getFriction()));
     for (const e of this.entityManager.getEntities()) {
       e.tick(dt, this.physicsStrategy.getFriction(), drift, this.physicsStrategy.getStopThreshold());
     }
@@ -7537,6 +9944,18 @@ class GameHandler {
   getContext() {
     return { ...this.context };
   }
+  getCounters() {
+    return this.context.counters.map((counter) => ({ ...counter }));
+  }
+  getCounter(counterId) {
+    const counter = this.context.counters.find((candidate) => candidate.id === counterId);
+    if (!counter)
+      throw new Error(`Unknown counter target '${counterId}'`);
+    return { ...counter };
+  }
+  dispatchEngineEffect(effect) {
+    dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect });
+  }
   addSystem(system) {
     this.systems.push(system);
   }
@@ -7568,6 +9987,10 @@ class GameHandler {
       this.recordFeedback("collision" /* Collision */, { ...ids[0] ? { actorId: ids[0] } : {}, ...ids.length > 1 ? { targetIds: ids.slice(1) } : {} });
       if (ids.length === 1)
         this.recordFeedback("hazard" /* Hazard */, { actorId: ids[0], data: { structure: true } });
+      const structure = [a, b].find((value) => typeof value.getCollisionCommands === "function");
+      const entity = [a, b].find((value) => typeof value.getId === "function" && typeof value.getTeam === "function");
+      if (structure && entity)
+        dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
     };
   }
   setWorldSize(worldSize) {
@@ -7577,8 +10000,15 @@ class GameHandler {
     if (this.context.currTurn !== turnNumber)
       this.entityManager.getEntities().forEach((entity) => {
         entity.resetItemUses();
-        entity.advanceItemEffectsTurn();
+        entity.advanceTemporalModifiersTurn();
+        entity.advancePendingActionModifierLifetimes();
+        entity.advanceCollisionFilterLifetimes();
+        entity.advanceActorEligibilityConstraintLifetimes();
+        for (const scheduled of entity.advanceItemEffectsTurn())
+          this.executeDueSpawnTrigger(entity, scheduled);
       });
+    if (this.context.currTurn !== turnNumber)
+      this.advanceStructureLifecyclesTurn();
     this.context.currTurn = turnNumber;
     this.ruleState.turnNumber = turnNumber;
   }
@@ -7612,6 +10042,12 @@ class GameHandler {
     this.setTurnNumber(ruleState.turnNumber);
     this.setActiveTeam(ruleState.activeTeam);
     this.setRuleState(ruleState);
+    const event = createRoundStartEvent(String(this.id), ruleState.turnNumber, ruleState.activeTeam, ruleState.phase);
+    for (const entity of this.entityManager.getEntities()) {
+      entity.onRound(event);
+      if (this.effectRound.length > 0)
+        dispatchTriggeredEffects({ effects: this.effectRound, event, apply: (effect) => effect.apply(entity) });
+    }
     this.drawItemsForActiveTeam();
   }
   getMatchResult() {
@@ -7648,14 +10084,18 @@ class GameHandler {
       throw new Error("A rematch requires initial game settings");
     const settings = JSON.parse(JSON.stringify(this.initialSettings));
     this.entityManager.applySettings(settings.players);
+    this.structureLifecycles = [];
+    this.deferredEffects = [];
     this.initializeFixedLoadouts();
     this.context.structures = settings.mapBoundarys.map((boundary) => new FullStructure(boundary));
+    this.restoreStructureLifecycles(settings.structureLifecycles);
     this.setPhysics(new defaultPhysics(settings.friction));
     this.setWorldSize(settings.screenResolution);
     this.setMyTeam(settings.myTeam);
     this.setTeamSize(settings.allTeamSize);
     this.setItems(settings.items);
     this.loadEffects(settings.effects);
+    this.loadTriggerDefinitions(settings.triggerDefinitions ?? []);
     this.initializeItemDraws();
     this.resetMapItemPickups();
     const initialPhase = settings.gameMode?.phases?.[0] ?? "physics" /* Physics */;
@@ -7693,6 +10133,8 @@ class GameHandler {
   }
   start(state) {
     this.context.state = state ?? "GameState.Your_turn" /* Your_turn */;
+    for (const entity of this.entityManager.getEntities())
+      entity.setNumericEffectDispatcher((effect) => this.dispatchEngineEffect(effect));
     return this;
   }
   addStructure(structure) {
@@ -7774,6 +10216,7 @@ class GameHandler {
       effects,
       items: this.items.map((item) => ({ ...item })),
       players: this.entityManager.toSettings(),
+      counters: canonicalizeCounterStates(this.context.counters),
       minPlayers: this.settings?.minPlayers ?? 0,
       maxPlayers: this.settings?.maxPlayers ?? 0,
       allTeamSize: this.teamSize,
@@ -7782,6 +10225,7 @@ class GameHandler {
       ...this.settings?.mapReference ? { mapReference: { ...this.settings.mapReference } } : {},
       ...this.settings?.gameMode ? { gameMode: JSON.parse(JSON.stringify(this.settings.gameMode)) } : {},
       ...this.settings?.ai ? { ai: JSON.parse(JSON.stringify(this.settings.ai)) } : {},
+      ...this.triggerDefinitions.describe().length ? { triggerDefinitions: this.triggerDefinitions.toSettings() } : {},
       turnNumber: this.getContext().currTurn,
       activeTeam: this.getActiveTeam(),
       ruleState: { ...this.ruleState, activeTeam: this.getActiveTeam(), turnNumber: this.getTurnNumber() },
@@ -7804,7 +10248,9 @@ class GameHandler {
       }),
       tickRate: this.getTickRate(),
       ...this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {},
-      ...this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}
+      ...this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {},
+      ...this.structureLifecycles.length ? { structureLifecycles: structuredClone(this.structureLifecycles) } : {},
+      ...this.deferredEffects.length ? { deferredEffects: structuredClone(this.deferredEffects) } : {}
     };
     this.saveSettings(JSON.parse(JSON.stringify(settings)));
     return settings;
@@ -7830,6 +10276,11 @@ class GameHandler {
   }
   addEffectEveryCollision(effect) {
     this.effectCollision.push(effect);
+  }
+  loadTriggerDefinitions(definitions) {
+    const catalog = new TriggerDefinitionCatalog;
+    definitions.forEach((definition) => catalog.register(definition));
+    this.triggerDefinitions = catalog;
   }
   setTeamSize(size) {
     this.teamSize = size;
@@ -7858,14 +10309,62 @@ class GameHandler {
   resetMapItemPickups() {
     this.mapPickupSystem.reset();
   }
+  advanceStructureLifecyclesTurn() {
+    const next = [];
+    for (const lifecycle of this.structureLifecycles) {
+      const advanced = advanceStructureLifecycle(lifecycle);
+      if (advanced)
+        next.push(advanced);
+      else {
+        const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
+        if (!structure)
+          throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+        this.setStructureParticipation(structure.getId(), false);
+      }
+    }
+    this.structureLifecycles = next;
+  }
+  restoreStructureLifecycles(lifecycles) {
+    this.structureLifecycles = [];
+    for (const lifecycle of lifecycles ?? []) {
+      validateStructureLifecycle(lifecycle);
+      if (!this.context.structures.some((structure) => structure.getId() === lifecycle.structureId))
+        throw new Error(`Unknown structure lifecycle target '${lifecycle.structureId}'`);
+      this.structureLifecycles.push(structuredClone(lifecycle));
+    }
+  }
+  restoreDeferredEffects(effects) {
+    this.deferredEffects = [];
+    for (const effect of effects ?? []) {
+      validateDeferredEffect(effect);
+      this.deferredEffects.push(structuredClone(effect));
+    }
+  }
+  removeStructureLifecycles(sourceIds, targetId) {
+    for (const lifecycle of this.structureLifecycles) {
+      if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId)
+        continue;
+      const structure = this.context.structures.find((candidate) => candidate.getId() === lifecycle.structureId);
+      if (structure)
+        this.setStructureParticipation(structure.getId(), false);
+    }
+    this.structureLifecycles = this.structureLifecycles.filter((lifecycle) => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+  }
+  setStructureParticipation(structureId, enabled) {
+    for (const type of [PARTICIPATION_SET_PHYSICS_EFFECT_ID, PARTICIPATION_SET_DRAWING_EFFECT_ID]) {
+      dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: { schemaVersion: 1, type, target: { type: "structure", structureId }, typeValue: { enabled } } });
+    }
+  }
+  removeDeferredEffects(sourceIds, ownerId) {
+    this.deferredEffects = this.deferredEffects.filter((effect) => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
+  }
   useItem(actorId, itemId, target = { type: "self" }) {
-    const actor = this.entityManager.getEntityById(actorId);
-    if (!actor)
-      throw new Error(`Actor ${actorId} not found`);
+    const actor = this.validateActorForAction(actorId);
     const item = this.items.find((candidate) => candidate.id === itemId);
     if (!item)
       throw new Error(`Item '${itemId}' is not declared for this game`);
     validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize });
+    const resolvedItemTarget = item.effects.some((effect) => effect.type === "deferredEffect" /* DeferredEffect */ || effect.type === "spawnTrigger" /* SpawnTrigger */) ? resolveEffectTarget(target, { actor }) : undefined;
     if (item.id === MYSTERY_BOX_ITEM_ID) {
       this.resolveMysteryBoxUse(actor, item);
       this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -7874,32 +10373,211 @@ class GameHandler {
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
     if (!targetEntity)
       throw new Error("Item target entity not found");
-    const runtimeEffects = item.effects.map((effect) => createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
+    const runtimeEffects = item.effects.map((effect) => effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID ? { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID ? { type: TRANSFORM_SWAP_POSITION_EFFECT_ID, typeValue: structuredClone(effect.value ?? {}) } : createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.value ?? {}) }));
+    for (const effect of runtimeEffects) {
+      if (effect instanceof EffectSpawnTrigger) {
+        this.triggerDefinitions.require(effect.triggerId);
+        if (effect.structureId !== undefined) {
+          if (!this.context.structures.some((structure) => structure.getId() === effect.structureId))
+            throw new Error(`Unknown structure target '${effect.structureId}'`);
+          if (resolvedItemTarget?.type !== "position")
+            throw new Error("Structure spawnTrigger requires a position target");
+        } else if (resolvedItemTarget?.type !== "entity")
+          throw new Error("spawnTrigger requires an entity or self target");
+      }
+    }
     const inventory = actor.getInventory();
     consumeInventoryItem(inventory, item);
-    const combination = validateItemCombination(item, targetEntity.getItemEffects(), new Map(this.items.map((candidate) => [candidate.id, candidate])));
+    const installedEffects = [
+      ...targetEntity.getItemEffects(),
+      ...targetEntity.getTemporalModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+      ...targetEntity.getPendingActionModifiers().map((modifier) => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
+      ...targetEntity.getCollisionFilters().map((filter) => ({ itemId: filter.sourceId, order: filter.sourceOrder })),
+      ...targetEntity.getActorEligibilityConstraints().map((constraint) => ({ itemId: constraint.sourceId, order: constraint.sourceOrder })),
+      ...this.structureLifecycles.filter((lifecycle) => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map((lifecycle) => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
+      ...this.deferredEffects.filter((effect) => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map((effect) => ({ itemId: effect.sourceId, order: effect.sourceOrder }))
+    ];
+    const combination = validateItemCombination(item, installedEffects, new Map(this.items.map((candidate) => [candidate.id, candidate])));
     targetEntity.removeItemEffects(combination.removeItemIds);
-    this.applyItemEffects(actor, target, runtimeEffects, item);
+    targetEntity.removeTemporalModifiers(combination.removeItemIds);
+    targetEntity.removePendingActionModifiers(combination.removeItemIds);
+    targetEntity.removeCollisionFilters(combination.removeItemIds);
+    targetEntity.removeActorEligibilityConstraints(combination.removeItemIds);
+    this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()));
+    this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()));
+    this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget);
     actor.setInventory(inventory);
     this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId] : [actorId], data: { itemId } });
     if (item.effects.some((effect) => effect.type === "shield"))
       this.feedback.record("shield" /* Shield */, this.getTurnNumber(), { actorId, data: { itemId } });
   }
-  applyItemEffects(actor, target, effects, item) {
+  applyItemEffects(actor, target, effects, item, resolvedItemTarget) {
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
     if (target.type === "entity" && !targetEntity)
       throw new Error("Item target entity not found");
     for (const effect of effects) {
-      if (effect instanceof EffectMagnet && targetEntity)
-        targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()));
-      else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
-        const actorPosition = actor.getPos();
-        actor.setPos(targetEntity.getPos());
-        targetEntity.setPos(actorPosition);
+      if (isEntityForceFieldItemEffect(effect)) {
+        if (target.type !== "entity" || !targetEntity)
+          throw new Error("Entity force effects require an entity target");
+        this.dispatchEngineEffect({
+          schemaVersion: 1,
+          type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
+          target: { type: "entity", entityId: String(targetEntity.getId()) },
+          typeValue: { ...structuredClone(effect.typeValue), origin: actor.getPos() }
+        });
+      } else if (isEntitySwapPositionItemEffect(effect)) {
+        if (target.type !== "entity" || !targetEntity)
+          throw new Error("Swap position effects require an entity target");
+        this.dispatchEngineEffect({ schemaVersion: 1, type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: String(actor.getId()) }, typeValue: { otherEntityId: String(targetEntity.getId()) } });
+      } else if (isDeferredEffectTemplate(effect)) {
+        if (!resolvedItemTarget)
+          throw new Error("Deferred Effects require a resolved target");
+        if (resolvedItemTarget.type !== "position")
+          throw new Error("Deferred force fields require a position target");
+        const target2 = { type: "position", position: { ...resolvedItemTarget.position } };
+        this.deferredEffects.push(createDeferredEffect({
+          id: `${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          durationUnit: effect.durationUnit,
+          duration: effect.duration,
+          effect: { ...structuredClone(effect.effect), target: target2 },
+          sourceId: item.id,
+          sourceOrder: itemOrder(item),
+          ownerId: String(actor.getId())
+        }));
+      } else if (effect instanceof EffectSpawnTrigger) {
+        if (!resolvedItemTarget)
+          throw new Error("spawnTrigger requires a resolved target");
+        const triggerSettings = effect.toSettings();
+        const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
+        actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {} } }, { itemId: item.id, order: itemOrder(item) });
+      } else if (isStructureLifecycleTemplate(effect)) {
+        if (target.type !== "position")
+          throw new Error("Structure lifecycles require a position target");
+        this.installStructureLifecycle(actor, item, effect, target.position);
+      } else if (isCollisionFilterTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Collision filters require an entity target");
+        const filterId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+        targetEntity.addCollisionFilter(createCollisionFilter({ id: filterId, excludedCategories: [...effect.excludedCategories], sourceId: item.id, sourceOrder: itemOrder(item) }), createCollisionFilterLifetime({ id: `${filterId}:lifetime`, filterId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }));
+      } else if (isActorEligibilityConstraintTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Actor eligibility constraints require an entity target");
+        const constraintId = `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+        targetEntity.addActorEligibilityConstraint(createActorEligibilityConstraint({ id: constraintId, mode: effect.mode, sourceId: item.id, sourceOrder: itemOrder(item) }), createActorEligibilityConstraintLifetime({ id: `${constraintId}:lifetime`, constraintId, durationUnit: effect.durationUnit, duration: effect.duration, sourceId: item.id, sourceOrder: itemOrder(item) }));
+      } else if (isActionModifierTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Action modifiers require an entity target");
+        const actionModifier = effect.action === "force" ? createActionModifier({
+          id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          action: "force",
+          operation: "scale",
+          factor: effect.factor,
+          ...item.duration.type === "turns" ? { durationUnit: "turns", duration: item.duration.value, remaining: item.duration.value } : {},
+          ...item.duration.type !== "turns" ? { remainingUses: 1 } : {},
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        }) : createActionModifier({
+          id: `${targetEntity.getId()}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          action: "aim",
+          operation: "random-offset",
+          maxVarianceDegrees: effect.maxVarianceDegrees,
+          randomState: effect.randomState,
+          ...item.duration.type === "turns" ? { durationUnit: "turns", duration: item.duration.value, remaining: item.duration.value } : {},
+          ...item.duration.type !== "turns" ? { remainingUses: 1 } : {},
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        });
+        targetEntity.addPendingActionModifier(actionModifier);
+      } else if (isTemporalModifierTemplate(effect)) {
+        if (!targetEntity)
+          throw new Error("Temporal modifiers require an entity target");
+        const targetId = String(targetEntity.getId());
+        const modifier = createTemporalModifier({
+          id: `${targetId}:${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+          target: { type: "entity", entityId: targetId },
+          effect: { ...structuredClone(effect.effect), target: { type: "entity", entityId: targetId } },
+          durationUnit: effect.durationUnit,
+          duration: effect.duration,
+          sourceId: item.id,
+          sourceOrder: itemOrder(item)
+        });
+        targetEntity.addTemporalModifier(modifier);
       } else {
         (targetEntity ?? actor).addItemEffect(effect.toSettings(), { itemId: item.id, order: itemOrder(item) });
       }
     }
+  }
+  installStructureLifecycle(actor, item, template, position) {
+    const structureId = `${actor.getId()}:${item.id}:${this.getTurnNumber()}`;
+    if (this.context.structures.some((structure) => structure.getId() === structureId))
+      throw new Error(`Structure lifecycle ID '${structureId}' already exists`);
+    this.context.structures.push(new FullStructure({
+      id: structureId,
+      type: 2 /* RECTANGLE */,
+      x: position.x,
+      y: position.y,
+      w: template.structure.w,
+      h: template.structure.h,
+      ...template.structure.color === undefined ? {} : { color: template.structure.color },
+      role: template.structure.role ?? "solid",
+      physicsEnabled: true,
+      drawingEnabled: true,
+      effects: []
+    }));
+    this.structureLifecycles.push(createStructureLifecycle({
+      id: `${structureId}:lifecycle`,
+      structureId,
+      durationUnit: template.durationUnit,
+      duration: template.duration,
+      sourceId: item.id,
+      sourceOrder: itemOrder(item),
+      targetId: String(actor.getId())
+    }));
+  }
+  advanceDeferredEffectsTick() {
+    const due = [];
+    const next = [];
+    for (const deferred of this.deferredEffects) {
+      const advanced = advanceDeferredEffect(deferred);
+      if (advanced)
+        next.push(advanced);
+      else
+        due.push(deferred);
+    }
+    this.deferredEffects = next;
+    for (const [index, deferred] of due.entries()) {
+      const event = createScheduleDueEvent(deferred.ownerId ?? deferred.id, index, deferred.id, "tick", 0);
+      dispatchTriggerActivation({ effectId: "engine.deferredEffect", event, apply: () => dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: deferred.effect }) });
+    }
+  }
+  executeDueSpawnTrigger(owner, scheduled) {
+    if (scheduled.type !== "spawnTrigger" /* SpawnTrigger */)
+      return;
+    const value = scheduled.typeValue;
+    const target = value.resolvedTarget;
+    const definition = this.triggerDefinitions.get(String(value.triggerId));
+    if (!definition)
+      return;
+    const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${String(value.triggerId)}`, "turn", this.getTurnNumber());
+    if ("effects" in definition.effect) {
+      const composition = definition.effect;
+      dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => dispatchPredefinedComposition({ ctx: this.context, systems: this.systems, composition, positionOverride: value.resolvedPosition }) });
+      return;
+    }
+    if (target?.type === "structure") {
+      const structure = this.context.structures.find((candidate) => candidate.getId() === target.structureId);
+      if (!structure)
+        throw new Error(`Unknown structure target '${target.structureId}'`);
+      const position = value.resolvedPosition;
+      dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(structure, position) });
+      return;
+    }
+    if (!target || target.type !== "entity")
+      return;
+    const entity = this.entityManager.getEntityById(target.entityId);
+    if (!entity || entity.isDead())
+      return;
+    dispatchTriggerActivation({ effectId: `trigger.${definition.id}`, event, apply: () => createRuntimeEffect(definition.effect).apply(entity) });
   }
   mysteryBoxRewardOptions(actorId) {
     const economy = this.settings?.gameMode?.itemEconomy;
@@ -7993,6 +10671,12 @@ class GameHandler {
     }
   }
 }
+function isEntityForceFieldItemEffect(effect) {
+  return "type" in effect && effect.type === MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID;
+}
+function isEntitySwapPositionItemEffect(effect) {
+  return "type" in effect && effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID;
+}
 
 class GameHandlerBuilder {
   engine;
@@ -8041,10 +10725,13 @@ class GameHandlerBuilder {
     const physics = new defaultPhysics(friction2);
     const physicsSystem = new PhysicsSystem(physics);
     this.engine.attachFeedbackToPhysics(physicsSystem);
-    this.addPhysics(physics).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
+    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new TransformSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
     return this;
   }
   fromSettings(gameSettings) {
+    gameSettings = migrateGameSettingsEffects(gameSettings);
+    const counters = canonicalizeCounterStates(gameSettings.counters ?? []);
+    gameSettings = { ...gameSettings, counters };
     const drift = gameSettings.drift ?? DEFAULT_DRIFT;
     validateDrift(drift);
     const playerCount = gameSettings.playerCount ?? (gameSettings.maxPlayers > 0 ? gameSettings.maxPlayers : 1);
@@ -8059,6 +10746,7 @@ class GameHandlerBuilder {
     this.engine.setId(gameSettings.id);
     this.engine.setTickRate(gameSettings.tickRate ?? 1);
     this.engine.setWorldSize(worldSize);
+    this.engine.getContext().counters.splice(0, this.engine.getContext().counters.length, ...counters);
     this.engine.setPhysics(new defaultPhysics(gameSettings.friction));
     const snapshot = gameSettings;
     if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
@@ -8072,6 +10760,12 @@ class GameHandlerBuilder {
       if (byId.has("core.simulator"))
         restored.set("core.simulator", createSystemFromSettings(byId.get("core.simulator"), restored));
       this.engine.replaceSystems(systemOrder.map((id) => restored.get(id)));
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.numeric"))
+        this.engine.addSystem(new NumericSystem);
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.participation"))
+        this.engine.addSystem(new ParticipationSystem);
+      if (!this.engine.getSystems().some((system) => system.systemId === "core.transform") && gameSettings.items.some((item) => item.effects.some((effect) => effect.type === TRANSFORM_SWAP_POSITION_EFFECT_ID)))
+        this.engine.addSystem(new TransformSystem);
       const restoredPhysics = this.engine.getSystems().find((system) => system.systemId === "core.physics");
       if (!restoredPhysics)
         throw new Error("System snapshot must include core.physics");
@@ -8084,6 +10778,10 @@ class GameHandlerBuilder {
     this.engine.setItems(gameSettings.items);
     this.engine.configureMapItemPickups(gameSettings.gameMode?.itemEconomy.mapPickups ?? []);
     this.engine.loadEffects(gameSettings.effects);
+    this.engine.loadTriggerDefinitions(gameSettings.triggerDefinitions ?? []);
+    if (!("state" in gameSettings) && gameSettings.triggerDefinitions?.some((definition) => ("effects" in definition.effect)) && !this.engine.getSystems().some((system) => system.systemId === "core.transform")) {
+      this.engine.addSystem(new TransformSystem);
+    }
     players.forEach((player) => this.addPlayer(createRuntimePlayer(player)));
     if (!("state" in gameSettings)) {
       this.engine.initializeFixedLoadouts();
@@ -8091,6 +10789,8 @@ class GameHandlerBuilder {
       this.engine.startTurn({ phase: gameSettings.gameMode?.phases[0] ?? "physics" /* Physics */, activeTeam: 0, turnNumber: 0, itemUses: 0 });
     }
     mapBoundarys.forEach((boundary) => this.engine.addStructure(new FullStructure(boundary)));
+    this.engine.restoreStructureLifecycles(gameSettings.structureLifecycles);
+    this.engine.restoreDeferredEffects(gameSettings.deferredEffects);
     if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
       const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
       this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)));
@@ -8135,11 +10835,11 @@ function createRuntimeHandler(settings, systems, systemOrder) {
 
 var DOCUMENT_SCHEMA_VERSION = 1;
 function validateMapDocument(document) {
-  if (!isRecord9(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
+  if (!isRecord11(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
     throw new Error("Invalid map schema version");
-  if (!isRecord9(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
+  if (!isRecord11(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
     throw new Error("Invalid map metadata");
-  if (!isVector6(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
+  if (!isVector5(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
     throw new Error("Invalid map world size");
   if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1)
     throw new Error("Invalid map physics");
@@ -8152,20 +10852,20 @@ function validateMapDocument(document) {
   if (document.environmentalMechanics !== undefined)
     validateEnvironmentalMechanics(document.environmentalMechanics);
 }
-function isRecord9(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null;
 }
-function isVector6(value) {
-  return isRecord9(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
+function isVector5(value) {
+  return isRecord11(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
 }
 function isFriction(value) {
-  return isRecord9(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
+  return isRecord11(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
 }
 function isSpawnRegion(value) {
-  return isRecord9(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
+  return isRecord11(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
 }
 function isArenaGeometry(value) {
-  if (!isRecord9(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
+  if (!isRecord11(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === 0 /* CIRCLE */)
     return typeof value.r === "number" && value.r > 0;
@@ -8215,7 +10915,7 @@ function loadMapDocument(map, template) {
     worldSize: { ...map.worldSize },
     friction: { ...map.friction },
     drift: map.drift,
-    mapBoundarys: [
+    mapBoundarys: assignStableStructureIds([
       ...map.arenaGeometry.map((boundary) => ({
         ...boundary,
         color: boundary.color ?? (boundary.role === "containment" ? undefined : DEFAULT_MAP_STRUCTURE_COLOR),
@@ -8223,13 +10923,16 @@ function loadMapDocument(map, template) {
       })),
       ...map.hazards.map(hazardToBoundary),
       ...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary)
-    ],
+    ]),
     environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined
   };
 }
 var DEFAULT_MAP_STRUCTURE_COLOR = "#315b7d";
+function assignStableStructureIds(boundaries) {
+  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+}
 function isMapHazard(value) {
-  if (!isRecord9(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord9(value.trigger) || value.trigger.type !== "collision" || !isRecord9(value.config))
+  if (!isRecord11(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord11(value.trigger) || value.trigger.type !== "collision" || !isRecord11(value.config))
     return false;
   if (!isHazardZone(value.config))
     return false;
@@ -8249,26 +10952,24 @@ function hazardToBoundary(hazard) {
     y: zone.y,
     r: zone.r,
     color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-    effects: [hazardEffect(hazard)]
+    effects: [],
+    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }
   };
 }
-function hazardEffect(hazard) {
-  if (hazard.type === "kill-zone") {
-    return { trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], type: "EffectType.ModifySetting" /* ModifySetting */, typeValue: { operation: "set" /* Set */, key: "dead", value: true } };
-  }
+function lethalCollisionCommand() {
+  return createCollisionCommandBinding(createEngineEffectComposition([
+    { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+    { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+  ]));
+}
+function forceHazardCommand(hazard) {
   const config = hazard.config;
   const radians = config.angle * Math.PI / 180;
-  return {
-    trigger: "EffectTrigger.Collision" /* Collision */,
-    triggerValue: [],
-    type: "EffectType.ModifySetting" /* ModifySetting */,
-    typeValue: { operation: "add" /* Add */, key: "velocity", value: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } }
-  };
+  return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } });
 }
 function environmentalMechanicToBoundary(mechanic) {
   return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
 }
-
 var KORE_AUDIO_ASSETS = {
   "kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
   "kore.music.match": "/public/audio/CM_02_Moon_Shadows.mp3",
@@ -8340,8 +11041,8 @@ function validateGameMode(mode) {
 function createMatchSystemProfile(teamCount) {
   if (!Number.isSafeInteger(teamCount) || teamCount < 1)
     throw new Error("A match system profile requires at least one team");
-  const registry = new EngineSystemRegistry().register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
-  const framework = registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"]);
+  const registry = registerParticipationSystem(registerNumericSystem(registerMovementSystem(new EngineSystemRegistry))).register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
+  const framework = registry.select(["core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning", "core.numeric", "core.participation"]);
   assertJsonValue(framework.systems);
   return framework;
 }
@@ -8405,7 +11106,7 @@ function createMatchDefinition(options) {
   return structuredClone(definition);
 }
 function validateKoreMatchDefinition(value) {
-  if (!isRecord10(value))
+  if (!isRecord12(value))
     throw new Error("Malformed match definition");
   if (value.schemaVersion !== KORE_MATCH_DEFINITION_VERSION)
     throw new Error("Unsupported match definition version");
@@ -8421,7 +11122,7 @@ function validateKoreMatchDefinition(value) {
     throw new Error("A match definition requires systems and systemOrder arrays");
   const ids = new Set;
   for (const system of value.systems) {
-    if (!isRecord10(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord10(system.state)) {
+    if (!isRecord12(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord12(system.state)) {
       throw new Error("Malformed system settings in match definition");
     }
     if (ids.has(system.systemId))
@@ -8437,7 +11138,7 @@ function createRuntimeMatch(definition) {
   validateKoreMatchDefinition(definition);
   return createRuntimeHandler(definition.settings, definition.systems, definition.systemOrder);
 }
-function isRecord10(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -8473,7 +11174,7 @@ function getSelectableGameModes() {
 var CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 var CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
 var CONTENT_PACKAGE_MAX_DOCUMENTS = 256;
-var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+var ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "transform.swap-position", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 var EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
@@ -8534,7 +11235,7 @@ function hashContentPackage(value) {
   return hashCanonicalJson(JSON.parse(canonicalizeContentPackage(value)));
 }
 function validateManifest(value) {
-  if (!isRecord11(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
+  if (!isRecord13(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
     throw new Error("Malformed content package manifest");
   assertKeys2(value, ["id", "name", "version", "dependencies"], "manifest");
   const dependencies = arrayOf(value.dependencies, "manifest dependencies");
@@ -8542,7 +11243,7 @@ function validateManifest(value) {
     throw new Error("Content package has too many dependencies");
   const seen = new Set;
   for (const dependency of dependencies) {
-    if (!isRecord11(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
+    if (!isRecord13(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
       throw new Error("Malformed content package dependency");
     if (seen.has(dependency.id))
       throw new Error(`Duplicate dependency '${dependency.id}'`);
@@ -8550,7 +11251,7 @@ function validateManifest(value) {
   }
 }
 function validateMode(value) {
-  if (!isRecord11(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
+  if (!isRecord13(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
     throw new Error("Malformed content package mode");
   assertKeys2(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
   if (value.phases.length === 0 || !value.phases.every((phase) => typeof phase === "string"))
@@ -8558,32 +11259,32 @@ function validateMode(value) {
   validateItemEconomySettings(value.itemEconomy);
 }
 function validateUi(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed UI metadata");
   assertKeys2(value, ["labels", "icons", "menu"], "UI metadata");
   for (const key of ["labels", "icons"])
-    if (value[key] !== undefined && (!isRecord11(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
+    if (value[key] !== undefined && (!isRecord13(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
       throw new Error("UI metadata must contain string maps");
   if (value.menu !== undefined) {
     for (const entry of arrayOf(value.menu, "UI menu"))
-      if (!isRecord11(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
+      if (!isRecord13(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
         throw new Error("Malformed UI menu entry");
   }
 }
 function validateAudio(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed audio declarations");
   assertKeys2(value, ["sounds", "music"], "audio declarations");
   for (const key of ["sounds", "music"])
     if (value[key] !== undefined)
       for (const [id, declaration] of Object.entries(value[key])) {
-        if (!validId2(id) || !isRecord11(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
+        if (!validId2(id) || !isRecord13(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
           throw new Error("Malformed audio declaration");
         assertKeys2(declaration, ["asset", "bus"], "audio declaration");
       }
 }
 function validatePresentation(value) {
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error("Malformed presentation declarations");
   assertKeys2(value, ["animations", "events"], "presentation declarations");
   for (const animation2 of arrayOf(value.animations, "animations"))
@@ -8608,14 +11309,14 @@ function normalize(value) {
   for (const key of ["maps", "items", "modes"])
     if (Array.isArray(copy[key]))
       copy[key] = [...copy[key]].sort((a, b) => collectionId(a).localeCompare(collectionId(b)));
-  if (isRecord11(copy.manifest) && Array.isArray(copy.manifest.dependencies))
+  if (isRecord13(copy.manifest) && Array.isArray(copy.manifest.dependencies))
     copy.manifest.dependencies = [...copy.manifest.dependencies].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   return copy;
 }
 function canonicalize(value) {
   if (Array.isArray(value))
     return value.map(canonicalize);
-  if (isRecord11(value))
+  if (isRecord13(value))
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
   return value;
 }
@@ -8631,7 +11332,7 @@ function assertJson(value, path) {
     value.forEach((entry, index) => assertJson(entry, `${path}[${index}]`));
     return;
   }
-  if (!isRecord11(value))
+  if (!isRecord13(value))
     throw new Error(`Malformed JSON value at ${path}`);
   for (const [key, entry] of Object.entries(value)) {
     if (EXECUTABLE_KEYS.has(key.toLowerCase()) || key.includes("/") || key.includes("\\"))
@@ -8665,13 +11366,13 @@ function validVersion(value) {
 function safeAsset(value) {
   return value.length <= 512 && !MODULE_SCHEMES.test(value) && !/[<>\s]/.test(value) && !value.toLowerCase().startsWith("data:");
 }
-function isRecord11(value) {
+function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
-  const record = value;
-  const metadata = record.metadata;
-  return String(record.id ?? metadata?.id ?? "");
+  const record9 = value;
+  const metadata = record9.metadata;
+  return String(record9.id ?? metadata?.id ?? "");
 }
 function hashCanonicalJson(value) {
   const text = JSON.stringify(value);
@@ -8734,7 +11435,7 @@ function createPlayer(input = {}) {
     ...input.playericon !== undefined ? { playericon: input.playericon } : {},
     ...input.hoop !== undefined ? { hoop: input.hoop } : {},
     ...input.isPhysicsEnabled !== undefined ? { isPhysicsEnabled: input.isPhysicsEnabled } : {},
-    ...input.isDead !== undefined ? { isDead: input.isDead } : {},
+    ...input.isDrawingEnabled !== undefined ? { isDrawingEnabled: input.isDrawingEnabled } : {},
     ...input.effects !== undefined ? { effects: input.effects.map((e) => ({ ...e })) } : {},
     ...input.inventory !== undefined ? { inventory: input.inventory.map((i) => ({ ...i })) } : {}
   });
@@ -8772,7 +11473,7 @@ class KoreMapBuilder {
     this.options = options;
     this.world = engine.createWorld({ id: options.id, worldSize: options.worldSize });
     this.world.setBackground(toJson(this.background));
-    const containment = { type: 2 /* RECTANGLE */, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
+    const containment = { id: `${options.id}.containment`, type: 2 /* RECTANGLE */, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
     this.structures.push(containment);
     this.world.addStructure(toJson(containment));
   }
@@ -8829,8 +11530,9 @@ class KoreMapBuilder {
   }
   addStructure(structure) {
     const settings = "toSettings" in structure ? structure.toSettings() : structure;
-    this.structures.push(clone8(settings));
-    this.world.addStructure(toJson(settings));
+    const canonical = { ...settings, id: settings.id ?? `${this.options.id}.structure.${this.structures.length}` };
+    this.structures.push(clone8(canonical));
+    this.world.addStructure(toJson(canonical));
     this.built = undefined;
     return this;
   }
@@ -8844,7 +11546,10 @@ class KoreMapBuilder {
     this.assertHazardZone(settings);
     this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
     const structureIndex = this.structures.length;
-    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [kore.effects.modifySetting({ operation: "set" /* Set */, key: "dead", value: true })] });
+    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
+      { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+      { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+    ]))] });
     this.generatedHazardStructureIndexes.add(structureIndex);
     return this;
   }
@@ -8855,7 +11560,7 @@ class KoreMapBuilder {
     const radians = settings.angle * Math.PI / 180;
     this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
     const structureIndex = this.structures.length;
-    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [kore.effects.modifySetting({ operation: "add" /* Add */, key: "velocity", value: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
+    this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
     this.generatedHazardStructureIndexes.add(structureIndex);
     return this;
   }
@@ -9099,8 +11804,8 @@ function stableAuthoringHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function createDefaultKoreFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
-  return registry.select(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+  const registry = new EngineSystemRegistry().register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] }).register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] }).register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
+  return registry.select(["core.numeric", "core.participation", "core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 var kore = {
   engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },
@@ -9160,7 +11865,7 @@ var kore = {
     damage(damage) {
       if (!Number.isFinite(damage) || damage < 0)
         throw new Error("Damage must be a non-negative finite number");
-      return new EffectDamage({ typeValue: { damage } });
+      return new EffectNumericAdd({ typeValue: { stateId: "hp", amount: -damage } });
     },
     mass(mass) {
       if (!Number.isFinite(mass) || mass <= 0)
@@ -9170,26 +11875,26 @@ var kore = {
     size(size) {
       if (!Number.isFinite(size) || size <= 0)
         throw new Error("Size must be a finite positive number");
-      return { type: "EffectType.ModifySize" /* ModifySize */, typeValue: { size } };
+      return { schemaVersion: 1, type: "EffectType.ModifySize" /* ModifySize */, typeValue: { size } };
     },
     position(position) {
       if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
         throw new Error("Position coordinates must be finite numbers");
-      return { type: "EffectType.Position" /* Position */, typeValue: { ...position } };
+      return { schemaVersion: 1, type: "EffectType.Position" /* Position */, typeValue: { ...position } };
     },
     velocity(velocity) {
       if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y))
         throw new Error("Velocity components must be finite numbers");
-      return { type: "EffectType.Velocity" /* Velocity */, typeValue: { ...velocity } };
+      return { schemaVersion: 1, type: "EffectType.Velocity" /* Velocity */, typeValue: { ...velocity } };
     },
     team(team) {
-      return { type: "EffectType.Team" /* Team */, typeValue: { team: [...team] } };
+      return { schemaVersion: 1, type: "EffectType.Team" /* Team */, typeValue: { team: [...team] } };
     },
     modifySetting(values) {
       return new EffectModifySetting({ typeValue: values });
     },
     multi(...effects) {
-      return new MultiEffect({ type: "EffectType.Multi" /* Multi */, typeValue: effects.map((effect) => ("toSettings" in effect) ? effect.toSettings() : effect) });
+      return new MultiEffect({ schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: effects.map((effect) => ("toSettings" in effect) ? effect.toSettings() : effect) });
     },
     itemEffect(type, typeValue = {}) {
       return { type, typeValue: clone8(typeValue) };
@@ -9199,20 +11904,27 @@ var kore = {
         throw new Error("Shield capacity must be a positive number");
       return { type: "shield" /* Shield */, typeValue: { capacity } };
     },
+    aimVariance(maxVarianceDegrees, seed) {
+      if (!Number.isFinite(maxVarianceDegrees) || maxVarianceDegrees < 0)
+        throw new Error("Aim variance must be a finite non-negative number");
+      if (seed !== undefined && !Number.isSafeInteger(seed))
+        throw new Error("Aim variance seed must be a safe integer");
+      return { type: "aimVariance" /* AimVariance */, typeValue: { maxVarianceDegrees, ...seed === undefined ? {} : { seed } } };
+    },
     freeze(durationTurns = 1) {
       if (!Number.isInteger(durationTurns) || durationTurns <= 0)
         throw new Error("Freeze durationTurns must be a positive integer");
-      return { type: "freeze" /* Freeze */, typeValue: { durationTurns } };
+      return { type: "temporalModifier" /* TemporalModifier */, typeValue: { durationUnit: "turns", duration: durationTurns, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } } };
     },
     magnet(strength, range2) {
       if (!Number.isFinite(strength) || !Number.isFinite(range2) || range2 <= 0)
         throw new Error("Magnet parameters must be finite numbers with positive range");
-      return { type: "magnet" /* Magnet */, typeValue: { strength, range: range2 } };
+      return { type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, typeValue: { mode: "attract", force: strength, range: range2 } };
     },
     temporaryWall(lifetimeTurns = 1) {
       if (!Number.isInteger(lifetimeTurns) || lifetimeTurns <= 0)
-        throw new Error("Temporary wall lifetimeTurns must be a positive integer");
-      return { type: "temporaryWall" /* TemporaryWall */, typeValue: { lifetimeTurns } };
+        throw new Error("Temporary structure lifetimeTurns must be a positive integer");
+      return { type: "structureLifecycle" /* StructureLifecycle */, typeValue: { durationUnit: "turns", duration: lifetimeTurns, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } } };
     },
     ghostMode(durationTurns = 1) {
       if (!Number.isInteger(durationTurns) || durationTurns <= 0)
@@ -9234,10 +11946,10 @@ var kore = {
         throw new Error("Torque must be a finite number");
       return { type: "applyTorque" /* ApplyTorque */, typeValue: { torque } };
     },
-    delayedEffect(delayTicks, effect) {
-      if (!Number.isInteger(delayTicks) || delayTicks < 0)
-        throw new Error("Delay ticks must be a non-negative integer");
-      return { type: "delayedEffect" /* DelayedEffect */, typeValue: { delayTicks, effect: clone8(effect) } };
+    deferredEffect(delayTicks, effect) {
+      if (!Number.isSafeInteger(delayTicks) || delayTicks < 1)
+        throw new Error("Delay ticks must be a positive integer");
+      return { type: "deferredEffect" /* DeferredEffect */, typeValue: { durationUnit: "ticks", duration: delayTicks, effect: clone8(effect) } };
     },
     spawnTrigger(delayTicks, triggerType) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
@@ -9250,20 +11962,19 @@ var kore = {
     rulePhase: { item: "item" /* Item */, aim: "aim" /* Aim */, charge: "charge" /* Charge */, push: "push" /* Push */, physics: "physics" /* Physics */, complete: "complete" /* Complete */ },
     winCondition: { lastTeamStanding: "last-team-standing" /* LastTeamStanding */ },
     shape: { circle: 0 /* CIRCLE */, rectangle: 2 /* RECTANGLE */, line: 1 /* LINE */ },
-    effectType: { physics: "EffectType.Physics" /* Physics */, movement: "EffectType.Movement" /* Movement */, damage: "EffectType.Damage" /* Damage */, multi: "EffectType.Multi" /* Multi */, modifySetting: "EffectType.ModifySetting" /* ModifySetting */ },
+    effectType: { physics: "EffectType.Physics" /* Physics */, movement: "EffectType.Movement" /* Movement */, multi: "EffectType.Multi" /* Multi */, modifySetting: "EffectType.ModifySetting" /* ModifySetting */ },
     itemEffectType: {
       modifyForce: "modifyForce" /* ModifyForce */,
       modifyRotation: "modifyRotation" /* ModifyRotation */,
       lockRotation: "lockRotation" /* LockRotation */,
       applyTorque: "applyTorque" /* ApplyTorque */,
       spawnTrigger: "spawnTrigger" /* SpawnTrigger */,
-      delayedEffect: "delayedEffect" /* DelayedEffect */,
+      deferredEffect: "deferredEffect" /* DeferredEffect */,
       shield: "shield" /* Shield */,
-      freeze: "freeze" /* Freeze */,
-      swapPosition: "swapPosition" /* SwapPosition */,
-      temporaryWall: "temporaryWall" /* TemporaryWall */,
+      swapPosition: TRANSFORM_SWAP_POSITION_EFFECT_ID,
+      structureLifecycle: "structureLifecycle" /* StructureLifecycle */,
       ghostMode: "ghostMode" /* GhostMode */,
-      magnet: "magnet" /* Magnet */,
+      magnet: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID,
       selectionLock: "selectionLock" /* SelectionLock */,
       aimVariance: "aimVariance" /* AimVariance */
     },
@@ -9272,13 +11983,18 @@ var kore = {
   }
 };
 export {
+  validateTriggerDefinition,
+  validateResolvedEffectTarget,
   resolveRuntimeItemEffects,
   kore,
   createRuntimeItemEffect,
+  createPositionResolvedTarget,
   createPlayer,
   createItem,
+  createEntityResolvedTarget,
   createDefaultKoreFramework,
   composeItemEffects,
   applyRuntimeForceEffects,
+  TriggerDefinitionCatalog,
   KoreMapBuilder
 };

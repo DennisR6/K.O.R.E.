@@ -8,11 +8,16 @@ import { GameStateManager } from "./GameStateManager.js";
 import { MatchStateIndicator } from "./MatchStateIndicator.js";
 import { PlaybackSystem } from "./PlayBackSystem.js";
 import { PhysicsSystem } from "./PhysicsSystem.js";
+import { MovementSystem } from "./MovementSystem.js";
 import { RoundPlayerSystem } from "./RoundSystem.js";
 import { Simulator } from "./Simulator.js";
 import { WinningSystem } from "./WinningSystem.js";
 import { UiSystem } from "./UiSystem.js";
 import { EnvironmentalSystem } from "./EnvironmentalSystem.js";
+import { CounterSystem } from "./CounterSystem.js";
+import { TransformSystem } from "./TransformSystem.js";
+import { ParticipationSystem } from "./ParticipationSystem.js";
+import { NumericSystem } from "./NumericSystem.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic, type EnvironmentalState } from "../environment/environmental.js";
 import type { ISerializableSystem, SystemSettings } from "./types.js";
 
@@ -43,7 +48,8 @@ export function validateSystemSettingsList(settings: unknown, order: unknown): a
 export function createSystemFromSettings(settings: SystemSettings, restored: ReadonlyMap<string, ISerializableSystem> = new Map()): ISerializableSystem {
 	validateSystemSettings(settings)
 	const state = settings.state as Record<string, unknown>
-	switch (settings.systemId) {
+		switch (settings.systemId) {
+		case "core.movement": if (Object.keys(state).length) throw new Error("Malformed movement settings"); return new MovementSystem()
 		case "core.playback": {
 			const system = new PlaybackSystem()
 			if (!Number.isSafeInteger(state.remainingFrames) || typeof state.syncPending !== "boolean" || typeof state.completionPending !== "boolean" || !(state.finalState === null || Array.isArray(state.finalState))) throw new Error("Malformed playback settings")
@@ -88,12 +94,16 @@ export function createSystemFromSettings(settings: SystemSettings, restored: Rea
 		case "ai.battle": return AiBattleSystem.fromSettings(state)
 		case "ai.opponent": return AiOpponentSystem.fromSettings(state)
 		case "core.environmental": {
-			if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIndexes) || !state.structureIndexes.every(index => Number.isSafeInteger(index) && index >= 0)) throw new Error("Malformed environmental settings")
+			if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIds) || !state.structureIds.every(structureId => typeof structureId === "string" && structureId.length > 0)) throw new Error("Malformed environmental settings")
 			validateEnvironmentalMechanics(state.mechanics)
 			const lifecycle = { tick: state.tick, active: state.active, triggerUntil: state.triggerUntil, cooldownUntil: state.cooldownUntil, cyclePhase: state.cyclePhase }
 			if (!Number.isSafeInteger(lifecycle.tick) || !Array.isArray(lifecycle.active) || !Array.isArray(lifecycle.triggerUntil) || !Array.isArray(lifecycle.cooldownUntil) || !Array.isArray(lifecycle.cyclePhase)) throw new Error("Malformed environmental lifecycle state")
-			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIndexes as number[])
+			return new EnvironmentalSystem(state.mechanics as EnvironmentalMechanic[], lifecycle as EnvironmentalState, state.structureIds as string[])
 		}
+		case "core.counter": if (Object.keys(state).length) throw new Error("Malformed counter settings"); return new CounterSystem()
+		case "core.transform": if (Object.keys(state).length) throw new Error("Malformed transform settings"); return new TransformSystem()
+		case "core.participation": if (Object.keys(state).length) throw new Error("Malformed participation settings"); return new ParticipationSystem()
+		case "core.numeric": if (Object.keys(state).length) throw new Error("Malformed numeric settings"); return new NumericSystem()
 		default: throw new Error(`Unknown system ID '${settings.systemId}'`)
 	}
 }

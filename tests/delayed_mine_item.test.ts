@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { applyVerzoegerteMineExplosion, createOfficialItemLoader, createVerzoegerteMine, verzoegerteMineItem } from "../src/item/officialItems.ts";
+import { createOfficialItemLoader, createVerzoegerteMine, verzoegerteMineItem } from "../src/item/officialItems.ts";
 
 test("Verzögerte Mine is a validated built-in position-targeted item", () => {
 	const loader = createOfficialItemLoader();
@@ -7,13 +7,9 @@ test("Verzögerte Mine is a validated built-in position-targeted item", () => {
 	expect(loader.get("verzoegerte-mine")).toEqual(verzoegerteMineItem);
 });
 
-test("Verzögerte Mine applies no force before delay and repels after explosion", () => {
+test("Verzögerte Mine lowers to a generic deferred force-field effect", () => {
 	const mine = createVerzoegerteMine({ x: 0, y: 0 }, 2);
-	expect(applyVerzoegerteMineExplosion(mine, { x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: 0, y: 0 });
-	mine.trigger.advanceTick();
-	expect(applyVerzoegerteMineExplosion(mine, { x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: 0, y: 0 });
-	mine.trigger.advanceTick();
-	expect(applyVerzoegerteMineExplosion(mine, { x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ x: -4, y: 0 });
+	expect(mine.deferred).toEqual({ durationUnit: "ticks", duration: 2, effect: { schemaVersion: 1, type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 60 } } });
 });
 
 test("Verzögerte Mine rejects invalid placement", () => {

@@ -32,13 +32,14 @@ export class ItemPhaseUI {
 
 	public static getAvailableItems(handler: GameHandler, actorId: string): InventoryItem[] {
 		const actor = handler.getEntityManager().getEntityById(actorId);
-		if (!actor || actor.isDead()) return [];
+		if (!actor || actor.isDead() || !actor.isActorEligible()) return [];
 		return actor.getInventory().filter(item => item.remainingUses > 0).map(item => ({ ...item }));
 	}
 
 	public static validateTarget(handler: GameHandler, actorId: string, itemId: string, target: unknown): { valid: boolean; error?: string } {
 		const actor = handler.getEntityManager().getEntityById(actorId);
 		if (!actor || actor.isDead()) return { valid: false, error: "Actor not found or inactive" };
+		if (!actor.isActorEligible()) return { valid: false, error: "Actor is locked from selection" };
 		const settings = handler.getSettings();
 		const items = (settings && "items" in settings ? settings.items : []) as ItemDocument[];
 		const item = items.find(i => i.id === itemId);

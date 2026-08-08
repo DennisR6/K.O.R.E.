@@ -8,11 +8,12 @@ import { FRICTION_TABLE } from "../src/settings/settings.js";
 describe("Effect SDK Authoring & Migration Parity", () => {
 
 	describe("SDK Core Effect Helpers", () => {
-		test("kore.effects.damage produces JSON-safe EffectDamage settings", () => {
+		test("kore.effects.damage produces JSON-safe numeric.add settings", () => {
 			const effect = kore.effects.damage(25);
 			expect(effect.toSettings()).toEqual({
-				type: EffectType.Damage,
-				typeValue: { damage: 25 },
+				schemaVersion: 1,
+				type: EffectType.NumericAdd,
+				typeValue: { stateId: "hp", amount: -25 },
 			});
 			expect(JSON.parse(JSON.stringify(effect.toSettings()))).toEqual(effect.toSettings());
 		});
@@ -20,6 +21,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.mass produces valid EffectModifyMass settings", () => {
 			const effect = kore.effects.mass(2);
 			expect(effect.toSettings()).toEqual({
+				schemaVersion: 1,
 				type: EffectType.ModifyMass,
 				typeValue: { mass: 2 },
 			});
@@ -28,6 +30,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.size produces valid ModifySize settings", () => {
 			const effect = kore.effects.size(30);
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.ModifySize,
 				typeValue: { size: 30 },
 			});
@@ -36,6 +39,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.position produces valid Position settings", () => {
 			const effect = kore.effects.position({ x: 100, y: 200 });
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Position,
 				typeValue: { x: 100, y: 200 },
 			});
@@ -44,6 +48,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.velocity produces valid Velocity settings", () => {
 			const effect = kore.effects.velocity({ x: 15, y: -5 });
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Velocity,
 				typeValue: { x: 15, y: -5 },
 			});
@@ -52,6 +57,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.team produces valid Team settings", () => {
 			const effect = kore.effects.team([0, 1]);
 			expect(effect).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Team,
 				typeValue: { team: [0, 1] },
 			});
@@ -63,10 +69,11 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			const multi = kore.effects.multi(damage, mass);
 
 			expect(multi.toSettings()).toEqual({
+				schemaVersion: 1,
 				type: EffectType.Multi,
 				typeValue: [
-					{ type: EffectType.Damage, typeValue: { damage: 10 } },
-					{ type: EffectType.ModifyMass, typeValue: { mass: 1.5 } },
+					{ schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -10 } },
+					{ schemaVersion: 1, type: EffectType.ModifyMass, typeValue: { mass: 1.5 } },
 				],
 			});
 		});
@@ -91,24 +98,24 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 		test("kore.effects.freeze produces valid Freeze item effect settings", () => {
 			const effect = kore.effects.freeze(2);
 			expect(effect).toEqual({
-				type: ItemEffectType.Freeze,
-				typeValue: { durationTurns: 2 },
+			type: ItemEffectType.TemporalModifier,
+			typeValue: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.25 } } },
 			});
 		});
 
 		test("kore.effects.magnet produces valid Magnet item effect settings", () => {
 			const effect = kore.effects.magnet(500, 120);
 			expect(effect).toEqual({
-				type: ItemEffectType.Magnet,
-				typeValue: { strength: 500, range: 120 },
+				type: "movement.apply-force-to-entity",
+				typeValue: { mode: "attract", force: 500, range: 120 },
 			});
 		});
 
-		test("kore.effects.temporaryWall produces valid TemporaryWall item effect settings", () => {
+		test("kore.effects.temporaryWall produces valid generic structure lifecycle settings", () => {
 			const effect = kore.effects.temporaryWall(3);
 			expect(effect).toEqual({
-				type: ItemEffectType.TemporaryWall,
-				typeValue: { lifetimeTurns: 3 },
+				type: ItemEffectType.StructureLifecycle,
+				typeValue: { durationUnit: "turns", duration: 3, structure: { type: "rectangle", w: 1, h: 1, role: "solid" } },
 			});
 		});
 
@@ -128,12 +135,12 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			});
 		});
 
-		test("kore.effects.delayedEffect produces nested item effect settings", () => {
-			const inner = kore.effects.shield(30);
-			const delayed = kore.effects.delayedEffect(10, inner);
+		test("kore.effects.deferredEffect produces generic deferred Engine effect settings", () => {
+			const inner = kore.effects.damage(30).toSettings();
+			const delayed = kore.effects.deferredEffect(10, inner);
 			expect(delayed).toEqual({
-				type: ItemEffectType.DelayedEffect,
-				typeValue: { delayTicks: 10, effect: inner },
+				type: ItemEffectType.DeferredEffect,
+				typeValue: { durationUnit: "ticks", duration: 10, effect: inner },
 			});
 		});
 	});
@@ -143,7 +150,7 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			const settings = kore.effects.damage(15).toSettings();
 			const runtimeEffect = createRuntimeEffect(settings);
 
-			expect(runtimeEffect.getType()).toBe(EffectType.Damage);
+			expect(runtimeEffect.getType()).toBe(EffectType.NumericAdd);
 			expect(runtimeEffect.toSettings()).toEqual(settings);
 		});
 

@@ -41,6 +41,7 @@
     "kore.ui.hud.resume": "Resume",
     "kore.ui.hud.none": "None",
     "kore.ui.hud.waiting": "Waiting for opponent/server",
+    "kore.ui.hud.aiThinking": "This is a hard move - the AI is still thinking...",
     "kore.ui.hud.turn": "Team {team} | {phase} | Turn {turn}",
     "kore.ui.hud.actor": "Actor: {actor}",
     "kore.ui.hud.aim": "Aim: {aim}",

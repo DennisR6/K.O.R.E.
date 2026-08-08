@@ -17,7 +17,7 @@ export class EffectModifyMass implements Effect {
 	getType(): EffectType { return EffectType.ModifyMass }
 	toSettings(): EffectSettings {
 		return {
-			type: EffectType.ModifyMass,
+			schemaVersion: 1, type: EffectType.ModifyMass,
 			typeValue: { mass: this.mass }
 		}
 	}

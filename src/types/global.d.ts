@@ -1,5 +1,6 @@
 import * as p5Instance from 'p5';
 import type { AudioManager } from '../menu/AudioManager.js';
+import type { HardAiWorkerMetrics } from '../ai/worker/host.js';
 
 declare global {
 	interface Window {
@@ -8,6 +9,7 @@ declare global {
 			handler: GameHandler
 			mapId: string | null
 			readonly logs: readonly import('../engine/runtimeLog.js').RuntimeLogEntry[]
+			aiWorkerMetrics?: HardAiWorkerMetrics
 			audio: AudioManager
 		},
 	}

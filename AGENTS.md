@@ -68,6 +68,11 @@ This bidirectional lifecycle guarantees that runtime state is always reproducibl
 - `dist/` is ignored generated JavaScript and generated asset data. It may be stale and may contain files that no longer have source counterparts.
 - `sdk/` contains generated standalone ESM runtime bundles and TypeScript declarations for the generic Engine, UI, Audio, Presentation, and KORE SDK entry points. Regenerate it with `bun run sdk:build`; do not edit generated files manually.
 - `docs/` contains technical documentation guides (`docs/README.md`) and generated TypeDoc API documentation.
+- `docs/performance-testing.md` documents the committed performance baseline
+  contract; `performance/baselines.json` is checked by
+  `bun run test:performance` and updated only by the explicit
+  `bun run performance:update` command.
+- `docs/item-convergence.md` is the durable current Item Convergence inventory and ranking. After each completed Item migration, refresh CocoIndex, rerank remaining official Items from repository evidence, update that document with the baseline commit, and select the next Item only from the refreshed ranking.
 - `README.md` provides project overview, quickstart, installation, usage commands, and gameplay modes.
 - `package-lock.json` is stale and describes an old React/Vite/Socket.IO graph. `package.json` plus the tracked `bun.lock` describe the active dependency graph. Use Bun; do not casually run npm install or regenerate either lock.
 
@@ -134,8 +139,10 @@ After every change, check whether this guide still reflects the implementation a
 - `src/effects/runtimeFactory.ts`: single KORE runtime effect factory boundary (`createRuntimeEffect`). Production code constructs runtime effects exclusively through this adapter.
 - `src/effects/*.ts`: movement, friction/physics, damage, and mass/position/
   size/team/velocity modifiers.
-- `src/effects/modifyForce.ts`: serializable multiplicative force modifier for
-  item actions, with deterministic stacking.
+- `src/effects/triggerDispatcher.ts`: internal validated activation bridge for
+  handler, Player, MovementSystem, and circle/rectangle structure trigger paths;
+  it also dispatches typed `round.start` activations at `GameHandler.startTurn()`;
+  it does not alter serialized Effect settings.
 - `src/effects/modifyRotation.ts`: serializable additive rotation modifier for
   item actions, with deterministic angle normalization.
 - `src/effects/lockRotation.ts`: serializable turn-counted rotation lock with
@@ -144,16 +151,29 @@ After every change, check whether this guide still reflects the implementation a
   with deterministic rotation normalization.
 - `src/effects/spawnTrigger.ts`: serializable turn-counted trigger primitive
   with snapshot restoration state.
-- `src/effects/delayedEffect.ts`: serializable fixed-tick delayed-effect
-  primitive with snapshot-safe countdown state.
+- `src/engine/contracts/deferredEffect.ts`: generic JSON-safe one-shot Engine
+  effect execution state with stable identity and deterministic tick expiry.
+- `src/engine/contracts/lifetime.ts`: shared flat JSON-safe duration/countdown
+  mechanics for TemporalModifier, StructureLifecycle, and DeferredEffect. It
+  performs pure validation and one-step advancement only; lifecycle owners keep
+  their own time boundaries and expiry behavior.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
-- `src/effects/freeze.ts`: serializable movement-reduction effect with turn
-  expiration and snapshot-safe state.
+- `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent
+  modifier state with stable entity targets and deterministic turn expiry.
+- `src/engine/contracts/structureLifecycle.ts`: generic JSON-safe timed
+  canonical-structure lifecycle with stable IDs, retained dormant structures,
+  and deterministic turn expiry.
+- `src/engine/contracts/collisionFilter.ts`: generic JSON-safe entity-owned
+  collision relation exclusions with separately persisted turn lifetimes and a
+  pure pair-eligibility predicate. `PhysicsSystem` applies it before collision
+  resolution and entry dispatch; it does not alter boundary elimination.
+- `src/engine/contracts/actorEligibility.ts`: generic JSON-safe entity-owned
+  actor exclusions with separately persisted turn lifetimes and a pure
+  eligibility predicate. `GameHandler.validateActorForAction()` is the shared
+  local, AI, replay, and server authority boundary.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
-- `src/effects/temporaryWall.ts`: serializable temporary-wall lifecycle with
-  deterministic structure cleanup state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
@@ -172,8 +192,25 @@ After every change, check whether this guide still reflects the implementation a
   entities inside their rectangular regions and preserves collected-turn state.
 - `src/item/target.ts`: validates declarative self, entity, position, and zone
   targets against ownership, activity, range, and world bounds.
+- `src/item/resolvedTarget.ts`: version-one detached entity/position targets for
+  scheduled item Effects; zone targets are explicitly unsupported.
+- `src/item/triggerDefinitions.ts`: version-one JSON-safe named TriggerDefinition
+  catalog for validated core Effect/MultiEffect payloads; it is separate from
+  Effect IDs.
 - `src/item/officialItems.ts`: built-in declarative item catalog and Anker,
-  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline.
+  Durchlässigkeit, Magnet, Falltür, Power-Dash, Verzögerte-Mine, Mini-Wall, Freeze-Shot, and Switch behavior using the validated item/effect pipeline. Freeze-Shot lowers to a generic turn-scoped temporal modifier containing the existing `movement.scale-speed` command; Mini-Wall lowers to a generic timed canonical rectangle lifecycle and retains expired structures as dormant entries.
+  Power-Dash lowers `modifyForce` into the generic entity-owned
+  `pendingActionModifiers` contract and is consumed once at the accepted-shot
+  force boundary; Anker uses the same force operation with a two-turn lifetime
+  in the same pending-action contract. Vodka-Zero lowers `aimVariance` into the
+  generic `aim.random-offset` operation with canonical seeded state and one
+  accepted-shot consumption at that same boundary; its legacy executable
+  helper is historical compatibility only.
+  Jägermeister-Elixier lowers `selectionLock` into the generic
+  `actorEligibilityConstraints` plus separate turn-counted lifetime state;
+  actor eligibility is enforced below UI by the shared Handler boundary and
+  target eligibility remains independent. Its legacy executable helper is
+  historical compatibility only.
   It also owns the Wunderkiste (Mystery Box) reward logic: `resolveMysteryBoxReward`
   picks a specific or seeded candidate-pool reward and rejects empty pools,
   unknown IDs, and recursive mystery-box rewards unless explicitly enabled;
@@ -181,15 +218,30 @@ After every change, check whether this guide still reflects the implementation a
   derives the deterministic seed from snapshot-stable state (actor, turn, team,
   and the seeded-draw seed or game-id hash), so restore and replay reproduce
   the same reward.
-- `src/effects/ghostMode.ts`: serializable collision-filtering effect with turn
-  expiration and snapshot-safe state.
+- `src/effects/ghostMode.ts`: historical Ghost Mode decoder/helper. Current
+  Durchlässigkeit lowers to the generic `collisionFilters` plus separate
+  turn-counted `collisionFilterLifetimes` state; `PhysicsSystem` filters the
+  excluded `entity` and `structure` relations before resolution and collision
+  entry dispatch. Boundary elimination remains independent.
 - `src/effects/magnet.ts`: serializable attraction/repulsion effect with range
   and deterministic vector behavior.
   The declarative official-item path is active for
   validation and inventory tests, and `GameHandler.useItem()` resolves ordinary
   effects through the public KORE item-runtime boundary, persisting installed
-  effect state in player snapshots; the mystery-box reward remains the special
+   effect state in player snapshots. Generic temporal modifiers are persisted
+   separately on player snapshots and applied once to an accepted movement
+   action; the mystery-box reward remains the special
   inventory-grant path.
+- `GameHandler` owns generic timed structure lifecycles: accepted structure
+  templates create stable canonical structures, and expiry disables physics and
+  drawing while retaining the structure in snapshots.
+- `GameHandler` is the authoritative owner of deferred Engine-effect tick
+  advancement. Due records emit transient `schedule.due` activations and
+  execute through the shared predefined dispatcher; completed records are
+  removed from canonical deferred state.
+- `GameHandler` is also the authoritative owner of due `spawnTrigger` turn
+  schedules; named definitions are loaded from `GameSettings.triggerDefinitions`
+  and execute only against persisted entity targets.
 
 ### AI drivers
 
@@ -202,9 +254,15 @@ After every change, check whether this guide still reflects the implementation a
   (`decisionLimits`) and resolves equal-scoring candidates through its seed
   (seeded tie-break plus a rotated fallback angle grid), keeping killing
   moves preferred and non-killing ties aimed at an enemy, so every battle
-  seed plays a different game while matches keep terminating.
+  seed plays a different game while matches keep terminating. Hard AI passes
+  its explicit 300-tick speculative horizon without changing the authoritative
+  1,200-tick simulation default.
 - `src/ai/types.ts`: `AiSettings` (`difficulty`, `seed`, `team`,
   `decisionLimits`) and `validateAiSettings`.
+- `src/ai/worker/`: production browser Worker protocol, host lifecycle,
+  deterministic compute, provenance validation, responsiveness metrics, and
+  synchronous fallback boundary. It restores canonical snapshots and returns
+  AI intent only; browser integration is qualified for local AI scenes.
 - `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
   skips the item phase, submits one legal shot per physics phase through
   `AiTurnEmitter`, and implements the passive `IMouse` contract so the result
@@ -220,13 +278,36 @@ After every change, check whether this guide still reflects the implementation a
 - `src/structures/fullStructure.ts`: settings-to-runtime structure adapter.
 - `src/structures/structureCircle.ts`, `structureRectangle.ts`, and
   `structureLine.ts`: concrete geometry. Line support is incomplete.
+- Canonical structures carry stable IDs plus independent serialized
+  `physicsEnabled` and `drawingEnabled` participation flags. Dormant structures
+  remain in the canonical collection and can be positioned and reactivated by
+  generic structure-targeted Effects; no Item-specific runtime structure-spawn
+  system is used for Falltür. Timed canonical structure lifecycles may create
+  stable structures through the generic lifecycle host. Historical geometry-derived IDs are assigned only by
+  `src/migrations/structures.ts`; runtime `FullStructure` construction requires
+  the persisted ID.
+  Relative current Engine collision commands are stored separately as validated
+  `collisionCommands` bindings; `GameHandler` resolves the colliding entity and
+  routes them through the shared predefined dispatcher after physics resolution.
 - `src/structures/DeadlyObstacleCircle.ts` and `DebuggerStructure.ts`: special
   or debug structures.
 - `src/systems/types.ts`: `IGameContext`, `ISystem`, playback, and simulator
   contracts.
+- `src/systems/MovementSystem.ts`: trusted pre-entity movement-effect
+  interpreter using typed movement state.
+- `src/systems/CounterSystem.ts`: trusted deterministic interpreter for generic
+  numeric counter mutations; it mutates canonical context state but owns no
+  persistent counter values or feature-specific meaning.
+- `src/systems/NumericSystem.ts`: trusted interpreter for typed entity-owned
+  numeric mutations. It derives threshold crossings from previous/current
+  values and returns relative follow-up Effects through the shared dispatcher;
+  it owns no numeric values or threshold configuration.
+- `src/systems/predefinedEffectDispatcher.ts`: trusted predefined-System host;
+  resolves stable counter/entity targets and routes each current Engine Effect
+  to exactly one installed interpreter. It does not load executable content.
 - `src/systems/PhysicsSystem.ts`: entity/entity and entity/structure collision
-  iteration; movement and friction are currently entity effects, not this
-  system.
+  iteration; friction remains an entity effect and position integration for
+  collisions remains in this system's CCD solver.
 - `src/systems/UiSystem.ts`: converts mouse drag into actor, angle, and power;
   only permits selection by the active team.
 - `src/systems/Emitter.ts`: sends completed input through an `IInputEmitter`.
@@ -245,6 +326,19 @@ After every change, check whether this guide still reflects the implementation a
 - `src/engine/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
   JSON-safe worlds/entities/structures/effects and deterministic framework
   metadata selection. It must not import KORE/game domains or runtime adapters.
+- `src/engine/sdk/trigger.ts`: generic version-one detached tick and
+  collision-entry trigger-event contracts with strict payload validation.
+- `src/engine/contracts/counterState.ts` and
+  `src/engine/sdk/counterCapability.ts`: generic version-one world-owned
+  numeric CounterState plus typed `counter.set`, `counter.add`, and
+  `counter.reset` commands. Counter IDs are stable targets; score, kills,
+  coins, and other meanings remain content-layer semantics.
+- `src/engine/contracts/numericState.ts` and
+  `src/engine/sdk/numericCapability.ts`: generic version-one entity-owned
+  numeric targets with declarative threshold crossings and typed
+  `numeric.set`, `numeric.add`, and empty-payload `numeric.reset` commands.
+  Reset values belong to canonical per-state bindings and are never carried
+  in reset Effect payloads.
 - `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
   menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
   no browser loop/listeners, and must not import KORE/game or browser domains.
@@ -276,7 +370,8 @@ After every change, check whether this guide still reflects the implementation a
   structure effects.
 - `src/environment/environmental.ts` and `src/systems/EnvironmentalSystem.ts`:
   versioned deterministic timed hazards, triggered zones, force fields, moving
-  structures, and environmental cycles with snapshot-safe lifecycle state.
+  structures, and environmental cycles with snapshot-safe lifecycle state;
+  activation transitions use bounded typed trigger events.
 - `src/settings/cueClashMap.ts`, `frostbiteArenaMap.ts`, and
   `magmaCradleMap.ts`: scalable validated canonical map factories with world
   sizes independent of render dimensions. Magma Cradle uses loaded force and
@@ -363,6 +458,21 @@ After every change, check whether this guide still reflects the implementation a
   proper MIME types.
 - `scripts/listAssets.ts`: diagnostic tool that checks size and MIME type of
   generated JSON assets under `public/assets/json/`.
+- `scripts/profileAiBattle.ts`: aggregate headless AI-vs-AI performance
+  profiler for candidate counts, speculative/accepted ticks, physics checks,
+  and branch setup attribution; it does not change gameplay semantics.
+- `scripts/profileAiDecisionStability.ts`: single-seed experimental profiler
+  that compares Hard AI candidate selections at multiple simulation horizons
+  against the current 1,200-tick reference without changing production AI.
+- `scripts/profileAiCandidateLimits.ts`: bounded multi-seed profiler comparing
+  candidate-limit selected-action parity and speculative work against the
+  current 30-candidate reference.
+- `scripts/profileAiWorker.ts`: non-production worker parity and boundary
+  profiler for canonical snapshot reconstruction, transfer overhead, and
+  prepared Hard AI intent.
+- `scripts/performanceBaseline.ts`: explicit committed-baseline checker and
+  updater backed by the aggregate profiler. `test:performance` never updates
+  baselines; only `performance:update` does.
 
 ### Networking and utilities
 
@@ -433,6 +543,10 @@ After every change, check whether this guide still reflects the implementation a
   used by the menu's "Play Online" action.
 - `src/utils/random.ts`: deterministic pseudo-random source for replayable
   gameplay decisions.
+- `src/migrations/effects.ts` and `src/migrations/structures.ts`: explicit
+  historical-input normalization boundaries. Runtime Effect validation accepts
+  only current schema-versioned Effects, and runtime structure construction
+  requires persisted canonical IDs.
 - `src/utils/id.ts`: `localStorage` user/game IDs; not used by current startup.
 - `src/utils/ErrorHandling.ts`: error utility.
 - `src/utils/log.ts`: commented logger prototype.
@@ -472,9 +586,15 @@ bunx playwright install chromium   # once per machine for browser E2E tests
 Useful commands:
 
 ```sh
-bun run test           # ≤60s fast deterministic suite; excludes long qualifications/browser E2E
+bun run test           # alias for the explicit fast lane (currently ~11s)
 bun test               # raw all Bun-discovered tests; browser E2E runs under the Playwright runner instead
-bun run test:qualification # browser, fuzz, map, and gameplay release qualifications
+bun run test:unit      # pure contracts and deterministic component tests
+bun run test:integration # owner/interpreter, authority, persistence, replay, and server boundaries
+bun run test:qualification # active complete Engine/Item qualification; blocked evidence has a separate profile
+bun run test:qualification:blocked # explicit known blocked/candidate qualification evidence
+bun run test:e2e       # full Playwright browser lane
+bun run test:soak      # deterministic default AI/physics stability profile
+bun run test:release   # typecheck, build, fast, qualification, replay, browser smoke, examples, desktop
 bun run test:fuzz      # default 25-match deterministic AI-vs-AI smoke fuzz run
 bun run test:fuzz:rc   # 1000-match release-candidate fuzz run (~35s)
 bun run test:fuzz:soak # 5000-match soak fuzz run (~3 min)
@@ -600,9 +720,14 @@ Account for this mismatch when changing rendering APIs.
 
 `GameHandlerBuilder.defaultSystems()` installs systems in this order:
 
-1. `PlaybackSystem`
-2. `PhysicsSystem`
-3. `GameStateManager`
+1. `MovementSystem`
+2. `NumericSystem`
+3. `ParticipationSystem`
+4. `TransformSystem`
+5. `PlaybackSystem`
+6. `PhysicsSystem`
+7. `BoundarySystem`
+8. `GameStateManager`
 
 The local gameplay branch in `src/main.ts` adds `UiSystem` and `EmitterSystem`
 through `createMatchHandler`, then installs input/drawing/result wiring with the
@@ -623,15 +748,16 @@ engine state, turn number, and active team when given `EngineSettings`.
 
 1. Pre-tickers.
 2. Handler-level always effects on every entity.
-3. Every entity's `tick()`.
-4. Systems in registration order.
-5. Structure ticks.
-6. Post-tickers.
+3. Registered systems' optional pre-entity ticks.
+4. Every entity's `tick()`.
+5. Systems in registration order.
+6. Structure ticks.
+7. Post-tickers.
 
-`Player.tick()` delegates movement to `EffectMove` and friction to
-`EffectPhysics`. `PhysicsSystem` resolves collisions and zeros very low
-speeds; despite its comments, it does not integrate positions or apply
-friction itself.
+`MovementSystem` delegates Always-triggered movement to `EffectMove` through
+the typed movement-state boundary. `Player.tick()` retains the entity-local
+friction `EffectPhysics` path. `PhysicsSystem` resolves collisions and zeros
+very low speeds; despite its comments, it does not apply friction itself.
 
 ### Input, simulation, and playback
 
@@ -644,7 +770,9 @@ friction itself.
 5. `EmitterSystem` sends the shot and changes state to `Waiting_for_server`.
 6. Local `GameEmitter` calls `simulateTurn()` and then `tickTurn()`.
 7. `simulateTurn()` serializes and clones the engine, applies the impulse, and
-   ticks until static or 1,200 frames.
+   ticks until static or its explicit max-tick budget; the default and
+   authoritative path remain 1,200 frames, while Hard AI speculation passes
+   300.
 8. `tickTurn()` applies the live impulse and starts playback for that frame
    count.
 9. `PlaybackSystem` hard-syncs positions and velocities to the simulated final
@@ -700,6 +828,8 @@ remain unsupported.
 `EngineSettings` adds game state, turn number, active team, serialized rule
 state, match result, and runtime entity snapshots. Persisted game snapshots must
 preserve all turn and rule-progress fields.
+It also persists the complete world-owned `counters` collection; counter reads
+use canonical state and never inspect Effect history or hidden system state.
 It also carries sorted, versioned stable system settings plus explicit tick order;
 the allowlisted system factory rejects unknown, duplicate, malformed, executable,
 or unsupported-version system data during restoration.
@@ -710,6 +840,8 @@ an optional mystery-box reward configuration (`candidatePool` plus an explicit
 preserved in engine snapshots.
 Seeded item-draw state is also preserved in engine snapshots so reconnect and
 replay restoration resume the configured deterministic draw pool.
+`GameSettings.triggerDefinitions` carries validated named core Effect/MultiEffect
+definitions for supported `spawnTrigger` schedules.
 `TurnPacket` contains `actorId`, `{ angle, power }`, `durationFrames`, and final
 entity state.
 
@@ -762,6 +894,12 @@ Treat registry order changes as data-contract changes.
   generated base64 asset JSON.
 
 ## Testing Guidance
+
+Committed performance baselines live in `performance/baselines.json` and are
+checked with `bun run test:performance`. Do not update committed performance
+baselines merely to make a failing performance test pass. A baseline increase
+requires an explicit explanation of why the additional cost is intentional or
+unavoidable. Prefer fixing regressions over moving the baseline.
 
 For each commit-sized checklist task, run the named focused test file(s), nearby
 subsystem coverage, and TypeScript validation:
@@ -855,7 +993,8 @@ Section 13 defines and qualifies the collision contract: deterministic complete
 depenetration, zero-distance and endpoint handling, bounded multi-contact and
 CCD, energy/rest invariants, entry-only collision effects, and snapshot contact
 continuity. `PhysicsSystem` serializes active lifecycle pairs only at completed
-tick boundaries using entity UUID/structure-index keys. `tests/physics_qualification_gate.test.ts`
+tick boundaries using canonical entity UUID/Structure ID keys; local iteration
+indexes are not persisted identity. `tests/physics_qualification_gate.test.ts`
 references the solver evidence; `test:physics-fuzz`, `test:physics-fuzz:rc`,
 and `test:physics-fuzz:soak` run 100, 5,000, and 25,000 deterministic cases.
 
@@ -929,11 +1068,12 @@ not desired design:
 
 - `Player.setMass()` clamps values above one and rejects non-finite or
   non-positive mass.
-- Positive `EffectDamage` values reduce HP, and HP at or below zero marks a
-  player dead. Death circles use `EffectModifySetting` to set `dead: true`.
-  Dead players render as authoritative `OUT` markers but no longer tick,
-  collide, accept selection, or resolve a turn; settings snapshots preserve
-  their dead state. Match-end input is
+- Positive KORE `numeric.add` HP values reduce HP, and HP at or below zero disables a
+  player's physics and drawing participation. Death circles use ordered
+  `EffectType.Multi` Effects to set both flags false. Inactive players render
+  as authoritative `OUT` markers but no longer tick, collide, accept selection,
+  or resolve a turn; snapshots preserve the orthogonal participation flags.
+  Match-end input is
   blocked, but winning evaluation is not yet integrated into round progression.
 - Round effects are stored but not meaningfully executed. Circle and rectangle
   collision effects execute, including converted editor push and kill zones.

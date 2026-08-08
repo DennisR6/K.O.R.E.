@@ -16,6 +16,8 @@ import type { RenderContext } from "../engine/RenderContext.js";
 import { readClipboardText } from "../mods/browserClipboard.js";
 import { createModFileInput } from "../mods/browserFileInput.js";
 import type { LoadedContentPackage } from "../content/package.js";
+import { HardAiWorkerHost } from "../ai/worker/host.js";
+import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -33,6 +35,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private hud: ReturnType<typeof installGameplayHud> | undefined;
 	private modFileInput: ReturnType<typeof createModFileInput> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
+	private aiWorkerHost: HardAiWorkerHost | undefined;
 	public readonly soundSourceId = "kore.scene-router";
 
 	public constructor(
@@ -64,6 +67,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
+	public getAiWorkerMetrics(): HardAiWorkerMetrics | undefined { return this.aiWorkerHost?.getMetrics(); }
 	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
@@ -87,8 +91,9 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		const workerHost = new HardAiWorkerHost();
 		this.mode = "ai-battle";
-		const started = this.startScene(() => createAiBattleHandler(mapId, seed), mapId);
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed, undefined, workerHost), mapId, workerHost);
 		if (started) {
 			this.aiBattle = true;
 			this.battleSeed = seed;
@@ -100,9 +105,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startModAiBattle(mod: LoadedContentPackage): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		const workerHost = new HardAiWorkerHost();
 		this.mode = "ai-battle";
 		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
-		const started = this.startScene(() => createAiBattleHandler(mapId, seed, mod), mapId);
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed, mod, workerHost), mapId, workerHost);
 		if (started) {
 			this.aiBattle = true;
 			this.battleSeed = seed;
@@ -114,8 +120,9 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		const workerHost = new HardAiWorkerHost();
 		this.mode = "human-vs-ai";
-		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed), mapId);
+		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed, workerHost), mapId, workerHost);
 		if (started) {
 			this.aiBattle = false;
 			this.battleSeed = seed;
@@ -125,7 +132,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		return started;
 	}
 
-	private startScene(factory: () => GameHandler, mapId: string | null): boolean {
+	private startScene(factory: () => GameHandler, mapId: string | null, workerHost?: HardAiWorkerHost): boolean {
 		this.starting = true;
 		try {
 			const next = factory();
@@ -133,14 +140,17 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.captureSoundCommands(this.handler.getMouseHandler());
 			this.menuPreview?.dispose();
 			this.menuPreview = undefined;
+			this.aiWorkerHost?.dispose();
 			this.handler.dispose();
 			this.handler = next;
+			this.aiWorkerHost = workerHost;
 			this.mapId = mapId;
 			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => { void reportOfflineMatch(record); });
 			this.installResultOverlay(next);
 			this.error = undefined;
 			return true;
 		} catch (error) {
+			workerHost?.dispose();
 			this.error = error instanceof Error ? error.message : "Unable to start match";
 			return false;
 		} finally {
@@ -176,7 +186,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 				// A battle rematch must be a fresh game: re-draw the battle
 				// seed instead of replaying the same seeded decisions.
 				const seed = this.battleSeedSource();
-				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed), this.mapId);
+				const workerHost = new HardAiWorkerHost();
+				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed, undefined, workerHost), this.mapId, workerHost);
 				if (restarted) this.battleSeed = seed;
 				return;
 			}
@@ -184,6 +195,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			return;
 		}
 		this.handler.dispose();
+		this.aiWorkerHost?.dispose();
+		this.aiWorkerHost = undefined;
 		// The application mixer owns the global music slot. Explicitly release the
 		// local match source before the fresh menu requests lower-priority music.
 		this.pendingSoundCommands.push(audio.command.stopSource({ sourceId: "kore.game.local", fadeOutMs: 150 }));
@@ -286,11 +299,11 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameMod
  * random draw and varies the hard-AI decisions deterministically; pass an
  * explicit seed for reproducible games.
  */
-export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage): GameHandler {
-	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod });
+export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage, aiWorkerHost?: HardAiWorkerHost): GameHandler {
+	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod, aiWorkerHost });
 }
 
 /** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
-export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed });
+export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff), aiWorkerHost?: HardAiWorkerHost): GameHandler {
+	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed, aiWorkerHost });
 }

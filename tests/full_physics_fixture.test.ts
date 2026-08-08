@@ -51,25 +51,29 @@ test("a fixed seed produces the complete physics regression snapshot", () => {
 		id: player.id,
 		position: player.position,
 		velocity: player.velocity,
-		isDead: player.isDead,
+		isPhysicsEnabled: player.isPhysicsEnabled,
+		isDrawingEnabled: player.isDrawingEnabled,
 	}))).toEqual([
 		{
 			id: moving.id,
 			position: { x: 66.83043913872267, y: 110.60364891374049 },
 			velocity: { x: 1.346619659898994, y: 2.637705526451129 },
-			isDead: false,
+			isPhysicsEnabled: true,
+			isDrawingEnabled: true,
 		},
 		{
 			id: target.id,
 			position: { x: 85.95805590899384, y: 105.00384661452777 },
 			velocity: { x: 2.027026314315535, y: 0.33565438851029156 },
-			isDead: false,
+			isPhysicsEnabled: true,
+			isDrawingEnabled: true,
 		},
 		{
 			id: outside.id,
 			position: { x: 200, y: 100 },
 			velocity: { x: 0, y: 0 },
-			isDead: true,
+			isPhysicsEnabled: false,
+			isDrawingEnabled: false,
 		},
 	]);
 });

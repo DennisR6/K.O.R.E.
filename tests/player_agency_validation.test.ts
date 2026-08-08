@@ -40,7 +40,8 @@ function changed(before: PlayerSettings, after: PlayerSettings): boolean {
 		|| before.velocity.x !== after.velocity.x
 		|| before.velocity.y !== after.velocity.y
 		|| before.hp !== after.hp
-		|| before.isDead !== after.isDead;
+		|| before.isPhysicsEnabled !== after.isPhysicsEnabled
+		|| before.isDrawingEnabled !== after.isDrawingEnabled;
 }
 
 /**
@@ -88,7 +89,7 @@ export function analyzePlayerAgency(trace: AgencyActionTrace[]): PlayerAgencyRep
 	if (trace.length > 1 && actions.size === 1) warnings.add("single-repeated-action");
 	const actedActors = new Set(trace.map(action => action.actorId));
 	for (const action of trace) {
-		if (action.before.some(player => player.isDead && !actedActors.has(player.id))) warnings.add("death-before-agency");
+		if (action.before.some(player => (!player.isPhysicsEnabled || !player.isDrawingEnabled) && !actedActors.has(player.id))) warnings.add("death-before-agency");
 	}
 
 	return {
@@ -173,7 +174,7 @@ describe("Section 15.7 meaningful player agency", () => {
 	});
 
 	test("flags no legal actors and death before agency without promoting either to a hard failure", () => {
-		const dead = createPlayerSettings({ id: "00000000-0000-4000-8000-000000000003", isDead: true, team: [1] });
+		const dead = createPlayerSettings({ id: "00000000-0000-4000-8000-000000000003", isPhysicsEnabled: false, isDrawingEnabled: false, team: [1] });
 		const live = createPlayerSettings({ id: "00000000-0000-4000-8000-000000000001", team: [0] });
 		const report = analyzePlayerAgency([syntheticTrace({ before: [live, dead], result: { ...syntheticTrace().result, finalState: [live, dead] } })]);
 		expect(report.warnings).toEqual(expect.arrayContaining(["death-before-agency"]));

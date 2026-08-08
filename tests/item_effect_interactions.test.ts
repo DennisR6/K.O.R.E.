@@ -2,21 +2,22 @@ import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { EffectModifyForce, applyForceModifiers } from "../src/effects/modifyForce.ts";
+import { applyActionModifiers, createActionModifier } from "../src/engine/contracts/actionModifier.ts";
 import { EffectModifyRotation, applyRotationModifiers } from "../src/effects/modifyRotation.ts";
 import { EffectLockRotation } from "../src/effects/lockRotation.ts";
-import { EffectFreeze } from "../src/effects/freeze.ts";
+import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
+import { advanceStructureLifecycle, createStructureLifecycle } from "../src/engine/contracts/structureLifecycle.ts";
 import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectSelectionLock } from "../src/effects/selectionLock.ts";
-import { EffectTemporaryWall } from "../src/effects/temporaryWall.ts";
 import { EffectSpawnTrigger } from "../src/effects/spawnTrigger.ts";
 import { createOfficialItemLoader } from "../src/item/officialItems.ts";
+import { EffectTrigger, EffectType } from "../src/effects/types.ts";
 
 test("mixed effect stacking and conflict resolution behave deterministically", () => {
 	// Stacking force multipliers (e.g. Anker 0.5 * Power-Dash 1.5 = 0.75)
-	const forceRes = applyForceModifiers({ angle: 0, power: 10 }, [
-		new EffectModifyForce({ typeValue: { factor: 0.5 } }),
-		new EffectModifyForce({ typeValue: { factor: 1.5 } }),
+	const forceRes = applyActionModifiers({ angle: 0, power: 10 }, [
+		createActionModifier({ id: "anker", action: "force", operation: "scale", factor: 0.5, remainingUses: 1, sourceOrder: 0 }),
+		createActionModifier({ id: "power-dash", action: "force", operation: "scale", factor: 1.5, remainingUses: 1, sourceOrder: 0 }),
 	]);
 	expect(forceRes.power).toBe(7.5);
 	expect(forceRes.angle).toBe(0);
@@ -30,43 +31,40 @@ test("mixed effect stacking and conflict resolution behave deterministically", (
 });
 
 test("mixed effect cleanup and expiration across turn progression", () => {
-	const freeze = new EffectFreeze({ typeValue: { speedFactor: 0.5, durationTurns: 2 } });
+	const freeze = createTemporalModifier({ id: "target:freeze:0", target: { type: "entity", entityId: "target" }, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 }, target: { type: "entity", entityId: "target" } }, durationUnit: "turns", duration: 2 });
 	const ghost = new EffectGhostMode({ typeValue: { durationTurns: 1 } });
 	const lockRot = new EffectLockRotation({ typeValue: { durationTurns: 2 } });
 	const selLock = new EffectSelectionLock({ typeValue: { durationTurns: 1 } });
-	const wall = new EffectTemporaryWall({ typeValue: { wallId: "wall1", x: 100, y: 100, w: 50, h: 10, durationTurns: 2, active: true } });
+	const wall = createStructureLifecycle({ id: "wall1:lifecycle", structureId: "wall1", durationUnit: "turns", duration: 2 });
 	const trigger = new EffectSpawnTrigger({ typeValue: { triggerId: "trig1", delayTurns: 1 } });
 
-	expect(freeze.isActive()).toBe(true);
+	expect(freeze.remaining).toBe(2);
 	expect(ghost.isActive()).toBe(true);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(true);
-	expect(wall.isActive()).toBe(true);
 	expect(trigger.hasFired()).toBe(false);
 
 	// Advance turn 1
-	freeze.advanceTurn();
+	const freezeAfterOne = advanceTemporalModifier(freeze)!;
 	ghost.advanceTurn();
 	lockRot.advanceTurn();
 	selLock.advanceTurn();
-	wall.advanceTurn();
 	expect(trigger.advanceTurn()).toBe(true);
 
-	expect(freeze.isActive()).toBe(true);
+	expect(freezeAfterOne.remaining).toBe(1);
 	expect(ghost.isActive()).toBe(false);
 	expect(lockRot.isLocked()).toBe(true);
 	expect(selLock.isLocked()).toBe(false);
-	expect(wall.isActive()).toBe(true);
+	expect(advanceStructureLifecycle(wall)?.remaining).toBe(1);
 	expect(trigger.hasFired()).toBe(true);
 
 	// Advance turn 2
-	freeze.advanceTurn();
+	const freezeAfterTwo = advanceTemporalModifier(freezeAfterOne);
 	lockRot.advanceTurn();
-	expect(wall.advanceTurn()).toBe(true); // expires
+	expect(advanceStructureLifecycle(advanceStructureLifecycle(wall)!) ).toBeUndefined(); // expires
 
-	expect(freeze.isActive()).toBe(false);
+	expect(freezeAfterTwo).toBeUndefined();
 	expect(lockRot.isLocked()).toBe(false);
-	expect(wall.isActive()).toBe(false);
 });
 
 test("serialization round-trip and replay regression for mixed items and effects", () => {
@@ -78,9 +76,9 @@ test("serialization round-trip and replay regression for mixed items and effects
 		position: { x: 100, y: 100 },
 		rotation: 45,
 		inventory: [{ itemId: "anker", remainingUses: 2, usesThisTurn: 0 }],
-		effects: [
-			{ type: "EffectType.Movement", typeValue: {}, trigger: 0, triggerValue: [] },
-		],
+			effects: [
+				{ schemaVersion: 1, type: EffectType.Movement, typeValue: { deltaTime: 0, x: 0, y: 0 }, trigger: EffectTrigger.Always, triggerValue: [] },
+			],
 	}));
 
 	const handler = new GameHandlerBuilder().defaultSystems().addPlayer(player).build();

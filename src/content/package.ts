@@ -49,7 +49,7 @@ export interface LoadedContentPackage {
 	readonly hash: string;
 }
 
-const ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"] as const;
+const ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "transform.swap-position", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"] as const;
 const EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 const MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 

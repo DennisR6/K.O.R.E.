@@ -1,24 +1,14 @@
 import { expect, test } from "bun:test";
-import { EffectSwapPosition } from "../src/effects/swapPosition.ts";
-import { ItemEffectType } from "../src/effects/types.ts";
+import { EngineEffectRegistry, TRANSFORM_SWAP_POSITION_EFFECT_ID, registerTransformEffects } from "../src/engine/sdk/index.ts";
 
-test("swapPosition exchanges active entity positions atomically", () => {
-	const effect = new EffectSwapPosition();
-	expect(effect.swap(
-		{ id: "a", position: { x: 10, y: 20 }, active: true },
-		{ id: "b", position: { x: 80, y: 90 }, active: true },
-	)).toEqual([{ x: 80, y: 90 }, { x: 10, y: 20 }]);
-	expect(effect.teleport({ id: "a", position: { x: 10, y: 20 }, active: true }, { x: 40, y: 50 })).toEqual({ x: 40, y: 50 });
+test("transform.swap-position is a JSON-safe stable-ID command", () => {
+	const effects = registerTransformEffects(new EngineEffectRegistry());
+	const command = { type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: "first" }, typeValue: { otherEntityId: "second" } };
+	expect(() => effects.validate(command)).not.toThrow();
+	expect(() => effects.validate({ ...command, typeValue: { otherEntityId: "" } })).toThrow("non-empty");
 });
 
-test("swapPosition serializes as a declarative effect", () => {
-	expect(new EffectSwapPosition().toSettings()).toEqual({ type: ItemEffectType.SwapPosition, typeValue: {} });
-});
-
-test("swapPosition rejects invalid or inactive targets", () => {
-	const effect = new EffectSwapPosition();
-	const active = { id: "a", position: { x: 0, y: 0 }, active: true };
-	expect(() => effect.swap(active, active)).toThrow("itself");
-	expect(() => effect.swap({ ...active, active: false }, { id: "b", position: { x: 1, y: 1 }, active: true })).toThrow("active");
-	expect(() => effect.teleport(active, { x: Number.NaN, y: 1 })).toThrow("finite");
+test("transform.swap-position rejects extra payload state", () => {
+	const effects = registerTransformEffects(new EngineEffectRegistry());
+	expect(() => effects.validate({ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, target: { type: "entity", entityId: "first" }, typeValue: { otherEntityId: "second", temporary: true } })).toThrow("unexpected");
 });

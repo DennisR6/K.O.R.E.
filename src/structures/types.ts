@@ -5,6 +5,8 @@
 import type { IPhysics, SHAPE } from "../physics/physics.js";
 import type { ISettingsSerialize } from "../engine/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
+import type { SettingKey, SettingValue } from "../effects/types.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 import { StructureCircle } from "./structureCircle.js";
 import { StructureLine } from "./structureLine.js";
 import { StructureRectangle } from "./structureRectangle.js";
@@ -21,7 +23,30 @@ export interface IStructure extends
 	ISettingsSerialize<MapBoundarySettings>
 // ,IMapBoundary<EffectType, EffectTrigger>
 // ,ISettingsSerialize<MapBoundarySettingsCircle<EffectType, EffectTrigger> | MapBoundarySettingsRect<EffectType, EffectTrigger> | MapBoundarySettingsLine<EffectType, EffectTrigger>> 
-{ }
+{
+	getId(): string;
+	getPos(): { x: number; y: number };
+	getVel(): { x: number; y: number };
+	getBounds(): { x: number; y: number };
+	getMass(): number;
+	getShape(): SHAPE;
+	getFriction(): number | undefined;
+	getBounceFactor(): number;
+	onCollision({ entity }: { entity: IPhysics<SHAPE> }): void;
+	setPos(pos: { x: number; y: number }): void;
+	setVel(vel: { x: number; y: number }): void;
+	setMass(mass: number): void;
+	setFriction(friction: number): void;
+	setBounceFactor(bounce: number): void;
+	physicsEnabled(): boolean;
+	setPhysicsEnabled(physicsEnabled: boolean): void;
+	drawingEnabled(): boolean;
+	setDrawingEnabled(drawingEnabled: boolean): void;
+	setSetting(key: SettingKey, value: SettingValue): void;
+	addSetting(key: SettingKey, value: SettingValue): void;
+	removeSetting(key: SettingKey, value: SettingValue): void;
+	getCollisionCommands(): readonly CollisionCommandBinding[];
+}
 export type StructureMap = {
 	[SHAPE.CIRCLE]: StructureCircle & IPhysics<SHAPE.CIRCLE>
 	[SHAPE.RECTANGLE]: StructureRectangle & IPhysics<SHAPE.RECTANGLE>

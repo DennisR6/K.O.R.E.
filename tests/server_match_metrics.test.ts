@@ -7,7 +7,8 @@ const users = Array.from({ length: 8 }, (_, index) => `00000000-0000-4000-8000-$
 
 function settingsWithOneDeadTeam() {
 	const settings = createDefaultGameSettings(2, 1);
-	settings.players.find(player => player.team.includes(1))!.isDead = true;
+	settings.players.find(player => player.team.includes(1))!.isPhysicsEnabled = false;
+	settings.players.find(player => player.team.includes(1))!.isDrawingEnabled = false;
 	return settings;
 }
 

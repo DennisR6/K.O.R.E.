@@ -28,7 +28,7 @@ export class EffectPhysics implements Effect {
 	getType(): EffectType { return EffectType.Physics }
 	toSettings(): EffectSettings {
 		return {
-			type: EffectType.Physics,
+			 schemaVersion: 1, type: EffectType.Physics,
 			typeValue: {
 				friction: this.friction,
 				linearDrag: this.linearDrag,

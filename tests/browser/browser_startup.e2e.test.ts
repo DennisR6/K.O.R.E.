@@ -178,7 +178,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(info.title).toBe("KORE");
 			expect(info.canvasCount).toBeGreaterThan(0);
 			expect(info.gameSurface).toBe("object");
-			expect(info.gameKeys).toEqual(["audio", "handler", "logs", "mapId"]);
+			expect(info.gameKeys).toEqual(["aiWorkerMetrics", "audio", "handler", "logs", "mapId"]);
 			expect(info.handlerCtor).toBe("GameHandler");
 			// Menu state: no match settings before the play action.
 			expect(info.settingsMode).toBeNull();

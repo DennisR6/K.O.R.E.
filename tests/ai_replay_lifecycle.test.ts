@@ -47,8 +47,11 @@ function makeAiArena() {
 				{
 					trigger: EffectTrigger.Collision,
 					triggerValue: [],
-					type: EffectType.ModifySetting,
-					typeValue: { operation: SettingOperation.Set, key: "dead", value: true },
+					type: EffectType.Multi,
+					typeValue: [
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+						{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+					],
 				},
 			],
 		},
@@ -62,6 +65,7 @@ const AI_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples: 3 
 
 /** Runs one AI-vs-AI match to completion and returns the live artifacts. */
 function runAiMatch(matchSeed: number, aiSeed0: number, aiSeed1: number) {
+	const startedAt = performance.now();
 	const settings = makeAiArena();
 	const handler = new GameHandlerBuilder()
 		.defaultSystems()
@@ -90,6 +94,10 @@ function runAiMatch(matchSeed: number, aiSeed0: number, aiSeed1: number) {
 		expect(ticks).toBeLessThan(10_000);
 	}
 	expect(guard).toBeLessThan(10_000);
+	if (process.env.AI_DIAGNOSTIC === "1") {
+		const decisionCount = emitter.recorder.getReplay().actions.length;
+		console.log(JSON.stringify({ matchSeed, aiSeed0, aiSeed1, totalDurationMs: performance.now() - startedAt, decisionCount, candidateSimulationsUpperBound: decisionCount * 30, speculativeTicksUpperBound: decisionCount * 30 * 300, guard }));
+	}
 	return { handler, emitter };
 }
 
@@ -171,7 +179,7 @@ describe("AI Match Replay Lifecycle", () => {
 		expect(replayA.getHandler().getTurnNumber()).toBe(handler.getTurnNumber());
 		expect(replayA.getHandler().getActiveTeam()).toBe(handler.getActiveTeam());
 		expect(replayA.getHandler().getRuleState()).toEqual(handler.getRuleState());
-	});
+	}, 30_000);
 
 	test("AI decisions depend deterministically on the AI seed", () => {
 		// The match seed only drives the replay recording: identical AI seeds

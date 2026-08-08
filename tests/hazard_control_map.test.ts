@@ -76,7 +76,7 @@ function runShot(settings: ReturnType<typeof createCanonicalPlayableMatchSetting
 	const actor = handler.toSettings().players.find(player => player.team[0] === team)!;
 	emitter.sendShot(actor.id, angle, power);
 	const frames = settle(handler, maxFrames);
-	return { frames, players: handler.toSettings().players.map(player => ({ team: player.team, position: { ...player.position }, isDead: player.isDead })) };
+	return { frames, players: handler.toSettings().players.map(player => ({ team: player.team, position: { ...player.position }, isDead: !player.isPhysicsEnabled || !player.isDrawingEnabled })) };
 }
 
 interface ScriptedAction { team: number; angle: number; power: number }
@@ -88,7 +88,7 @@ function playScripted(settings: ReturnType<typeof createCanonicalPlayableMatchSe
 	for (const action of actions) {
 		if (handler.getState() === GameState.Game_over) break;
 		if (handler.getRuleState().phase === RulePhase.Item) emitter.skipPhase();
-		const actor = handler.toSettings().players.find(player => player.team[0] === action.team && !player.isDead);
+		const actor = handler.toSettings().players.find(player => player.team[0] === action.team && player.isPhysicsEnabled && player.isDrawingEnabled);
 		if (!actor) throw new Error(`No live actor for team ${action.team} on the scripted turn`);
 		emitter.sendShot(actor.id, action.angle, action.power);
 		settle(handler, 900);
@@ -96,7 +96,7 @@ function playScripted(settings: ReturnType<typeof createCanonicalPlayableMatchSe
 	const snapshot = handler.toSettings();
 	return {
 		winnerTeam: handler.getMatchResult()?.status === "draw" ? null : (handler.getMatchResult()?.winnerTeam ?? null),
-		players: snapshot.players.map(player => ({ team: player.team, position: { ...player.position }, isDead: player.isDead })),
+		players: snapshot.players.map(player => ({ team: player.team, position: { ...player.position }, isDead: !player.isPhysicsEnabled || !player.isDrawingEnabled })),
 		turns: handler.getTurnNumber(),
 	};
 }
@@ -313,7 +313,7 @@ describe("Section 17.6 hazard control map", () => {
 		expect(camera.getScaleFactor()).toBeGreaterThan(0);
 		expect(camera.getWorldBounds()).toEqual({ x: 0, y: 0, w: 800, h: 450 });
 		for (const player of settings.players) {
-			expect(player.isDead).toBe(false);
+		expect(player.isPhysicsEnabled && player.isDrawingEnabled).toBe(true);
 			expect(camera.containsCircle(player.position, player.size)).toBe(true);
 		}
 	});

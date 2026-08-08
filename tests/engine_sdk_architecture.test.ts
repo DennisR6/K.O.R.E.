@@ -10,9 +10,11 @@ test("generic Engine SDK authors JSON worlds without importing KORE", () => {
 		.addEntity(engine.createEntity({ id: "generic-entity", capabilities: ["position"] }))
 		.addStructure(engine.createStructure({ shape: "rectangle", x: 0, y: 0, w: 320, h: 180 }))
 		.addEffect(engine.createEffect({ type: "example", params: { value: 1 } }))
+		.addCounter(engine.createCounterState({ id: "coins" }))
 		.build();
 	expect(JSON.parse(engine.buildJson(world))).toEqual(world);
 	expect(() => engine.validate(world)).not.toThrow();
+	expect(world.counters).toEqual([{ schemaVersion: 1, id: "coins", value: 0 }]);
 	for (const file of ["src/engine/sdk/index.ts", "src/engine/sdk/systemRegistry.ts", "src/engine/sdk/worldBuilder.ts"]) {
 		const source = readFileSync(file, "utf8");
 		expect(source).not.toMatch(/from\s+["'].*(?:kore|settings|rules|item|ai|content|server|ui|menu|scenes)[/"']/);
@@ -39,7 +41,7 @@ test("generic system registry resolves deterministic capabilities, optional syst
 
 test("KORE SDK composes generic framework metadata through the canonical entry point", () => {
 	expect(kore.engine.createWorld({ id: "extension", worldSize: { x: 1, y: 1 } }).build().id).toBe("extension");
-	expect(kore.createDefaultFramework().systemOrder).toEqual(["core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+	expect(kore.createDefaultFramework().systemOrder).toEqual(["core.movement", "core.numeric", "core.participation", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 	const handler = kore.createHandler(createDefaultGameSettings(2, 1));
 	expect(handler.getSystems().map(system => (system as { systemId?: string }).systemId)).toEqual(kore.createDefaultFramework().systemOrder);
 });
