@@ -780,7 +780,7 @@ The repository-wide inventory after the Damage and Falltür slices is:
 |---|---|---|---|
 | Engine | `Physics` | D | Live per-entity friction/drag tick behavior; remains KORE runtime physics until a concrete generic physics-state owner exists. |
 | Engine | `NumericAdd` | A | Current HP mutation through `NumericSystem`; migrated. |
-| Engine | `Movement` | D | Live temporal integration with drift and stop-threshold ordering; distinct from generic velocity commands. |
+| Engine | `Movement` | D | Characterized and retained as a KORE temporal modifier interpreted only by `MovementSystem.preTick`; distinct from generic velocity commands. |
 | Engine | `Multi` | B | Live ordered composition; retain while children converge independently. |
 | Engine | `ModifyMass` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic mass capability. |
 | Engine | `ModifySize` | C/D | SDK authoring and tests only; no current gameplay consumer justifies a generic size capability. |
@@ -811,9 +811,9 @@ The ranked live candidates are:
 
 | Rank | Candidate | Reuse | Production | Legacy removal | Risk / missing boundary |
 |---:|---|---:|---:|---:|---|
-| 1 | `Movement` | High: existing movement state and integrate capability could serve persistent motion content | High: every active figure tick | High: could remove the remaining temporal legacy interpreter | Drift, stop-threshold, delta-time, and pre-tick ordering need characterization before deciding whether `movement.integrate` is equivalent. |
-| 2 | `Physics` | Medium: could establish generic physics modifier ownership | High: every active figure tick | Medium | Friction, drag, stop threshold, and KORE entity behavior have no current generic state owner; likely larger infrastructure. |
-| 3 | `ModifySetting(mass/size/team)` | Low until a real consumer appears | No current production content | Medium | SDK/test authoring only; do not invent object-state capabilities speculatively. |
+| 1 | `Physics` | Medium: could establish generic physics modifier ownership | High: every active figure tick | Medium | Friction, drag, stop threshold, and KORE entity behavior have no current generic state owner; likely larger infrastructure. |
+| 2 | `ModifySetting(mass/size/team)` | Low until a real consumer appears | No current production content | Medium | SDK/test authoring only; do not invent object-state capabilities speculatively. |
+| 3 | Item status/scheduling Effects | Low without a concrete Engine-neutral consumer | Several live KORE items | Low | Current target-sensitive lifecycle semantics remain correctly KORE-owned. |
 
 `ModifySetting(participation)` was selected and is now migrated. The reusable
 collision boundary receives the authoritative handler context, resolves the
@@ -828,10 +828,44 @@ Characterization and migration evidence is currently `tests/collision_command_ho
 `tests/numeric_threshold.test.ts`, and the generic dispatcher/trigger contract
 tests. The velocity migration is qualified by the direct legacy/current
 arithmetic comparison, target/entry tests, and the existing collision host
-qualification. A fresh inventory now ranks `Movement` above `Physics`; no
-Movement migration is included in this slice because its temporal semantics are
-not equivalent to a one-shot movement command and require a separate ownership
-characterization.
+qualification. Legacy Movement is now explicitly retained after characterization;
+the next candidate from fresh evidence is `Physics`.
+
+### Legacy Movement Ownership Decision
+
+Legacy Movement is not equivalent to `movement.set-velocity`,
+`movement.add-velocity`, or `movement.scale-speed`. It is a continuous lifecycle
+modifier with this current execution order:
+
+```text
+Handler scheduled/always work
+→ MovementSystem.preTick
+→ EffectMove.apply
+→ position += selectedVelocity * selectedDeltaTime
+→ Player.tick
+→ EffectPhysics friction/drag
+→ PhysicsSystem CCD, collision, and end-of-tick stop handling
+```
+
+For current production player settings, `EffectMove` has `{ x: 0, y: 0,
+deltaTime: 0 }`, so `MovementSystem` supplies the live velocity and handler `dt`.
+Non-zero authored components intentionally override only their corresponding
+velocity component, and a non-zero drift blends the velocity direction toward
+the entity rotation while preserving speed when speed is above the physics stop
+threshold. Zero velocity still advances no position; inactive entities are
+skipped before the Effect runs. Friction is not part of Movement: it is applied
+afterward by the Player-owned Physics Effect, while collision response and
+depenetration remain PhysicsSystem/PhysicsStrategy responsibilities.
+
+The authoritative owner is already `MovementSystem.preTick`; `EffectMove` is its
+serialized KORE temporal modifier implementation, not a second integration loop.
+The existing generic `movement.integrate` registry declaration is insufficient
+as a migration target because it has no qualified runtime lifecycle execution,
+does not encode the legacy fallback/override behavior, and would require a new
+persistent target-binding mechanism. No new primitive or hidden MovementSystem
+state is justified. Focused characterization is in
+`tests/movement_characterization.test.ts`, `tests/effect_test.ts`,
+`tests/physics_energy_invariants.test.ts`, and `tests/full_physics_fixture.test.ts`.
 
 ### Collision Velocity Convergence
 
