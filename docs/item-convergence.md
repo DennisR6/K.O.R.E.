@@ -1,6 +1,6 @@
 # Item Convergence
 
-Last reranked after commit: `6bdc103 fix(engine): register atomic transform in runtime profiles`
+Last reranked after commit: `1cf5fb4 test(items): characterize mystery box reward semantics`
 
 Repository state: clean / qualified for the completed Delayed Mine slice.
 
@@ -33,14 +33,16 @@ This is the current repository-backed checkpoint, not a historical ranking. Futu
 
 Already-converged Items are excluded from this active ranking.
 
+There is no recommended next migration candidate after Wunderkiste. Wunderkiste is a qualified retained KORE semantic, while the other remaining Items are incomplete/non-production or require future input/collision semantics.
+
 | Rank | Item | Classification | Existing primitives reused | Missing semantic | Legacy removal value | Risk | Recommendation |
 |------|------|----------------|----------------------------|------------------|----------------------|------|----------------|
-| 1 | Wunderkiste | D | Item economy, seeded draws, stable actor identity, scheduling concepts | Reward-pool and inventory-grant semantics remain KORE content meaning | Low | Low if retained; risky to generalize | Current next-order candidate; ranked only |
-| 2 | Anker | F | `EffectModifyForce`; `movement.scale-speed` is only an approximation | Accepted-action force modifier | Low currently; no live production consumer | High | Defer |
-| 3 | Power-Dash | F | Same potential primitives as Anker | Accepted-action force modifier | Low currently; no live production application | High | Defer with Anker |
-| 4 | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer |
-| 5 | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Retain until input policy evolves |
-| 6 | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Retain as shot-policy semantic |
+| -- | Wunderkiste | D | Item economy, seeded draws, stable actor identity, deterministic utility | Reward-pool interpretation and one-Item grant remain KORE meaning | None justified | Low | Qualified retained; not a migration candidate |
+| -- | Anker | F | `EffectModifyForce`; `movement.scale-speed` is only an approximation | Accepted-action force modifier | Low currently; no live production consumer | High | Defer |
+| -- | Power-Dash | F | Same potential primitives as Anker | Accepted-action force modifier | Low currently; no live production application | High | Defer with Anker |
+| -- | Ghost Mode / Durchlässigkeit | F | Temporal lifetime shape only | Collision category/filter semantics; participation flags are not equivalent | Potentially high, but the semantic gap is large | High | Defer |
+| -- | Selection Lock / Jägermeister-Elixier | F | Turn-counted state shape | Selection/input-policy capability; no current `UiSystem` consumer | Low | Medium | Retain until input policy evolves |
+| -- | Vodka-Zero | F | Deterministic random state only | Accepted-shot aim modifier | Low currently; no live production consumer | High | Retain as shot-policy semantic |
 
 ## Remaining Item Inventory
 
@@ -63,23 +65,26 @@ The six remaining Items below, together with the six completed Items above, are 
 - `transform.set-position` is defined in `src/engine/sdk/transformCapability.ts`; `effect.composition` is ordered but does not provide read-before-write binding.
 - `participation.*` controls physics/drawing participation and must not be treated as Ghost Mode collision filtering.
 - The gameplay qualification suite intentionally keeps `effect-disappears-after-use` visible for incomplete Item paths rather than promoting them to qualified behavior.
+- Wunderkiste uses `resolveMysteryBoxReward()` for KORE reward semantics and delegates the actual one-use capped inventory mutation to `addDrawnInventoryItem()`.
+- `MapPickupSystem` is adjacent infrastructure: it grants declared world pickups through the same inventory helper but does not resolve Wunderkiste rewards.
+- The Handler special case is legitimate KORE orchestration, not a duplicated generic Engine reward mechanism. No generic reward command or reward graph is justified by another production consumer.
 
 ## Recommended Next Item
 
-Recommended next-order Item: **Wunderkiste**
+Recommended next Item: **None**
 
-Reason: Switch is complete. The refreshed repository-backed ranking now places Wunderkiste first, but its reward-pool and inventory-grant behavior remains intentionally KORE-specific. Wunderkiste is ranked only; it was not implemented in this checkpoint.
+Reason: Wunderkiste is qualified as a retained KORE semantic. The remaining official Items are incomplete/non-production or require future input/collision semantics. Do not manufacture another generic Engine primitive or select an Item solely to continue the migration list.
 
-Expected handling for the next ranked candidate:
+Qualified Wunderkiste ownership:
 
 ```text
-KORE item economy and reward validation
+KORE reward configuration and validation
 -> deterministic seeded reward resolution
--> one capped inventory grant
--> retain the KORE content semantic unless a future generic economy primitive is justified
+-> existing generic addDrawnInventoryItem() grant
+-> snapshot/replay through canonical inventory state
 ```
 
-Expected missing primitive: none required for correctness. A generic reward/inventory command would be speculative and should not be introduced solely to remove the Item name.
+Missing generic primitive: none. A generic reward/inventory command would be speculative and should not be introduced solely to remove the Item name.
 
 Required characterization:
 
@@ -89,9 +94,13 @@ Required characterization:
 - Snapshot and replay preserve the reward result.
 - No speculative generic reward subsystem is introduced.
 
+## Active Convergence Status
+
+Active Item Convergence is complete for the currently qualified generic language. The remaining official Items are either qualified retained KORE semantics (`Wunderkiste`) or incomplete/non-production behavior requiring separate future semantic work. No further Item migration is selected from this checkpoint.
+
 ## Final Drift Audit
 
-Already-converged Items must not be opportunistically rewritten during active convergence. Falltür is especially deferred and must remain unchanged while Wunderkiste or another selected Item is evaluated.
+Already-converged Items must not be opportunistically rewritten during active convergence. Falltür is especially deferred and remains reserved for the separate final drift audit.
 
 After all intended Item slices are complete, perform one final drift audit against the completed Engine/KORE primitive set. The audit must verify that each completed lowering still uses the current generic contracts and that no Item-specific runtime branch has reappeared.
 
