@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime, isActorEligible, advanceActorEligibilityConstraintLifetime } from "../src/engine/contracts/actorEligibility.ts";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime, isActorEligible, advanceActorEligibilityConstraintLifetime, validateActorEligibilityState } from "../src/engine/contracts/actorEligibility.ts";
 
 test("actor eligibility constraints exclude only acting entities", () => {
 	const constraint = createActorEligibilityConstraint({ id: "lock", mode: "excluded" });
@@ -17,4 +17,18 @@ test("actor eligibility lifetime is separate and deterministic", () => {
 
 test("actor eligibility rejects unsupported modes", () => {
 	expect(() => createActorEligibilityConstraint({ id: "bad", mode: "forced" as never })).toThrow("mode");
+});
+
+test("actor eligibility lifetime must reference an existing constraint", () => {
+	const lifetime = createActorEligibilityConstraintLifetime({ id: "missing:lifetime", constraintId: "missing", durationUnit: "turns", duration: 1 });
+
+	expect(() => validateActorEligibilityState([], [lifetime])).toThrow("unknown constraint");
+});
+
+test("actor eligibility provenance does not change pure eligibility", () => {
+	const first = createActorEligibilityConstraint({ id: "first", mode: "excluded", sourceId: "one", sourceOrder: 1 });
+	const second = createActorEligibilityConstraint({ id: "second", mode: "excluded", sourceId: "two", sourceOrder: 99 });
+
+	expect(isActorEligible([first])).toBe(false);
+	expect(isActorEligible([second])).toBe(false);
 });
