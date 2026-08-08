@@ -30,7 +30,7 @@ export const ITEM_EFFECT_LIFECYCLE: Readonly<Record<ItemEffectType, EffectLifecy
 	[ItemEffectType.LockRotation]: { category: "status", execution: "turn", persistent: true },
 	[ItemEffectType.ApplyTorque]: { category: "modifier", execution: "tick", persistent: true },
 	[ItemEffectType.SpawnTrigger]: { category: "scheduled", execution: "turn", persistent: true },
-	[ItemEffectType.DelayedEffect]: { category: "scheduled", execution: "tick", persistent: true },
+	[ItemEffectType.DeferredEffect]: { category: "scheduled", execution: "tick", persistent: true },
 	[ItemEffectType.Shield]: { category: "status", execution: "collision", persistent: true },
 	[ItemEffectType.SwapPosition]: { category: "command", execution: "action", persistent: false },
 	[ItemEffectType.StructureLifecycle]: { category: "status", execution: "turn", persistent: true },

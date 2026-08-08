@@ -704,11 +704,9 @@ export const kore = {
 			if (!Number.isFinite(torque)) throw new Error("Torque must be a finite number");
 			return { type: ItemEffectType.ApplyTorque, typeValue: { torque } };
 		},
-		delayedEffect(delayTicks: number, effect: ItemEffectSettings | EffectSettings): ItemEffectSettings {
-			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
-			return "typeValue" in effect && isItemEffectType(effect.type)
-				? { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, effectType: effect.type, effectValue: clone(effect.typeValue) } }
-				: { type: ItemEffectType.DelayedEffect, typeValue: { delayTicks, nestedEffect: clone(effect) } };
+			deferredEffect(delayTicks: number, effect: EffectSettings): ItemEffectSettings {
+			if (!Number.isSafeInteger(delayTicks) || delayTicks < 1) throw new Error("Delay ticks must be a positive integer");
+			return { type: ItemEffectType.DeferredEffect, typeValue: { durationUnit: "ticks", duration: delayTicks, effect: clone(effect) as never } };
 		},
 		spawnTrigger(delayTicks: number, triggerType: string): ItemEffectSettings {
 			if (!Number.isInteger(delayTicks) || delayTicks < 0) throw new Error("Delay ticks must be a non-negative integer");
@@ -728,7 +726,7 @@ export const kore = {
 			lockRotation: ItemEffectType.LockRotation,
 			applyTorque: ItemEffectType.ApplyTorque,
 			spawnTrigger: ItemEffectType.SpawnTrigger,
-			delayedEffect: ItemEffectType.DelayedEffect,
+			deferredEffect: ItemEffectType.DeferredEffect,
 			shield: ItemEffectType.Shield,
 			swapPosition: ItemEffectType.SwapPosition,
 			structureLifecycle: ItemEffectType.StructureLifecycle,
@@ -741,10 +739,6 @@ export const kore = {
 		friction: FRICTION_TABLE,
 	},
 } as const;
-
-function isItemEffectType(value: string): value is ItemEffectType {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "swapPosition", "ghostMode", "magnet", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle"].includes(value);
-}
 
 export type { KoreGameModeInput, KoreMatchDefinition, KoreMatchHeader, KoreMatchOptions };
 export type { GameSettings } from "../../settings/settings.js";

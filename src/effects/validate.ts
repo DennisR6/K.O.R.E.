@@ -1,4 +1,3 @@
-import { assertJsonValue } from "../engine/contracts/systemSettings.js";
 import {
 	EffectType, EFFECT_SCHEMA_VERSION,
 	ItemEffectType,
@@ -17,7 +16,7 @@ const ITEM_EFFECT_KEYS = new Set(["type", "typeValue", "itemId", "order"]);
 	const PLAYER_SETTING_KEYS = new Set<PlayerSettingKey>(["hp", "mass", "size", "friction", "position", "velocity", "team", "physicsEnabled", "drawingEnabled"]);
 	const STRUCTURE_SETTING_KEYS = new Set(["physicsEnabled", "drawingEnabled"]);
 const CORE_EFFECT_TYPES = [EffectType.Physics, EffectType.NumericAdd, EffectType.Movement, EffectType.Multi, EffectType.ModifyMass, EffectType.ModifySize, EffectType.Position, EffectType.Velocity, EffectType.Team, EffectType.ModifySetting] as const;
-const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.DelayedEffect, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle] as const;
+const ITEM_EFFECT_TYPES = [ItemEffectType.ModifyForce, ItemEffectType.ModifyRotation, ItemEffectType.LockRotation, ItemEffectType.ApplyTorque, ItemEffectType.SpawnTrigger, ItemEffectType.Shield, ItemEffectType.SwapPosition, ItemEffectType.GhostMode, ItemEffectType.Magnet, ItemEffectType.SelectionLock, ItemEffectType.AimVariance, ItemEffectType.TemporalModifier, ItemEffectType.StructureLifecycle, ItemEffectType.DeferredEffect] as const;
 
 /** Validates one serialized core effect without constructing a runtime object. */
 export function validateEffectSettings(value: unknown): asserts value is EffectSettings {
@@ -88,21 +87,19 @@ export function validateRuntimeItemEffectSettings(value: unknown): asserts value
 			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
 			if (payload.resolvedPosition !== undefined) { const position = record(payload.resolvedPosition, "spawnTrigger resolvedPosition"); exactKeys(position, ["x", "y"], "spawnTrigger resolvedPosition"); finite(position.x, "spawnTrigger resolvedPosition x"); finite(position.y, "spawnTrigger resolvedPosition y"); }
 			optionalBoolean(payload.fired, "spawnTrigger fired"); return;
-		case ItemEffectType.DelayedEffect:
-			knownKeys(payload, new Set(["effectType", "effectValue", "nestedEffect", "delayTicks", "remainingTicks", "fired", "resolvedTarget"]), "delayedEffect payload"); requiredKeys(payload, ["delayTicks"], "delayedEffect payload");
-			if ((payload.effectType === undefined) === (payload.nestedEffect === undefined)) throw new Error("delayedEffect requires exactly one nested Effect representation");
-			if (payload.effectType !== undefined) {
-				string(payload.effectType, "delayedEffect effectType");
-				if (payload.effectType === ItemEffectType.SpawnTrigger || payload.effectType === ItemEffectType.DelayedEffect || payload.effectType === ItemEffectType.StructureLifecycle || payload.effectType === ItemEffectType.SwapPosition || payload.effectType === ItemEffectType.TemporalModifier) throw new Error("delayedEffect nested scheduled/structural Effects are unsupported");
-				if (payload.effectValue !== undefined) assertJsonValue(payload.effectValue);
-				validateRuntimeItemEffectSettings({ type: payload.effectType, typeValue: payload.effectValue ?? {} });
-			} else {
-				if (payload.effectValue !== undefined) throw new Error("delayedEffect effectValue requires effectType");
-				validateEffectSettings(payload.nestedEffect);
-			}
-			boundedTicks(payload.delayTicks, payload.remainingTicks, "delayedEffect");
-			if (payload.resolvedTarget !== undefined) validateResolvedEffectTarget(payload.resolvedTarget);
-			optionalBoolean(payload.fired, "delayedEffect fired"); return;
+		case ItemEffectType.DeferredEffect:
+			exactKeys(payload, ["durationUnit", "duration", "effect"], "deferredEffect payload");
+			if (payload.durationUnit !== "ticks") throw new Error("deferredEffect durationUnit must be ticks");
+			boundedTurns(payload.duration, undefined, "deferredEffect");
+			const deferred = record(payload.effect, "deferredEffect effect");
+			exactKeys(deferred, ["schemaVersion", "type", "typeValue"], "deferredEffect effect");
+			if (deferred.schemaVersion !== 1 || deferred.type !== "movement.apply-force-field") throw new Error("deferredEffect currently requires movement.apply-force-field");
+			const field = record(deferred.typeValue, "deferredEffect force field");
+			exactKeys(field, ["mode", "force", "range"], "deferredEffect force field");
+			if (field.mode !== "attract" && field.mode !== "repel") throw new Error("deferredEffect force field mode is invalid");
+			finiteNonNegative(field.force, "deferredEffect force field force");
+			finitePositive(field.range, "deferredEffect force field range");
+			return;
 		case ItemEffectType.Shield:
 			knownKeys(payload, new Set(["capacity", "remainingCapacity", "blocksCollision"]), "shield payload"); requiredKeys(payload, ["capacity"], "shield payload"); finitePositive(payload.capacity, "shield capacity");
 			if (payload.remainingCapacity !== undefined && (typeof payload.remainingCapacity !== "number" || !Number.isFinite(payload.remainingCapacity) || payload.remainingCapacity < 0 || payload.remainingCapacity > payload.capacity)) throw new Error("shield remainingCapacity is outside capacity");
@@ -160,7 +157,6 @@ function validateTurns(payload: Record<string, unknown>, label: string): void {
 }
 function boundedTurns(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 1) throw new Error(`${label} durationTurns must be a positive integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTurns is outside durationTurns`); }
 function boundedDelayTurns(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 0) throw new Error(`${label} delayTurns must be a non-negative integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTurns is outside delayTurns`); }
-function boundedTicks(duration: unknown, remaining: unknown, label: string): void { if (!Number.isSafeInteger(duration) || (duration as number) < 0) throw new Error(`${label} delayTicks must be a non-negative integer`); if (remaining !== undefined && (!Number.isSafeInteger(remaining) || (remaining as number) < 0 || (remaining as number) > (duration as number))) throw new Error(`${label} remainingTicks is outside delayTicks`); }
 function record(value: unknown, label: string): Record<string, unknown> { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`); return value as Record<string, unknown>; }
 function knownKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>, label: string): void { for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`${label} contains unknown field '${key}'`); }
 function exactKeys(value: Record<string, unknown>, allowed: readonly string[], label: string): void { const set = new Set(allowed); for (const key of Object.keys(value)) if (!set.has(key)) throw new Error(`${label} contains unknown field '${key}'`); for (const key of allowed) if (!(key in value)) throw new Error(`${label} is missing '${key}'`); }

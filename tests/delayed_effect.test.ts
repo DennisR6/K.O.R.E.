@@ -1,28 +1,30 @@
 import { expect, test } from "bun:test";
-import { EffectDelayed } from "../src/effects/delayedEffect.ts";
-import { ItemEffectType } from "../src/effects/types.ts";
+import { advanceDeferredEffect, createDeferredEffect } from "../src/engine/contracts/deferredEffect.ts";
 
-test("delayedEffect fires exactly on the configured fixed tick", () => {
-	const effect = new EffectDelayed({ typeValue: { effectType: "modifyForce", effectValue: { factor: 0.5 }, delayTicks: 2 } });
-	expect(effect.advanceTick()).toBe(false);
-	expect(effect.getRemainingTicks()).toBe(1);
-	expect(effect.advanceTick()).toBe(true);
-	expect(effect.hasFired()).toBe(true);
-	expect(effect.advanceTick()).toBe(false);
+function deferred(remaining?: number) {
+	return createDeferredEffect({
+		id: "mine:0",
+		durationUnit: "ticks",
+		duration: 2,
+		effect: { schemaVersion: 1, type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 60 }, target: { type: "position", position: { x: 100, y: 100 } } },
+		...(remaining === undefined ? {} : { remaining }),
+	});
+}
+
+test("deferred effects fire exactly once at the configured fixed tick", () => {
+	const effect = deferred();
+	expect(advanceDeferredEffect(effect)?.remaining).toBe(1);
+	expect(advanceDeferredEffect(advanceDeferredEffect(effect)!)).toBeUndefined();
 });
 
-test("delayedEffect serializes and restores its countdown state", () => {
-	const effect = new EffectDelayed({ typeValue: { effectType: "modifyRotation", delayTicks: 3 } });
-	effect.advanceTick();
-	const settings = effect.toSettings();
-	expect(settings).toEqual({ type: ItemEffectType.DelayedEffect, typeValue: { effectType: "modifyRotation", effectValue: undefined, delayTicks: 3, remainingTicks: 2, fired: false } });
-	const restored = new EffectDelayed(settings);
-	expect(restored.advanceTick()).toBe(false);
-	expect(restored.advanceTick()).toBe(true);
+test("deferred effects serialize and restore their countdown state", () => {
+	const effect = deferred(1);
+	expect(JSON.parse(JSON.stringify(effect))).toEqual(effect);
+	expect(advanceDeferredEffect(effect)).toBeUndefined();
 });
 
-test("delayedEffect validates its type and countdown", () => {
-	expect(() => new EffectDelayed({ typeValue: { effectType: "", delayTicks: 1 } })).toThrow("effectType");
-	expect(() => new EffectDelayed({ typeValue: { effectType: "modifyForce", delayTicks: -1 } })).toThrow("non-negative");
-	expect(() => new EffectDelayed({ typeValue: { effectType: "modifyForce", delayTicks: 1, remainingTicks: 2 } })).toThrow("between zero");
+test("deferred effects validate stable identity, tick duration, and Engine payload", () => {
+	expect(() => createDeferredEffect({ id: "", durationUnit: "ticks", duration: 1, effect: { schemaVersion: 1, type: "movement.apply-force-field", typeValue: {} } })).toThrow("stable id");
+	expect(() => createDeferredEffect({ id: "x", durationUnit: "turns" as never, duration: 1, effect: { schemaVersion: 1, type: "movement.apply-force-field", typeValue: {} } })).toThrow("ticks");
+	expect(() => createDeferredEffect({ id: "x", durationUnit: "ticks", duration: 1, effect: { schemaVersion: 1, type: "unknown", typeValue: {} } })).not.toThrow();
 });

@@ -10,6 +10,7 @@ import { createEngineEffectComposition } from "../engine/sdk/composition.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
 import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 export * from "./officialItemHelpers.js";
 
@@ -139,7 +140,7 @@ export const verzoegerteMineItem: ItemDocument = createItem({
 	name: "Verzögerte Mine",
 	description: "Creates a delayed repelling force explosion at a selected position.",
 	type: "trap",
-	effects: [{ type: "delayedEffect", value: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks: DELAYED_MINE_DELAY_TICKS } }],
+	effects: [{ type: "deferredEffect", value: { durationUnit: "ticks", duration: DELAYED_MINE_DELAY_TICKS, effect: { schemaVersion: 1, type: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } } } }],
 	targetType: "position",
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -301,7 +302,7 @@ export function createOfficialItemLoader(): ItemLoader {
 	validator.registerEffectType("ghostMode");
 	validator.registerEffectType("magnet");
 	validator.registerEffectType("spawnTrigger");
-	validator.registerEffectType("delayedEffect");
+	validator.registerEffectType("deferredEffect");
 	validator.registerEffectType("structureLifecycle");
 	validator.registerEffectType("swapPosition");
 	validator.registerEffectType("selectionLock");

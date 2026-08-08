@@ -36,6 +36,7 @@ import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
 import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
 import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
+import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
 import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";
 import { TransformSystem } from "../systems/TransformSystem.js";
@@ -46,9 +47,8 @@ import { SeededRandom } from "../utils/random.js";
 import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
+import { createRuntimeItemEffect, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
 import { EffectMagnet } from "../effects/magnet.js";
-import { EffectDelayed } from "../effects/delayedEffect.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
 import { EffectSwapPosition } from "../effects/swapPosition.js";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
@@ -147,6 +147,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	/** True while `resolveTurn` is resolving the accepted turn's final state. */
 	private resolvingTurn = false
 	private structureLifecycles: StructureLifecycleSettings[] = []
+	private deferredEffects: DeferredEffectSettings[] = []
 	private readonly feedback = new GameplayFeedbackTrace();
 	/**
 		 * Erzeugt eine neue Instanz der Engine.
@@ -324,7 +325,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		// the match mid-loop.
 		if (this.context.state === GameState.Game_over && !this.resolvingTurn) return
 		this.preTickers.forEach(t => t.tick(dt, this.physicsStrategy.getFriction()));
-		this.advanceScheduledItemEffectsTick();
+		this.advanceDeferredEffectsTick();
 		for (const e of this.entityManager.getEntities()) {
 			if (this.effectAlways.length === 0) continue;
 			dispatchTriggeredEffects({ effects: this.effectAlways, event: createTickEvent(String(this.id), dt), apply: effect => effect.apply(e) });
@@ -582,6 +583,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const settings = JSON.parse(JSON.stringify(this.initialSettings)) as GameSettings
 		this.entityManager.applySettings(settings.players)
 		this.structureLifecycles = []
+		this.deferredEffects = []
 		this.initializeFixedLoadouts()
 		this.context.structures = settings.mapBoundarys.map(boundary => new FullStructure(boundary))
 		this.restoreStructureLifecycles((settings as EngineSettings).structureLifecycles)
@@ -712,6 +714,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...(this.itemDrawRandom ? { itemDrawState: { randomState: this.itemDrawRandom.getState() } } : {}),
 			...(this.mapPickupSystem.toState() ? { itemPickupState: this.mapPickupSystem.toState() } : {}),
 			...(this.structureLifecycles.length ? { structureLifecycles: structuredClone(this.structureLifecycles) } : {}),
+			...(this.deferredEffects.length ? { deferredEffects: structuredClone(this.deferredEffects) } : {}),
 		}
 		// The export stays a pure snapshot: only a detached copy is retained,
 		// so caller mutations of the returned settings can never leak into
@@ -776,6 +779,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			this.structureLifecycles.push(structuredClone(lifecycle));
 		}
 	}
+	public restoreDeferredEffects(effects: readonly DeferredEffectSettings[] | undefined): void {
+		this.deferredEffects = [];
+		for (const effect of effects ?? []) {
+			validateDeferredEffect(effect);
+			this.deferredEffects.push(structuredClone(effect));
+		}
+	}
 	private removeStructureLifecycles(sourceIds: ReadonlySet<string>, targetId: string): void {
 		for (const lifecycle of this.structureLifecycles) {
 			if (!lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId) continue;
@@ -784,6 +794,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			structure?.setDrawingEnabled(false);
 		}
 		this.structureLifecycles = this.structureLifecycles.filter(lifecycle => !lifecycle.sourceId || !sourceIds.has(lifecycle.sourceId) || lifecycle.targetId !== targetId);
+	}
+	private removeDeferredEffects(sourceIds: ReadonlySet<string>, ownerId: string): void {
+		this.deferredEffects = this.deferredEffects.filter(effect => !effect.sourceId || !sourceIds.has(effect.sourceId) || effect.ownerId !== ownerId);
 	}
 	/**
 	 * Consumes a declared item and validates its target through the gameplay
@@ -796,7 +809,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const item = this.items.find(candidate => candidate.id === itemId)
 		if (!item) throw new Error(`Item '${itemId}' is not declared for this game`)
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
-		const delayedTarget = item.effects.some(effect => effect.type === ItemEffectType.DelayedEffect || effect.type === ItemEffectType.SpawnTrigger) ? resolveEffectTarget(target, { actor }) : undefined
+		const resolvedItemTarget = item.effects.some(effect => effect.type === ItemEffectType.DeferredEffect || effect.type === ItemEffectType.SpawnTrigger) ? resolveEffectTarget(target, { actor }) : undefined
 		if (item.id === MYSTERY_BOX_ITEM_ID) {
 			this.resolveMysteryBoxUse(actor, item)
 			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
@@ -806,13 +819,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		if (!targetEntity) throw new Error("Item target entity not found")
 		const runtimeEffects = item.effects.map(effect => createRuntimeItemEffect({ type: effect.type as never, typeValue: structuredClone(effect.value ?? {}) } as ItemEffectSettings))
 		for (const effect of runtimeEffects) {
-			if (effect instanceof EffectDelayed && delayedTarget?.type === "position" && effect.effectType !== ItemEffectType.Magnet) throw new Error(`Delayed Effect '${effect.effectType}' does not support position targets`);
 			if (effect instanceof EffectSpawnTrigger) {
 				this.triggerDefinitions.require(effect.triggerId);
 				if (effect.structureId !== undefined) {
 					if (!this.context.structures.some(structure => structure.getId() === effect.structureId)) throw new Error(`Unknown structure target '${effect.structureId}'`);
-					if (delayedTarget?.type !== "position") throw new Error("Structure spawnTrigger requires a position target");
-				} else if (delayedTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
+					if (resolvedItemTarget?.type !== "position") throw new Error("Structure spawnTrigger requires a position target");
+				} else if (resolvedItemTarget?.type !== "entity") throw new Error("spawnTrigger requires an entity or self target");
 			}
 		}
 		const inventory = actor.getInventory()
@@ -823,31 +835,42 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			...targetEntity.getItemEffects(),
 			...targetEntity.getTemporalModifiers().map(modifier => ({ itemId: modifier.sourceId, order: modifier.sourceOrder })),
 			...this.structureLifecycles.filter(lifecycle => lifecycle.targetId === String(targetEntity.getId()) && lifecycle.sourceId).map(lifecycle => ({ itemId: lifecycle.sourceId, order: lifecycle.sourceOrder })),
+			...this.deferredEffects.filter(effect => effect.ownerId === String(targetEntity.getId()) && effect.sourceId).map(effect => ({ itemId: effect.sourceId, order: effect.sourceOrder })),
 		];
 		const combination = validateItemCombination(item, installedEffects, new Map(this.items.map(candidate => [candidate.id, candidate])))
 		targetEntity.removeItemEffects(combination.removeItemIds)
 		targetEntity.removeTemporalModifiers(combination.removeItemIds)
 		this.removeStructureLifecycles(combination.removeItemIds, String(targetEntity.getId()))
-		this.applyItemEffects(actor, target, runtimeEffects, item, delayedTarget)
+		this.removeDeferredEffects(combination.removeItemIds, String(targetEntity.getId()))
+		this.applyItemEffects(actor, target, runtimeEffects, item, resolvedItemTarget)
 		actor.setInventory(inventory)
 		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, targetIds: target.type === "entity" ? [target.entityId!] : [actorId], data: { itemId } });
 		if (item.effects.some(effect => effect.type === "shield")) this.feedback.record(KoreGameplayFeedbackType.Shield, this.getTurnNumber(), { actorId, data: { itemId } });
 	}
 
-	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: RuntimeItemEffect[], item: ItemDocument, delayedTarget?: ResolvedEffectTarget): void {
+	private applyItemEffects(actor: IEntity, target: ItemTarget, effects: RuntimeItemEffect[], item: ItemDocument, resolvedItemTarget?: ResolvedEffectTarget): void {
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId!) : actor
 		if (target.type === "entity" && !targetEntity) throw new Error("Item target entity not found")
 		for (const effect of effects) {
-			if (effect instanceof EffectDelayed) {
-				if (!delayedTarget) throw new Error("Delayed Effects require a resolved target");
-				const delayedSettings = effect.toSettings();
-				actor.addItemEffect({ ...delayedSettings, typeValue: { ...delayedSettings.typeValue, resolvedTarget: delayedTarget } }, { itemId: item.id, order: itemOrder(item) });
+			if (isDeferredEffectTemplate(effect)) {
+				if (!resolvedItemTarget) throw new Error("Deferred Effects require a resolved target");
+				if (resolvedItemTarget.type !== "position") throw new Error("Deferred force fields require a position target");
+				const target = { type: "position" as const, position: { ...resolvedItemTarget.position } };
+				this.deferredEffects.push(createDeferredEffect({
+					id: `${actor.getId()}:${item.id}:${this.getTurnNumber()}`,
+					durationUnit: effect.durationUnit,
+					duration: effect.duration,
+					effect: { ...structuredClone(effect.effect), target },
+					sourceId: item.id,
+					sourceOrder: itemOrder(item),
+					ownerId: String(actor.getId()),
+				}));
 			}
 			else if (effect instanceof EffectSpawnTrigger) {
-				if (!delayedTarget) throw new Error("spawnTrigger requires a resolved target");
+				if (!resolvedItemTarget) throw new Error("spawnTrigger requires a resolved target");
 				const triggerSettings = effect.toSettings();
-				const resolvedTarget = effect.structureId === undefined ? delayedTarget : createStructureResolvedTarget(effect.structureId);
-				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(delayedTarget.type === "position" ? { resolvedPosition: { ...delayedTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
+				const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
+				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
 			}
 			else if (effect instanceof EffectMagnet && targetEntity) targetEntity.setVel(effect.applyToVelocity(targetEntity.getVel(), actor.getPos(), targetEntity.getPos()))
 			else if (effect instanceof EffectSwapPosition && targetEntity && targetEntity !== actor) {
@@ -900,47 +923,18 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		}));
 	}
 
-	private advanceScheduledItemEffectsTick(): void {
-		for (const owner of this.entityManager.getEntities()) {
-			for (const scheduled of owner.advanceItemEffectsTick()) {
-				if (scheduled.type !== ItemEffectType.DelayedEffect) continue;
-				const value = scheduled.typeValue;
-				if (!value.resolvedTarget || (typeof value.effectType !== "string" && value.nestedEffect === undefined)) continue;
-				const event = createScheduleDueEvent(String(owner.getId()), 0, `${String(owner.getId())}:${scheduled.itemId ?? "delayed"}`, "tick", 0);
-				dispatchTriggerActivation({ effectId: "item.delayedEffect", event, apply: () => this.executeDueDelayedEffect(owner, scheduled) });
-			}
+	private advanceDeferredEffectsTick(): void {
+		const due: DeferredEffectSettings[] = [];
+		const next: DeferredEffectSettings[] = [];
+		for (const deferred of this.deferredEffects) {
+			const advanced = advanceDeferredEffect(deferred);
+			if (advanced) next.push(advanced);
+			else due.push(deferred);
 		}
-	}
-
-	private executeDueDelayedEffect(owner: IEntity, scheduled: ItemEffectSettings): void {
-		const value = scheduled.typeValue;
-		const target = value.resolvedTarget as ResolvedEffectTarget | undefined;
-		if (!target) return;
-		if (value.nestedEffect !== undefined) {
-			if (target.type !== "entity") return;
-			const entity = this.entityManager.getEntityById(target.entityId);
-			if (!entity || entity.isDead()) return;
-			createRuntimeEffect(value.nestedEffect as EffectSettings).apply(entity);
-			return;
-		}
-		if (typeof value.effectType !== "string") return;
-		const nested = createRuntimeItemEffect({ type: value.effectType as ItemEffectType, typeValue: structuredClone(value.effectValue ?? {}) as Record<string, unknown> });
-		if (target.type === "entity") {
-			const entity = this.entityManager.getEntityById(target.entityId);
-			if (!entity || entity.isDead()) return;
-			if (nested instanceof EffectMagnet) {
-				entity.setVel(nested.applyToVelocity(entity.getVel(), owner.getPos(), entity.getPos()));
-				return;
-			}
-			if (isTemporalModifierTemplate(nested) || isStructureLifecycleTemplate(nested)) throw new Error("Delayed temporal or structure lifecycles are unsupported");
-			entity.addItemEffect(nested.toSettings() as ItemEffectSettings, { itemId: scheduled.itemId ?? "delayed-effect", order: scheduled.order ?? 0 });
-			return;
-		}
-		if (!(nested instanceof EffectMagnet)) return;
-		if (target.type !== "position") return;
-		for (const entity of this.entityManager.getEntities()) {
-			if (entity.isDead()) continue;
-			entity.setVel(nested.applyToVelocity(entity.getVel(), target.position, entity.getPos()));
+		this.deferredEffects = next;
+		for (const [index, deferred] of due.entries()) {
+			const event = createScheduleDueEvent(deferred.ownerId ?? deferred.id, index, deferred.id, "tick", 0);
+			dispatchTriggerActivation({ effectId: "engine.deferredEffect", event, apply: () => dispatchPredefinedEffect({ ctx: this.context, systems: this.systems, effect: deferred.effect }) });
 		}
 	}
 
@@ -1159,6 +1153,7 @@ export class GameHandlerBuilder {
 		// Structures
 		mapBoundarys.forEach(boundary => this.engine.addStructure(new FullStructure(boundary)))
 		this.engine.restoreStructureLifecycles((gameSettings as EngineSettings).structureLifecycles)
+		this.engine.restoreDeferredEffects((gameSettings as EngineSettings).deferredEffects)
 		if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
 			const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
 			this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)))

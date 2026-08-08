@@ -55,7 +55,6 @@ export interface IEntity extends IDrawer, ITicker, IPhysics<SHAPE.CIRCLE>, IKill
 	addItemEffect(effect: ItemEffectSettings, source?: { itemId: string; order: number }): void
 	removeItemEffects(itemIds: ReadonlySet<string>): void
 	advanceItemEffectsTurn(): ItemEffectSettings[]
-	advanceItemEffectsTick(): ItemEffectSettings[]
 	getItemEffects(): ItemEffectSettings[]
 	addTemporalModifier(modifier: TemporalModifierSettings): void
 	getTemporalModifiers(): TemporalModifierSettings[]

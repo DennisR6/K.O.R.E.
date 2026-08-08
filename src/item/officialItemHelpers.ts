@@ -1,7 +1,8 @@
 import { EffectModifyForce } from "../effects/modifyForce.js";
 import { EffectMagnet } from "../effects/magnet.js";
 import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
-import { EffectDelayed } from "../effects/delayedEffect.js";
+import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../engine/contracts/deferredEffect.js";
+import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../engine/contracts/structureLifecycle.js";
 import { EffectSwapPosition, type PositionTargetState } from "../effects/swapPosition.js";
 import { EffectSelectionLock } from "../effects/selectionLock.js";
@@ -19,13 +20,12 @@ import {
 export function applyAnkerForce(force: ForceInput): ForceInput { return new EffectModifyForce({ typeValue: { factor: ANKER_FORCE_FACTOR } }).applyToForce(force); }
 export function applyPowerDashForce(force: ForceInput): ForceInput { return new EffectModifyForce({ typeValue: { factor: POWER_DASH_FACTOR } }).applyToForce(force); }
 
-export interface VerzoegerteMine { center: { x: number; y: number }; radius: number; trigger: EffectDelayed; force: EffectMagnet; }
+export interface VerzoegerteMine { center: { x: number; y: number }; radius: number; deferred: DeferredEffectTemplate; force: EffectMagnet; }
 export function createVerzoegerteMine(center: { x: number; y: number }, delayTicks: number = DELAYED_MINE_DELAY_TICKS): VerzoegerteMine {
 	if (!Number.isFinite(center.x) || !Number.isFinite(center.y)) throw new Error("Verzögerte Mine position must be finite");
-	const trigger = new EffectDelayed({ typeValue: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks } });
-	return { center: { ...center }, radius: DELAYED_MINE_RADIUS, trigger, force: new EffectMagnet({ typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } }) };
+	const deferred = createDeferredEffectTemplate({ durationUnit: "ticks", duration: delayTicks, effect: { schemaVersion: 1, type: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } } });
+	return { center: { ...center }, radius: DELAYED_MINE_RADIUS, deferred, force: new EffectMagnet({ typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } }) };
 }
-export function applyVerzoegerteMineExplosion(mine: VerzoegerteMine, velocity: { x: number; y: number }, target: { x: number; y: number }): { x: number; y: number } { return mine.trigger.hasFired() ? mine.force.applyToVelocity(velocity, mine.center, target) : { ...velocity }; }
 export function createMiniWall(_position: { x: number; y: number }, _wallId: string = "mini-wall"): StructureLifecycleTemplate {
 	return createStructureLifecycleTemplate({ durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } });
 }

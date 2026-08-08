@@ -52,7 +52,7 @@ test("standalone bundles preserve runtime public export names", async () => {
 		import("../sdk/kore_sdk.js"),
 	]);
 	const engineExports = Object.keys(engineBundle).sort();
-	for (const name of ["TEMPORAL_DURATION_UNITS", "TEMPORAL_MODIFIER_SCHEMA_VERSION", "advanceTemporalModifier", "createTemporalModifier", "createTemporalModifierTemplate", "validateTemporalModifier"]) expect(engineExports).toContain(name);
+	for (const name of ["DEFERRED_EFFECT_DURATION_UNITS", "DEFERRED_EFFECT_SCHEMA_VERSION", "STRUCTURE_LIFECYCLE_DURATION_UNITS", "STRUCTURE_LIFECYCLE_SCHEMA_VERSION", "TEMPORAL_DURATION_UNITS", "TEMPORAL_MODIFIER_SCHEMA_VERSION", "MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID", "advanceDeferredEffect", "advanceTemporalModifier", "createDeferredEffect", "createDeferredEffectTemplate", "createTemporalModifier", "createTemporalModifierTemplate", "validateDeferredEffect", "validateTemporalModifier"]) expect(engineExports).toContain(name);
 	expect(engineExports).toContain("engine");
 	expect(Object.keys(uiBundle).sort()).toEqual(["UiMenuBuilder", "UiRuntime", "createDefaultUiFramework", "ui", "validateUiSettings"].sort());
 	expect(Object.keys(audioBundle).sort()).toEqual(["ApplicationAudioMixer", "AudioEmitter", "AudioRuntime", "SoundSystem", "audio", "createAudioRuntime", "createAudioSettings", "createDefaultAudioFramework", "validateApplicationAudioSettings", "validateAudioBatch", "validateAudioCommand", "validateAudioSettings"].sort());

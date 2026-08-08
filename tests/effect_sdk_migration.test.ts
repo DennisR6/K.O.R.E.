@@ -135,12 +135,12 @@ describe("Effect SDK Authoring & Migration Parity", () => {
 			});
 		});
 
-		test("kore.effects.delayedEffect produces nested item effect settings", () => {
-			const inner = kore.effects.shield(30);
-			const delayed = kore.effects.delayedEffect(10, inner);
+		test("kore.effects.deferredEffect produces generic deferred Engine effect settings", () => {
+			const inner = kore.effects.damage(30).toSettings();
+			const delayed = kore.effects.deferredEffect(10, inner);
 			expect(delayed).toEqual({
-				type: ItemEffectType.DelayedEffect,
-				typeValue: { delayTicks: 10, effectType: inner.type, effectValue: inner.typeValue },
+				type: ItemEffectType.DeferredEffect,
+				typeValue: { durationUnit: "ticks", duration: 10, effect: inner },
 			});
 		});
 	});

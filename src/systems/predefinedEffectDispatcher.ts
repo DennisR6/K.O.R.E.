@@ -58,6 +58,11 @@ function resolveTarget(ctx: IGameContext, value: unknown, positionOverride?: { x
 		if (!entity) throw new Error(`Unknown numeric entity target '${target.entityId}'`);
 		return { type: "numeric", entity, stateId: target.stateId };
 	}
+	if (target.type === "position") {
+		const position = target.position as Record<string, unknown>;
+		if (typeof position.x !== "number" || !Number.isFinite(position.x) || typeof position.y !== "number" || !Number.isFinite(position.y)) throw new Error("Position target requires finite coordinates");
+		return { type: "position", position: { x: position.x, y: position.y } };
+	}
 	if (target.type === "structure") {
 		if (typeof target.structureId !== "string" || target.structureId.length === 0) throw new Error("Structure target requires a non-empty structureId");
 		const structure = ctx.structures.find(candidate => candidate.getId() === target.structureId);

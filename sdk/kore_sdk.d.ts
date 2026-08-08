@@ -503,7 +503,7 @@ export declare const kore: {
         readonly modifyForce: (multiplier: number) => any;
         readonly modifyRotation: (angle: number) => any;
         readonly applyTorque: (torque: number) => any;
-        readonly delayedEffect: (delayTicks: number, effect: any | any) => any;
+        readonly deferredEffect: (delayTicks: number, effect: any) => any;
         readonly spawnTrigger: (delayTicks: number, triggerType: string) => any;
     };
     /** Shared engine enums and friction presets for declarative authoring. */
@@ -540,7 +540,7 @@ export declare const kore: {
             readonly lockRotation: any.LockRotation;
             readonly applyTorque: any.ApplyTorque;
             readonly spawnTrigger: any.SpawnTrigger;
-            readonly delayedEffect: any.DelayedEffect;
+            readonly deferredEffect: any.DeferredEffect;
             readonly shield: any.Shield;
             readonly swapPosition: any.SwapPosition;
             readonly structureLifecycle: any.StructureLifecycle;

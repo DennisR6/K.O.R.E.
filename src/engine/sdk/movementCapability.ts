@@ -6,7 +6,8 @@ export const MOVEMENT_EFFECT_ID = "movement.integrate" as const;
 export const MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity" as const;
 export const MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity" as const;
 export const MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed" as const;
-export const MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID] as const;
+export const MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field" as const;
+export const MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID] as const;
 
 export function movementSystemDefinition(): EngineSystemDefinition {
 	return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
@@ -23,6 +24,12 @@ export interface MovementVelocityPayload {
 
 export interface MovementScaleSpeedPayload {
 	factor: number;
+}
+
+export interface MovementForceFieldPayload {
+	mode: "attract" | "repel";
+	force: number;
+	range: number;
 }
 
 /** Registers the generic movement contract without selecting its runtime system. */
@@ -67,6 +74,19 @@ export function registerMovementCommands(registry: EngineEffectRegistry): Engine
 				const value = record(payload, "Movement speed scale payload");
 				exactKeys(value, ["factor"], "Movement speed scale payload");
 				if (typeof value.factor !== "number" || !Number.isFinite(value.factor) || value.factor < 0) throw new Error("Movement speed scale factor must be finite and non-negative");
+			},
+		})
+		.register({
+			id: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID,
+			requiresCapability: [MOVEMENT_CAPABILITY],
+			targetType: "position",
+			lifecycleCategory: "command",
+			validatePayload: payload => {
+				const value = record(payload, "Movement force field payload");
+				exactKeys(value, ["mode", "force", "range"], "Movement force field payload");
+				if (value.mode !== "attract" && value.mode !== "repel") throw new Error("Movement force field mode must be attract or repel");
+				if (typeof value.force !== "number" || !Number.isFinite(value.force) || value.force < 0) throw new Error("Movement force field force must be finite and non-negative");
+				if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0) throw new Error("Movement force field range must be finite and positive");
 			},
 		});
 }

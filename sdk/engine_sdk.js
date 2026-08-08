@@ -370,7 +370,8 @@ var MOVEMENT_EFFECT_ID = "movement.integrate";
 var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
 var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
 var MOVEMENT_SCALE_SPEED_EFFECT_ID = "movement.scale-speed";
-var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID];
+var MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID = "movement.apply-force-field";
+var MOVEMENT_COMMAND_EFFECT_IDS = [MOVEMENT_SET_VELOCITY_EFFECT_ID, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID];
 function movementSystemDefinition() {
   return { id: "core.movement", provides: [MOVEMENT_CAPABILITY], acceptsEffects: [...MOVEMENT_COMMAND_EFFECT_IDS], before: ["core.playback"] };
 }
@@ -418,6 +419,21 @@ function registerMovementCommands(registry) {
       exactKeys2(value, ["factor"], "Movement speed scale payload");
       if (typeof value.factor !== "number" || !Number.isFinite(value.factor) || value.factor < 0)
         throw new Error("Movement speed scale factor must be finite and non-negative");
+    }
+  }).register({
+    id: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID,
+    requiresCapability: [MOVEMENT_CAPABILITY],
+    targetType: "position",
+    lifecycleCategory: "command",
+    validatePayload: (payload) => {
+      const value = record2(payload, "Movement force field payload");
+      exactKeys2(value, ["mode", "force", "range"], "Movement force field payload");
+      if (value.mode !== "attract" && value.mode !== "repel")
+        throw new Error("Movement force field mode must be attract or repel");
+      if (typeof value.force !== "number" || !Number.isFinite(value.force) || value.force < 0)
+        throw new Error("Movement force field force must be finite and non-negative");
+      if (typeof value.range !== "number" || !Number.isFinite(value.range) || value.range <= 0)
+        throw new Error("Movement force field range must be finite and positive");
     }
   });
 }
@@ -1090,6 +1106,79 @@ function validateDuration(value, label) {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
     throw new Error(`${label} must be a positive integer`);
 }
+var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
+var DEFERRED_EFFECT_DURATION_UNITS = ["ticks"];
+function createDeferredEffectTemplate(input) {
+  const template = structuredClone(input);
+  validateDeferredEffectTemplate(template);
+  return template;
+}
+function createDeferredEffect(input) {
+  const deferred = {
+    schemaVersion: DEFERRED_EFFECT_SCHEMA_VERSION,
+    id: input.id,
+    durationUnit: input.durationUnit,
+    duration: input.duration,
+    remaining: input.remaining ?? input.duration,
+    effect: structuredClone(input.effect),
+    ...input.sourceId === undefined ? {} : { sourceId: input.sourceId },
+    ...input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder },
+    ...input.ownerId === undefined ? {} : { ownerId: input.ownerId }
+  };
+  validateDeferredEffect(deferred);
+  return deferred;
+}
+function advanceDeferredEffect(effect) {
+  validateDeferredEffect(effect);
+  if (effect.remaining <= 1)
+    return;
+  return { ...structuredClone(effect), remaining: effect.remaining - 1 };
+}
+function validateDeferredEffectTemplate(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect template must be an object");
+  const template = value;
+  if (template.durationUnit !== "ticks")
+    throw new Error("Deferred effect requires ticks duration");
+  validateDuration2(template.duration, "Deferred effect duration");
+  validateEngineEffect(template.effect);
+}
+function validateDeferredEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect must be an object");
+  const effect = value;
+  if (effect.schemaVersion !== DEFERRED_EFFECT_SCHEMA_VERSION)
+    throw new Error("Unsupported deferred effect schema version");
+  if (typeof effect.id !== "string" || effect.id.length === 0)
+    throw new Error("Deferred effect requires a stable id");
+  if (effect.sourceId !== undefined && (typeof effect.sourceId !== "string" || effect.sourceId.length === 0))
+    throw new Error("Deferred effect sourceId must be non-empty");
+  if (effect.sourceOrder !== undefined && !Number.isSafeInteger(effect.sourceOrder))
+    throw new Error("Deferred effect sourceOrder must be a safe integer");
+  if (effect.ownerId !== undefined && (typeof effect.ownerId !== "string" || effect.ownerId.length === 0))
+    throw new Error("Deferred effect ownerId must be non-empty");
+  if (effect.durationUnit !== "ticks")
+    throw new Error("Deferred effect requires ticks duration");
+  validateDuration2(effect.duration, "Deferred effect duration");
+  validateDuration2(effect.remaining, "Deferred effect remaining duration");
+  if (effect.remaining > effect.duration)
+    throw new Error("Deferred effect remaining duration exceeds duration");
+  validateEngineEffect(effect.effect);
+}
+function validateEngineEffect(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Deferred effect requires an Engine effect");
+  const effect = value;
+  if (effect.schemaVersion !== 1 || typeof effect.type !== "string" || effect.type.length === 0)
+    throw new Error("Deferred Engine effect is invalid");
+  assertJsonValue(effect.typeValue);
+  if (effect.target !== undefined)
+    assertJsonValue(effect.target);
+}
+function validateDuration2(value, label) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
+    throw new Error(`${label} must be a positive integer`);
+}
 
 var engine = {
   createWorld(options) {
@@ -1140,6 +1229,8 @@ export {
   validateNumericEffectSettings,
   validateMovementState,
   validateEngineEffectComposition,
+  validateDeferredEffectTemplate,
+  validateDeferredEffect,
   validateCounterTriggerBinding,
   validateCounterTarget,
   validateCounterState,
@@ -1172,6 +1263,8 @@ export {
   createMovementState,
   createEnvironmentActivationTriggerEvent,
   createEngineEffectComposition,
+  createDeferredEffectTemplate,
+  createDeferredEffect,
   createCounterState,
   createCollisionEnterTriggerEvent,
   createCollisionCommandBinding,
@@ -1180,6 +1273,7 @@ export {
   canonicalizeCounterStates,
   advanceTemporalModifier,
   advanceStructureLifecycle,
+  advanceDeferredEffect,
   TRANSFORM_SET_ROTATION_EFFECT_ID,
   TRANSFORM_SET_POSITION_EFFECT_ID,
   TRANSFORM_CAPABILITY,
@@ -1203,6 +1297,7 @@ export {
   MOVEMENT_EFFECT_ID,
   MOVEMENT_COMMAND_EFFECT_IDS,
   MOVEMENT_CAPABILITY,
+  MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID,
   MOVEMENT_ADD_VELOCITY_EFFECT_ID,
   EngineWorldBuilder,
   EngineTriggerActivationQueue,
@@ -1210,6 +1305,8 @@ export {
   EngineEffectRegistry,
   ENGINE_EFFECT_COMPOSITION_TYPE,
   ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION,
+  DEFERRED_EFFECT_SCHEMA_VERSION,
+  DEFERRED_EFFECT_DURATION_UNITS,
   COUNTER_SET_EFFECT_ID,
   COUNTER_SCHEMA_VERSION,
   COUNTER_RESET_EFFECT_ID,

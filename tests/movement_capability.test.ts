@@ -36,4 +36,6 @@ test("movement commands validate typed velocity and speed-scale payloads", () =>
 	expect(() => effects.validate({ type: "movement.scale-speed", typeValue: { factor: 0 } })).not.toThrow();
 	expect(() => effects.validate({ type: "movement.scale-speed", typeValue: { factor: -1 } })).toThrow();
 	expect(() => effects.validate({ type: "movement.set-velocity", typeValue: { x: 1, y: 2, extra: true } })).toThrow();
+	expect(() => effects.validate({ type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 60 } })).not.toThrow();
+	expect(() => effects.validate({ type: "movement.apply-force-field", typeValue: { mode: "repel", force: 4, range: 0 } })).toThrow();
 });

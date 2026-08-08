@@ -23,7 +23,7 @@ export const enum ItemEffectType {
 	LockRotation = "lockRotation",
 	ApplyTorque = "applyTorque",
 	SpawnTrigger = "spawnTrigger",
-	DelayedEffect = "delayedEffect",
+	DeferredEffect = "deferredEffect",
 	Shield = "shield",
 	SwapPosition = "swapPosition",
 	StructureLifecycle = "structureLifecycle",
@@ -75,7 +75,7 @@ export interface ItemEffectPayloadMap {
 	[ItemEffectType.LockRotation]: LockRotationPayload;
 	[ItemEffectType.ApplyTorque]: { torque: number };
 	[ItemEffectType.SpawnTrigger]: SpawnTriggerPayload;
-	[ItemEffectType.DelayedEffect]: DelayedEffectPayload;
+	[ItemEffectType.DeferredEffect]: { durationUnit: "ticks"; duration: number; effect: Record<string, unknown> };
 	[ItemEffectType.Shield]: ShieldPayload;
 	[ItemEffectType.SwapPosition]: Record<string, never>;
 	[ItemEffectType.StructureLifecycle]: { durationUnit: "turns"; duration: number; structure: Record<string, unknown> };
@@ -99,16 +99,6 @@ export interface SpawnTriggerPayload {
 	fired?: boolean;
 	resolvedTarget?: ResolvedEffectTarget;
 	resolvedPosition?: Vector2D;
-}
-
-export interface DelayedEffectPayload {
-	effectType?: string;
-	effectValue?: Record<string, unknown>;
-	nestedEffect?: EffectSettings;
-	delayTicks: number;
-	remainingTicks?: number;
-	fired?: boolean;
-	resolvedTarget?: ResolvedEffectTarget;
 }
 
 export interface ShieldPayload {

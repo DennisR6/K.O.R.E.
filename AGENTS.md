@@ -148,8 +148,8 @@ After every change, check whether this guide still reflects the implementation a
   with deterministic rotation normalization.
 - `src/effects/spawnTrigger.ts`: serializable turn-counted trigger primitive
   with snapshot restoration state.
-- `src/effects/delayedEffect.ts`: serializable fixed-tick delayed-effect
-  primitive with snapshot-safe countdown state.
+- `src/engine/contracts/deferredEffect.ts`: generic JSON-safe one-shot Engine
+  effect execution state with stable identity and deterministic tick expiry.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
 - `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent
@@ -159,8 +159,6 @@ After every change, check whether this guide still reflects the implementation a
   and deterministic turn expiry.
 - `src/effects/swapPosition.ts`: reusable validated teleport/swap primitive for
   active entity positions.
-- `src/effects/temporaryWall.ts`: serializable temporary-wall lifecycle with
-  deterministic structure cleanup state.
 - `src/item/types.ts`: versioned item, inventory, pickup, target, duration, and
   use-limit schemas with create helpers and structural validation functions.
 - `src/item/validate.ts`: strict declarative item validator. It requires an
@@ -207,10 +205,10 @@ After every change, check whether this guide still reflects the implementation a
 - `GameHandler` owns generic timed structure lifecycles: accepted structure
   templates create stable canonical structures, and expiry disables physics and
   drawing while retaining the structure in snapshots.
-- `GameHandler` is the authoritative owner of delayed item-effect tick
-  advancement. Due delayed effects emit transient `schedule.due` activations
-  and execute against their persisted resolved target; completed schedules are
-  removed from item state.
+- `GameHandler` is the authoritative owner of deferred Engine-effect tick
+  advancement. Due records emit transient `schedule.due` activations and
+  execute through the shared predefined dispatcher; completed records are
+  removed from canonical deferred state.
 - `GameHandler` is also the authoritative owner of due `spawnTrigger` turn
   schedules; named definitions are loaded from `GameSettings.triggerDefinitions`
   and execute only against persisted entity targets.

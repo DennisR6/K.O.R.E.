@@ -1,5 +1,4 @@
 import { EffectAimVariance } from "../../effects/aimVariance.js";
-import { EffectDelayed } from "../../effects/delayedEffect.js";
 import { EffectGhostMode } from "../../effects/ghostMode.js";
 import { EffectMagnet } from "../../effects/magnet.js";
 import { EffectModifyForce } from "../../effects/modifyForce.js";
@@ -11,10 +10,10 @@ import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../
 import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
 import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../../engine/contracts/temporalModifier.js";
 import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../../engine/contracts/structureLifecycle.js";
+import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../../engine/contracts/deferredEffect.js";
 
 export type RuntimeItemEffect =
 	| EffectAimVariance
-	| EffectDelayed
 	| EffectGhostMode
 	| EffectMagnet
 	| EffectModifyForce
@@ -23,7 +22,8 @@ export type RuntimeItemEffect =
 	| EffectSpawnTrigger
 	| EffectSwapPosition
 	| TemporalModifierTemplate
-	| StructureLifecycleTemplate;
+	| StructureLifecycleTemplate
+	| DeferredEffectTemplate;
 
 /**
  * The only KORE item-content-to-runtime construction boundary. Item content
@@ -45,10 +45,6 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return new EffectShield({ typeValue: { capacity: numberValue(value, "capacity") } });
 		case ItemEffectType.SpawnTrigger:
 			return new EffectSpawnTrigger({ typeValue: { triggerId: stringValue(value, "triggerId"), delayTurns: integerValue(value, "delayTurns"), ...(value.structureId === undefined ? {} : { structureId: stringValue(value, "structureId") }), ...(value.remainingTurns === undefined ? {} : { remainingTurns: integerValue(value, "remainingTurns") }), ...(value.fired === undefined ? {} : { fired: value.fired as boolean }), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }), ...(value.resolvedPosition === undefined ? {} : { resolvedPosition: value.resolvedPosition as never }) } });
-		case ItemEffectType.DelayedEffect: {
-			const nested = value.effectValue;
-			return new EffectDelayed({ typeValue: { ...(value.nestedEffect === undefined ? { effectType: stringValue(value, "effectType"), effectValue: nested as Record<string, unknown> | undefined } : { nestedEffect: value.nestedEffect as never }), delayTicks: integerValue(value, "delayTicks"), ...(value.resolvedTarget === undefined ? {} : { resolvedTarget: value.resolvedTarget as never }) } });
-		}
 		case ItemEffectType.AimVariance:
 			return new EffectAimVariance({ typeValue: { maxVarianceDegrees: numberValue(value, "maxVarianceDegrees") } });
 		case ItemEffectType.SwapPosition:
@@ -57,6 +53,8 @@ export function createRuntimeItemEffect(settings: ItemEffectSettings): RuntimeIt
 			return createTemporalModifierTemplate({ durationUnit: value.durationUnit as "turns", duration: integerValue(value, "duration"), effect: value.effect as never });
 		case ItemEffectType.StructureLifecycle:
 			return createStructureLifecycleTemplate({ durationUnit: value.durationUnit as "turns", duration: integerValue(value, "duration"), structure: value.structure as never });
+		case ItemEffectType.DeferredEffect:
+			return createDeferredEffectTemplate({ durationUnit: value.durationUnit as "ticks", duration: integerValue(value, "duration"), effect: value.effect as never });
 		default:
 			throw new Error(`Unsupported runtime item effect '${String(settings.type)}'`);
 	}
@@ -73,7 +71,7 @@ export function advanceRuntimeItemEffect(effect: ItemEffectSettings): ItemEffect
 
 export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
 	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
-	if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime)) return { next: structuredClone(effect), due: false };
+	if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime) || isDeferredEffectTemplate(runtime)) return { next: structuredClone(effect), due: false };
 	const advance = (runtime as unknown as { advanceTurn?: () => unknown }).advanceTurn;
 	if (!advance) return { next: structuredClone(effect), due: false };
 	if (runtime instanceof EffectSpawnTrigger && runtime.hasFired()) return { due: false };
@@ -81,19 +79,6 @@ export function advanceRuntimeItemEffectTurn(effect: ItemEffectSettings): { next
 	const next = runtime.toSettings();
 	const value = next.typeValue as Record<string, unknown>;
 	if (value.remainingTurns === 0 || value.active === false || value.fired === true) return { due: false };
-	return { next: { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings, due: false };
-}
-
-export function advanceRuntimeItemEffectTick(effect: ItemEffectSettings): { next?: ItemEffectSettings; due: boolean } {
-	const runtime = createRuntimeItemEffect({ type: effect.type, typeValue: structuredClone(effect.typeValue) } as ItemEffectSettings);
-	if (isTemporalModifierTemplate(runtime) || isStructureLifecycleTemplate(runtime)) return { next: structuredClone(effect), due: false };
-	const advance = (runtime as unknown as { advanceTick?: () => unknown }).advanceTick;
-	if (!advance) return { next: structuredClone(effect), due: false };
-	if (runtime instanceof EffectDelayed && runtime.hasFired()) return { due: false };
-	if (advance.call(runtime) === true) return { due: true };
-	const next = runtime.toSettings();
-	const value = next.typeValue as Record<string, unknown>;
-	if (value.fired === true) return { due: false };
 	return { next: { ...effect, typeValue: structuredClone(value) } as ItemEffectSettings, due: false };
 }
 
@@ -120,9 +105,13 @@ function stringValue(value: Record<string, unknown>, key: string): string {
 }
 
 export function isTemporalModifierTemplate(value: RuntimeItemEffect): value is TemporalModifierTemplate {
-	return "durationUnit" in value && "duration" in value && "effect" in value;
+	return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.scale-speed";
 }
 
 export function isStructureLifecycleTemplate(value: RuntimeItemEffect): value is StructureLifecycleTemplate {
 	return "durationUnit" in value && "duration" in value && "structure" in value;
+}
+
+export function isDeferredEffectTemplate(value: RuntimeItemEffect): value is DeferredEffectTemplate {
+	return "durationUnit" in value && "duration" in value && "effect" in value && value.effect.type === "movement.apply-force-field";
 }

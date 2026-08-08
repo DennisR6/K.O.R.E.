@@ -14,6 +14,7 @@ export type ResolvedPredefinedTarget =
 	| { type: "counter"; counter: CounterState }
 	| { type: "entity"; entity: IEntity }
 	| { type: "numeric"; entity: IEntity; stateId: string }
+	| { type: "position"; position: Vector2D }
 	| { type: "structure"; structure: IStructure; positionOverride?: Vector2D };
 
 /** Versioned, data-only identity of a registered engine system. */

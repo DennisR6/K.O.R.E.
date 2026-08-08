@@ -2,7 +2,7 @@ import { EffectType } from "../effects/types.js";
 import { createMovementState } from "../engine/sdk/entityState.js";
 import type { IGameContext, SystemSettings } from "./types.js";
 import { createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
-import { MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
 import type { IPredefinedEffectSystem, ResolvedPredefinedTarget } from "./types.js";
 
@@ -27,6 +27,23 @@ export class MovementSystem implements IPredefinedEffectSystem {
 	public ticker(_ctx: IGameContext, _dt: number, _friction: number): void {}
 	public acceptsEffect(effectId: string): boolean { return MOVEMENT_COMMAND_EFFECT_IDS.includes(effectId as typeof MOVEMENT_COMMAND_EFFECT_IDS[number]); }
 	public applyEffect(_ctx: IGameContext, effect: EngineEffectSettings, target: ResolvedPredefinedTarget): void {
+		if (effect.type === MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID) {
+			if (target.type !== "position") throw new Error("Movement force field requires a position target");
+			const payload = effect.typeValue as Record<string, unknown>;
+			if (payload.mode !== "attract" && payload.mode !== "repel" || typeof payload.force !== "number" || !Number.isFinite(payload.force) || payload.force < 0 || typeof payload.range !== "number" || !Number.isFinite(payload.range) || payload.range <= 0) throw new Error("Movement force field payload is invalid");
+			for (const entity of _ctx.entities.getEntities()) {
+				if (entity.isDead() || !entity.physicsEnabled()) continue;
+				const position = entity.getPos();
+				const dx = position.x - target.position.x;
+				const dy = position.y - target.position.y;
+				const distance = Math.hypot(dx, dy);
+				if (distance === 0 || distance > payload.range) continue;
+				const direction = payload.mode === "attract" ? 1 : -1;
+				const velocity = entity.getVel();
+				entity.setVel({ x: velocity.x + (dx / distance) * payload.force * direction, y: velocity.y + (dy / distance) * payload.force * direction });
+			}
+			return;
+		}
 		if (target.type !== "entity") throw new Error("Movement effect requires an entity target");
 		if (!target.entity.physicsEnabled()) throw new Error(`Movement target '${target.entity.getId()}' is inactive`);
 		const payload = effect.typeValue;

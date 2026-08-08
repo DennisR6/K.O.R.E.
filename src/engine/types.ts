@@ -10,6 +10,7 @@ import type { ItemPickupState } from "../item/types.js";
 import type { PhysicsContactState } from "../physics/physics.js";
 import type { CounterState } from "./contracts/counterState.js";
 import type { StructureLifecycleSettings } from "./contracts/structureLifecycle.js";
+import type { DeferredEffectSettings } from "./contracts/deferredEffect.js";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.
@@ -173,6 +174,8 @@ export interface EngineSettings extends GameSettings {
 	itemPickupState?: ItemPickupState
 	/** Canonical timed structure lifecycles; expired structures remain dormant. */
 	structureLifecycles?: StructureLifecycleSettings[]
+	/** Canonical one-shot deferred Engine effects. */
+	deferredEffects?: DeferredEffectSettings[]
 	matchResult?: MatchResult
 	/** Contact lifecycle state captured only between completed physics ticks. */
 	physicsState?: PhysicsContactState
