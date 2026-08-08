@@ -147,11 +147,14 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 			const handler = (window as any).game.handler;
 			return handler.getLogs(handler.LoggerType.Performance).map((log: any) => ({ type: log.type, data: log.data }));
 		});
+		const startup = await page.evaluate(() => (window as any).game.startup);
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker metrics", metrics);
+		if (process.env.AI_DIAGNOSTIC === "1") console.log("production startup telemetry", startup);
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production worker rejections", performanceLogs.filter((log: { type: string }) => log.type === "ai.worker.rejected"));
 		expect(metrics?.workerPathAvailable).toBe(true);
 		expect(metrics?.requestCount).toBeGreaterThan(0);
 		expect(metrics?.validResponseCount).toBeGreaterThan(0);
+		expect(metrics?.fallbackCount).toBe(0);
 		expect(Number.isFinite(metrics?.workerComputeMs)).toBe(true);
 		expect(Number.isFinite(metrics?.playerVisibleDurationMs)).toBe(true);
 		expect(Number.isFinite(metrics?.precomputeHeadroomMs)).toBe(true);
@@ -160,7 +163,7 @@ test("production Hard AI worker overlaps playback without blocking the event loo
 		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("ai.worker.requested");
 		expect(performanceLogs.filter((log: { type: string; data?: { maxTicks?: number } }) => log.type === "turn.simulation.max-ticks" && log.data?.maxTicks === 1200)).toHaveLength(0);
 		expect(performanceLogs.filter((log: { type: string }) => log.type === "ai.worker.completed").length).toBeGreaterThan(0);
-		expect(performanceLogs.find((log: { type: string; data?: unknown }) => log.type === "ai.worker.completed")?.data).toHaveProperty("precomputeHeadroomMs");
+		expect(performanceLogs.filter((log: { type: string; data?: unknown }) => log.type === "ai.worker.completed").some((log: { data?: unknown }) => typeof log.data === "object" && log.data !== null && "precomputeHeadroomMs" in log.data)).toBe(true);
 		expect(performanceLogs.map((log: { type: string }) => log.type)).toContain("turn.playback.completed");
 		if (process.env.AI_DIAGNOSTIC === "1") console.log("production long tasks", longTasks);
 	} finally {

@@ -30,6 +30,7 @@ import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
 import { installMatchPerformanceReport } from "./net/performanceReport.js";
+import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -43,9 +44,12 @@ const usersettings = {
 }
 
 const requestedLanguage = uri.searchParams.get("lang");
+startupMark("startup.bootstrap.started");
+startupMark("assets.load.started", { category: "json/config" });
 const activeLanguage: LanguageCatalog | undefined = !isUiDebugSandboxUrl(uri)
 	? await loadLanguage(isLanguageCode(requestedLanguage) ? requestedLanguage : "en_en")
 	: undefined;
+startupMark("assets.load.completed", { category: "json/config" });
 
 const ui = new UiSystem()
 // One browser media owner receives batches from any active game/menu runtime.
@@ -70,11 +74,13 @@ if (isUiDebugSandboxUrl(uri)) {
 	const viewer = startReplayViewer(usersettings.replayToken, activeLanguage!)
 	startGame(handler, () => handler, () => viewer.advance())
 } else if (!usersettings.skipmenu) {
+	 startupMark("scene.init.started", { scene: "menu" });
 	 router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
 		 void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}), ...(modeId ? { modePreference: modeId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
 	}, activeLanguage!)
-	handler = router.getHandler()
-	startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())
+	 handler = router.getHandler()
+	 startupMark("scene.init.completed", { scene: "menu" });
+	 startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())
 	} else if (usersettings.url && usersettings.url !== "local") {
 	startNetworkGame(usersettings.url, activeLanguage!)
 } else {
@@ -271,6 +277,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
 		const scale = adapted.scale;
 		p.setup = () => {
+			startupMark("first-frame.requested");
 			p.createCanvas(adapted.width, adapted.height);
 			ctx = new P5Renderer(p, scale, GameSettings.screenResolution.x)
 			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
@@ -305,6 +312,9 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 				p.push()
 				active.drawWorld(ctx)
 				p.pop()
+				startupMark("first-frame.rendered", { scene: active.getSettings()?.gameMode?.id ? "game" : "menu" });
+				if (active.getSettings()?.gameMode?.id) startupMark("first-game-frame.rendered", { mode: active.getSettings()?.gameMode?.id });
+				flushStartupTelemetry(active, (type, data) => active.log(type, data));
 			} catch (error) {
 				if (usersettings.replayToken) logReplayFrameError(error)
 				else throw error
@@ -353,6 +363,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		// The catalog map ID of the active local match, or null in the menu.
 		get mapId() { return router?.getMapId() ?? null; },
 		get logs() { return [...getActiveHandler().getLogs()]; },
+		get startup() { return getStartupTelemetry(); },
 		get aiWorkerMetrics() { return router?.getAiWorkerMetrics(); },
 		audio: browserAudioManager
 	};

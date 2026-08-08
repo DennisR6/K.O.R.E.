@@ -40,6 +40,7 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 			return;
 		}
 		if (rule.phase !== RulePhase.Physics) return;
+		if (this.workerHost?.getState() === "starting") return;
 		if (this.workerHost?.isAvailable()) {
 			const prepared = this.workerHost.consumePreparedAction();
 			if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(this.settings.team)) {

@@ -178,7 +178,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(info.title).toBe("KORE");
 			expect(info.canvasCount).toBeGreaterThan(0);
 			expect(info.gameSurface).toBe("object");
-			expect(info.gameKeys).toEqual(["aiWorkerMetrics", "audio", "handler", "logs", "mapId"]);
+				expect(info.gameKeys).toEqual(["aiWorkerMetrics", "audio", "handler", "logs", "mapId", "startup"]);
 			expect(info.handlerCtor).toBe("GameHandler");
 			// Menu state: no match settings before the play action.
 			expect(info.settingsMode).toBeNull();
@@ -186,6 +186,11 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			// The documented debug surface reflects the active handler.
 			const activeHandler = await page.evaluate(() => (window as any).game.handler.constructor.name);
 			expect(activeHandler).toBe("GameHandler");
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.startup.events.some((event: { type: string }) => event.type === "first-frame.rendered"))), 10_000, 100, "first rendered frame telemetry");
+			const startup = await page.evaluate(() => (window as any).game.startup);
+			const startupTypes = startup.events.map((event: { type: string }) => event.type);
+			expect(startupTypes).toEqual(expect.arrayContaining(["startup.begin", "assets.load.started", "assets.load.completed", "first-frame.requested", "first-frame.rendered"]));
+			expect(startup.assets).toBeDefined();
 
 			// Console policy: no uncaught exceptions, no console errors.
 			assertCleanConsole(capture);
@@ -218,6 +223,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 
 			// The local-play action starts exactly one canonical match.
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.startup.events.some((event: { type: string }) => event.type === "first-game-frame.rendered"))), 10_000, 100, "first game frame telemetry");
 			const matchInfo = await page.evaluate(() => {
 				const handler = (window as any).game.handler;
 				return {

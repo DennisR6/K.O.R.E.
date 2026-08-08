@@ -11,12 +11,18 @@ export function restoreHardAiWorkerHandler(snapshot: HardAiWorkerRequest["snapsh
 export function computeHardAiWorkerRequest(request: HardAiWorkerRequest): HardAiWorkerResponse {
 	const start = performance.now();
 	const handler = restoreHardAiWorkerHandler(request.snapshot);
-	handler.resolveTurn(request.acceptedAction);
-	handler.startTurn(request.nextRuleState);
+	if (request.kind === "initial-decision") {
+		handler.setRuleState(request.nextRuleState);
+	} else {
+		if (!request.acceptedAction) throw new Error("Worker precompute request is missing its accepted action");
+		handler.resolveTurn(request.acceptedAction);
+		handler.startTurn(request.nextRuleState);
+	}
 	const postTurnStateHash = fingerprintCanonicalSnapshot(handler.toSettings());
 	const action = new HardAi().computeTurn(handler, request.aiSettings)?.shot;
 	return {
 		schemaVersion: request.schemaVersion,
+		...(request.kind ? { kind: request.kind } : {}),
 		requestId: request.requestId,
 		basedOnStateHash: request.basedOnStateHash,
 		expectedTurnNumber: request.expectedTurnNumber,

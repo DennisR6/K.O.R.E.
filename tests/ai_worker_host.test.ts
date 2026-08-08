@@ -8,7 +8,9 @@ import { GameState } from "../src/engine/types.js";
 import { restoreHardAiWorkerHandler } from "../src/ai/worker/compute.js";
 
 class FakeWorker {
-	onmessage: ((event: MessageEvent) => void) | null = null;
+	private messageHandler: ((event: MessageEvent) => void) | null = null;
+	set onmessage(handler: ((event: MessageEvent) => void) | null) { this.messageHandler = handler; handler?.({ data: { type: "ready" } } as MessageEvent); }
+	get onmessage(): ((event: MessageEvent) => void) | null { return this.messageHandler; }
 	onerror: ((event: ErrorEvent) => void) | null = null;
 	posted: HardAiWorkerRequest[] = [];
 	terminated = false;

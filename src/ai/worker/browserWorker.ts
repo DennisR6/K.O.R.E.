@@ -17,3 +17,5 @@ self.onmessage = async event => {
 		self.postMessage({ type: "error", message: error instanceof Error ? error.message : String(error) });
 	}
 };
+
+self.postMessage({ type: "ready" });

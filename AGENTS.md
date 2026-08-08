@@ -88,6 +88,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/main.ts`: browser bootstrap, menu/game selection, accessible online
   connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
   mouse events, keyboard audio controls, and `window.game` debug access.
+- `src/engine/startupTelemetry.ts`: bounded browser startup timing and asset
+  aggregate observations exposed through `window.game.startup`; it remains
+  runtime-only and never enters canonical settings, fingerprints, or replays.
 - `src/debug/uiSandbox.ts`: standalone p5 host for the generic UI SDK debug
   sandbox. It activates only with `?debug=ui` (or `?debugui=1`) and keeps the
   browser adapter and diagnostics outside the generic SDK.
@@ -261,8 +264,11 @@ After every change, check whether this guide still reflects the implementation a
   `decisionLimits`) and `validateAiSettings`.
 - `src/ai/worker/`: production browser Worker protocol, host lifecycle,
   deterministic compute, provenance validation, responsiveness metrics, and
-  synchronous fallback boundary. It restores canonical snapshots and returns
-  AI intent only; browser integration is qualified for local AI scenes.
+  synchronous fallback boundary. Its explicit `starting`/`ready`/`failed`
+  lifecycle queues healthy startup requests asynchronously; only failed or
+  unavailable browser Workers use synchronous fallback. It restores canonical
+  snapshots and returns AI intent only; browser integration is qualified for
+  local AI scenes.
 - `src/ai/AiBattleSystem.ts`: autonomous KI-vs-KI driver; an `ISystem` that
   skips the item phase, submits one legal shot per physics phase through
   `AiTurnEmitter`, and implements the passive `IMouse` contract so the result

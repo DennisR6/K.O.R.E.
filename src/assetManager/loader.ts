@@ -1,4 +1,5 @@
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
+import { recordStartupAsset } from '../engine/startupTelemetry.js';
 
 type ImageKey = AssetKey | string;
 type LoadedImage = HTMLImageElement | ImageBitmap;
@@ -31,6 +32,7 @@ class EngineAssetManager {
 		const currentRetries = this.errorCount.get(key) || 0;
 		this.errorCount.set(key, currentRetries + 1);
 
+		const startedAt = performance.now();
 		try {
 			const fetchUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
 			const response = await fetch(fetchUrl);
@@ -42,9 +44,11 @@ class EngineAssetManager {
 			this.cache.set(key, image);
 			this.errorCount.delete(key);
 			this.isLoading.delete(key)
+			recordStartupAsset(assetCategory(key), { durationMs: performance.now() - startedAt, bytes: blob.size });
 		} catch (e) {
 			console.debug(`Asset ${key} konnte nicht geladen werden (Versuch ${currentRetries + 1})`);
 			this.isLoading.delete(key)
+			recordStartupAsset(assetCategory(key), { durationMs: performance.now() - startedAt, failed: true });
 
 			// Wenn Limit erreicht: JSON Fallback
 			if (currentRetries >= this.MAX_RETRIES) {
@@ -100,6 +104,16 @@ class EngineAssetManager {
 			console.error(`Kritischer Fehler: Asset ${key} nicht ladbar!`, e);
 		}
 	}
+}
+
+function assetCategory(key: ImageKey): "images" | "fonts" | "audio" | "json/config" | "other" {
+	const path = typeof key === "string" ? key : AssetPaths[key];
+	if (typeof path !== "string") return "other";
+	if (/\.(?:png|jpe?g|webp|gif|svg)(?:$|[?#])/i.test(path)) return "images";
+	if (/\.(?:woff2?|ttf|otf)(?:$|[?#])/i.test(path)) return "fonts";
+	if (/\.(?:mp3|wav|ogg|m4a)(?:$|[?#])/i.test(path)) return "audio";
+	if (/\.(?:json|map)(?:$|[?#])/i.test(path)) return "json/config";
+	return "other";
 }
 
 function isSvgAsset(key: ImageKey): boolean {

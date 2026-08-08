@@ -18,6 +18,7 @@ import { createModFileInput } from "../mods/browserFileInput.js";
 import type { LoadedContentPackage } from "../content/package.js";
 import { HardAiWorkerHost } from "../ai/worker/host.js";
 import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
+import { startupMark } from "../engine/startupTelemetry.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -36,6 +37,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private modFileInput: ReturnType<typeof createModFileInput> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
 	private aiWorkerHost: HardAiWorkerHost | undefined;
+	private prewarmedWorkerHost: HardAiWorkerHost | undefined;
 	public readonly soundSourceId = "kore.scene-router";
 
 	public constructor(
@@ -45,6 +47,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
 	) {
 		this.handler = new GameHandler();
+		if (typeof window !== "undefined" && typeof Worker !== "undefined") this.prewarmedWorkerHost = new HardAiWorkerHost();
 		this.handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
@@ -91,7 +94,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
-		const workerHost = new HardAiWorkerHost();
+		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "ai-battle";
 		const started = this.startScene(() => createAiBattleHandler(mapId, seed, undefined, workerHost), mapId, workerHost);
 		if (started) {
@@ -105,7 +108,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startModAiBattle(mod: LoadedContentPackage): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
-		const workerHost = new HardAiWorkerHost();
+		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "ai-battle";
 		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
 		const started = this.startScene(() => createAiBattleHandler(mapId, seed, mod, workerHost), mapId, workerHost);
@@ -120,7 +123,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
-		const workerHost = new HardAiWorkerHost();
+		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "human-vs-ai";
 		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed, workerHost), mapId, workerHost);
 		if (started) {
@@ -135,7 +138,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private startScene(factory: () => GameHandler, mapId: string | null, workerHost?: HardAiWorkerHost): boolean {
 		this.starting = true;
 		try {
+			startupMark("game.build.started", { mode: this.mode, mapId });
 			const next = factory();
+			startupMark("game.build.completed", { mode: this.mode, mapId });
+			startupMark("game.scene.init.started", { scene: this.mode ?? "game" });
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
 			this.menuPreview?.dispose();
@@ -147,6 +153,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.mapId = mapId;
 			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => { void reportOfflineMatch(record); });
 			this.installResultOverlay(next);
+			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
+			startupMark("game.ready", { mode: this.mode, mapId });
 			this.error = undefined;
 			return true;
 		} catch (error) {
@@ -156,6 +164,11 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		} finally {
 			this.starting = false;
 		}
+	}
+	private takePrewarmedWorkerHost(): HardAiWorkerHost {
+		const host = this.prewarmedWorkerHost;
+		this.prewarmedWorkerHost = undefined;
+		return host ?? new HardAiWorkerHost();
 	}
 	private captureSoundCommands(value: unknown): void {
 		if (!value || typeof value !== "object" || typeof (value as Partial<ISoundEmitter>).drainSoundCommands !== "function") return;

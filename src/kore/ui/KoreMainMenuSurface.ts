@@ -13,6 +13,7 @@ import { importModText } from "../../mods/importMod.js";
 import { createEmptyModState, type ModDocumentState, type ModError, type ModSource } from "../../mods/types.js";
 import type { ReadClipboardResult } from "../../mods/browserClipboard.js";
 import { createEnglishLanguage, formatLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
+import { startupMark } from "../../engine/startupTelemetry.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;
@@ -94,7 +95,7 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 			case KoreMenuCommand.OpenBattle: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapBattle }); return;
 			case KoreMenuCommand.OpenLocalMaps: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapLocal }); return;
 			case KoreMenuCommand.OpenOnline: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.MapOnline }); return;
-			case KoreMenuCommand.StartLocal: this.confirm(command.type); this.callbacks.onPlayLocal?.(); return;
+			case KoreMenuCommand.StartLocal: this.confirm(command.type); startupMark("game.start.requested", { mode: "hotseat" }); this.callbacks.onPlayLocal?.(); return;
 			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
 			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;
 			case KoreMenuCommand.OpenMods: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Mods }); return;
@@ -152,10 +153,10 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 		}
 	}
 	private selectMap(value: Extract<KoreMenuCommandMessage, { type: KoreMenuCommand.SelectMap }>["payload"]): void {
-		if (value.intent === KoreMenuMapIntent.Battle) this.callbacks.onPlayAiBattle?.(value.mapId);
-		else if (value.intent === KoreMenuMapIntent.Online) this.callbacks.onPlayOnline?.(value.mapId, value.modeId);
-		else if (value.intent === KoreMenuMapIntent.Ai && value.difficulty) this.callbacks.onPlayAiOpponent?.(asAiDifficulty(value.difficulty), value.mapId);
-		else if (value.intent === KoreMenuMapIntent.Local) this.callbacks.onSelectMap?.(value.mapId, value.modeId);
+		if (value.intent === KoreMenuMapIntent.Battle) { startupMark("game.start.requested", { mode: "ai-battle", mapId: value.mapId }); this.callbacks.onPlayAiBattle?.(value.mapId); }
+		else if (value.intent === KoreMenuMapIntent.Online) { startupMark("game.start.requested", { mode: "online", mapId: value.mapId }); this.callbacks.onPlayOnline?.(value.mapId, value.modeId); }
+		else if (value.intent === KoreMenuMapIntent.Ai && value.difficulty) { startupMark("game.start.requested", { mode: "human-vs-ai", mapId: value.mapId }); this.callbacks.onPlayAiOpponent?.(asAiDifficulty(value.difficulty), value.mapId); }
+		else if (value.intent === KoreMenuMapIntent.Local) { startupMark("game.start.requested", { mode: "hotseat", mapId: value.mapId }); this.callbacks.onSelectMap?.(value.mapId, value.modeId); }
 	}
 	private confirm(command: KoreMenuCommand): void { if (this.initialSettings.metadata.confirmationCommands.includes(command)) this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId, this.initialSettings.metadata.confirmationSoundId)); }
 }

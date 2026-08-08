@@ -29,6 +29,8 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 	private readonly emitter1: AiTurnEmitter;
 	private readonly settings0: AiSettings;
 	private readonly settings1: AiSettings;
+	private startupWaitKey: string | undefined;
+	private initialDecisionKey: string | undefined;
 
 	public constructor(
 		private readonly handler: GameHandler | undefined,
@@ -70,6 +72,10 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			return;
 		}
 		if (rule.phase !== RulePhase.Physics) return;
+		if (this.workerHost?.getState() === "starting") {
+			this.waitForInitialWorker(team, rule);
+			return;
+		}
 		if (this.workerHost?.isAvailable()) {
 			const prepared = this.workerHost.consumePreparedAction();
 			if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(team)) {
@@ -77,6 +83,14 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 				return;
 			}
 			if (this.workerHost.isThinking()) return;
+			if (rule.turnNumber === 0) {
+				const key = this.initialKey(team, rule.turnNumber);
+				if (this.initialDecisionKey !== key) {
+					this.initialDecisionKey = key;
+					this.workerHost.prepareInitialDecision({ snapshot: this.handler.toSettings(), ruleState: rule, aiSettings: team === 0 ? this.settings0 : this.settings1 });
+					return;
+				}
+			}
 		}
 		const emitter = team === 0 ? this.emitter0 : this.emitter1;
 		const aiSettings = team === 0 ? this.settings0 : this.settings1;
@@ -92,6 +106,21 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team) && this.handler!.isActorEligibleForAction(entity.getId()));
 			if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
 		}
+	}
+
+	private initialKey(team: number, turnNumber: number): string { return `${this.handler?.getGameId() ?? "disposed"}:${turnNumber}:${team}`; }
+	private waitForInitialWorker(team: number, rule: ReturnType<GameHandler["getRuleState"]>): void {
+		if (!this.workerHost || !this.handler) return;
+		const key = this.initialKey(team, rule.turnNumber);
+		if (this.startupWaitKey === key) return;
+		this.startupWaitKey = key;
+		void this.workerHost.ready().then(() => {
+			if (this.startupWaitKey !== key) return;
+			this.startupWaitKey = undefined;
+			const currentRule = this.handler?.getRuleState();
+			if (!this.handler || this.handler.getState() !== GameState.Your_turn || !currentRule || currentRule.turnNumber !== rule.turnNumber || currentRule.activeTeam !== team || currentRule.phase !== RulePhase.Physics) return;
+			this.initialDecisionKey = undefined;
+		}).catch(() => { if (this.startupWaitKey === key) this.startupWaitKey = undefined; });
 	}
 
 	/** Exposes the authoritative shot emitter for recorder/analysis introspection. */

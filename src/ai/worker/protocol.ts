@@ -7,18 +7,20 @@ export const HARD_AI_WORKER_PROTOCOL_VERSION = 1 as const;
 
 export type HardAiWorkerRequest = {
 	schemaVersion: typeof HARD_AI_WORKER_PROTOCOL_VERSION;
+	kind?: "precompute" | "initial-decision";
 	requestId: string;
 	basedOnStateHash: string;
 	expectedTurnNumber: number;
 	expectedNextTeam: number;
 	nextRuleState: RuleState;
 	snapshot: EngineSettings;
-	acceptedAction: IInput;
+	acceptedAction?: IInput;
 	aiSettings: AiSettings;
 };
 
 export type HardAiWorkerResponse = {
 	schemaVersion: typeof HARD_AI_WORKER_PROTOCOL_VERSION;
+	kind?: "precompute" | "initial-decision";
 	requestId: string;
 	basedOnStateHash: string;
 	expectedTurnNumber: number;
@@ -29,8 +31,8 @@ export type HardAiWorkerResponse = {
 };
 
 /** Stable non-cryptographic provenance fingerprint for stale-result checks. */
-export function fingerprintHardAiRequest(request: Pick<HardAiWorkerRequest, "snapshot" | "acceptedAction" | "expectedTurnNumber" | "expectedNextTeam" | "nextRuleState" | "aiSettings">): string {
-	const source = JSON.stringify({ snapshot: request.snapshot, acceptedAction: request.acceptedAction, expectedTurnNumber: request.expectedTurnNumber, expectedNextTeam: request.expectedNextTeam, nextRuleState: request.nextRuleState, aiSettings: request.aiSettings });
+export function fingerprintHardAiRequest(request: Pick<HardAiWorkerRequest, "snapshot" | "acceptedAction" | "expectedTurnNumber" | "expectedNextTeam" | "nextRuleState" | "aiSettings"> & Pick<HardAiWorkerRequest, "kind">): string {
+	const source = JSON.stringify({ kind: request.kind ?? "precompute", snapshot: request.snapshot, ...(request.acceptedAction ? { acceptedAction: request.acceptedAction } : {}), expectedTurnNumber: request.expectedTurnNumber, expectedNextTeam: request.expectedNextTeam, nextRuleState: request.nextRuleState, aiSettings: request.aiSettings });
 	let hash = 2166136261;
 	for (let index = 0; index < source.length; index++) {
 		hash ^= source.charCodeAt(index);
