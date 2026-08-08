@@ -1,5 +1,6 @@
 import { assertJsonValue, type JsonValue } from "./systemSettings.js";
 import type { EngineEffectSettings } from "../sdk/effectRegistry.js";
+import { advanceLifetime, createLifetime, validateLifetime, type LifetimeSettings } from "./lifetime.js";
 
 export const DEFERRED_EFFECT_SCHEMA_VERSION = 1 as const;
 export const DEFERRED_EFFECT_DURATION_UNITS = ["ticks"] as const;
@@ -33,9 +34,7 @@ export function createDeferredEffect(input: Omit<DeferredEffectSettings, "schema
 	const deferred: DeferredEffectSettings = {
 		schemaVersion: DEFERRED_EFFECT_SCHEMA_VERSION,
 		id: input.id,
-		durationUnit: input.durationUnit,
-		duration: input.duration,
-		remaining: input.remaining ?? input.duration,
+		...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
 		effect: structuredClone(input.effect),
 		...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
 		...(input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }),
@@ -47,15 +46,15 @@ export function createDeferredEffect(input: Omit<DeferredEffectSettings, "schema
 
 export function advanceDeferredEffect(effect: DeferredEffectSettings): DeferredEffectSettings | undefined {
 	validateDeferredEffect(effect);
-	if (effect.remaining <= 1) return undefined;
-	return { ...structuredClone(effect), remaining: effect.remaining - 1 };
+	const next = advanceLifetime(lifetimeOf(effect));
+	return next ? { ...structuredClone(effect), ...next } : undefined;
 }
 
 export function validateDeferredEffectTemplate(value: unknown): asserts value is DeferredEffectTemplate {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Deferred effect template must be an object");
 	const template = value as Partial<DeferredEffectTemplate>;
 	if (template.durationUnit !== "ticks") throw new Error("Deferred effect requires ticks duration");
-	validateDuration(template.duration, "Deferred effect duration");
+	validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
 	validateEngineEffect(template.effect);
 }
 
@@ -68,9 +67,8 @@ export function validateDeferredEffect(value: unknown): asserts value is Deferre
 	if (effect.sourceOrder !== undefined && !Number.isSafeInteger(effect.sourceOrder)) throw new Error("Deferred effect sourceOrder must be a safe integer");
 	if (effect.ownerId !== undefined && (typeof effect.ownerId !== "string" || effect.ownerId.length === 0)) throw new Error("Deferred effect ownerId must be non-empty");
 	if (effect.durationUnit !== "ticks") throw new Error("Deferred effect requires ticks duration");
-	validateDuration(effect.duration, "Deferred effect duration");
-	validateDuration(effect.remaining, "Deferred effect remaining duration");
-	if ((effect.remaining as number) > (effect.duration as number)) throw new Error("Deferred effect remaining duration exceeds duration");
+	validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.duration });
+	validateLifetime({ durationUnit: effect.durationUnit, duration: effect.duration, remaining: effect.remaining });
 	validateEngineEffect(effect.effect);
 }
 
@@ -82,6 +80,7 @@ function validateEngineEffect(value: unknown): asserts value is EngineEffectSett
 	if (effect.target !== undefined) assertJsonValue(effect.target);
 }
 
-function validateDuration(value: unknown, label: string): asserts value is number {
-	if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new Error(`${label} must be a positive integer`);
+
+function lifetimeOf(value: Pick<DeferredEffectSettings, "durationUnit" | "duration" | "remaining">): LifetimeSettings & { durationUnit: DeferredEffectDurationUnit } {
+	return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }

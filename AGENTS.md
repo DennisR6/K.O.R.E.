@@ -151,6 +151,10 @@ After every change, check whether this guide still reflects the implementation a
   with snapshot restoration state.
 - `src/engine/contracts/deferredEffect.ts`: generic JSON-safe one-shot Engine
   effect execution state with stable identity and deterministic tick expiry.
+- `src/engine/contracts/lifetime.ts`: shared flat JSON-safe duration/countdown
+  mechanics for TemporalModifier, StructureLifecycle, and DeferredEffect. It
+  performs pure validation and one-step advancement only; lifecycle owners keep
+  their own time boundaries and expiry behavior.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
 - `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent

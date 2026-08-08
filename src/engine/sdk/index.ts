@@ -61,3 +61,5 @@ export { advanceDeferredEffect, createDeferredEffect, createDeferredEffectTempla
 export type { DeferredEffectDurationUnit, DeferredEffectSettings, DeferredEffectTemplate } from "../contracts/deferredEffect.js";
 export { applyActionModifiers, consumeActionModifiers, createActionModifier, createActionModifierTemplate, validateActionModifier, ACTION_MODIFIER_SCHEMA_VERSION } from "../contracts/actionModifier.js";
 export type { AcceptedForceInput, ActionModifierSettings, ActionModifierTemplate } from "../contracts/actionModifier.js";
+export { advanceLifetime, createLifetime, validateLifetime, LIFETIME_DURATION_UNITS } from "../contracts/lifetime.js";
+export type { DurationUnit, LifetimeSettings } from "../contracts/lifetime.js";

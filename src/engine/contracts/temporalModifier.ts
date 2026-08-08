@@ -1,5 +1,6 @@
 import { assertJsonValue, type JsonValue } from "./systemSettings.js";
 import type { EngineEffectSettings } from "../sdk/effectRegistry.js";
+import { advanceLifetime, createLifetime, validateLifetime, type LifetimeSettings } from "./lifetime.js";
 
 export const TEMPORAL_MODIFIER_SCHEMA_VERSION = 1 as const;
 export const TEMPORAL_DURATION_UNITS = ["turns"] as const;
@@ -44,9 +45,7 @@ export function createTemporalModifier(input: Omit<TemporalModifierSettings, "sc
 		id: input.id,
 		target: { ...input.target },
 		effect: structuredClone(input.effect),
-		durationUnit: input.durationUnit,
-		duration: input.duration,
-		remaining: input.remaining ?? input.duration,
+		...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
 		...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
 		...(input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }),
 	};
@@ -56,8 +55,8 @@ export function createTemporalModifier(input: Omit<TemporalModifierSettings, "sc
 
 export function advanceTemporalModifier(modifier: TemporalModifierSettings): TemporalModifierSettings | undefined {
 	validateTemporalModifier(modifier);
-	if (modifier.remaining <= 1) return undefined;
-	return { ...structuredClone(modifier), remaining: modifier.remaining - 1 };
+	const next = advanceLifetime(lifetimeOf(modifier));
+	return next ? { ...structuredClone(modifier), ...next } : undefined;
 }
 
 export function validateTemporalModifier(value: unknown): asserts value is TemporalModifierSettings {
@@ -69,13 +68,14 @@ export function validateTemporalModifier(value: unknown): asserts value is Tempo
 	if (modifier.sourceOrder !== undefined && !Number.isSafeInteger(modifier.sourceOrder)) throw new Error("Temporal modifier sourceOrder must be a safe integer");
 	if (!modifier.target || modifier.target.type !== "entity" || typeof modifier.target.entityId !== "string" || modifier.target.entityId.length === 0) throw new Error("Temporal modifier requires a stable entity target");
 	if (modifier.durationUnit !== "turns") throw new Error("Temporal modifier requires turns duration");
-	const duration = modifier.duration;
-	const remaining = modifier.remaining;
-	if (typeof duration !== "number" || !Number.isSafeInteger(duration) || duration < 1) throw new Error("Temporal modifier duration must be a positive integer");
-	if (typeof remaining !== "number" || !Number.isSafeInteger(remaining) || remaining < 1 || remaining > duration) throw new Error("Temporal modifier remaining duration is invalid");
+	validateLifetime({ durationUnit: modifier.durationUnit, duration: modifier.duration, remaining: modifier.remaining });
 	if (!modifier.effect || typeof modifier.effect !== "object" || Array.isArray(modifier.effect)) throw new Error("Temporal modifier requires an Engine effect");
 	assertJsonValue(modifier.effect as unknown as JsonValue);
 	if (modifier.effect.schemaVersion !== 1 || typeof modifier.effect.type !== "string") throw new Error("Temporal modifier Engine effect is invalid");
 	const effectKeys = Object.keys(modifier.effect);
 	if (effectKeys.some(key => !["schemaVersion", "type", "typeValue", "target"].includes(key))) throw new Error("Temporal modifier Engine effect contains unexpected fields");
+}
+
+function lifetimeOf(value: Pick<TemporalModifierSettings, "durationUnit" | "duration" | "remaining">): LifetimeSettings & { durationUnit: TemporalDurationUnit } {
+	return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }

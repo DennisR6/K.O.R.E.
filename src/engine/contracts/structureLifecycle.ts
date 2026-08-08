@@ -1,4 +1,5 @@
 import { assertJsonValue, type JsonValue } from "./systemSettings.js";
+import { advanceLifetime, createLifetime, validateLifetime, type LifetimeSettings } from "./lifetime.js";
 
 export const STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1 as const;
 export const STRUCTURE_LIFECYCLE_DURATION_UNITS = ["turns"] as const;
@@ -42,9 +43,7 @@ export function createStructureLifecycle(input: Omit<StructureLifecycleSettings,
 		schemaVersion: STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
 		id: input.id,
 		structureId: input.structureId,
-		durationUnit: input.durationUnit,
-		duration: input.duration,
-		remaining: input.remaining ?? input.duration,
+		...createLifetime({ durationUnit: input.durationUnit, duration: input.duration, remaining: input.remaining }),
 		...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
 		...(input.sourceOrder === undefined ? {} : { sourceOrder: input.sourceOrder }),
 		...(input.targetId === undefined ? {} : { targetId: input.targetId }),
@@ -55,15 +54,15 @@ export function createStructureLifecycle(input: Omit<StructureLifecycleSettings,
 
 export function advanceStructureLifecycle(lifecycle: StructureLifecycleSettings): StructureLifecycleSettings | undefined {
 	validateStructureLifecycle(lifecycle);
-	if (lifecycle.remaining <= 1) return undefined;
-	return { ...structuredClone(lifecycle), remaining: lifecycle.remaining - 1 };
+	const next = advanceLifetime(lifetimeOf(lifecycle));
+	return next ? { ...structuredClone(lifecycle), ...next } : undefined;
 }
 
 export function validateStructureLifecycleTemplate(value: unknown): asserts value is StructureLifecycleTemplate {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Structure lifecycle template must be an object");
 	const template = value as Partial<StructureLifecycleTemplate>;
 	if (template.durationUnit !== "turns") throw new Error("Structure lifecycle requires turns duration");
-	validateDuration(template.duration, "Structure lifecycle duration");
+	validateLifetime({ durationUnit: template.durationUnit, duration: template.duration, remaining: template.duration });
 	if (!template.structure || typeof template.structure !== "object" || Array.isArray(template.structure)) throw new Error("Structure lifecycle requires structure geometry");
 	const structure = template.structure as Partial<StructureLifecycleStructure>;
 	if (structure.type !== "rectangle") throw new Error("Structure lifecycle currently requires rectangle geometry");
@@ -84,11 +83,9 @@ export function validateStructureLifecycle(value: unknown): asserts value is Str
 	if (lifecycle.sourceOrder !== undefined && !Number.isSafeInteger(lifecycle.sourceOrder)) throw new Error("Structure lifecycle sourceOrder must be a safe integer");
 	if (lifecycle.targetId !== undefined && (typeof lifecycle.targetId !== "string" || lifecycle.targetId.length === 0)) throw new Error("Structure lifecycle targetId must be non-empty");
 	if (lifecycle.durationUnit !== "turns") throw new Error("Structure lifecycle requires turns duration");
-	validateDuration(lifecycle.duration, "Structure lifecycle duration");
-	validateDuration(lifecycle.remaining, "Structure lifecycle remaining duration");
-	if ((lifecycle.remaining as number) > (lifecycle.duration as number)) throw new Error("Structure lifecycle remaining duration exceeds duration");
+	validateLifetime({ durationUnit: lifecycle.durationUnit, duration: lifecycle.duration, remaining: lifecycle.remaining });
 }
 
-function validateDuration(value: unknown, label: string): asserts value is number {
-	if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new Error(`${label} must be a positive integer`);
+function lifetimeOf(value: Pick<StructureLifecycleSettings, "durationUnit" | "duration" | "remaining">): LifetimeSettings & { durationUnit: StructureLifecycleDurationUnit } {
+	return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
