@@ -147,6 +147,14 @@ describe("Mystery Box gameplay", () => {
 		expect(firstReward).toBe(secondReward);
 	});
 
+	test("candidate-pool declaration order is the deterministic selection order", () => {
+		const pool = ["first", "second", "third"];
+		expect(resolveMysteryBoxReward({ candidatePool: pool, seed: 0 })).toBe("first");
+		expect(resolveMysteryBoxReward({ candidatePool: pool, seed: 1 })).toBe("second");
+		expect(resolveMysteryBoxReward({ candidatePool: pool, seed: 2 })).toBe("third");
+		expect(resolveMysteryBoxReward({ candidatePool: ["first", "first"], seed: 1 })).toBe("first");
+	});
+
 	test("removes exactly one mystery box from inventory", () => {
 		const { actor, emitter } = buildPipeline(createMysteryBoxSettings({ pool: ["anker"] }));
 		emitter.sendItemUse(actor.getId(), MYSTERY_BOX_ITEM_ID, { type: "self" });
@@ -346,12 +354,21 @@ describe("Mystery Box helpers", () => {
 		expect(inventory).toEqual([{ itemId: "freeze-shot", remainingUses: 2, usesThisTurn: 0 }]);
 	});
 
+	test("failed reward grant leaves inventory unchanged", () => {
+		const inventory: InventoryItem[] = [{ itemId: MYSTERY_BOX_ITEM_ID, remainingUses: 2, usesThisTurn: 1 }];
+		const before = structuredClone(inventory);
+		expect(() => grantMysteryBoxReward(inventory, officialItems(), { specificItemId: "not-declared" })).toThrow("is not a known item");
+		expect(inventory).toEqual(before);
+	});
+
 	test("deriveMysteryBoxSeed is deterministic and varies by actor and turn", () => {
 		const baseSeed = 12345;
 		const first = deriveMysteryBoxSeed({ actorId: "a", turnNumber: 0, activeTeam: 0, baseSeed });
 		expect(deriveMysteryBoxSeed({ actorId: "a", turnNumber: 0, activeTeam: 0, baseSeed })).toBe(first);
 		expect(deriveMysteryBoxSeed({ actorId: "b", turnNumber: 0, activeTeam: 0, baseSeed })).not.toBe(first);
 		expect(deriveMysteryBoxSeed({ actorId: "a", turnNumber: 1, activeTeam: 0, baseSeed })).not.toBe(first);
+		expect(deriveMysteryBoxSeed({ actorId: "a", turnNumber: 0, activeTeam: 1, baseSeed })).not.toBe(first);
+		expect(deriveMysteryBoxSeed({ actorId: "a", turnNumber: 0, activeTeam: 0, baseSeed: baseSeed + 1 })).not.toBe(first);
 	});
 
 	test("MapPickupSystem still collects pickups configured for any declared item", () => {
