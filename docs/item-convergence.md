@@ -4,7 +4,7 @@ Last reranked after commit: `3e30215 refactor(items): converge magnet on entity 
 
 Repository state: clean / qualified for the completed Delayed Mine slice.
 
-CocoIndex state: refreshed after the baseline commit; current index contains 720 files and 7,107 chunks.
+CocoIndex state: refreshed after the baseline commit; current index contains 720 files and 7,106 chunks.
 
 This is the current repository-backed checkpoint, not a historical ranking. Future slices must refresh evidence and rerank all remaining official Items before selecting the next Item.
 
