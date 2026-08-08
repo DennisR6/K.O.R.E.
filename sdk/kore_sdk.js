@@ -10196,7 +10196,7 @@ class GameHandlerBuilder {
     const physics = new defaultPhysics(friction2);
     const physicsSystem = new PhysicsSystem(physics);
     this.engine.attachFeedbackToPhysics(physicsSystem);
-    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new TransformSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
+    this.addPhysics(physics).addSystem(new MovementSystem).addSystem(new NumericSystem).addSystem(new ParticipationSystem).addSystem(new TransformSystem).addSystem(new PlaybackSystem).addSystem(physicsSystem).addSystem(new BoundarySystem).addSystem(new GameStateManager);
     return this;
   }
   fromSettings(gameSettings) {
@@ -10512,8 +10512,8 @@ function validateGameMode(mode) {
 function createMatchSystemProfile(teamCount) {
   if (!Number.isSafeInteger(teamCount) || teamCount < 1)
     throw new Error("A match system profile requires at least one team");
-  const registry = registerParticipationSystem(registerNumericSystem(registerMovementSystem(new EngineSystemRegistry))).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
-  const framework = registry.select(["core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning", "core.numeric", "core.participation"]);
+  const registry = registerParticipationSystem(registerNumericSystem(registerMovementSystem(new EngineSystemRegistry))).register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"], state: { remainingFrames: 0, syncPending: false, completionPending: false, finalState: null } }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"], state: { fps: 1, contacts: [] } }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] }).register({ id: "core.winning", after: ["core.game-state-manager"], state: { teamCount, pending: null } });
+  const framework = registry.select(["core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning", "core.numeric", "core.participation"]);
   assertJsonValue(framework.systems);
   return framework;
 }
@@ -11275,8 +11275,8 @@ function stableAuthoringHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function createDefaultKoreFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] }).register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] }).register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
-  return registry.select(["core.numeric", "core.participation", "core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+  const registry = new EngineSystemRegistry().register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] }).register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] }).register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] }).register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] }).register({ id: "core.playback", provides: ["playback"] }).register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] }).register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] }).register({ id: "core.game-state-manager", after: ["core.boundary"] });
+  return registry.select(["core.numeric", "core.participation", "core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 var kore = {
   engine: { createWorld: engine.createWorld, createSystemRegistry: engine.createSystemRegistry },

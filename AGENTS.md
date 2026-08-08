@@ -650,9 +650,9 @@ Account for this mismatch when changing rendering APIs.
 `GameHandlerBuilder.defaultSystems()` installs systems in this order:
 
 1. `MovementSystem`
-2. `TransformSystem`
-3. `NumericSystem`
-4. `ParticipationSystem`
+2. `NumericSystem`
+3. `ParticipationSystem`
+4. `TransformSystem`
 5. `PlaybackSystem`
 6. `PhysicsSystem`
 7. `BoundarySystem`

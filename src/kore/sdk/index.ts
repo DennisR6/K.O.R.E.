@@ -568,11 +568,12 @@ export function createDefaultKoreFramework(): EngineFrameworkSettings {
 		.register({ id: "core.numeric", provides: ["numeric.state"], acceptsEffects: ["numeric.set", "numeric.add", "numeric.reset"] })
 		.register({ id: "core.participation", provides: ["participation.state"], acceptsEffects: ["participation.set-physics", "participation.set-drawing"] })
 		.register({ id: "core.movement", provides: ["movement.state"], acceptsEffects: ["movement.integrate"], before: ["core.playback"] })
+		.register({ id: "core.transform", provides: ["transform.state"], acceptsEffects: ["transform.set-position", "transform.set-rotation", "transform.swap-position"], before: ["core.playback"] })
 		.register({ id: "core.playback", provides: ["playback"] })
 		.register({ id: "core.physics", provides: ["physics"], after: ["core.playback"] })
 		.register({ id: "core.boundary", requires: ["physics"], after: ["core.physics"] })
 		.register({ id: "core.game-state-manager", after: ["core.boundary"] });
-	return registry.select(["core.numeric", "core.participation", "core.movement", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
+	return registry.select(["core.numeric", "core.participation", "core.movement", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager"]);
 }
 
 /**

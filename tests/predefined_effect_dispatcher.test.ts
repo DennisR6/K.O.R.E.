@@ -43,7 +43,6 @@ test("predefined dispatch validates the current envelope and target before mutat
 
 test("transform swap dispatch captures both positions before either write", () => {
 	const handler = createCanonicalPlayableMatchHandler();
-	handler.addSystem(new TransformSystem());
 	const [first, second] = handler.getEntityManager().getEntities();
 	first!.setPos({ x: 10, y: 20 });
 	second!.setPos({ x: 80, y: 90 });
@@ -56,7 +55,6 @@ test("transform swap dispatch captures both positions before either write", () =
 
 test("transform swap dispatch performs no partial mutation on missing or invalid targets", () => {
 	const handler = createCanonicalPlayableMatchHandler();
-	handler.addSystem(new TransformSystem());
 	const [first, second] = handler.getEntityManager().getEntities();
 	first!.setPos({ x: 10, y: 20 });
 	second!.setPos({ x: 80, y: 90 });

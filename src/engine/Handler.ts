@@ -1108,9 +1108,9 @@ export class GameHandlerBuilder {
 		this
 			.addPhysics(physics)
 			.addSystem(new MovementSystem())
-			.addSystem(new TransformSystem())
 			.addSystem(new NumericSystem())
 			.addSystem(new ParticipationSystem())
+			.addSystem(new TransformSystem())
 			.addSystem(new PlaybackSystem())
 			.addSystem(physicsSystem)
 			.addSystem(new BoundarySystem())
