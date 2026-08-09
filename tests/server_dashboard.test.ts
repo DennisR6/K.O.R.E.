@@ -30,6 +30,15 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain("Matches now");
 	expect(page).toContain("Paused matches");
 	expect(page).toContain("Sleeping matches");
+	expect(page).toContain("https://cdn.tailwindcss.com");
+	expect(page).toContain("Latency comparison");
+	expect(page).toContain('data-period="today"');
+	expect(page).toContain('data-period="yesterday"');
+	expect(page).toContain('data-period="week"');
+	expect(page).toContain('id="latency-median"');
+	expect(page).toContain('"median":5');
+	expect(page).toContain('"median":10');
+	expect(page).toContain('"median":7');
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
