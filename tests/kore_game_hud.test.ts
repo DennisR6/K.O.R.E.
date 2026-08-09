@@ -30,7 +30,9 @@ test("HUD projection is idempotent, draw is pure, and item command routes throug
 test("item-phase skip button remains clickable while gameplay input is locked", () => {
 	const commands: unknown[] = [];
 	const hud = createKoreGameHudSurface({ handle: command => { commands.push(command); return false; } });
-	hud.applyProjection(projection());
+	hud.applyProjection(projection({ match: { inputLocked: true, waiting: true, paused: false } }));
+	const element = hud.getRuntime().toSettings().screens[0]?.elements.find(candidate => candidate.id === KoreHudElement.SkipItem);
+	expect(element?.enabled).toBe(true);
 	hud.updateMouse(600, 320);
 	hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.SkipItemPhase, payload: undefined }]);
