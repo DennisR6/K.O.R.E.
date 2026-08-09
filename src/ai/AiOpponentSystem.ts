@@ -36,6 +36,8 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 		if (!this.handler || !this.targetEmitter || (ctx.state !== GameState.Your_turn && ctx.state !== GameState.Opponents_turn) || this.handler.getActiveTeam() !== this.settings.team) return;
 		const rule = this.handler.getRuleState();
 		if (rule.phase === RulePhase.Item) {
+			const maxItems = this.handler.getSettings()?.gameMode?.maxItemsPerTurn ?? 0;
+			if (rule.itemUses < maxItems && this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
 			this.targetEmitter.skipPhase?.();
 			return;
 		}

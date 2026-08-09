@@ -5,6 +5,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
+import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
 
 describe("Simulation Hard AI", () => {
 	test("HardAi evaluates simulation options within deterministic budget and selects optimal shot", () => {
@@ -100,5 +101,19 @@ describe("Simulation Hard AI", () => {
 		const decision = hardAi.computeTurn(handler, aiSettings);
 		expect(decision).toBeDefined();
 		expect(simCount).toBeLessThanOrEqual(5);
+	});
+
+	test("HardAi sometimes scores a useful item during the item phase", () => {
+		const handler = createCanonicalPlayableMatchHandler();
+		const hardAi = new HardAi();
+		const decisions = Array.from({ length: 32 }, (_, seed) => hardAi.computeTurn(handler, {
+			difficulty: "hard",
+			seed,
+			team: 0,
+			decisionLimits: { maxSimulations: 1, maxAngleSamples: 1, maxForceSamples: 1 },
+		}));
+
+		expect(decisions.some(decision => decision?.itemUse?.itemId === "power-dash")).toBe(true);
+		expect(decisions.every(decision => !decision?.itemUse || decision.itemUse.target.type === "self")).toBe(true);
 	});
 });

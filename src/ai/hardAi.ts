@@ -2,12 +2,23 @@ import type { GameHandler } from "../engine/Handler.js";
 import type { AiDecision, IAiTurnProducer } from "./aiEmitter.js";
 import type { AiSettings } from "./types.js";
 import { SeededRandom } from "../utils/random.js";
+import { RulePhase } from "../rules/types.js";
+import { validateItemTarget, type ItemTarget } from "../item/target.js";
+import type { ItemDocument } from "../item/types.js";
+import type { IEntity } from "../entity/Entity.js";
 
 interface ScoredChoice {
 	actorId: string;
 	angle: number;
 	power: number;
 	aimedAtEnemy: boolean;
+}
+
+interface ScoredItemChoice {
+	actorId: string;
+	itemId: string;
+	target: ItemTarget;
+	score: number;
 }
 
 /** Maximum simulation horizon used only while ranking speculative Hard AI candidates. */
@@ -22,12 +33,14 @@ export class HardAi implements IAiTurnProducer {
 		// so matches keep making progress - but every seed plays a different
 		// game while replays stay reproducible from the seed.
 		const random = new SeededRandom(aiSettings.seed);
+		const rule = handler.getRuleState();
 
 		const entities = handler.getEntityManager().getEntities();
 		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
 		const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
 
 		if (aiActors.length === 0 || enemyActors.length === 0) return undefined;
+		if (rule.phase === RulePhase.Item) return this.chooseItem(handler, aiActors, enemyActors, random);
 
 		const maxSimulations = aiSettings.decisionLimits?.maxSimulations ?? 36;
 		const maxAngleSamples = aiSettings.decisionLimits?.maxAngleSamples ?? 12;
@@ -124,4 +137,57 @@ export class HardAi implements IAiTurnProducer {
 			shot: { actorId: choice.actorId, angle: choice.angle, power: choice.power },
 		};
 	}
+
+	private chooseItem(handler: GameHandler, aiActors: IEntity[], enemyActors: IEntity[], random: SeededRandom): AiDecision | undefined {
+		const items = handler.getSettings()?.items ?? [];
+		const choices: ScoredItemChoice[] = [];
+		for (const actor of aiActors) {
+			for (const inventory of actor.getInventory().filter(entry => entry.remainingUses > 0)) {
+				const item = items.find(candidate => candidate.id === inventory.itemId);
+				if (!item) continue;
+				for (const target of itemTargets(item, actor, enemyActors, handler.getEntityManager().getEntities())) {
+					try {
+						validateItemTarget(item, target, { actor, entities: handler.getEntityManager().getEntities(), worldSize: handler.getContext().worldSize });
+					} catch { continue; }
+					choices.push({ actorId: actor.getId(), itemId: item.id, target, score: scoreItem(item, target, actor, enemyActors) });
+				}
+			}
+		}
+		if (choices.length === 0) return undefined;
+		const bestScore = Math.max(...choices.map(choice => choice.score));
+		if (bestScore < 2 || random.nextInt(100) >= 65) return undefined;
+		const best = choices.filter(choice => choice.score === bestScore);
+		const choice = best[random.nextInt(best.length)]!;
+		return { itemUse: { actorId: choice.actorId, itemId: choice.itemId, target: choice.target } };
+	}
+}
+
+function itemTargets(item: ItemDocument, actor: IEntity, enemies: IEntity[], entities: IEntity[]): ItemTarget[] {
+	if (item.targetType === "self") return [{ type: "self" }];
+	if (item.targetType === "entity") {
+		return [...entities].sort((left, right) => distance(actor, left) - distance(actor, right)).map(entity => ({ type: "entity", entityId: entity.getId() }));
+	}
+	if (item.targetType === "position") {
+		const target = enemies.slice().sort((left, right) => distance(actor, left) - distance(actor, right))[0];
+		return target ? [{ type: "position", position: target.getPos() }] : [];
+	}
+	return [];
+}
+
+function scoreItem(item: ItemDocument, target: ItemTarget, actor: IEntity, enemies: IEntity[]): number {
+	const baseScores: Record<string, number> = {
+		anker: 2, durchlaessigkeit: 2, magnet: 4, falltuer: 3, "power-dash": 3,
+		"verzoegerte-mine": 3, "mini-wall": 2, "freeze-shot": 4, switch: 2,
+		"jaegermeister-elixier": 3, "vodka-zero": 2,
+	};
+	let score = baseScores[item.id] ?? 1;
+	if (target.type === "entity" && enemies.some(enemy => enemy.getId() === target.entityId)) score += 1;
+	if (target.type === "position") score += 1;
+	if (item.targetType === "self" && enemies.length > 0) score += Math.max(0, 1 - distance(actor, enemies[0]!) / 800);
+	return score;
+}
+
+function distance(first: { getPos(): { x: number; y: number } }, second: { getPos(): { x: number; y: number } }): number {
+	const a = first.getPos(); const b = second.getPos();
+	return Math.hypot(a.x - b.x, a.y - b.y);
 }
