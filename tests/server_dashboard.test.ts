@@ -100,11 +100,11 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	expect(pageHtml).toContain(`data-replays="index"`);
 	expect(pageHtml).toContain('src="https://unpkg.com/htmx.org@2.0.4"');
 	expect(pageHtml).toContain('hx-trigger="input changed delay:500ms"');
-	expect(pageHtml).toContain('hx-target="#replay-results"');
+	expect(pageHtml).toContain('hx-target="#replay-table"');
 	const htmxSearch = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, { headers: { authorization: `Bearer ${secret}`, "HX-Request": "true" } }), registry, { operatorSecret: secret }, database))!;
 	expect(htmxSearch.headers.get("content-type")).toContain("text/html");
 	const firstSummary = database.listOperatorReplays(first.id)[0]!;
-	expect(await htmxSearch.text()).toBe(`<tbody id="replay-results" data-replays="index"><tr><td>${first.id}</td><td>${firstSummary.status}</td><td>${firstSummary.updatedAt}</td><td>0</td><td><a href="/operator/replays/${first.id}/view">View replay</a> <a href="/operator/replays/${first.id}">Download</a></td></tr></tbody>`);
+	expect(await htmxSearch.text()).toBe(`<table id="replay-table"><caption>Persisted match replays</caption><thead><tr><th>Match ID</th><th>Status</th><th>Updated</th><th>Actions</th><th>Replay</th></tr></thead><tbody data-replays="index"><tr><td>${first.id}</td><td>${firstSummary.status}</td><td>${firstSummary.updatedAt}</td><td>0</td><td><a href="/operator/replays/${first.id}/view">View replay</a> <a href="/operator/replays/${first.id}">Download</a></td></tr></tbody></table>`);
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
 	expect(completedHtml).toContain("View replay");
