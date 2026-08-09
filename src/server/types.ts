@@ -20,10 +20,14 @@ export type PersistedMatchLifecycle = {
 };
 
 export type MapUsageMetric = { mapId: string; games: number; percentage: number };
+export type OfflineModeMetric = { mode: "hotseat" | "human-vs-ai" | "ai-battle"; games: number };
 
 /** Aggregate dashboard facts. `now` is a point-in-time registry-cache count. */
 export type MatchMetrics = {
 	allTime: number;
+	/** Completed offline, hotseat, and AI matches reported by the production clients. */
+	offlineMatches: number;
+	offlineModes: OfflineModeMetric[];
 	/** Distinct durable player identities across every stored match. */
 	playersAllTime: number;
 	/** Distinct players whose match lifecycle is anything except sleeping. */

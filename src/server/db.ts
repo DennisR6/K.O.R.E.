@@ -8,7 +8,7 @@ import { GameState } from "../engine/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import type { FrozenReplayDocument, ReplayAction, ReplayDocument } from "../replay/types.js";
 import { validateFrozenReplayDocument, validateReplayDocument, validateReplayOrigin } from "../replay/types.js";
-import type { AuthoritativeMatchStatus, MapUsageMetric, PersistedMatchLifecycle } from "./types.js";
+import type { AuthoritativeMatchStatus, MapUsageMetric, OfflineModeMetric, PersistedMatchLifecycle } from "./types.js";
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import type { OfflineMatchReport } from "./offlineMatchContract.js";
 import type { MatchResult } from "../rules/types.js";
@@ -248,16 +248,21 @@ export class GameDatabase {
 		this.writeLifecycle(id, lifecycle);
 	}
 
-	public getMetricCounts(): { allTime: number; playersAllTime: number; playersOnline: number; paused: number; sleeping: number } {
+	public getMetricCounts(): { allTime: number; offlineMatches: number; offlineModes: OfflineModeMetric[]; playersAllTime: number; playersOnline: number; paused: number; sleeping: number } {
 		const allTime = this.db.query("SELECT count(*) AS count FROM games").get() as { count: number };
-		const playersAllTime = this.db.query("SELECT count(DISTINCT user_id) AS count FROM game_players").get() as { count: number };
+		const offlineMatches = this.db.query("SELECT count(*) AS count FROM offline_matches").get() as { count: number };
+		const playerIds = new Set((this.db.query("SELECT user_id FROM game_players").all() as Array<{ user_id: string }>).map(row => row.user_id));
+		const offlinePlayers = this.db.query("SELECT players_json FROM offline_matches").all() as Array<{ players_json: string }>;
+		for (const row of offlinePlayers) for (const player of JSON.parse(row.players_json) as string[]) playerIds.add(player);
+		const playersAllTime = { count: playerIds.size };
 		const playersOnline = this.db.query("SELECT count(DISTINCT game_players.user_id) AS count FROM game_players JOIN game_lifecycle ON game_lifecycle.game_id = game_players.game_id WHERE game_lifecycle.status != 'sleeping'").get() as { count: number };
 		const statuses = this.db.query(`
 			SELECT status, count(*) AS count FROM game_lifecycle
 			WHERE status IN ('paused', 'sleeping') GROUP BY status
 		`).all() as Array<{ status: AuthoritativeMatchStatus; count: number }>;
 		const counts = new Map(statuses.map(row => [row.status, row.count]));
-		return { allTime: allTime.count, playersAllTime: playersAllTime.count, playersOnline: playersOnline.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
+		const offlineModes = this.db.query("SELECT mode, count(*) AS games FROM offline_matches GROUP BY mode ORDER BY games DESC, mode ASC").all() as OfflineModeMetric[];
+		return { allTime: allTime.count + offlineMatches.count, offlineMatches: offlineMatches.count, offlineModes, playersAllTime: playersAllTime.count, playersOnline: playersOnline.count, paused: counts.get("paused") ?? 0, sleeping: counts.get("sleeping") ?? 0 };
 	}
 
 	/** Lists every persisted action log for authenticated operator replay lookup. */
@@ -286,7 +291,7 @@ export class GameDatabase {
 
 	/** Durable map usage, sorted so equal counts have a stable dashboard order. */
 	public getMapUsageMetrics(): MapUsageMetric[] {
-		const rows = this.db.query("SELECT map_id, count(*) AS games FROM games GROUP BY map_id ORDER BY games DESC, map_id ASC")
+		const rows = this.db.query("SELECT map_id, count(*) AS games FROM (SELECT map_id FROM games UNION ALL SELECT map_id FROM offline_matches) GROUP BY map_id ORDER BY games DESC, map_id ASC")
 			.all() as Array<{ map_id: string; games: number }>;
 		const total = rows.reduce((sum, row) => sum + row.games, 0);
 		return rows.map(row => ({ mapId: row.map_id, games: row.games, percentage: total === 0 ? 0 : Number(((row.games / total) * 100).toFixed(2)) }));
