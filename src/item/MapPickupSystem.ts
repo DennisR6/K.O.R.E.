@@ -3,11 +3,18 @@ import type { IGameContext, ISystem } from "../systems/types.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import { type ItemDocument, type ItemPickup, type ItemPickupState, validateItemPickupState } from "./types.js";
 
+export type ItemPickupCollector = (entity: IEntity, item: ItemDocument) => void;
+
 /** Collects configured map pickups when an active, live entity enters their region. */
 export class MapPickupSystem implements ISystem {
 	private pickups: ItemPickup[] = [];
 	private items = new Map<string, ItemDocument>();
 	private state: ItemPickupState | undefined;
+	private collect: ItemPickupCollector = (entity, item) => {
+		const inventory = entity.getInventory();
+		addDrawnInventoryItem(inventory, item);
+		entity.setInventory(inventory);
+	};
 
 	public configure(pickups: ItemPickup[], items: ItemDocument[]): void {
 		this.pickups = structuredClone(pickups);
@@ -16,6 +23,14 @@ export class MapPickupSystem implements ISystem {
 			if (!this.items.has(pickup.itemId)) throw new Error(`Map pickup references unknown item '${pickup.itemId}'`);
 		}
 		this.state = this.pickups.length === 0 ? undefined : createItemPickupState(this.pickups.length);
+	}
+
+	public setCollector(collector: ItemPickupCollector | undefined): void {
+		this.collect = collector ?? ((entity, item) => {
+			const inventory = entity.getInventory();
+			addDrawnInventoryItem(inventory, item);
+			entity.setInventory(inventory);
+		});
 	}
 
 	public restore(state: ItemPickupState | undefined): void {
@@ -56,9 +71,7 @@ export class MapPickupSystem implements ISystem {
 			const limit = pickup.maxPickupsPerTurn ?? 1;
 			for (const entity of entitiesInRegion) {
 				if (pickupState.collected >= limit || pickupState.occupants.includes(entity.getId())) continue;
-				const inventory = entity.getInventory();
-				addDrawnInventoryItem(inventory, item);
-				entity.setInventory(inventory);
+				this.collect(entity, item);
 				pickupState.collected++;
 			}
 			pickupState.occupants = [...occupants];

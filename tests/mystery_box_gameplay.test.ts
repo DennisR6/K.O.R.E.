@@ -15,7 +15,7 @@ import {
 	mysteryBoxItem,
 	resolveMysteryBoxReward,
 } from "../src/item/officialItems.js";
-import type { InventoryItem, ItemDocument } from "../src/item/types.js";
+import { createItemPickup, type InventoryItem, type ItemDocument, type ItemPickup } from "../src/item/types.js";
 import { RuleInterpreter } from "../src/rules/RuleInterpreter.js";
 import { RulePhase, validateItemEconomySettings, WinCondition } from "../src/rules/types.js";
 import { createDefaultGameSettings, validateGameSettings } from "../src/settings/settings.js";
@@ -112,6 +112,18 @@ describe("Mystery Box gameplay", () => {
 		expect(handler.getRuleState()).toEqual({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 1 });
 		expect(emitter.recorder.getReplay().actions).toEqual([{ type: "itemUse", actorId: actor.getId(), itemId: MYSTERY_BOX_ITEM_ID, target: { type: "self" } }]);
 		expect(handler.getFeedbackTrace().at(-1)?.data).toMatchObject({ itemId: MYSTERY_BOX_ITEM_ID, rewardItemId: "anker", rewardName: "Anker" });
+	});
+
+	test("unwraps a mystery-box map pickup immediately", () => {
+		const settings = createMysteryBoxSettings({ pool: ["anker"], loadoutItems: [] });
+		(settings.gameMode.itemEconomy as unknown as { mapPickups: ItemPickup[] }).mapPickups = [createItemPickup({ itemId: MYSTERY_BOX_ITEM_ID, spawnRegion: { x: 0, y: 0, w: 800, h: 450 }, activationType: "collision" })];
+		const { handler, actor } = buildPipeline(settings);
+
+		handler.tick();
+
+		expect(inventoryOf(actor).some(entry => entry.itemId === MYSTERY_BOX_ITEM_ID)).toBe(false);
+		expect(inventoryOf(actor).find(entry => entry.itemId === "anker")?.remainingUses).toBe(1);
+		expect(handler.getFeedbackTrace().at(-1)?.data).toMatchObject({ source: "map-pickup", rewardName: "Anker" });
 	});
 
 	test("validates command and target through gameplay authority", () => {
@@ -323,8 +335,8 @@ describe("Mystery Box gameplay", () => {
 		expect(enabledAfter.filter(entry => entry.itemId === MYSTERY_BOX_ITEM_ID).length).toBe(1);
 	});
 
-	test("collecting a spawned mystery-box pickup grants the box, then the item phase resolves a reward", () => {
-		const settings = createMysteryBoxSettings({ pool: ["anker"], boxUses: 1 });
+	test("collecting a spawned mystery-box pickup unwraps its reward immediately", () => {
+		const settings = createMysteryBoxSettings({ pool: ["anker"], loadoutItems: [] });
 		const { handler, actor } = buildPipeline(settings);
 
 		const spawn = generateRandomMapPickupPosition({ x: 800, y: 450 }, 40, 42);
@@ -332,12 +344,9 @@ describe("Mystery Box gameplay", () => {
 
 		actor.setPos({ x: spawn.x + 20, y: spawn.y + 20 });
 		handler.tick(0);
-		expect(boxEntry(inventoryOf(actor))!.remainingUses).toBe(2);
-
-		const emitter = new GameEmitter(handler, settings.gameMode, 2);
-		emitter.sendItemUse(actor.getId(), MYSTERY_BOX_ITEM_ID, { type: "self" });
-		expect(boxEntry(inventoryOf(actor))!.remainingUses).toBe(1);
+		expect(inventoryOf(actor).some(entry => entry.itemId === MYSTERY_BOX_ITEM_ID)).toBe(false);
 		expect(inventoryOf(actor).find(entry => entry.itemId === "anker")).toEqual({ itemId: "anker", remainingUses: 1, usesThisTurn: 0 });
+		expect(handler.getFeedbackTrace().at(-1)?.data).toMatchObject({ source: "map-pickup", rewardName: "Anker" });
 	});
 });
 

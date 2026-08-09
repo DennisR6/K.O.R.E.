@@ -871,7 +871,24 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		items.forEach(validateItemDocument)
 		this.items = structuredClone(items)
 	}
-	public configureMapItemPickups(pickups: ItemPickup[]): void { this.mapPickupSystem.configure(pickups, this.items) }
+	public configureMapItemPickups(pickups: ItemPickup[]): void {
+		this.mapPickupSystem.configure(pickups, this.items)
+		this.mapPickupSystem.setCollector((entity, item) => item.id === MYSTERY_BOX_ITEM_ID ? this.unwrapMysteryBoxPickup(entity) : this.collectItemPickup(entity, item))
+	}
+	private collectItemPickup(entity: IEntity, item: ItemDocument): void {
+		const inventory = entity.getInventory();
+		addDrawnInventoryItem(inventory, item);
+		entity.setInventory(inventory);
+	}
+	private unwrapMysteryBoxPickup(actor: IEntity): void {
+		const options = this.mysteryBoxRewardOptions(actor.getId())
+		const rewardId = resolveMysteryBoxReward(options)
+		const reward = this.items.find(candidate => candidate.id === rewardId)
+		const inventory = actor.getInventory()
+		grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId })
+		actor.setInventory(inventory)
+		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId: String(actor.getId()), data: { itemId: MYSTERY_BOX_ITEM_ID, rewardItemId: rewardId, rewardName: reward?.name ?? rewardId, source: "map-pickup" } })
+	}
 	/** Produces the complete detached state consumed by the gameplay renderer. */
 	public getAuthoritativeRenderState(): AuthoritativeGameplaySnapshot {
 		return {
