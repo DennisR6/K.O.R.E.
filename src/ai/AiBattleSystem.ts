@@ -75,10 +75,6 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		const team = this.handler.getActiveTeam();
 		const rule = this.handler.getRuleState();
 		if (rule.phase === RulePhase.Item) {
-			const aiSettings = team === 0 ? this.settings0 : this.settings1;
-			const emitter = team === 0 ? this.emitter0 : this.emitter1;
-			const maxItems = this.handler.getSettings()?.gameMode?.maxItemsPerTurn ?? 0;
-			if (rule.itemUses < maxItems && emitter.executeTurn(this.handler, aiSettings, this.targetEmitter)) return;
 			if (!this.targetEmitter.skipPhase) throw new Error("KI vs KI requires an emitter with phase skipping");
 			this.targetEmitter.skipPhase();
 			return;

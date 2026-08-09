@@ -292,10 +292,14 @@ class MenuBattlePreview {
 	private workerHost = new HardAiWorkerHost();
 	private handler = createAiBattleHandler("ice-map-v1", undefined, undefined, this.workerHost);
 	private visible = false;
+	private tickCounter = 0;
 
 	public tick(visible: boolean): void {
 		this.visible = visible;
 		if (!visible) return;
+		// The preview is decorative. Keep its authoritative simulation below the
+		// browser render rate so a long AI turn cannot freeze menu interaction.
+		if (++this.tickCounter % 4 !== 0) return;
 		if (this.handler.getState() === GameState.Game_over) {
 			this.handler.dispose();
 			this.workerHost.dispose();
