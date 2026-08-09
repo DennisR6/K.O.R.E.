@@ -11,14 +11,15 @@ export const DASHBOARD_DATABASE_PATH = "/operator/db";
 export const DASHBOARD_REPLAYS_PATH = "/operator/replays";
 const DASHBOARD_COOKIE = "kore_operator_session";
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
-const FRESHNESS = "allTime, playersAllTime, playersOnline, paused, and sleeping are durable SQLite aggregates; playersOnline includes every player whose game is not sleeping; now is scoped to this server process's resident registry cache.";
+const FRESHNESS = "allTime, offlineMatches, playersAllTime, and map usage include durable online and production-reported offline/KI matches; playersOnline, paused, and sleeping describe authoritative online matches; now is scoped to this server process's resident registry cache.";
 
 export type DashboardConfig = { operatorSecret: string | undefined };
 
 export type DashboardMetricsResponse = {
 	schemaVersion: 1;
 	measuredAt: number;
-	counts: Pick<MatchMetrics, "allTime" | "playersAllTime" | "playersOnline" | "now" | "paused" | "sleeping">;
+	counts: Pick<MatchMetrics, "allTime" | "offlineMatches" | "playersAllTime" | "playersOnline" | "now" | "paused" | "sleeping">;
+	offlineModes: MatchMetrics["offlineModes"];
 	mapUsage: MatchMetrics["mapUsage"];
 	mostPlayedMap: MatchMetrics["mostPlayedMap"];
 	freshness: typeof FRESHNESS;
@@ -57,7 +58,7 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 		if (pathname === DASHBOARD_METRICS_PATH || wantsJson(request)) {
 			return Response.json(body, { headers: { "cache-control": "no-store" } });
 		}
-		return new Response(renderDashboard(body), {
+		return new Response(renderDashboard(body, publicBaseUrl), {
 			headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
 		});
 	} catch {
@@ -113,12 +114,14 @@ export function metricsResponse(metrics: MatchMetrics): DashboardMetricsResponse
 		measuredAt: metrics.measuredAt,
 		counts: {
 			allTime: metrics.allTime,
+			offlineMatches: metrics.offlineMatches,
 			playersAllTime: metrics.playersAllTime,
 			playersOnline: metrics.playersOnline,
 			now: metrics.now,
 			paused: metrics.paused,
 			sleeping: metrics.sleeping,
 		},
+		offlineModes: metrics.offlineModes.map(metric => ({ ...metric })),
 		mapUsage: metrics.mapUsage.map(metric => ({ ...metric })),
 		mostPlayedMap: metrics.mostPlayedMap && { ...metrics.mostPlayedMap },
 		freshness: FRESHNESS,
@@ -193,7 +196,7 @@ function notFound(): Response {
 	return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
 }
 
-function renderDashboard(metrics: DashboardMetricsResponse): string {
+function renderDashboard(metrics: DashboardMetricsResponse, publicBaseUrl?: string): string {
 	const mostPlayed = metrics.mostPlayedMap ? escapeHtml(`${metrics.mostPlayedMap.mapId} (${metrics.mostPlayedMap.games} games, ${metrics.mostPlayedMap.percentage}%)`) : "No matches yet";
 	const rows = metrics.mapUsage.map(metric => `<tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium text-slate-700">${escapeHtml(metric.mapId)}</td><td class="px-4 py-3 text-right text-slate-500">${metric.games}</td><td class="px-4 py-3 text-right font-semibold text-slate-700">${metric.percentage}%</td></tr>`).join("") || "<tr><td class=\"px-4 py-6 text-center text-slate-400\" colspan=\"3\">No matches yet</td></tr>";
 	const latencyPeriods = JSON.stringify({
@@ -201,31 +204,36 @@ function renderDashboard(metrics: DashboardMetricsResponse): string {
 		yesterday: { label: "Yesterday", median: 10, p90: 18, average: 12, previous: 7 },
 		week: { label: "Last 7 days", median: 7, p90: 15, average: 9, previous: 8 },
 	});
+	const replayUrl = dashboardUrl(publicBaseUrl, DASHBOARD_REPLAYS_PATH);
+	const databaseUrl = dashboardUrl(publicBaseUrl, DASHBOARD_DATABASE_PATH);
+	const offlineModeLabels: Record<string, string> = { hotseat: "Hotseat", "human-vs-ai": "Human vs AI", "ai-battle": "AI vs AI" };
+	const offlineModeRows = metrics.offlineModes.map(mode => `<div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"><span class="text-sm text-slate-600">${offlineModeLabels[mode.mode] ?? escapeHtml(mode.mode)}</span><strong class="text-sm">${mode.games}</strong></div>`).join("") || `<p class="text-sm text-slate-400">No offline reports yet.</p>`;
 	return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>KORE operator dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui']}}}}</script></head>
 <body class="min-h-screen bg-slate-950 font-sans text-slate-900"><div class="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,.16),_transparent_34rem)]">
-<header class="border-b border-white/10 bg-slate-950/80 text-white backdrop-blur"><div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8"><div><p class="text-xs font-bold uppercase tracking-[.28em] text-cyan-300">KORE / OPERATIONS</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Game state overview</h1></div><nav class="flex items-center gap-2"><a class="rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white" href="${DASHBOARD_REPLAYS_PATH}">Replay archive</a><a class="rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300" href="${DASHBOARD_DATABASE_PATH}">Download backup</a></nav></div></header>
+<header class="border-b border-white/10 bg-slate-950/80 text-white backdrop-blur"><div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8"><div><p class="text-xs font-bold uppercase tracking-[.28em] text-cyan-300">KORE / OPERATIONS</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Game state overview</h1></div><nav class="flex items-center gap-2"><a class="rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white" href="${replayUrl}">Replay archive</a><a class="rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300" href="${databaseUrl}">Download backup</a></nav></div></header>
 <main class="mx-auto max-w-7xl space-y-6 px-5 py-8 lg:px-8">
 <section class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p class="text-sm font-medium text-cyan-400">Live control room</p><h2 class="mt-1 text-3xl font-bold tracking-tight text-white">How the game is doing</h2><p class="mt-2 max-w-2xl text-sm text-slate-400">A high-level view of participation, match lifecycle, map adoption and operator performance.</p></div><div class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300"><span class="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Measured ${new Date(metrics.measuredAt).toLocaleString("en-US")}</div></section>
-<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 ${dashboardCard("All-time matches", metrics.counts.allTime, "data-metric=\"allTime\"", "Every durable match", "cyan")}
 ${dashboardCard("Players online", metrics.counts.playersOnline, "data-metric=\"playersOnline\"", "Across non-sleeping games", "emerald")}
 ${dashboardCard("Matches now", metrics.counts.now, "data-metric=\"now\"", "Resident in this process", "violet")}
 ${dashboardCard("All-time players", metrics.counts.playersAllTime, "data-metric=\"playersAllTime\"", "Distinct player identities", "amber")}
+${dashboardCard("Offline / KI matches", metrics.counts.offlineMatches, "data-metric=\"offlineMatches\"", "Reported from production clients", "rose")}
 </section>
 <section class="grid gap-6 xl:grid-cols-[1.4fr_.8fr]">
 <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Response time</p><h3 class="mt-2 text-xl font-bold text-slate-900">Latency comparison</h3><p class="mt-1 text-sm text-slate-500">Illustrative view until request telemetry is connected.</p></div><div id="latency-tabs" class="flex rounded-lg bg-slate-100 p-1"><button data-period="today" class="rounded-md bg-white px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm">Today</button><button data-period="yesterday" class="rounded-md px-3 py-2 text-xs font-semibold text-slate-500">Yesterday</button><button data-period="week" class="rounded-md px-3 py-2 text-xs font-semibold text-slate-500">Last 7 days</button></div></div>
 <div class="mt-7 grid gap-4 sm:grid-cols-3"><div class="rounded-xl bg-slate-950 p-4 text-white"><p class="text-xs text-slate-400">Median</p><p id="latency-median" class="mt-2 text-3xl font-bold">5ms</p><p id="latency-delta" class="mt-2 text-xs font-medium text-emerald-300">50% faster than yesterday</p></div><div class="rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">p90</p><p id="latency-p90" class="mt-2 text-3xl font-bold text-slate-900">12ms</p><p class="mt-2 text-xs text-slate-500">90% of requests are below this</p></div><div class="rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Average</p><p id="latency-average" class="mt-2 text-3xl font-bold text-slate-900">7ms</p><p class="mt-2 text-xs text-slate-500">Across the selected period</p></div></div>
 <div class="mt-6 flex items-end gap-2" aria-label="Latency trend"><div class="h-12 flex-1 rounded-t bg-cyan-100"></div><div class="h-20 flex-1 rounded-t bg-cyan-200"></div><div class="h-16 flex-1 rounded-t bg-cyan-300"></div><div class="h-28 flex-1 rounded-t bg-cyan-400"></div><div class="h-24 flex-1 rounded-t bg-cyan-500"></div><div class="h-36 flex-1 rounded-t bg-cyan-600"></div><div class="h-32 flex-1 rounded-t bg-cyan-700"></div><div class="h-40 flex-1 rounded-t bg-cyan-800"></div></div><div class="mt-2 flex justify-between text-[10px] font-medium uppercase tracking-wider text-slate-400"><span>08:00</span><span>12:00</span><span>16:00</span><span>Now</span></div></div>
 <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-white shadow-xl shadow-slate-950/20"><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-500">Match lifecycle</p><h3 class="mt-2 text-xl font-bold">Current state</h3><div class="mt-6 space-y-5">${statusBar("Resident", metrics.counts.now, metrics.counts.allTime, "bg-cyan-400", "Matches currently loaded")}${statusBar("Paused matches", metrics.counts.paused, metrics.counts.allTime, "bg-amber-400", "Waiting for players")}${statusBar("Sleeping matches", metrics.counts.sleeping, metrics.counts.allTime, "bg-slate-500", "Restored on reconnect")}</div><div class="mt-7 border-t border-white/10 pt-5"><p class="text-xs text-slate-500">Most played map</p><p class="mt-1 font-semibold text-cyan-300" data-metric="mostPlayedMap">${mostPlayed}</p></div></div></section>
-<section class="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Content mix</p><h3 class="mt-2 text-xl font-bold">Map usage</h3></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">${metrics.counts.allTime} total</span></div><div class="mt-5 overflow-hidden rounded-xl border border-slate-100"><table class="w-full text-left text-sm"><caption class="sr-only">Map usage by game count and percentage</caption><thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><th class="px-4 py-3">Map</th><th class="px-4 py-3 text-right">Games</th><th class="px-4 py-3 text-right">Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table></div></div><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Operator signals</p><h3 class="mt-2 text-xl font-bold">Useful at a glance</h3><div class="mt-5 space-y-3"><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Distinct players</span><strong>${metrics.counts.playersAllTime}</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Live player coverage</span><strong>${metrics.counts.allTime ? Math.round((metrics.counts.playersOnline / Math.max(metrics.counts.playersAllTime, 1)) * 100) : 0}%</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Top map share</span><strong>${metrics.mostPlayedMap?.percentage ?? 0}%</strong></div></div><a class="mt-5 block text-sm font-semibold text-cyan-600 hover:text-cyan-700" href="${DASHBOARD_REPLAYS_PATH}">Inspect replay activity <span aria-hidden="true">-&gt;</span></a></div></section>
+<section class="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Content mix</p><h3 class="mt-2 text-xl font-bold">Map usage</h3></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">${metrics.counts.allTime} total</span></div><div class="mt-5 overflow-hidden rounded-xl border border-slate-100"><table class="w-full text-left text-sm"><caption class="sr-only">Map usage by game count and percentage</caption><thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><th class="px-4 py-3">Map</th><th class="px-4 py-3 text-right">Games</th><th class="px-4 py-3 text-right">Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table></div></div><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Operator signals</p><h3 class="mt-2 text-xl font-bold">Useful at a glance</h3><div class="mt-5 space-y-3"><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Distinct players</span><strong>${metrics.counts.playersAllTime}</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Live player coverage</span><strong>${metrics.counts.allTime ? Math.round((metrics.counts.playersOnline / Math.max(metrics.counts.playersAllTime, 1)) * 100) : 0}%</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Top map share</span><strong>${metrics.mostPlayedMap?.percentage ?? 0}%</strong></div></div><div class="mt-5 border-t border-slate-100 pt-4"><p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Offline / KI breakdown</p><div class="space-y-2" data-metric="offlineModes">${offlineModeRows}</div></div><a class="mt-5 block text-sm font-semibold text-cyan-600 hover:text-cyan-700" href="${replayUrl}">Inspect replay activity <span aria-hidden="true">-&gt;</span></a></div></section>
 <footer class="rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-xs leading-5 text-slate-400"><p data-freshness="metrics">${escapeHtml(metrics.freshness)}</p></footer></main></div>
 <script>const latency=${latencyPeriods};const tabs=document.querySelectorAll('[data-period]');const median=document.querySelector('#latency-median');const p90=document.querySelector('#latency-p90');const average=document.querySelector('#latency-average');const delta=document.querySelector('#latency-delta');function selectPeriod(key){const value=latency[key];median.textContent=value.median+'ms';p90.textContent=value.p90+'ms';average.textContent=value.average+'ms';const difference=Math.round(((value.median-value.previous)/value.previous)*100);delta.textContent=difference<=0?Math.abs(difference)+'% faster than comparison period':difference+'% slower than comparison period';delta.className='mt-2 text-xs font-medium '+(difference<=0?'text-emerald-300':'text-rose-300');tabs.forEach(tab=>{const active=tab.dataset.period===key;tab.className='rounded-md px-3 py-2 text-xs font-semibold '+(active?'bg-white text-slate-900 shadow-sm':'text-slate-500')});}tabs.forEach(tab=>tab.addEventListener('click',()=>selectPeriod(tab.dataset.period)));</script></body></html>`;
 }
 
 function dashboardCard(label: string, value: number, attribute: string, detail: string, color: string): string {
-	const accent = { cyan: "bg-cyan-400", emerald: "bg-emerald-400", violet: "bg-violet-400", amber: "bg-amber-400" }[color] ?? "bg-cyan-400";
+	const accent = { cyan: "bg-cyan-400", emerald: "bg-emerald-400", violet: "bg-violet-400", amber: "bg-amber-400", rose: "bg-rose-400" }[color] ?? "bg-cyan-400";
 	return `<div class="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-5 text-white shadow-xl shadow-slate-950/20"><span class="absolute right-0 top-0 h-24 w-24 translate-x-8 -translate-y-8 rounded-full ${accent} opacity-20 blur-2xl"></span><div class="relative"><div class="flex items-center justify-between"><p class="text-sm text-slate-400">${label}</p><span class="h-2 w-2 rounded-full ${accent}"></span></div><p class="mt-4 text-4xl font-bold tracking-tight" ${attribute}>${value}</p><p class="mt-2 text-xs text-slate-500">${detail}</p></div></div>`;
 }
 

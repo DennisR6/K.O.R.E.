@@ -5,6 +5,9 @@ import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 import { servePublicReplayShare } from "../src/server/replayShares.ts";
 import { ReplayViewer } from "../src/menu/replayViewer.ts";
+import { ReplayRecorder } from "../src/replay/recorder.ts";
+import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
+import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 
 const secret = "0123456789abcdef0123456789abcdef";
 const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
@@ -41,6 +44,9 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain('"median":7');
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
+	const mountedPage = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!.text();
+	expect(mountedPage).toContain('href="https://operator.example/kore/operator/replays"');
+	expect(mountedPage).toContain('href="https://operator.example/kore/operator/db"');
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
 	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
@@ -81,6 +87,31 @@ test.serial("dashboard exposes durable map counts, percentages, and the most pla
 	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
 	expect(page).toContain('data-metric="mostPlayedMap">cue-clash (2 games, 66.67%)');
 	expect(page).toContain('data-metric="mapUsage"');
+	database.close();
+});
+
+test.serial("dashboard includes production offline and AI match reports", async () => {
+	const database = new GameDatabase(":memory:");
+	const registry = new GameRegistry(database);
+	const replay = new ReplayRecorder(createCanonicalPlayableMatchSettings(), 123).getReplay();
+	database.storeOfflineMatch({
+		mode: "ai-battle",
+		mapId: "cue-clash",
+		seed: 123,
+		players: ["easy KI", "hard KI"],
+		result: { status: MatchStatus.Winner, winnerTeam: 0, reason: MatchEndReason.LastTeamStanding, turnNumber: 4 },
+		replay,
+	});
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
+	expect(await response.json()).toMatchObject({
+		counts: { allTime: 1, offlineMatches: 1, playersAllTime: 2 },
+		offlineModes: [{ mode: "ai-battle", games: 1 }],
+		mapUsage: [{ mapId: "cue-clash", games: 1, percentage: 100 }],
+	});
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret })).text();
+	expect(page).toContain('data-metric="offlineMatches">1');
+	expect(page).toContain("Offline / KI breakdown");
+	expect(page).toContain("AI vs AI");
 	database.close();
 });
 
