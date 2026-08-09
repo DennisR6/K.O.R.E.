@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameState } from "../src/engine/types.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { NetworkEmitter, installTurnReceiver } from "../src/emitter/NetworkEmitter.ts";
 import { createItemDocument } from "../src/item/types.ts";
@@ -26,6 +27,7 @@ function settings() {
 test("local emitter applies item use and advances authoritative item state", () => {
 	const gameSettings = settings();
 	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(gameSettings).build();
+	handler.setMyTeam([0]);
 	const actor = handler.getEntityManager().getEntities()[0];
 	const emitter = new GameEmitter(handler, gameSettings.gameMode, 2);
 	emitter.sendItemUse(actor.getId(), "switch", { type: "self" });
@@ -67,4 +69,18 @@ test("ITEM_USED reconciles client inventories and rule state", () => {
 	const clientActor = clientHandler.getEntityManager().getEntityById(actor.getId())!;
 	expect(clientActor.getInventory()).toEqual([{ itemId: "switch", remainingUses: 0, usesThisTurn: 1 }]);
 	expect(clientHandler.getRuleState().itemUses).toBe(1);
+});
+
+test("network errors restore the actionable turn state", () => {
+	const gameSettings = settings();
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(gameSettings).build();
+	handler.setMyTeam([0]);
+	handler.setState(GameState.Waiting_for_server);
+	let listener: ((event: MessageEvent) => void) | undefined;
+	const socket = {
+		addEventListener: (_type: string, callback: (event: MessageEvent) => void) => { listener = callback; },
+	} as unknown as WebSocket;
+	installTurnReceiver(socket, handler);
+	listener?.({ data: JSON.stringify({ type: NetworkMessageType.ERROR, message: "The game is not in the physics phase" }) } as MessageEvent);
+	expect(handler.getState()).toBe(GameState.Your_turn);
 });
