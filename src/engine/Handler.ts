@@ -872,7 +872,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.items = structuredClone(items)
 	}
 	public configureMapItemPickups(pickups: ItemPickup[]): void {
-		this.mapPickupSystem.configure(pickups, this.items)
+		this.mapPickupSystem.configure(pickups, this.items, this.context.worldSize)
 		this.mapPickupSystem.setCollector((entity, item) => item.id === MYSTERY_BOX_ITEM_ID ? this.unwrapMysteryBoxPickup(entity) : this.collectItemPickup(entity, item))
 	}
 	private collectItemPickup(entity: IEntity, item: ItemDocument): void {

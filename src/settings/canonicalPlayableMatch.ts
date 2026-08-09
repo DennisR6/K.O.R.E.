@@ -70,6 +70,7 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 					itemId: mysteryBoxItem.id,
 					spawnRegion: generateRandomMapPickupPosition(base.worldSize, 40, 12345),
 					activationType: "collision",
+					respawnConfig: { intervalRounds: 1, relocate: true },
 				})],
 			},
 		}),

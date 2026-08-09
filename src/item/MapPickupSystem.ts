@@ -10,15 +10,17 @@ export class MapPickupSystem implements ISystem {
 	private pickups: ItemPickup[] = [];
 	private items = new Map<string, ItemDocument>();
 	private state: ItemPickupState | undefined;
+	private worldSize = { x: 800, y: 450 };
 	private collect: ItemPickupCollector = (entity, item) => {
 		const inventory = entity.getInventory();
 		addDrawnInventoryItem(inventory, item);
 		entity.setInventory(inventory);
 	};
 
-	public configure(pickups: ItemPickup[], items: ItemDocument[]): void {
+	public configure(pickups: ItemPickup[], items: ItemDocument[], worldSize: { x: number; y: number } = this.worldSize): void {
 		this.pickups = structuredClone(pickups);
 		this.items = new Map(items.map(item => [item.id, item]));
+		this.worldSize = { ...worldSize };
 		for (const pickup of this.pickups) {
 			if (!this.items.has(pickup.itemId)) throw new Error(`Map pickup references unknown item '${pickup.itemId}'`);
 		}
@@ -41,6 +43,7 @@ export class MapPickupSystem implements ISystem {
 		if (!state) throw new Error("Configured map pickups require a serialized pickup state");
 		validateItemPickupState(state, this.pickups.length);
 		this.state = clonePickupState(state);
+		for (const [index, pickupState] of this.state.pickups.entries()) if (pickupState.spawnRegion) this.pickups[index]!.spawnRegion = { ...pickupState.spawnRegion };
 	}
 
 	public reset(): void {
@@ -97,6 +100,10 @@ export class MapPickupSystem implements ISystem {
 				if (state.respawnCountdown <= 0) {
 					state.collected = 0;
 					state.respawnCountdown = undefined;
+					if (pickup.respawnConfig?.relocate) {
+						pickup.spawnRegion = relocatedRegion(pickup.spawnRegion, index, turnNumber, this.worldSize);
+						state.spawnRegion = { ...pickup.spawnRegion };
+					}
 				}
 			}
 		}
@@ -122,6 +129,13 @@ function createItemPickupState(pickupCount: number, turnNumber: number = 0): Ite
 function clonePickupState(state: ItemPickupState): ItemPickupState {
 	return {
 		turnNumber: state.turnNumber,
-		pickups: state.pickups.map(pickup => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...(pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown }) })),
+		pickups: state.pickups.map(pickup => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...(pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown }), ...(pickup.spawnRegion ? { spawnRegion: { ...pickup.spawnRegion } } : {}) })),
 	};
+}
+
+function relocatedRegion(region: { x: number; y: number; w: number; h: number }, pickupIndex: number, turnNumber: number, worldSize: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
+	const seed = Math.imul((turnNumber + 1) ^ ((pickupIndex + 1) * 0x45d9f3b), 0x27d4eb2d) >>> 0;
+	const maxX = Math.max(0, Math.floor(worldSize.x - region.w));
+	const maxY = Math.max(0, Math.floor(worldSize.y - region.h));
+	return { ...region, x: maxX === 0 ? 0 : seed % (maxX + 1), y: maxY === 0 ? 0 : Math.floor(seed / (maxX + 1 || 1)) % (maxY + 1) };
 }
