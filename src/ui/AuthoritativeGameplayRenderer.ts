@@ -1,6 +1,6 @@
 import type { RenderContext } from "../engine/RenderContext.js";
 import { GameState } from "../engine/types.js";
-import type { ItemPickup, ItemPickupState } from "../item/types.js";
+import type { ItemDocument, ItemPickup, ItemPickupState } from "../item/types.js";
 import { type MatchResult, type RuleState } from "../rules/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { SHAPE } from "../physics/physics.js";
@@ -17,6 +17,7 @@ export interface AuthoritativeGameplaySnapshot {
   matchResult: MatchResult | undefined;
   structures: MapBoundarySettings[];
   players: PlayerSettings[];
+  items: ItemDocument[];
   pickups: ItemPickup[];
   pickupState: ItemPickupState | undefined;
 }
@@ -35,7 +36,7 @@ export class AuthoritativeGameplayRenderer {
     const snapshot = this.state.getAuthoritativeRenderState();
 
     for (const structure of snapshot.structures) this.drawStructure(renderer, structure);
-    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState);
+    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState, snapshot.items);
     for (const player of snapshot.players) this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
   }
 
@@ -68,11 +69,17 @@ export class AuthoritativeGameplayRenderer {
     }
   }
 
-  private drawPickups(renderer: RenderContext, pickups: ItemPickup[], state: ItemPickupState | undefined): void {
+  private drawPickups(renderer: RenderContext, pickups: ItemPickup[], state: ItemPickupState | undefined, items: ItemDocument[]): void {
     for (const [index, pickup] of pickups.entries()) {
       const collected = state?.pickups[index]?.collected ?? 0;
       if (collected >= (pickup.maxPickupsPerTurn ?? 1)) continue;
+      const item = items.find(candidate => candidate.id === pickup.itemId);
       renderer.push();
+      if (item?.ui?.component) {
+        renderer.drawImage(item.ui.component.source, pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+        renderer.pop();
+        continue;
+      }
       renderer.setNoFill();
       renderer.setStrokeColor("#facc15");
       renderer.setStroke(2);

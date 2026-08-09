@@ -880,6 +880,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			matchResult: this.getMatchResult(),
 			structures: this.context.structures.map(structure => structure.toSettings()),
 			players: this.entityManager.toSettings(),
+			items: structuredClone(this.items),
 			pickups: this.mapPickupSystem.getPickups(),
 			pickupState: this.mapPickupSystem.toState(),
 		}
