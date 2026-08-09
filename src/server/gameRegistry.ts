@@ -45,6 +45,9 @@ export type RematchResult =
 export type SubmitItemUseResult =
 	| { ok: true; record: GameRecord }
 	| { ok: false; error: string };
+export type SkipPhaseResult =
+	| { ok: true; record: GameRecord }
+	| { ok: false; error: string };
 export type SubmitReportResult = { ok: true; reportId: string } | { ok: false; error: string };
 export type CreateReplayShareResult = { ok: true; token: string } | { ok: false; error: string };
 export type PauseRequestResult = { ok: true; record: GameRecord; paused: boolean; waitingForOtherPlayer: boolean } | { ok: false; error: string };
@@ -255,6 +258,24 @@ export class GameRegistry {
 		} catch (error) {
 			return { ok: false, error: error instanceof Error ? error.message : "Invalid item use" }
 		}
+	}
+
+	public skipPhase(userId: string): SkipPhaseResult {
+		const record = this.getForUser(userId)
+		if (!record) return { ok: false, error: "No active game for this user" }
+		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
+		if (record.lifecycle.status === "paused") return { ok: false, error: "The game is paused" }
+		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
+		const team = record.teamByUser.get(userId)
+		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
+		if (record.ruleState.phase !== RulePhase.Item) return { ok: false, error: "The game is not in the item phase" }
+		const nextRuleState = record.rules.advancePhase(record.ruleState)
+		record.ruleState = nextRuleState
+		record.handler.setRuleState(nextRuleState)
+		record.currentTeam = nextRuleState.activeTeam
+		record.turnNumber = nextRuleState.turnNumber
+		this.persist(record)
+		return { ok: true, record }
 	}
 
 	public submitMatchReport(userId: string, category: unknown, text: unknown): SubmitReportResult {

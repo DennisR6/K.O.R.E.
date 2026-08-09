@@ -56,6 +56,8 @@ export const enum NetworkMessageType {
 	REMATCH = "REMATCH",
 	USE_ITEM = "USE_ITEM",
 	ITEM_USED = "ITEM_USED",
+	SKIP_PHASE = "SKIP_PHASE",
+	PHASE_CHANGED = "PHASE_CHANGED",
 	REPORT_MATCH = "REPORT_MATCH",
 	REPORT_SUBMITTED = "REPORT_SUBMITTED",
 	PAUSE_REQUEST = "PAUSE_REQUEST",
@@ -98,6 +100,8 @@ export type UnTypedNetworkMessage =
 	| NetworkRematch
 	| NetworkUseItem
 	| NetworkItemUsed
+	| NetworkSkipPhase
+	| NetworkPhaseChanged
 	| NetworkReportMatch
 	| NetworkReportSubmitted
 	| NetworkPauseRequest
@@ -151,6 +155,8 @@ export interface NetworkItemUsed {
 	ruleState: RuleState,
 	players: EngineSettings["players"],
 }
+export interface NetworkSkipPhase { type: NetworkMessageType.SKIP_PHASE }
+export interface NetworkPhaseChanged { type: NetworkMessageType.PHASE_CHANGED, ruleState: RuleState }
 export interface NetworkReportMatch { type: NetworkMessageType.REPORT_MATCH, category: "conduct" | "technical" | "other", text: string }
 export interface NetworkReportSubmitted { type: NetworkMessageType.REPORT_SUBMITTED, reportId: string }
 export interface NetworkPauseRequest { type: NetworkMessageType.PAUSE_REQUEST, action: "pause" | "resume" }

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
+import { GameState } from "../src/engine/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createCanonicalPlayableMatchHandler, createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 import { ItemPhaseUI } from "../src/ui/ItemPhaseUI.ts";
@@ -25,6 +26,13 @@ test("canonical gameplay exposes inventory, item allowance, skip, and physics tr
 	expect(itemUI.getPhaseState()).toMatchObject({ phase: RulePhase.Physics, canUseItems: false, canSkip: false });
 	expect(() => itemUI.use(actor.getId(), "power-dash")).toThrow("item phase");
 	expect(() => emitter.sendShot(actor.getId(), 220, 10)).not.toThrow();
+	handler.startTurn({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 0 });
+	handler.setState(GameState.Your_turn);
+	handler.updateMouse(132, 162);
+	handler.handleMousePressed();
+	handler.updateMouse(232, 162);
+	handler.handleMouseReleased();
+	expect(handler.getState()).toBe(GameState.Your_turn);
 });
 
 test("a shot cannot bypass the canonical item phase and stale inventory is detached", () => {

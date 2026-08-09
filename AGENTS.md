@@ -443,8 +443,9 @@ After every change, check whether this guide still reflects the implementation a
   active-player dots and pull-arrow world geometry. Generic UI
   settings still serialize ordinary strings, but KORE must author and parse its
   vocabulary exclusively through these enums. The local pause command freezes
-  transient handler ticks; online skip/pause controls are hidden because the
-  server protocol has no skip action or production pause surface. Do not add
+  transient handler ticks; online pause controls are hidden because the server
+  protocol has no production pause surface. Online item-phase skipping is
+  authoritative through the network phase-change protocol. Do not add
   manual HUD hitboxes or direct `AudioManager` calls to
   gameplay scenes.
 - `src/ui/mapbuilder.ts` and `src/ui/types.ts`: UI/map helper contracts.
@@ -755,9 +756,9 @@ through `createMatchHandler`, then installs input/drawing/result wiring with the
 shared `installGameplayHud`; `defaultSystems()` remains
 the sole registration point for physics and playback. The network branch waits
 for the server `INIT` settings, then installs the same UI systems with
-`NetworkEmitter` through the same HUD installer (capability-limited: item-phase
-skip and pause are hidden because the server protocol has no skip action or
-pause surface).
+  `NetworkEmitter` through the same HUD installer (capability-limited: pause is
+  hidden because the server protocol has no production pause surface; item-phase
+  skipping uses the authoritative network phase-change protocol).
 
 `GameHandlerBuilder.fromSettings()` installs the background, teams, players,
 wrapped map structures, handler effects, items, and map friction. It restores
