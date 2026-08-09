@@ -5,6 +5,7 @@ import type { CombiEmitter } from "../emitter/InputEmitter.js";
 import type { MatchResult } from "../rules/types.js";
 import type { MatchMode } from "../scenes/matchPipeline.js";
 import type { ReplayDocument } from "../replay/types.js";
+import { LoggerType } from "../engine/runtimeLog.js";
 
 /**
  * Browser-side collection and upload of completed offline matches (hotseat,
@@ -21,6 +22,7 @@ export type OfflineMatchRecordPayload = {
 	players: string[];
 	result: MatchResult;
 	replay: ReplayDocument;
+	performanceLogs?: unknown[];
 };
 
 const OFFLINE_MATCH_PATH = "offline-matches";
@@ -47,6 +49,7 @@ export function collectOfflineMatchRecord(handler: GameHandler, mode: MatchMode,
 		players: [...(handler.getSettings()?.allTeams ?? [])],
 		result,
 		replay,
+		performanceLogs: [...handler.getLogs(LoggerType.Performance)],
 	};
 	if (difficulty === "easy" || difficulty === "medium" || difficulty === "hard") record.difficulty = difficulty;
 	return record;

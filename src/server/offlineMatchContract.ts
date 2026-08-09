@@ -19,6 +19,7 @@ export type OfflineMatchReport = {
 	players: string[];
 	result: MatchResult;
 	replay: ReplayDocument;
+	performanceLogs?: unknown[];
 };
 
 /** Strict structural validation for untrusted browser uploads. */
@@ -32,6 +33,7 @@ export function validateOfflineMatchReport(value: unknown): asserts value is Off
 	if (!isMatchResult(value.result)) throw new Error("Offline match result is invalid");
 	validateReplayDocument(value.replay);
 	validateReplayOrigin(value.replay);
+	if (value.performanceLogs !== undefined && (!Array.isArray(value.performanceLogs) || value.performanceLogs.length > 10_000 || !value.performanceLogs.every(isJsonValue) || JSON.stringify(value.performanceLogs).length > 512_000)) throw new Error("Offline performance logs are invalid or too large");
 }
 
 function isMatchResult(value: unknown): value is MatchResult {
@@ -51,4 +53,12 @@ function isOfflineMatchDifficulty(value: unknown): value is OfflineMatchDifficul
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
+}
+
+function isJsonValue(value: unknown, depth = 0): boolean {
+	if (depth > 12 || value === null || typeof value === "string" || typeof value === "boolean") return true;
+	if (typeof value === "number") return Number.isFinite(value);
+	if (Array.isArray(value)) return value.every(item => isJsonValue(item, depth + 1));
+	if (typeof value !== "object") return false;
+	return Object.entries(value).every(([key, item]) => key.length <= 200 && isJsonValue(item, depth + 1));
 }

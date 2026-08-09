@@ -122,12 +122,16 @@ describe("browser-side offline match report", () => {
 
 	test("collects the finished handler's mode header and replay", () => {
 		const handler = createLocalGameplayHandler("ice-map-v1");
+		handler.log("performance.frame-window", { medianMs: 5, p90Ms: 12 });
+		handler.log("input.accepted", { actionType: "shot" });
 		finish(handler);
 		const record = collectOfflineMatchRecord(handler, "hotseat", "ice-map-v1", handler.getMatchResult()!);
 		expect(record).toBeDefined();
 		expect(record!.mode).toBe("hotseat");
 		expect(record!.players).toEqual(handler.getSettings()?.allTeams);
 		expect((record!.replay as { seed: number }).seed).toBe(12345);
+		expect(record!.performanceLogs).toHaveLength(1);
+		expect((record!.performanceLogs![0] as { type: string }).type).toBe("performance.frame-window");
 	});
 
 	test("reports exactly once per finished match and again after a rematch", () => {
