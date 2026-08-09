@@ -386,11 +386,11 @@ window.addEventListener('mousemove', (e) => {
 document.addEventListener('keydown', (e) => {
 	const audio = (window as unknown as { game?: { audio?: AudioManager } }).game?.audio
 	if (!audio) return
-	switch (e.key) {
-		case "n": audio.nextTrack(); break
-		case "p": audio.previousTrack(); break
-		case "ArrowUp": audio.addVolume(0.05); break
-		case "ArrowDown": audio.addVolume(-0.05); break
+	switch (e.key.toLowerCase()) {
+		case "n": audio.nextTrack(); e.preventDefault(); e.stopPropagation(); break
+		case "p": audio.previousTrack(); e.preventDefault(); e.stopPropagation(); break
+		case "arrowup": audio.addVolume(0.05); e.preventDefault(); e.stopPropagation(); break
+		case "arrowdown": audio.addVolume(-0.05); e.preventDefault(); e.stopPropagation(); break
 	}
 });
 

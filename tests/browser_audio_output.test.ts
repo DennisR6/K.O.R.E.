@@ -60,3 +60,14 @@ test("music replacement stops the previous managed source before starting the ne
 	expect(created[0]!.pauses).toBe(1);
 	expect(created[1]!.plays).toBe(1);
 });
+
+test("playlist navigation only switches between music tracks", async () => {
+	const created: FakeAudio[] = [];
+	const manager = new AudioManager(0, url => { const element = new FakeAudio(url); created.push(element); return element; }, id => id === "kore.music.menu" ? "/menu.mp3" : id === "kore.music.match" ? "/match.mp3" : undefined);
+	await manager.unlock();
+	manager.start();
+	await Promise.resolve();
+	manager.nextTrack();
+	manager.previousTrack();
+	expect(created.map(audio => audio.src)).toEqual(["/menu.mp3", "/match.mp3", "/menu.mp3"]);
+});
