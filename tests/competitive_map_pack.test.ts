@@ -63,3 +63,14 @@ test("competitive SDK maps satisfy the focused deterministic qualification bound
 		expect(result.fingerprint.length, id).toBeGreaterThan(0);
 	}
 }, 120_000);
+
+test("competitive maps expose containment on every side and lethal routes", () => {
+	const template = createDefaultGameSettings(2, 1);
+	for (const [id] of maps) {
+		const settings = buildMapSettings(id, template);
+		const containment = settings.mapBoundarys.find(boundary => boundary.role === "containment");
+		expect(containment, id).toMatchObject({ x: 0, y: 0, w: settings.worldSize.x, h: settings.worldSize.y });
+		const catalog = getMapCatalogEntry(id);
+		expect(catalog.hazardCount, id).toBeGreaterThan(0);
+	}
+});

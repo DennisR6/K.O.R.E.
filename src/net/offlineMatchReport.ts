@@ -169,6 +169,10 @@ async function resolveKoreBaseUrl(): Promise<string> {
 	if (configuredBaseUrl) return configuredBaseUrl;
 	try {
 		configuredBaseUrl = (await fetchOnlineServerConfig()).baseUrl;
+		if (typeof window !== "undefined" && isLocalDevelopmentHost(window.location.hostname)) {
+			const advertised = new URL(configuredBaseUrl);
+			if (advertised.origin !== window.location.origin) return new URL("./", window.location.href).toString();
+		}
 		return configuredBaseUrl;
 	} catch {
 		// Local static servers may not expose /config. Keep their current path
@@ -176,6 +180,10 @@ async function resolveKoreBaseUrl(): Promise<string> {
 		if (typeof window !== "undefined") return new URL("./", window.location.href).toString();
 		return DEFAULT_KORE_BASE_URL;
 	}
+}
+
+function isLocalDevelopmentHost(hostname: string): boolean {
+	return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
 }
 
 function reportEndpoints(endpoint: string): string[] {

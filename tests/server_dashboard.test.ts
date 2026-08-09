@@ -144,6 +144,10 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	const page = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const pageHtml = await page.text();
 	expect(pageHtml).toContain(`data-replays="index"`);
+	expect(pageHtml).toContain('hx-trigger="input changed delay:500ms"');
+	const searchFragment = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, { headers: { authorization: `Bearer ${secret}`, "HX-Request": "true" } }), registry, { operatorSecret: secret }, database))!;
+	expect(searchFragment.headers.get("content-type")).toContain("text/html");
+	expect(await searchFragment.text()).toContain(`<tbody id="replay-results"`);
 	expect(pageHtml).toContain("Kill game");
 	const kill = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!;
 	expect(kill.status).toBe(303);

@@ -72,6 +72,24 @@ describe("Section 17.2 map content inventory", () => {
 		}
 	});
 
+	test("every shipped map has a four-sided containment boundary and a death route", () => {
+		const template = createDefaultGameSettings(2, 1);
+		for (const mapId of shippedMapIds) {
+			const settings = buildMapSettings(mapId, template);
+			const containment = settings.mapBoundarys.find(boundary => boundary.role === "containment")
+				?? settings.mapBoundarys.find(boundary => "w" in boundary && "h" in boundary && boundary.x === 0 && boundary.y === 0 && boundary.w === settings.worldSize.x && boundary.h === settings.worldSize.y);
+			if (containment) {
+				expect(containment, mapId).toMatchObject({ x: 0, y: 0, w: settings.worldSize.x, h: settings.worldSize.y });
+				continue;
+			}
+			const rectangles = settings.mapBoundarys.filter(boundary => "w" in boundary && "h" in boundary);
+			expect(rectangles.some(boundary => boundary.x <= settings.worldSize.x * 0.15), `${mapId} left`).toBe(true);
+			expect(rectangles.some(boundary => boundary.x + boundary.w >= settings.worldSize.x * 0.85), `${mapId} right`).toBe(true);
+			expect(rectangles.some(boundary => boundary.y <= settings.worldSize.y * 0.15), `${mapId} top`).toBe(true);
+			expect(rectangles.some(boundary => boundary.y + boundary.h >= settings.worldSize.y * 0.85), `${mapId} bottom`).toBe(true);
+		}
+	});
+
 	test("planned candidates are explicit and not silently loadable", () => {
 		for (const mapId of plannedMapIds) {
 			const entry = getMapCatalogEntry(mapId);
