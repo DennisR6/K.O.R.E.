@@ -9,6 +9,7 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
+	public setEmitter(emitter: IInputEmitter): void { this.emitter = emitter }
 	/** Installs a host feedback hook without making the emitter itself a UI dependency. */
 	public setErrorHandler(onError: ((error: unknown) => void) | undefined): void { this.onError = onError }
 	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
