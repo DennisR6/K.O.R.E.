@@ -26,7 +26,13 @@ export type OfflineMatchRecordPayload = {
 const OFFLINE_MATCH_PATH = "offline-matches";
 
 export function buildOfflineMatchEndpoint(origin: string): string {
-	return `${origin.replace(/\/+$/, "")}/${OFFLINE_MATCH_PATH}`;
+	if (!origin) return "";
+	const url = new URL(origin);
+	const path = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
+	url.pathname = `${path}${OFFLINE_MATCH_PATH}`;
+	url.search = "";
+	url.hash = "";
+	return url.toString();
 }
 
 /** Builds the full persisted record for a finished handler, or undefined when no recorder exists. */
@@ -77,11 +83,11 @@ export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode,
 
 /** Default reporter: POSTs the record to the same-origin server store. */
 export async function reportOfflineMatch(record: OfflineMatchRecordPayload, options: { endpoint?: string; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
-	const endpoint = options.endpoint ?? buildOfflineMatchEndpoint(globalThis.location?.origin ?? "");
+	const endpoint = options.endpoint ?? buildOfflineMatchEndpoint(globalThis.location?.href ?? globalThis.location?.origin ?? "");
 	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
 	if (typeof fetchImpl !== "function" || !endpoint || endpoint === "/") return false;
 	try {
-		const response = await fetchImpl(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(record) });
+		const response = await fetchImpl(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(record), keepalive: true });
 		return response.ok;
 	} catch {
 		return false;
@@ -91,5 +97,5 @@ export async function reportOfflineMatch(record: OfflineMatchRecordPayload, opti
 function collectReplay(handler: GameHandler): ReplayDocument | undefined {
 	const emitterSystem = handler.getSystems().find(system => (system as { systemId?: string }).systemId === "core.emitter") as { emitter?: CombiEmitter } | undefined;
 	const gameEmitter = emitterSystem?.emitter?.getEmitters().find(emitter => emitter instanceof GameEmitter) as GameEmitter | undefined;
-	return gameEmitter?.recorder.getReplay();
+	return gameEmitter?.recorder.getReplay() ?? (handler.getSystems().find(system => typeof (system as { getReplay?: unknown }).getReplay === "function") as { getReplay?: () => ReplayDocument | undefined } | undefined)?.getReplay?.();
 }

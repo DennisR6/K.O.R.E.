@@ -7,6 +7,9 @@ import type { IGameContext, ISerializableSystem, SystemSettings } from "../syste
 import { koreAi } from "../kore/ai.js";
 import type { HardAiWorkerHost } from "./worker/host.js";
 import { isValidInput } from "../input/validate.js";
+import { GameEmitter } from "../emitter/EngineEmitter.js";
+import type { CombiEmitter } from "../emitter/InputEmitter.js";
+import type { ReplayDocument } from "../replay/types.js";
 
 /**
  * Autonomous KI-vs-KI battle driver.
@@ -58,6 +61,12 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 			schemaVersion: 1,
 			state: { team0: { ...this.settings0 }, team1: { ...this.settings1 } },
 		};
+	}
+
+	/** Exposes the shared local replay recorder without adding an emitter system. */
+	public getReplay(): ReplayDocument | undefined {
+		const emitters = this.targetEmitter as CombiEmitter | undefined;
+		return emitters?.getEmitters().find(emitter => emitter instanceof GameEmitter)?.recorder.getReplay();
 	}
 
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {

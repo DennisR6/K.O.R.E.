@@ -3,10 +3,12 @@ import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { ReplayRecorder } from "../src/replay/recorder.ts";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 import { createLocalGameplayHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
+import { createAiBattleHandler, createHumanVsAiHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
+import type { GameHandler } from "../src/engine/Handler.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { validateOfflineMatchReport } from "../src/server/offlineMatchContract.ts";
 import { serveOfflineMatchReport } from "../src/server/offlineMatches.ts";
-import { collectOfflineMatchRecord, installOfflineMatchReport, reportOfflineMatch, type OfflineMatchRecordPayload } from "../src/net/offlineMatchReport.ts";
+import { buildOfflineMatchEndpoint, collectOfflineMatchRecord, installOfflineMatchReport, reportOfflineMatch, type OfflineMatchRecordPayload } from "../src/net/offlineMatchReport.ts";
 import { GameState } from "../src/engine/types.ts";
 
 function validReport(): OfflineMatchRecordPayload {
@@ -31,7 +33,7 @@ function renderer() {
 	};
 }
 
-function finish(handler: ReturnType<typeof createLocalGameplayHandler>): void {
+function finish(handler: GameHandler): void {
 	handler.setMatchResult({ status: MatchStatus.Winner, winnerTeam: 1, reason: MatchEndReason.LastTeamStanding, turnNumber: 3 });
 	handler.setState(GameState.Game_over);
 }
@@ -112,6 +114,12 @@ describe("offline match report route", () => {
 });
 
 describe("browser-side offline match report", () => {
+	test("keeps the deployed application base path in the report endpoint", () => {
+		expect(buildOfflineMatchEndpoint("https://example.test/")).toBe("https://example.test/offline-matches");
+		expect(buildOfflineMatchEndpoint("https://example.test/kore/")).toBe("https://example.test/kore/offline-matches");
+		expect(buildOfflineMatchEndpoint("")).toBe("");
+	});
+
 	test("collects the finished handler's mode header and replay", () => {
 		const handler = createLocalGameplayHandler("ice-map-v1");
 		finish(handler);
@@ -137,10 +145,25 @@ describe("browser-side offline match report", () => {
 		expect(reports).toHaveLength(2);
 	});
 
+	test("installs automatic reporting for human-vs-AI and AI-vs-AI matches", () => {
+		const cases: Array<[GameHandler, "human-vs-ai" | "ai-battle"]> = [
+			[createHumanVsAiHandler("ice-map-v1", "easy", 11), "human-vs-ai"],
+			[createAiBattleHandler("ice-map-v1", 12), "ai-battle"],
+		];
+		for (const [handler, mode] of cases) {
+			const reports: OfflineMatchRecordPayload[] = [];
+			installOfflineMatchReport(handler, mode, "ice-map-v1", record => { reports.push(record); });
+			finish(handler);
+			handler.drawWorld(renderer() as never);
+			expect(reports).toHaveLength(1);
+			expect(reports[0]!.mode).toBe(mode);
+		}
+	});
+
 	test("resolves success and failure without throwing", async () => {
 		const record = validReport();
 		const calls: Array<{ url: string; body: string }> = [];
-		const okFetch = async (url: string, init: RequestInit) => { calls.push({ url, body: String(init.body) }); return new Response("{}", { status: 200 }); };
+		const okFetch = async (url: string, init: RequestInit) => { calls.push({ url, body: String(init.body) }); expect(init.keepalive).toBe(true); return new Response("{}", { status: 200 }); };
 		expect(await reportOfflineMatch(record, { endpoint: "http://test.local/offline-matches", fetchImpl: okFetch as never })).toBe(true);
 		expect(calls[0]!.url).toBe("http://test.local/offline-matches");
 		expect(calls[0]!.body).toContain('"mode":"human-vs-ai"');
