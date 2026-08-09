@@ -14,6 +14,7 @@ const ITEM_FIELDS = new Set([
 	"targetValidation",
 	"cooldown",
 	"interaction",
+	"ui",
 ]);
 const EFFECT_FIELDS = new Set(["type", "value"]);
 const DURATION_FIELDS = new Set(["type", "value"]);
@@ -25,6 +26,7 @@ const TARGET_VALIDATION_FIELDS = new Set([
 	"maxRange",
 ]);
 const INTERACTION_FIELDS = new Set(["mode", "with", "order"]);
+const ITEM_UI_FIELDS = new Set(["component", "showLabel"]);
 
 function isPlainObject(value: object): value is Record<string, unknown> {
 	const prototype = Object.getPrototypeOf(value);
@@ -180,6 +182,14 @@ export class ItemValidator {
 					if (!itemId || typeof mode !== "string") throw new Error("item.interaction.with must contain item modes");
 				}
 			}
+		}
+		if (item.ui !== undefined) {
+			const ui = assertKnownObject(item.ui, "item.ui", ITEM_UI_FIELDS);
+			if (ui.component !== undefined) {
+				const component = assertKnownObject(ui.component, "item.ui.component", new Set(["type", "source"]));
+				if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0) throw new Error("item.ui.component must be an image with a non-empty source");
+			}
+			if (ui.showLabel !== undefined && typeof ui.showLabel !== "boolean") throw new Error("item.ui.showLabel must be a boolean");
 		}
 
 		return document;

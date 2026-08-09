@@ -66,6 +66,19 @@ test("icon buttons remain serializable and are exposed to the host renderer", ()
 	expect(() => ui.validate({ ...menu, screens: [{ ...menu.screens[0], elements: [{ ...menu.screens[0]!.elements[0], icon: 42 }] }] })).toThrow();
 });
 
+test("button components are authored through the generic UI SDK and can be replaced at runtime", () => {
+	const component = ui.component.image("public/items/mystery_box.svg");
+	const menu = ui.createMenu({ id: "components", size: { width: 200, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [ui.button({ id: "item", text: "", component, rect: { x: 0, y: 0, width: 80, height: 40 } })] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	let source: string | undefined;
+	runtime.draw({ drawText() {}, drawTextInput() {}, drawImage(element) { source = element.component?.source ?? element.source; }, drawButton(element) { source = element.component?.source; } });
+	expect(source).toBe("public/items/mystery_box.svg");
+	expect(runtime.setElementComponent("item", ui.component.image("replacement.svg"))).toBe(true);
+	expect(runtime.toSettings().screens[0]!.elements[0]).toMatchObject({ component: { type: "image", source: "replacement.svg" } });
+});
+
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {
 	const framework = ui.createDefaultFramework();
 	expect(framework.systemOrder).toEqual(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
