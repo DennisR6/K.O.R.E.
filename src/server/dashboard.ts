@@ -131,7 +131,7 @@ export function metricsResponse(metrics: MatchMetrics, performance: DashboardPer
 }
 
 function emptyPerformanceMetrics(): DashboardPerformanceMetrics {
-	const empty = { samples: 0, average: null, median: null, p90: null, max: null, previousMedian: null, trend: Array.from({ length: 8 }, () => ({ samples: 0, value: null })) } as const;
+	const empty = { samples: 0, average: null, median: null, p90: null, max: null, previousMedian: null, trend: Array.from({ length: 12 }, () => ({ samples: 0, value: null })) } as const;
 	return { today: empty, yesterday: empty, week: empty };
 }
 
@@ -245,7 +245,7 @@ function dashboardCard(label: string, value: number, attribute: string, detail: 
 
 function latencyBars(trend: DashboardPerformanceTrendPoint[]): string {
 	const max = Math.max(...trend.map(point => point.value ?? 0), 1);
-	const colors = ["bg-cyan-100", "bg-cyan-200", "bg-cyan-300", "bg-cyan-400", "bg-cyan-500", "bg-cyan-600", "bg-cyan-700", "bg-cyan-800"];
+	const colors = ["bg-cyan-100", "bg-cyan-200", "bg-cyan-300", "bg-cyan-400", "bg-cyan-500", "bg-cyan-600", "bg-cyan-700", "bg-cyan-800", "bg-cyan-700", "bg-cyan-600", "bg-cyan-500", "bg-cyan-400"];
 	return trend.map((point, index) => {
 		const height = point.value === null ? 8 : Math.max(8, Math.round((point.value / max) * 160));
 		const title = point.value === null ? "No samples" : `${Number(point.value.toFixed(2))}ms median`;

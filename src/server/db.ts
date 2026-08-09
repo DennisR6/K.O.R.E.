@@ -47,11 +47,11 @@ const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 type PerformanceSample = { createdAt: number; value: number };
 
-function performanceTrend(samples: PerformanceSample[], rangeStart: number, rangeEnd: number): DashboardPerformanceTrendPoint[] {
-	const bucketSize = (rangeEnd - rangeStart) / 8;
-	return Array.from({ length: 8 }, (_, index) => {
+function performanceTrend(samples: PerformanceSample[], rangeStart: number, rangeEnd: number, bucketCount: number): DashboardPerformanceTrendPoint[] {
+	const bucketSize = (rangeEnd - rangeStart) / bucketCount;
+	return Array.from({ length: bucketCount }, (_, index) => {
 		const start = rangeStart + index * bucketSize;
-		const end = index === 7 ? rangeEnd : start + bucketSize;
+		const end = index === bucketCount - 1 ? rangeEnd : start + bucketSize;
 		const values = samples.filter(sample => sample.createdAt >= start && sample.createdAt < end).map(sample => sample.value).sort((a, b) => a - b);
 		return { samples: values.length, value: values.length === 0 ? null : values[Math.ceil(values.length * 0.5) - 1]! };
 	});
@@ -60,7 +60,10 @@ function performanceTrend(samples: PerformanceSample[], rangeStart: number, rang
 function isDashboardPerformanceMetrics(value: unknown): value is DashboardPerformanceMetrics {
 	if (!value || typeof value !== "object") return false;
 	const metrics = value as Partial<DashboardPerformanceMetrics>;
-	return [metrics.today, metrics.yesterday, metrics.week].every(period => !!period && Array.isArray(period.trend));
+	return !!metrics.today && !!metrics.yesterday && !!metrics.week
+		&& metrics.today.trend.length === 12
+		&& metrics.yesterday.trend.length === 12
+		&& metrics.week.trend.length === 7;
 }
 
 type StoredGameRow = {
@@ -396,10 +399,10 @@ export class GameDatabase {
 			if (rawSamples === 0) add(report.created_at, summary.turnDurationMs?.median);
 		}
 		const build = (sampleValues: PerformanceSample[], previousMedian: number | null, rangeStart: number, rangeEnd: number): DashboardPerformancePeriod => {
-			if (sampleValues.length === 0) return { samples: 0, average: null, median: null, p90: null, max: null, previousMedian, trend: performanceTrend([], rangeStart, rangeEnd) };
+			if (sampleValues.length === 0) return { samples: 0, average: null, median: null, p90: null, max: null, previousMedian, trend: performanceTrend([], rangeStart, rangeEnd, rangeEnd - rangeStart === day ? 12 : 7) };
 			const sorted = sampleValues.map(sample => sample.value).sort((a, b) => a - b);
 			const percentile = (rank: number) => sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)]!;
-			return { samples: sorted.length, average: Number((sorted.reduce((sum, value) => sum + value, 0) / sorted.length).toFixed(2)), median: percentile(0.5), p90: percentile(0.9), max: sorted[sorted.length - 1]!, previousMedian, trend: performanceTrend(sampleValues, rangeStart, rangeEnd) };
+			return { samples: sorted.length, average: Number((sorted.reduce((sum, value) => sum + value, 0) / sorted.length).toFixed(2)), median: percentile(0.5), p90: percentile(0.9), max: sorted[sorted.length - 1]!, previousMedian, trend: performanceTrend(sampleValues, rangeStart, rangeEnd, rangeEnd - rangeStart === day ? 12 : 7) };
 		};
 		const yesterday = build(values.yesterday, null, todayStart - day, todayStart);
 		const week = build(values.week, null, todayStart - 6 * day, todayStart + day);
