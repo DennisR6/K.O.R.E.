@@ -1,6 +1,6 @@
 import type { UUID } from "crypto"
 import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
-import type { RuleState } from "../rules/types.js"
+import type { MatchResult, RuleState } from "../rules/types.js"
 import type { ItemTarget } from "../item/target.js"
 
 /**
@@ -65,6 +65,8 @@ export const enum NetworkMessageType {
 	CREATE_REPLAY_SHARE = "CREATE_REPLAY_SHARE",
 	REPLAY_SHARE_CREATED = "REPLAY_SHARE_CREATED",
 	LEAVE_GAME = "LEAVE_GAME",
+	SURRENDER_GAME = "SURRENDER_GAME",
+	SURRENDERED = "SURRENDERED",
 	GAME_ENDED = "GAME_ENDED",
 }
 
@@ -109,6 +111,8 @@ export type UnTypedNetworkMessage =
 	| NetworkCreateReplayShare
 	| NetworkReplayShareCreated
 	| NetworkLeaveGame
+	| NetworkSurrenderGame
+	| NetworkSurrendered
 	| NetworkGameEnded
 
 export interface NetworkPing { type: NetworkMessageType.PING }
@@ -165,7 +169,9 @@ export interface NetworkCreateReplayShare { type: NetworkMessageType.CREATE_REPL
 export interface NetworkReplayShareCreated { type: NetworkMessageType.REPLAY_SHARE_CREATED, token: string }
 /** Explicitly abandons the current match instead of preserving it for reconnect. */
 export interface NetworkLeaveGame { type: NetworkMessageType.LEAVE_GAME }
+export interface NetworkSurrenderGame { type: NetworkMessageType.SURRENDER_GAME }
+export interface NetworkSurrendered { type: NetworkMessageType.SURRENDERED, result: MatchResult }
 /** Sent to every connected participant when a player abandons a match. */
-export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string }
+export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string, result?: MatchResult }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

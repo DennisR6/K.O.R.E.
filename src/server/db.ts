@@ -113,11 +113,13 @@ export class GameDatabase {
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS game_players (
 				game_id TEXT NOT NULL,
-				user_id TEXT PRIMARY KEY NOT NULL,
+				user_id TEXT NOT NULL,
 				team INTEGER NOT NULL,
+				PRIMARY KEY (game_id, user_id),
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
+		this.migrateGamePlayerKey();
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS game_lifecycle (
 				game_id TEXT PRIMARY KEY NOT NULL,
@@ -290,8 +292,31 @@ export class GameDatabase {
 	}
 
 	public findGameIdForUser(userId: string): string | undefined {
-		const row = this.db.query("SELECT game_id FROM game_players WHERE user_id = ?1").get(userId) as { game_id: string } | null;
+		const row = this.db.query("SELECT game_id FROM game_players WHERE user_id = ?1 ORDER BY game_id LIMIT 1").get(userId) as { game_id: string } | null;
 		return row?.game_id;
+	}
+
+	public findActiveGameIdForUser(userId: string): string | undefined {
+		const row = this.db.query("SELECT game_players.game_id FROM game_players JOIN game_lifecycle ON game_lifecycle.game_id = game_players.game_id WHERE game_players.user_id = ?1 AND game_lifecycle.status != 'completed' ORDER BY game_players.game_id LIMIT 1").get(userId) as { game_id: string } | null;
+		return row?.game_id;
+	}
+
+	private migrateGamePlayerKey(): void {
+		const columns = this.db.query("PRAGMA table_info(game_players)").all() as Array<{ name: string; pk: number }>;
+		const userColumn = columns.find(column => column.name === "user_id");
+		if (!userColumn || userColumn.pk !== 1 || columns.some(column => column.pk === 2)) return;
+		this.db.transaction(() => {
+			this.db.run("ALTER TABLE game_players RENAME TO game_players_legacy");
+			this.db.run(`CREATE TABLE game_players (
+				game_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				team INTEGER NOT NULL,
+				PRIMARY KEY (game_id, user_id),
+				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)`);
+			this.db.run("INSERT INTO game_players (game_id, user_id, team) SELECT game_id, user_id, team FROM game_players_legacy");
+			this.db.run("DROP TABLE game_players_legacy");
+		})();
 	}
 
 	/** Removes an abandoned match and all membership rows through SQLite cascades. */

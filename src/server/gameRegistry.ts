@@ -2,7 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
-import { MatchEndReason, MatchStatus, RulePhase, type RuleState } from "../rules/types.js";
+import { MatchEndReason, MatchStatus, RulePhase, type MatchResult, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
@@ -99,7 +99,8 @@ export class GameRegistry {
 
 	/** Marks a user's active socket and restores their game if it was evicted. */
 	public connectUser(userId: string): GameRecord | undefined {
-		const record = this.getForUser(userId)
+		const gameId = this.database.findActiveGameIdForUser(userId)
+		const record = gameId ? this.get(gameId) : undefined
 		if (!record) return undefined
 		record.connectedUsers.add(userId)
 		return this.touch(record)
@@ -107,7 +108,7 @@ export class GameRegistry {
 
 	/** Evicts the cached handler immediately when the final connected user leaves. */
 	public disconnectUser(userId: string): void {
-		const gameId = this.database.findGameIdForUser(userId)
+		const gameId = this.database.findActiveGameIdForUser(userId)
 		if (!gameId) return
 		const record = this.games.get(gameId)
 		if (!record) return
@@ -138,6 +139,22 @@ export class GameRegistry {
 		this.persist(record);
 		this.storeCompletedReplay(record);
 		return true;
+	}
+
+	/** Completes a live match when a player explicitly returns to the menu. */
+	public surrenderGameForUser(userId: string): { record: GameRecord; result: MatchResult } | undefined {
+		const record = this.getForUser(userId);
+		if (!record || record.lifecycle.status === "completed") return undefined;
+		const surrenderingTeam = record.teamByUser.get(userId);
+		const opponentTeam = surrenderingTeam === undefined ? undefined : record.users.map(user => record.teamByUser.get(user)).find(team => team !== undefined && team !== surrenderingTeam);
+		const result: MatchResult = opponentTeam === undefined
+			? { status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Surrendered, turnNumber: record.turnNumber }
+			: { status: MatchStatus.Winner, winnerTeam: opponentTeam, reason: MatchEndReason.Surrendered, turnNumber: record.turnNumber };
+		record.handler.finishMatch(result);
+		this.transition(record, "completed");
+		this.persist(record);
+		this.storeCompletedReplay(record);
+		return { record, result };
 	}
 
 	/** Drops inactive handlers only. Durable SQLite state remains available. */

@@ -3,7 +3,7 @@ import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
-import type { NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkUseItem } from "../server/types.js";
+import type { NetworkGameEnded, NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkSurrenderGame, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /**
@@ -43,6 +43,11 @@ export class NetworkEmitter implements IInputEmitter {
 		this.socket.send(wrap<NetworkReportMatch>({ type: NetworkMessageType.REPORT_MATCH, category, text }));
 		return true;
 	}
+	public surrender(): boolean {
+		if (this.socket.readyState !== WebSocket.OPEN) return false;
+		this.socket.send(wrap<NetworkSurrenderGame>({ type: NetworkMessageType.SURRENDER_GAME }));
+		return true;
+	}
 }
 
 /** Installs the authoritative TURN receiver for a client-side handler. */
@@ -78,6 +83,11 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			// A rejected shot must not leave the client in Waiting_for_server.
 			// Restore the locally controlled turn from the authoritative active team.
 			handler.setState(TurnSystem.stateForTeam(handler.getActiveTeam(), handler.getTeam()))
+		}
+		if (message.type === NetworkMessageType.GAME_ENDED) {
+			const ended = message as NetworkGameEnded;
+			if (ended.result) handler.setMatchResult(ended.result);
+			handler.setState(GameState.Game_over);
 		}
 	})
 }

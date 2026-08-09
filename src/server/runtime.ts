@@ -6,7 +6,7 @@ import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCata
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
 import { GameState } from "../engine/types.js";
-import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+	import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -69,6 +69,9 @@ export class ServerRuntime {
 			case NetworkMessageType.LEAVE_GAME:
 				this.leaveGame(socket)
 				return
+			case NetworkMessageType.SURRENDER_GAME:
+				this.surrenderGame(socket)
+				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
 				return
@@ -121,6 +124,16 @@ export class ServerRuntime {
 		if (!record) return this.sendError(socket, "No active game for this user");
 		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" };
 		for (const user of record.users) this.socketForUser(user)?.send(wrap(ended));
+	}
+
+	private surrenderGame(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before surrendering");
+		const surrendered = this.games.surrenderGameForUser(userId);
+		if (!surrendered) return this.sendError(socket, "No active game for this user");
+		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", result: surrendered.result };
+		for (const user of surrendered.record.users) this.socketForUser(user)?.send(wrap(ended));
+		socket.send(wrap<NetworkSurrendered>({ type: NetworkMessageType.SURRENDERED, result: surrendered.result }));
 	}
 
 	private handleDiscordJoin(socket: ServerSocket, payload: unknown): void {

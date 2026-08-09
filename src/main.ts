@@ -163,6 +163,13 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 
 		const emitter = new NetworkEmitter(socket)
 		let replayShareAction: "view" | "share" | undefined
+		let surrendering = false
+		const returnToMenu = () => window.location.assign(window.location.pathname)
+		socket.addEventListener("message", event => {
+			try {
+				if ((JSON.parse(String(event.data)) as { type?: unknown }).type === NetworkMessageType.SURRENDERED) returnToMenu()
+			} catch { /* Ignore malformed packets; the normal receiver handles protocol errors. */ }
+		})
 		handler = kore.restoreHandler(settings)
 		handler.setLanguage(language)
 		const restoredUi = handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined
@@ -189,7 +196,13 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 			},
 			onRematch: () => { socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false; },
 			onReplayShare: () => { replayShareAction = "view"; emitter.requestReplayShare(); return false; },
-			onReturnToMenu: () => { window.location.assign(window.location.pathname); return false; },
+			onReturnToMenu: () => {
+			if (surrendering) return false;
+			surrendering = true;
+			if (!emitter.surrender()) returnToMenu();
+			else window.setTimeout(() => { if (surrendering) returnToMenu(); }, 1_000);
+			return false;
+		},
 		});
 		installTurnReceiver(socket, handler)
 		installReplayShareControls(socket, language, handler, url => {
