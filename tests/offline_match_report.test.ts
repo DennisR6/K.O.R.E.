@@ -209,6 +209,17 @@ describe("browser-side offline match report", () => {
 		expect(calls).toBe(3);
 	});
 
+	test("notifies the owner only after report delivery succeeds", async () => {
+		const handler = createAiBattleHandler("ice-map-v1", 99);
+		let delivered = 0;
+		installOfflineMatchReport(handler, "ai-battle", "ice-map-v1", () => true, () => { delivered++; });
+		finish(handler);
+		handler.drawWorld(renderer() as never);
+		expect(delivered).toBe(0);
+		await Promise.resolve();
+		expect(delivered).toBe(1);
+	});
+
 	test("falls back to the root endpoint when the deployed prefix is not forwarded", async () => {
 		const urls: string[] = [];
 		const fetchImpl = async (url: string) => {

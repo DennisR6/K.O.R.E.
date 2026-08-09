@@ -46,6 +46,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
 		private readonly onPlayOnline?: (mapId?: string, modeId?: string) => void,
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
+		private readonly autoRestartAiBattle = false,
 	) {
 		this.handler = new GameHandler();
 		if (typeof window !== "undefined" && typeof Worker !== "undefined") this.prewarmedWorkerHost = new HardAiWorkerHost();
@@ -154,7 +155,9 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.handler = next;
 			this.aiWorkerHost = workerHost;
 			this.mapId = mapId;
-			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record));
+			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
+				if (this.aiBattle && this.handler === next) this.restartAiBattle();
+			} : undefined);
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
 			startupMark("game.ready", { mode: this.mode, mapId });
@@ -172,6 +175,12 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		const host = this.prewarmedWorkerHost;
 		this.prewarmedWorkerHost = undefined;
 		return host ?? new HardAiWorkerHost();
+	}
+	private restartAiBattle(): void {
+		const seed = this.battleSeedSource();
+		const workerHost = new HardAiWorkerHost();
+		const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed, undefined, workerHost), this.mapId, workerHost);
+		if (restarted) this.battleSeed = seed;
 	}
 	private captureSoundCommands(value: unknown): void {
 		if (!value || typeof value !== "object" || typeof (value as Partial<ISoundEmitter>).drainSoundCommands !== "function") return;

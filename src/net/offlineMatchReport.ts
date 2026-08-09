@@ -83,7 +83,7 @@ function isPersistedPerformanceLog(entry: { type: string }): boolean {
  * overlay becomes visible. Failures never throw: an unreachable or absent
  * report endpoint must never break the local match or the menu.
  */
-export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode, mapId: string, reporter: (record: OfflineMatchRecordPayload) => void | boolean | Promise<void | boolean>): void {
+export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode, mapId: string, reporter: (record: OfflineMatchRecordPayload) => void | boolean | Promise<void | boolean>, onDelivered?: (record: OfflineMatchRecordPayload) => void | Promise<void>): void {
 	let reported = false;
 	let reporting = false;
 	let retryAt = 0;
@@ -111,7 +111,10 @@ export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode,
 				// `false` is the explicit failure result used by reportOfflineMatch;
 				// legacy void reporters are treated as successful delivery.
 				if (value === false) retryAt = Date.now() + 1_000;
-				else reported = true;
+				else {
+					reported = true;
+					void Promise.resolve(onDelivered?.(record)).catch(() => {});
+				}
 			}).catch(() => { if (generation === reportGeneration) retryAt = Date.now() + 1_000; }).finally(() => { if (generation === reportGeneration) reporting = false; });
 		},
 	});

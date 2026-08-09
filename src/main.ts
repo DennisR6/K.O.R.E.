@@ -42,6 +42,7 @@ const usersettings = {
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
 	replayToken: uri.searchParams.get("replay") ?? "",
 	embedReplay: ["1", "true"].includes(uri.searchParams.get("embed") ?? ""),
+	autoRestart: ["1", "true"].includes(uri.searchParams.get("autorestart") ?? ""),
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 	modePreference: uri.searchParams.get("mode") ?? undefined,
 }
@@ -80,9 +81,9 @@ if (isUiDebugSandboxUrl(uri)) {
 	startGame(handler, () => viewer.getPlayer()?.getHandler() ?? handler, () => { viewer.advance(); notifyReplayEmbed(viewer); })
 } else if (!usersettings.skipmenu) {
 	 startupMark("scene.init.started", { scene: "menu" });
-	 router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
+		router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
 		 void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}), ...(modeId ? { modePreference: modeId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
-	}, activeLanguage!)
+	}, activeLanguage!, usersettings.autoRestart)
 	 handler = router.getHandler()
 	 startupMark("scene.init.completed", { scene: "menu" });
 	 startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())

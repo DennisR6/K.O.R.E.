@@ -44,14 +44,14 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics">, publicBaseUrl?: string): Promise<Response | undefined> {
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics" | "killGame">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics">, publicBaseUrl?: string): Promise<Response | undefined> {
 	const url = new URL(request.url); const pathname = url.pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
 	if (!isAuthorized(request, config.operatorSecret)) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
-	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, database, pathname, url.searchParams.get("id"), publicBaseUrl);
+	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, registry, database, pathname, url.searchParams.get("id"), publicBaseUrl);
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	try {
 		const metrics = registry.getMetrics();
@@ -67,12 +67,19 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	}
 }
 
-function operatorReplays(request: Request, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView"> | undefined, pathname: string, requestedGameId: string | null, publicBaseUrl?: string): Response {
+function operatorReplays(request: Request, registry: Pick<GameRegistry, "killGame">, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView"> | undefined, pathname: string, requestedGameId: string | null, publicBaseUrl?: string): Response {
+	const suffix = pathname.slice(DASHBOARD_REPLAYS_PATH.length).replace(/^\//, "");
+	const segments = suffix.split("/");
+	if (segments.length === 2 && segments[1] === "kill" && segments[0]) {
+		if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST", "cache-control": "no-store" } });
+		const gameId = decodeURIComponent(segments[0]);
+		if (!registry.killGame(gameId)) return notFound();
+		if (wantsJson(request)) return Response.json({ ok: true, gameId }, { headers: { "cache-control": "no-store" } });
+		return new Response(null, { status: 303, headers: { location: dashboardUrl(publicBaseUrl, DASHBOARD_REPLAYS_PATH), "cache-control": "no-store" } });
+	}
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	if (!database) return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
 	try {
-		const suffix = pathname.slice(DASHBOARD_REPLAYS_PATH.length).replace(/^\//, "");
-		const segments = suffix.split("/");
 		if (segments.length === 2 && segments[1] === "view" && segments[0]) {
 			const gameId = decodeURIComponent(segments[0]);
 			const replay = database.getOperatorReplay(gameId);
@@ -269,8 +276,10 @@ function renderReplayDashboard(response: DashboardReplayIndexResponse, publicBas
 		const encodedId = encodeURIComponent(replay.gameId);
 		const downloadUrl = dashboardUrl(publicBaseUrl, `${DASHBOARD_REPLAYS_PATH}/${encodedId}`);
 		const viewUrl = dashboardUrl(publicBaseUrl, `${DASHBOARD_REPLAYS_PATH}/${encodedId}/view`);
+		const killUrl = dashboardUrl(publicBaseUrl, `${DASHBOARD_REPLAYS_PATH}/${encodedId}/kill`);
 		const statusClass = replay.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700";
-		return `<tr class="border-t border-slate-100 transition hover:bg-slate-50"><td class="px-5 py-4"><div class="font-mono text-xs font-semibold text-slate-700">${escapeHtml(replay.gameId)}</div><div class="mt-1 text-xs text-slate-400">Match identifier</div></td><td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}">${escapeHtml(replay.status)}</span></td><td class="px-5 py-4 text-sm text-slate-500">${escapeHtml(new Date(replay.updatedAt).toLocaleString("en-US"))}</td><td class="px-5 py-4 text-right text-sm font-semibold text-slate-700">${replay.actionCount}</td><td class="px-5 py-4"><div class="flex flex-wrap gap-2"><a class="rounded-lg bg-cyan-400 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300" href="${escapeHtml(viewUrl)}">View replay</a><a class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-cyan-300 hover:text-slate-900" href="${escapeHtml(downloadUrl)}">Download</a></div></td></tr>`;
+		const kill = replay.status === "completed" ? "" : `<form method="post" action="${escapeHtml(killUrl)}" onsubmit="return confirm('Mark this stuck game as completed with a draw?');"><button class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:bg-rose-50" type="submit">Kill game</button></form>`;
+		return `<tr class="border-t border-slate-100 transition hover:bg-slate-50"><td class="px-5 py-4"><div class="font-mono text-xs font-semibold text-slate-700">${escapeHtml(replay.gameId)}</div><div class="mt-1 text-xs text-slate-400">Match identifier</div></td><td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}">${escapeHtml(replay.status)}</span></td><td class="px-5 py-4 text-sm text-slate-500">${escapeHtml(new Date(replay.updatedAt).toLocaleString("en-US"))}</td><td class="px-5 py-4 text-right text-sm font-semibold text-slate-700">${replay.actionCount}</td><td class="px-5 py-4"><div class="flex flex-wrap gap-2"><a class="rounded-lg bg-cyan-400 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300" href="${escapeHtml(viewUrl)}">View replay</a><a class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-cyan-300 hover:text-slate-900" href="${escapeHtml(downloadUrl)}">Download</a>${kill}</div></td></tr>`;
 	}).join("") || "<tr><td class=\"px-5 py-12 text-center text-sm text-slate-400\" colspan=\"5\">No persisted replay matches this filter.</td></tr>";
 	return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>KORE replay archive</title>

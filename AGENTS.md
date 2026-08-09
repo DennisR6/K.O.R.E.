@@ -415,9 +415,11 @@ After every change, check whether this guide still reflects the implementation a
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
   `createMatchHandler`; `startScene` installs `installGameplayHud` for player
   matches and leaves the KI-vs-KI engine HUD-free, while installing the
-  offline match report; battle rematches re-draw the battle seed through a fresh
-  scene (injectable `battleSeedSource`, exposed as `getBattleSeed()`), and the
-  menu exit releases the local audio source before creating the fresh menu.
+  offline match report; `?autorestart=1` restarts a KI-vs-KI battle with a fresh
+  seed only after its report is accepted by the server; battle rematches
+  re-draw the battle seed through a fresh scene (injectable `battleSeedSource`,
+  exposed as `getBattleSeed()`), and the menu exit releases the local audio
+  source before creating the fresh menu.
 - `src/net/offlineMatchReport.ts`: browser-side `installOfflineMatchReport`
   (reports once per finished match on the draw path, retries failed delivery,
   and re-arms after a rematch), `collectOfflineMatchRecord`, and
@@ -502,7 +504,9 @@ After every change, check whether this guide still reflects the implementation a
   and most-played-map metrics; an unset or short
   `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
   `/operator/replays` lists every persisted replay and filters by exact match
-  ID; `/operator/replays/<id>` downloads that deterministic replay document.
+  ID; `/operator/replays/<id>` downloads that deterministic replay document;
+  authenticated `POST /operator/replays/<id>/kill` force-completes a stuck
+  active match as a persisted draw.
   Every completed match automatically receives an unbroadcast replay token; the
   archive exposes a `View replay` link only to authenticated operators. These
   operator-only replay routes may expose match IDs and settings, while public
