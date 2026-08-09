@@ -392,8 +392,14 @@ export const KORE_UI_THEME: Record<string, UiElementTheme> = {
 
 /** Resolves an authored element style to its registered theme; unknown styles are rejected at this boundary. */
 export function resolveKoreButtonTheme(style: string | undefined): UiElementTheme {
-  if (style === undefined || !(style in KORE_UI_THEME)) throw new Error(`Unknown KORE UI button style '${String(style)}'`);
-  return KORE_UI_THEME[style]!;
+	const theme = findKoreButtonTheme(style);
+	if (!theme) throw new Error(`Unknown KORE UI button style '${String(style)}'`);
+	return theme;
+}
+
+/** Returns a registered theme when a text element intentionally shares a button style. */
+export function findKoreButtonTheme(style: string | undefined): UiElementTheme | undefined {
+	return style !== undefined && style in KORE_UI_THEME ? KORE_UI_THEME[style] : undefined;
 }
 
 export class Canvas2DUiRenderer {

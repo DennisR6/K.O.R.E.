@@ -7,7 +7,7 @@ import type { AiDifficulty } from "../../ai/types.js";
 import { koreAudio } from "../audio.js";
 import { createMainMenuComposition, validateKoreMainMenuSettings, type KoreMainMenuSettings } from "./mainMenu.js";
 import { KoreMenuColor, KoreMenuCommand, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, asAiDifficulty, koreMenuMapScreen, parseKoreMenuCommand, type KoreMenuCommandMessage } from "./menuVocabulary.js";
-import { Canvas2DUiRenderer, type UiElementState } from "./koreUiTheme.js";
+import { Canvas2DUiRenderer, findKoreButtonTheme, type UiElementState } from "./koreUiTheme.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;
@@ -108,7 +108,9 @@ class KoreMenuRenderer implements UiRenderer {
 			return;
 		}
 
-		this.ctx.setFillColor(element.hovered ? KoreMenuColor.HoverText : KoreMenuColor.Text);
+		const theme = findKoreButtonTheme(element.style);
+		const textColor = theme?.[element.hovered ? "hover" : "normal"].textColor ?? (element.hovered ? KoreMenuColor.HoverText : KoreMenuColor.Text);
+		this.ctx.setFillColor(textColor);
 		const fontSize = element.style === KoreMenuStyle.MapTitle ? 34
 			: element.style === KoreMenuStyle.DifficultyTitle ? 28
 			: element.style === KoreMenuStyle.MapNote ? 16 : 20;
