@@ -170,7 +170,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		// only the semantic actions and capability limits differ.
 		installGameplayHud(handler, {
 			language,
-			canSkipItemPhase: false,
+			canSkipItemPhase: true,
 			canPause: false,
 			onUseItem: (actorId, itemId, target) => { emitter.sendItemUse(actorId, itemId, target); return false; },
 			onRematch: () => { socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false; },

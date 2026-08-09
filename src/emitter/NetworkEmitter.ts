@@ -3,7 +3,7 @@ import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
-import type { NetworkItemUsed, NetworkUseItem } from "../server/types.js";
+import type { NetworkItemUsed, NetworkPhaseChanged, NetworkSkipPhase, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /**
@@ -33,6 +33,10 @@ export class NetworkEmitter implements IInputEmitter {
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
 		this.socket.send(wrap<NetworkUseItem>({ type: NetworkMessageType.USE_ITEM, actorId, itemId, target }))
 	}
+
+	skipPhase(): void {
+		this.socket.send(wrap<NetworkSkipPhase>({ type: NetworkMessageType.SKIP_PHASE }))
+	}
 	public requestReplayShare(): void { this.socket.send(wrap<NetworkCreateReplayShare>({ type: NetworkMessageType.CREATE_REPLAY_SHARE })); }
 }
 
@@ -59,6 +63,10 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			handler.getEntityManager().applySettings(itemUse.players)
 			handler.setRuleState(itemUse.ruleState)
 			handler.setState(TurnSystem.stateForTeam(itemUse.ruleState.activeTeam, handler.getTeam()))
+		}
+		if (message.type === NetworkMessageType.PHASE_CHANGED) {
+			handler.setRuleState((message as NetworkPhaseChanged).ruleState)
+			handler.setState(TurnSystem.stateForTeam((message as NetworkPhaseChanged).ruleState.activeTeam, handler.getTeam()))
 		}
 		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
 	})

@@ -6,7 +6,7 @@ import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCata
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
 import { GameState } from "../engine/types.js";
-import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -50,6 +50,9 @@ export class ServerRuntime {
 				return
 			case NetworkMessageType.USE_ITEM:
 				this.useItem(socket, message)
+				return
+			case NetworkMessageType.SKIP_PHASE:
+				this.skipPhase(socket)
 				return
 			case NetworkMessageType.REMATCH:
 				this.rematch(socket)
@@ -219,6 +222,15 @@ export class ServerRuntime {
 			const recipient = this.socketForUser(user)
 			if (recipient) recipient.send(wrap(packet))
 		}
+	}
+
+	private skipPhase(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before skipping a phase")
+		const result = this.games.skipPhase(userId)
+		if (!result.ok) return this.sendError(socket, result.error)
+		const packet: NetworkPhaseChanged = { type: NetworkMessageType.PHASE_CHANGED, ruleState: result.record.ruleState }
+		for (const user of result.record.users) this.socketForUser(user)?.send(wrap(packet))
 	}
 
 	private rematch(socket: ServerSocket): void {
