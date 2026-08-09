@@ -85,6 +85,7 @@ After every change, check whether this guide still reflects the implementation a
 ### Runtime entry points
 
 - `index.html`: browser shell; loads vendored `public/p5.min.js` and generated `dist/main.js`.
+- `replay.html`: standalone browser replay host with normal HTML playback controls; it embeds the read-only game at `?replay=<id>&embed=1` and controls it through a validated same-origin `postMessage` bridge.
 - `src/main.ts`: browser bootstrap, menu/game selection, accessible online
   connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
   mouse events, keyboard audio controls, and `window.game` debug access.
@@ -720,6 +721,10 @@ The default URL opens the menu. Local gameplay is selected with a non-empty
 ```text
 http://localhost:4001/?skipmenu=1
 ```
+
+The external replay host is available at `/replay.html?replay=<id>`. Its HTML
+controls seek, pause, and resume the embedded deterministic replay; direct
+`/?replay=<id>` playback remains supported.
 
 `skipmenu` is truthy only for the values `1` and `true` in `src/main.ts`.
 `?debug=ui` opens the standalone generic UI SDK sandbox instead of normal

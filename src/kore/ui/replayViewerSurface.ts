@@ -12,6 +12,7 @@ export type ReplayViewerSurfaceCallbacks = {
 export class KoreReplayViewerSurface implements IMouse, IDrawer {
 	private readonly runtime: UiRuntime;
 	private mouse = { x: 0, y: 0 };
+	private playbackLoaded = false;
 	public readonly acceptsUiInputWhileLocked = true;
 
 	public constructor(private readonly callbacks: ReplayViewerSurfaceCallbacks, language: LanguageCatalog = createEnglishLanguage(), initialToken = "") {
@@ -19,6 +20,11 @@ export class KoreReplayViewerSurface implements IMouse, IDrawer {
 		this.setToken(initialToken);
 	}
 	public setStatus(text: string): void { this.runtime.dispatch({ type: "setText", target: KoreReplayElement.Status, text }); }
+	/** Once a replay is loaded, the game world must remain unobstructed by the archive form. */
+	public setPlaybackLoaded(loaded: boolean): void {
+		this.playbackLoaded = loaded;
+	}
+	public isPlaybackLoaded(): boolean { return this.playbackLoaded; }
 	public getRuntime(): UiRuntime { return this.runtime; }
 	public setToken(token: string): void { this.runtime.dispatch({ type: "setValue", target: KoreReplayElement.Token, value: token }); }
 	public getToken(): string {
@@ -26,17 +32,19 @@ export class KoreReplayViewerSurface implements IMouse, IDrawer {
 		return node?.value ?? "";
 	}
 	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; }
-	public handleMousePressed(): void { this.runtime.tick({ pointer: { ...this.mouse, pressed: true, justPressed: true } }); this.handleCommands(this.runtime.drainCommands()); }
-	public handleMouseReleased(): void { this.runtime.tick({ pointer: { ...this.mouse, justReleased: true } }); this.handleCommands(this.runtime.drainCommands()); }
+	public handleMousePressed(): void { if (this.playbackLoaded) return; this.runtime.tick({ pointer: { ...this.mouse, pressed: true, justPressed: true } }); this.handleCommands(this.runtime.drainCommands()); }
+	public handleMouseReleased(): void { if (this.playbackLoaded) return; this.runtime.tick({ pointer: { ...this.mouse, justReleased: true } }); this.handleCommands(this.runtime.drainCommands()); }
 	public handleMouseWheel(_event: WheelEvent): void { }
 	public handleKeyPressed(event: KeyboardEvent): void {
+		if (this.playbackLoaded) return;
 		this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: event.key.length === 1 ? event.key : undefined } });
 		this.handleCommands(this.runtime.drainCommands());
 	}
 	public load(): void { void this.callbacks.onLoad(this.getToken()); }
 	public paste(): void { void Promise.resolve(this.callbacks.onPaste()).then(value => { if (value !== undefined) this.setToken(value); }); }
-	public tick(deltaTime = 1): void { this.runtime.tick({ pointer: { ...this.mouse } }, deltaTime); this.handleCommands(this.runtime.drainCommands()); }
+	public tick(deltaTime = 1): void { if (this.playbackLoaded) return; this.runtime.tick({ pointer: { ...this.mouse } }, deltaTime); this.handleCommands(this.runtime.drainCommands()); }
 	public draw(renderer: RenderContext): void {
+		if (this.playbackLoaded) return;
 		const replayRenderer = new ReplayViewerRenderer(renderer);
 		replayRenderer.drawShell();
 		this.runtime.draw(replayRenderer);
