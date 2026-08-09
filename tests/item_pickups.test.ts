@@ -112,6 +112,10 @@ test("relocating pickups move deterministically and restore their active region"
 	const moved = handler.toSettings().itemPickupState?.pickups[0];
 	expect(moved?.spawnRegion).toBeDefined();
 	expect(moved?.spawnRegion).not.toEqual(initial?.spawnRegion);
+	expect(moved?.spawnRegion?.x).toBeGreaterThanOrEqual(40);
+	expect(moved?.spawnRegion?.y).toBeGreaterThanOrEqual(40);
+	expect(moved?.spawnRegion?.x! + moved?.spawnRegion?.w!).toBeLessThanOrEqual(760);
+	expect(moved?.spawnRegion?.y! + moved?.spawnRegion?.h!).toBeLessThanOrEqual(410);
 	const restored = new GameHandlerBuilder().fromSettings(handler.toSettings()).build();
 	expect(restored.toSettings().itemPickupState?.pickups[0]?.spawnRegion).toEqual(moved?.spawnRegion);
 	expect(player.getInventory()).toHaveLength(1);

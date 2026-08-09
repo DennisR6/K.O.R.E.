@@ -135,7 +135,8 @@ function clonePickupState(state: ItemPickupState): ItemPickupState {
 
 function relocatedRegion(region: { x: number; y: number; w: number; h: number }, pickupIndex: number, turnNumber: number, worldSize: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
 	const seed = Math.imul((turnNumber + 1) ^ ((pickupIndex + 1) * 0x45d9f3b), 0x27d4eb2d) >>> 0;
-	const maxX = Math.max(0, Math.floor(worldSize.x - region.w));
-	const maxY = Math.max(0, Math.floor(worldSize.y - region.h));
-	return { ...region, x: maxX === 0 ? 0 : seed % (maxX + 1), y: maxY === 0 ? 0 : Math.floor(seed / (maxX + 1 || 1)) % (maxY + 1) };
+	const padding = Math.max(0, Math.min(40, Math.floor(Math.min(worldSize.x - region.w, worldSize.y - region.h) / 2)));
+	const maxX = Math.max(padding, Math.floor(worldSize.x - region.w - padding));
+	const maxY = Math.max(padding, Math.floor(worldSize.y - region.h - padding));
+	return { ...region, x: maxX === padding ? padding : padding + seed % (maxX - padding + 1), y: maxY === padding ? padding : padding + Math.floor(seed / (maxX - padding + 1)) % (maxY - padding + 1) };
 }
