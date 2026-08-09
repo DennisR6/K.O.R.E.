@@ -114,6 +114,7 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
             id: "icon",
             source: "/public/picture/menuicons/users.svg",
             rect: { x: 12, y: 10, width: 40, height: 40 },
+			style: KoreMenuStyle.OnlineButton,
         }),
         ui.text({
             id: "label",
