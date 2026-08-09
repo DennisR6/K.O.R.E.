@@ -42,6 +42,8 @@ export type StoredOfflineMatchSummary = Omit<StoredOfflineMatch, "replay">;
 export type DashboardPerformancePeriod = { samples: number; average: number | null; median: number | null; p90: number | null; max: number | null; previousMedian: number | null };
 export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; yesterday: DashboardPerformancePeriod; week: DashboardPerformancePeriod };
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
+const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
+const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 
 type StoredGameRow = {
 	id: string;
@@ -179,6 +181,13 @@ export class GameDatabase {
 				PRIMARY KEY(report_id, turn_number, team),
 				FOREIGN KEY (report_id) REFERENCES game_performance_reports(id) ON DELETE CASCADE,
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS dashboard_performance_cache (
+				cache_key TEXT PRIMARY KEY NOT NULL,
+				calculated_at INTEGER NOT NULL,
+				metrics_json TEXT NOT NULL
 			)
 		`);
 		this.db.run(`
@@ -335,6 +344,10 @@ export class GameDatabase {
 
 	/** Combines persisted online summaries and offline runtime logs for the operator dashboard. */
 	public getDashboardPerformanceMetrics(now: number = Date.now()): DashboardPerformanceMetrics {
+		const cached = this.db.query("SELECT calculated_at, metrics_json FROM dashboard_performance_cache WHERE cache_key = ?1").get(DASHBOARD_PERFORMANCE_CACHE_KEY) as { calculated_at: number; metrics_json: string } | null;
+		if (cached && now - cached.calculated_at < DASHBOARD_PERFORMANCE_CACHE_TTL_MS) {
+			try { return JSON.parse(cached.metrics_json) as DashboardPerformanceMetrics; } catch { /* Recalculate malformed cache rows. */ }
+		}
 		const day = 24 * 60 * 60 * 1_000;
 		const todayStart = Math.floor(now / day) * day;
 		const values = { today: [] as number[], yesterday: [] as number[], week: [] as number[] };
@@ -369,7 +382,10 @@ export class GameDatabase {
 		};
 		const yesterday = build(values.yesterday, null);
 		const week = build(values.week, null);
-		return { today: build(values.today, yesterday.median), yesterday: build(values.yesterday, week.median), week };
+		const metrics = { today: build(values.today, yesterday.median), yesterday: build(values.yesterday, week.median), week };
+		this.db.query("INSERT INTO dashboard_performance_cache (cache_key, calculated_at, metrics_json) VALUES (?1, ?2, ?3) ON CONFLICT(cache_key) DO UPDATE SET calculated_at = excluded.calculated_at, metrics_json = excluded.metrics_json")
+			.run(DASHBOARD_PERFORMANCE_CACHE_KEY, now, JSON.stringify(metrics));
+		return metrics;
 	}
 
 	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, now: number = Date.now()): string {

@@ -34,6 +34,9 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain("Paused matches");
 	expect(page).toContain("Sleeping matches");
 	expect(page).toContain("https://cdn.tailwindcss.com");
+	expect(page).toContain("https://unpkg.com/htmx.org@2.0.4");
+	expect(page).toContain('hx-trigger="every 60s"');
+	expect(page).toContain('hx-select="#dashboard-live"');
 	expect(page).toContain("Latency comparison");
 	expect(page).toContain('data-period="today"');
 	expect(page).toContain('data-period="yesterday"');
@@ -143,6 +146,8 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
 	expect(completedHtml).toContain("View replay");
+	expect(completedHtml).toContain('hx-target="#replay-results"');
+	expect(completedHtml).toContain('id="replay-results"');
 	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}/view`);
 	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}`);
 	const mountedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!;
