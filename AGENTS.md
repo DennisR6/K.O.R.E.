@@ -415,9 +415,11 @@ After every change, check whether this guide still reflects the implementation a
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
   `createMatchHandler`; `startScene` installs `installGameplayHud` for player
   matches and leaves the KI-vs-KI engine HUD-free, while installing the
-  offline match report; battle rematches re-draw the battle seed through a fresh
-  scene (injectable `battleSeedSource`, exposed as `getBattleSeed()`), and the
-  menu exit releases the local audio source before creating the fresh menu.
+  offline match report; `?autorestart=1` restarts a KI-vs-KI battle with a fresh
+  seed only after its report is accepted by the server; battle rematches
+  re-draw the battle seed through a fresh scene (injectable `battleSeedSource`,
+  exposed as `getBattleSeed()`), and the menu exit releases the local audio
+  source before creating the fresh menu.
 - `src/net/offlineMatchReport.ts`: browser-side `installOfflineMatchReport`
   (reports once per finished match on the draw path, retries failed delivery,
   and re-arms after a rematch), `collectOfflineMatchRecord`, and
