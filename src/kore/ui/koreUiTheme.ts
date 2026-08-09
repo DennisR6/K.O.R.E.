@@ -170,22 +170,22 @@ const MAIN_HELP_BUTTON_THEME: UiElementTheme = {
 // 1. PLAY ONLINE (Türkis/Cyan)
 export const MAIN_PLAY_ONLINE_BUTTON_THEME: UiElementTheme = {
   normal: {
-    background: "#1e293b",
+    background: "#12151c",
     backgroundAlpha: 0.85,
     borderColor: "#22d3ee",
     borderWidth: 2,
     borderRadius: 14,
     textColor: "#ffffff",
-    fontSize: 18,
+    fontSize: 22,
   },
   hover: {
-    background: "#2a394f",
-    backgroundAlpha: 0.95,
+    background: "#12151c",
+    backgroundAlpha: 0.98,
     borderColor: "#67e8f9",
-    borderWidth: 2,
+    borderWidth: 4,
     borderRadius: 14,
-    textColor: "#ffffff",
-    fontSize: 18,
+    textColor: "#22d3ee",
+    fontSize: 22,
   },
   active: {
     background: "#161e2e",
@@ -219,22 +219,22 @@ export const MAIN_PLAY_ONLINE_BUTTON_THEME: UiElementTheme = {
 // 2. PLAY LOCAL GAME (Lila/Purple)
 export const MAIN_PLAY_LOCAL_GAME_BUTTON_THEME: UiElementTheme = {
   normal: {
-    background: "#241f37",
+    background: "#12151c",
     backgroundAlpha: 0.85,
     borderColor: "#a855f7",
     borderWidth: 2,
     borderRadius: 14,
     textColor: "#ffffff",
-    fontSize: 18,
+    fontSize: 22,
   },
   hover: {
-    background: "#322b4d",
-    backgroundAlpha: 0.95,
-    borderColor: "#c084fc",
-    borderWidth: 2,
+    background: "#12151c",
+    backgroundAlpha: 0.98,
+    borderColor: "#a855f7",
+    borderWidth: 4,
     borderRadius: 14,
-    textColor: "#ffffff",
-    fontSize: 18,
+    textColor: "#a855f7",
+    fontSize: 22,
   },
   active: {
     background: "#1a1628",
@@ -252,7 +252,7 @@ export const MAIN_PLAY_LOCAL_GAME_BUTTON_THEME: UiElementTheme = {
     borderWidth: 2,
     borderRadius: 14,
     textColor: "#ffffff",
-    fontSize: 18,
+    fontSize: 22,
   },
   disabled: {
     background: "#12151c",
@@ -261,29 +261,29 @@ export const MAIN_PLAY_LOCAL_GAME_BUTTON_THEME: UiElementTheme = {
     borderWidth: 1,
     borderRadius: 14,
     textColor: "#64748b",
-    fontSize: 18,
+    fontSize: 22,
   },
 };
 
 // 3. SETTINGS (Orange)
 export const MAIN_SETTINGS_BUTTON_THEME: UiElementTheme = {
   normal: {
-    background: "#2d2319",
+    background: "#12151c",
     backgroundAlpha: 0.85,
     borderColor: "#f97316",
     borderWidth: 2,
     borderRadius: 14,
     textColor: "#ffffff",
-    fontSize: 18,
+    fontSize: 22,
   },
   hover: {
-    background: "#3d2f21",
-    backgroundAlpha: 0.95,
+    background: "#12151c",
+    backgroundAlpha: 0.98,
     borderColor: "#fb923c",
-    borderWidth: 2,
+    borderWidth: 4,
     borderRadius: 14,
-    textColor: "#ffffff",
-    fontSize: 18,
+    textColor: "#f97316",
+    fontSize: 22,
   },
   active: {
     background: "#201811",
@@ -317,22 +317,22 @@ export const MAIN_SETTINGS_BUTTON_THEME: UiElementTheme = {
 // 4. CREDITS (Gold/Gelb)
 export const MAIN_CREDITS_BUTTON_THEME: UiElementTheme = {
   normal: {
-    background: "#2e2a1b",
+    background: "#12151c",
     backgroundAlpha: 0.85,
     borderColor: "#eab308",
     borderWidth: 2,
     borderRadius: 14,
     textColor: "#ffffff",
-    fontSize: 18,
+    fontSize: 22,
   },
   hover: {
-    background: "#3e3823",
-    backgroundAlpha: 0.95,
+    background: "#12151c",
+    backgroundAlpha: 0.98,
     borderColor: "#fde047",
-    borderWidth: 2,
+    borderWidth: 4,
     borderRadius: 14,
-    textColor: "#ffffff",
-    fontSize: 18,
+    textColor: "#eab308",
+    fontSize: 22,
   },
   active: {
     background: "#211e12",
@@ -398,6 +398,7 @@ export function resolveKoreButtonTheme(style: string | undefined): UiElementThem
 
 export class Canvas2DUiRenderer {
   constructor(private readonly ctx: RenderContext) { }
+
 
   public drawButton(
     rect: { x: number; y: number; width: number; height: number },

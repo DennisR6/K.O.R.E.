@@ -89,6 +89,7 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
           style: "HelpContainer",
           elements: 
           [
+            ui.button({ id: "HelpButton", rect: rect(250, 40, 240, 270), style: "HelpButton", text:"" }),
             ui.container({
 					id: KoreMenuElement.MainActions,
 					rect: rect(0, 0, 740, 240),
@@ -96,12 +97,36 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 					style: KoreMenuStyle.MainActions,
 					elements: [
             ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 60, 48), style: KoreMenuStyle.MapTitle }),
-						menuButton(KoreMenuElement.MainOnline, translate(language, KoreMenuText.Online), KoreMenuScreen.OnlineSub, KoreMenuStyle.OnlineButton),
+						ui.container({
+    id: "image-text-button",
+    rect: { x: 0, y: 0, width: 220, height: 60 },
+    layout: ui.layout.absolute(),
+    elements: [
+        ui.button({
+            id: "action",
+            text: "",
+            rect: { x: 0, y: 0, width: 220, height: 60 },
+			style: KoreMenuStyle.OnlineButton,
+            action: ui.action.emit("ui.action.navigate(KoreMenuScreen.OnlineSub)"),
+        }),
+        ui.image({
+            id: "icon",
+            source: "/public/picture/menuicons/users.svg",
+            rect: { x: 12, y: 10, width: 40, height: 40 },
+        }),
+        ui.text({
+            id: "label",
+            text: translate(language, KoreMenuText.Online),	
+            rect: { x: 64, y: 20, width: 140, height: 20 },
+			style: KoreMenuStyle.OnlineButton,
+        }),
+    ],
+}),
 						menuButton(KoreMenuElement.MainLocal, translate(language, KoreMenuText.Local), KoreMenuScreen.LocalSub, KoreMenuStyle.LocalButton),
 						ui.button({ id: KoreMenuElement.MainSettings, text: "Settings", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.SettingsButton, action: ui.action.navigate(KoreMenuScreen.Settings) }),
 						ui.button({ id: KoreMenuElement.MainCredits, text: "Credits", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.CreditsButton, action: ui.action.navigate(KoreMenuScreen.Credits) }),
 					],
-				}),ui.button({ id: "HelpButton", rect: rect(250, 40, 240, 270), style: "HelpButton", text:"" }),]
+				}),]
           }
         ),
 			],
