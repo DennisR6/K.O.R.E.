@@ -2,20 +2,20 @@ import { audio, type AudioBusSettings, type AudioRuntimeSettings, type PlayMusic
 
 /** KORE-owned semantic IDs and the browser-resolved optional asset manifest. */
 export const KORE_AUDIO_ASSETS = {
-	"kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
-	"kore.music.match": "/public/audio/CM_02_Moon_Shadows.mp3",
+	"kore.music.menu": "./public/audio/CM_01_Ascension.mp3",
+	"kore.music.match": "./public/audio/CM_02_Moon_Shadows.mp3",
 	// The current prototype ships only the optional music pack. These short-cue
 	// IDs deliberately resolve through that pack until dedicated SFX are added.
-	"kore.ui.confirm": "/public/audio/CM_03_Ritualis.mp3",
-	"kore.game.shot": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.collision": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.damage": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.shield": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.item": "/public/audio/CM_03_Ritualis.mp3",
-	"kore.game.hazard": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.elimination": "/public/audio/CM_04_Sacrifice.mp3",
-	"kore.game.turn": "/public/audio/CM_03_Ritualis.mp3",
-	"kore.game.result": "/public/audio/CM_03_Ritualis.mp3",
+	"kore.ui.confirm": "./public/audio/CM_03_Ritualis.mp3",
+	"kore.game.shot": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.collision": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.damage": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.shield": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.item": "./public/audio/CM_03_Ritualis.mp3",
+	"kore.game.hazard": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.elimination": "./public/audio/CM_04_Sacrifice.mp3",
+	"kore.game.turn": "./public/audio/CM_03_Ritualis.mp3",
+	"kore.game.result": "./public/audio/CM_03_Ritualis.mp3",
 } as const;
 
 export const KORE_AUDIO_BUSES: AudioBusSettings[] = [

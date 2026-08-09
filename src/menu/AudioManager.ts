@@ -69,11 +69,16 @@ export class AudioManager {
 		// assets before constructing HTMLAudioElement; otherwise a missing file
 		// produces an uncaught browser media error even though the semantic audio
 		// command itself was handled correctly.
-		if (typeof window !== "undefined" && url.startsWith("/public/audio/")) {
-			void fetch(url, { method: "HEAD" }).then(response => { if (response.ok) this.startAudio(command, url); });
+		if (typeof window !== "undefined" && this.isPublicAudioAsset(url)) {
+			const probeUrl = new URL(url, document.baseURI).toString();
+			void fetch(probeUrl, { method: "HEAD" }).then(response => { if (response.ok) this.startAudio(command, url); });
 			return;
 		}
 		this.startAudio(command, url);
+	}
+	private isPublicAudioAsset(url: string): boolean {
+		try { return new URL(url, document.baseURI).pathname.includes("/public/audio/"); }
+		catch { return false; }
 	}
 	private startAudio(command: BrowserVoiceCommand, url: string): void {
 		const key = command.type === "playSound" ? `${command.globalSourceId}:${command.instanceId ?? command.sequence}` : command.globalSourceId;

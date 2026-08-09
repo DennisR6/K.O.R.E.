@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { BrowserAudioOutput } from "../src/audio/BrowserAudioOutput.ts";
 import { type AudioCommandBatch, type ResolvedAudioCommand } from "../src/engine/audio-sdk/index.ts";
 import { AudioManager, type BrowserAudioElement } from "../src/menu/AudioManager.ts";
+import { KORE_AUDIO_ASSETS } from "../src/kore/audio.ts";
 
 class FakeAudio implements BrowserAudioElement {
 	public volume = 1; public loop = false; public onended: ((event: Event) => unknown) | null = null; public pauses = 0; public plays = 0;
@@ -12,6 +13,10 @@ class FakeAudio implements BrowserAudioElement {
 
 function command(value: Omit<ResolvedAudioCommand, "runtimeId" | "globalSourceId" | "sequence">): ResolvedAudioCommand { return { ...value, runtimeId: "runtime", globalSourceId: `runtime:${value.sourceId ?? "system"}`, sequence: 1 } as ResolvedAudioCommand; }
 function batch(commands: ResolvedAudioCommand[]): AudioCommandBatch { return { schemaVersion: 1, runtimeId: "runtime", sequence: 1, commands, diagnostics: { collected: commands.length, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [], outputStatus: "ready", sequence: 1 } }; }
+
+test("KORE audio assets resolve relative to the deployed application base path", () => {
+	for (const url of Object.values(KORE_AUDIO_ASSETS)) expect(url).toMatch(/^\.\/public\/audio\//);
+});
 
 test("browser audio adapter buffers persistent intent while locked and discards transient one-shots", async () => {
 	const created: FakeAudio[] = [];
