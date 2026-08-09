@@ -10,7 +10,7 @@ import { koreAudio } from "../kore/audio.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import { installGameplayHud } from "./gameplayHud.js";
 import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
-import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
+import { flushOfflineMatchReports, installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import { readClipboardText } from "../mods/browserClipboard.js";
@@ -137,6 +137,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private startScene(factory: () => GameHandler, mapId: string | null, workerHost?: HardAiWorkerHost): boolean {
+		void flushOfflineMatchReports();
 		this.starting = true;
 		try {
 			startupMark("game.build.started", { mode: this.mode, mapId });
@@ -225,6 +226,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuHandler(): GameHandler {
+		void flushOfflineMatchReports();
 		const handler = new GameHandler();
 		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();

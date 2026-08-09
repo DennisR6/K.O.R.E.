@@ -111,6 +111,16 @@ describe("offline match report route", () => {
 		expect(get?.status).toBe(405);
 		expect(await serveOfflineMatchReport(new Request("http://test.local/config"), db)).toBeUndefined();
 	});
+
+	test("accepts an application base-path prefix", async () => {
+		const db = new GameDatabase(":memory:");
+		const response = await serveOfflineMatchReport(new Request("http://test.local/kore/offline-matches", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(validReport()),
+		}), db);
+		expect(response?.status).toBe(200);
+	});
 });
 
 describe("browser-side offline match report", () => {
@@ -197,5 +207,16 @@ describe("browser-side offline match report", () => {
 
 		expect(await reportOfflineMatch(validReport(), { endpoint: "http://test.local/offline-matches", fetchImpl: fetchImpl as never })).toBe(true);
 		expect(calls).toBe(3);
+	});
+
+	test("falls back to the root endpoint when the deployed prefix is not forwarded", async () => {
+		const urls: string[] = [];
+		const fetchImpl = async (url: string) => {
+			urls.push(url);
+			return new Response("{}", { status: url.endsWith("/kore/offline-matches") ? 404 : 200 });
+		};
+
+		expect(await reportOfflineMatch(validReport(), { endpoint: "http://test.local/kore/offline-matches", fetchImpl: fetchImpl as never })).toBe(true);
+		expect(urls).toEqual(["http://test.local/kore/offline-matches", "http://test.local/offline-matches"]);
 	});
 });

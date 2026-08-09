@@ -6,6 +6,8 @@ import type { MatchResult } from "../rules/types.js";
 import type { MatchMode } from "../scenes/matchPipeline.js";
 import type { ReplayDocument } from "../replay/types.js";
 import { LoggerType } from "../engine/runtimeLog.js";
+import { DEFAULT_KORE_BASE_URL } from "../server/config.js";
+import { fetchOnlineServerConfig } from "../utils/onlineConfig.js";
 
 /**
  * Browser-side collection and upload of completed offline matches (hotseat,
@@ -31,6 +33,8 @@ const REPORT_ATTEMPTS = 3;
 const PENDING_REPORTS_KEY = "kore.offline-match-reports.v1";
 
 type PendingReport = { key: string; record: OfflineMatchRecordPayload };
+const inFlightReports = new Map<string, Promise<boolean>>();
+let configuredBaseUrl: string | undefined;
 
 export function buildOfflineMatchEndpoint(origin: string): string {
 	if (!origin) return "";
@@ -114,37 +118,70 @@ export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode,
 }
 
 /** Default reporter: POSTs the record to the same-origin server store. */
-export async function reportOfflineMatch(record: OfflineMatchRecordPayload, options: { endpoint?: string; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
-	const endpoint = options.endpoint ?? buildOfflineMatchEndpoint(globalThis.location?.href ?? globalThis.location?.origin ?? "");
+export function reportOfflineMatch(record: OfflineMatchRecordPayload, options: { endpoint?: string; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
+	const key = offlineReportKey(record);
+	const existing = inFlightReports.get(key);
+	if (existing) return existing;
+	const request = deliverOfflineMatch(record, options).finally(() => { inFlightReports.delete(key); });
+	inFlightReports.set(key, request);
+	return request;
+}
+
+async function deliverOfflineMatch(record: OfflineMatchRecordPayload, options: { endpoint?: string; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
+	const endpoint = options.endpoint ?? buildOfflineMatchEndpoint(await resolveKoreBaseUrl());
 	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
 	if (typeof fetchImpl !== "function" || !endpoint || endpoint === "/") return false;
 	const key = offlineReportKey(record);
 	storePendingReport({ key, record });
 	const body = JSON.stringify(record);
-	for (let attempt = 0; attempt < REPORT_ATTEMPTS; attempt++) {
-		try {
-			const response = await fetchImpl(endpoint, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body,
-				// Chromium limits keepalive request bodies to roughly 64 KiB. Large
-				// replays must use a normal request instead of being silently dropped.
-				...(body.length <= MAX_KEEPALIVE_BYTES ? { keepalive: true } : {}),
-			});
-			if (response.ok) {
-				removePendingReport(key);
-				return true;
+	for (const candidate of reportEndpoints(endpoint)) {
+		for (let attempt = 0; attempt < REPORT_ATTEMPTS; attempt++) {
+			try {
+				const response = await fetchImpl(candidate, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body,
+					// Chromium limits keepalive request bodies to roughly 64 KiB. Large
+					// replays must use a normal request instead of being silently dropped.
+					...(body.length <= MAX_KEEPALIVE_BYTES ? { keepalive: true } : {}),
+				});
+				if (response.ok) {
+					removePendingReport(key);
+					return true;
+				}
+				if (response.status >= 400 && response.status < 500) {
+					if (response.status !== 404) removePendingReport(key);
+					break;
+				}
+			} catch {
+				// Retry transient network failures below.
 			}
-			if (response.status >= 400 && response.status < 500) {
-				removePendingReport(key);
-				return false;
-			}
-		} catch {
-			// Retry transient network failures below.
+			if (attempt + 1 < REPORT_ATTEMPTS) await new Promise(resolve => setTimeout(resolve, 250 * 2 ** attempt));
 		}
-		if (attempt + 1 < REPORT_ATTEMPTS) await new Promise(resolve => setTimeout(resolve, 250 * 2 ** attempt));
 	}
 	return false;
+}
+
+async function resolveKoreBaseUrl(): Promise<string> {
+	if (configuredBaseUrl) return configuredBaseUrl;
+	try {
+		configuredBaseUrl = (await fetchOnlineServerConfig()).baseUrl;
+		return configuredBaseUrl;
+	} catch {
+		// Local static servers may not expose /config. Keep their current path
+		// as a development fallback, while production uses the advertised base.
+		if (typeof window !== "undefined") return new URL("./", window.location.href).toString();
+		return DEFAULT_KORE_BASE_URL;
+	}
+}
+
+function reportEndpoints(endpoint: string): string[] {
+	try {
+		const url = new URL(endpoint);
+		if (url.pathname === "/offline-matches" || !url.pathname.endsWith("/offline-matches")) return [endpoint];
+		url.pathname = "/offline-matches";
+		return [endpoint, url.toString()];
+	} catch { return [endpoint]; }
 }
 
 /** Retries reports left behind when a result page was closed during delivery. */
