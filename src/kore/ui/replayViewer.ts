@@ -47,13 +47,13 @@ export function createReplayViewerComposition(language: LanguageCatalog = create
 		ui: ui.createMenu({ id: KoreReplayId.Runtime, size: { width: 800, height: 450 } })
 			.addScreen(ui.screen({
 				id: KoreReplayScreen.Main,
-				layout: ui.layout.vertical({ gap: 12, align: "center", padding: { top: 28, right: 24, bottom: 24, left: 24 } }),
+				layout: ui.layout.absolute(),
 				elements: [
-					ui.text({ id: KoreReplayElement.Title, text: translate(language, LANGUAGE_KEYS.ReplayTitle), rect: { x: 0, y: 0, width: 480, height: 32 }, style: KoreReplayStyle.Title }),
-					ui.textInput({ id: KoreReplayElement.Token, text: "", value: "", rect: { x: 0, y: 0, width: 480, height: 34 }, style: KoreReplayStyle.Token }),
-					ui.button({ id: KoreReplayElement.Load, text: translate(language, LANGUAGE_KEYS.ReplayLoad), rect: { x: 0, y: 0, width: 180, height: 36 }, style: KoreReplayStyle.Load, action: ui.action.emitValues(KoreReplayCommand.Load, [KoreReplayElement.Token]) }),
-					ui.button({ id: KoreReplayElement.Paste, text: translate(language, LANGUAGE_KEYS.ReplayPaste), rect: { x: 0, y: 0, width: 220, height: 36 }, style: KoreReplayStyle.Paste, action: ui.action.emit(KoreReplayCommand.Paste) }),
-					ui.text({ id: KoreReplayElement.Status, text: "", rect: { x: 0, y: 0, width: 560, height: 30 }, style: KoreReplayStyle.Status }),
+					ui.text({ id: KoreReplayElement.Title, text: translate(language, LANGUAGE_KEYS.ReplayTitle), rect: { x: 32, y: 22, width: 440, height: 32 }, style: KoreReplayStyle.Title }),
+					ui.textInput({ id: KoreReplayElement.Token, text: "", value: "", rect: { x: 32, y: 174, width: 450, height: 38 }, style: KoreReplayStyle.Token }),
+					ui.button({ id: KoreReplayElement.Load, text: translate(language, LANGUAGE_KEYS.ReplayLoad), rect: { x: 32, y: 224, width: 150, height: 38 }, style: KoreReplayStyle.Load, action: ui.action.emitValues(KoreReplayCommand.Load, [KoreReplayElement.Token]) }),
+					ui.button({ id: KoreReplayElement.Paste, text: translate(language, LANGUAGE_KEYS.ReplayPaste), rect: { x: 194, y: 224, width: 170, height: 38 }, style: KoreReplayStyle.Paste, action: ui.action.emit(KoreReplayCommand.Paste) }),
+					ui.text({ id: KoreReplayElement.Status, text: "", rect: { x: 32, y: 292, width: 450, height: 48 }, style: KoreReplayStyle.Status }),
 				],
 			}))
 			.build(),

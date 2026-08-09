@@ -207,7 +207,7 @@ function startReplayViewer(initialToken: string, language: LanguageCatalog): Rep
 			handler = viewer.getPlayer()!.getHandler();
 			handler.setLanguage(language);
 			handler.setMouseHandler(surface);
-			handler.addPreDrawer(surface);
+			handler.addPostDrawer(surface);
 			const loadedPlayer = viewer.getPlayer()!;
 			const world = handler.getSettings()?.worldSize;
 			console.log(`[replay] loaded: state=${handler.getState()} entities=${handler.getEntityManager().getEntities().length} actions=${loadedPlayer.getActionCount()} world=${JSON.stringify(world)} rendererWorldWidth=${GameSettings.screenResolution.x}`);
@@ -227,7 +227,7 @@ function startReplayViewer(initialToken: string, language: LanguageCatalog): Rep
 		},
 	}, language, initialToken);
 	handler.setMouseHandler(surface);
-	handler.addPreDrawer(surface);
+	handler.addPostDrawer(surface);
 	if (initialToken) void loadToken(initialToken);
 	return viewer;
 }

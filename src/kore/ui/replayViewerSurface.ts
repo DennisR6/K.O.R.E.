@@ -36,7 +36,11 @@ export class KoreReplayViewerSurface implements IMouse, IDrawer {
 	public load(): void { void this.callbacks.onLoad(this.getToken()); }
 	public paste(): void { void Promise.resolve(this.callbacks.onPaste()).then(value => { if (value !== undefined) this.setToken(value); }); }
 	public tick(deltaTime = 1): void { this.runtime.tick({ pointer: { ...this.mouse } }, deltaTime); this.handleCommands(this.runtime.drainCommands()); }
-	public draw(renderer: RenderContext): void { this.runtime.draw(new ReplayViewerRenderer(renderer)); }
+	public draw(renderer: RenderContext): void {
+		const replayRenderer = new ReplayViewerRenderer(renderer);
+		replayRenderer.drawShell();
+		this.runtime.draw(replayRenderer);
+	}
 
 	private handleCommands(commands: UiCommand[]): void {
 		for (const command of commands) {
@@ -48,21 +52,57 @@ export class KoreReplayViewerSurface implements IMouse, IDrawer {
 
 class ReplayViewerRenderer implements UiRenderer {
 	public constructor(private readonly renderer: RenderContext) { }
+	public drawShell(): void {
+		const renderer = this.renderer;
+		renderer.setFillColor("#020617", 0.68);
+		renderer.drawRect(0, 0, 800, 450);
+		renderer.setFillColor("#0f172a", 0.96);
+		renderer.drawRect(0, 0, 800, 68);
+		renderer.setFillColor("#22d3ee");
+		renderer.drawRect(28, 24, 4, 22, 2);
+		renderer.setFillColor("#67e8f9");
+		renderer.drawText("KORE / REPLAYS", 44, 31, 11);
+		renderer.setFillColor("#94a3b8");
+		renderer.drawText("READ-ONLY MATCH PLAYBACK", 44, 50, 10);
+		renderer.setFillColor("#0f172a", 0.78);
+		renderer.drawRect(18, 92, 492, 330, 16);
+		renderer.setFillColor("#0f172a", 0.94);
+		renderer.drawRect(526, 92, 256, 330, 16);
+		renderer.setFillColor("#64748b");
+		renderer.drawText("REPLAY ARCHIVE", 32, 108, 10);
+		renderer.drawText("SHARE ID", 32, 162, 10);
+		renderer.setFillColor("#475569");
+		renderer.drawText("Paste a share ID to restore a match", 32, 148, 11);
+		renderer.setFillColor("#22d3ee");
+		renderer.drawText("MATCH VIEW", 550, 118, 10);
+		renderer.setFillColor("#e2e8f0");
+		renderer.drawText("Playback controls", 550, 143, 18);
+		renderer.setFillColor("#64748b");
+		renderer.drawText("The recorded match is reconstructed", 550, 176, 11);
+		renderer.drawText("from its original deterministic state.", 550, 193, 11);
+		renderer.setFillColor("#1e293b");
+		renderer.drawRect(550, 224, 208, 1);
+		renderer.setFillColor("#64748b");
+	}
 	public drawText(element: Readonly<UiRuntimeElement>): void {
-		this.renderer.setFillColor("#f8fafc");
-		this.renderer.drawText(element.text ?? "", element.rect.x, element.rect.y + 24, element.id === KoreReplayElement.Title ? 30 : 16);
+		this.renderer.setFillColor(element.id === KoreReplayElement.Title ? "#f8fafc" : "#cbd5e1");
+		this.renderer.drawText(element.text ?? "", element.rect.x, element.rect.y + (element.id === KoreReplayElement.Title ? 25 : 20), element.id === KoreReplayElement.Title ? 25 : 13);
 	}
 	public drawButton(element: Readonly<UiRuntimeElement>): void {
-		this.renderer.setFillColor(element.style === KoreReplayStyle.Paste ? "#0f172a" : "#1d4ed8");
-		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height);
+		this.renderer.setFillColor(element.style === KoreReplayStyle.Paste ? "#1e293b" : "#22d3ee");
+		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height, 8);
 		this.renderer.setFillColor("#ffffff");
-		this.renderer.drawText(element.text ?? "", element.rect.x + 10, element.rect.y + 24, 14);
+		this.renderer.drawText(element.text ?? "", element.rect.x + 12, element.rect.y + 25, 12);
 	}
 	public drawTextInput(element: Readonly<UiRuntimeElement>): void {
+		this.renderer.setFillColor("#020617");
+		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height, 7);
+		this.renderer.setStrokeColor("#334155");
+		this.renderer.setStroke(1);
+		this.renderer.setNoFill();
+		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height, 7);
 		this.renderer.setFillColor("#e2e8f0");
-		this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height);
-		this.renderer.setFillColor("#0f172a");
-		this.renderer.drawText(element.value ?? "", element.rect.x + 8, element.rect.y + 23, 14);
+		this.renderer.drawText(element.value || "Enter replay share ID", element.rect.x + 12, element.rect.y + 25, 12);
 	}
 	public drawImage(element: Readonly<UiRuntimeElement>): void {
 		if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height);
