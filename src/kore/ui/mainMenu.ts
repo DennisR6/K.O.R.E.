@@ -100,7 +100,8 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 						ui.container({
     id: "image-text-button",
     rect: { x: 0, y: 0, width: 220, height: 60 },
-    layout: ui.layout.absolute(),
+    layout: ui.layout.absolute(), style: KoreMenuStyle.OnlineButton,
+	groupHover: true,
     elements: [
         ui.button({
             id: "action",

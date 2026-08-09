@@ -181,7 +181,7 @@ export const MAIN_PLAY_ONLINE_BUTTON_THEME: UiElementTheme = {
   hover: {
     background: "#12151c",
     backgroundAlpha: 0.98,
-    borderColor: "#67e8f9",
+    borderColor: "#22d3ee",
     borderWidth: 4,
     borderRadius: 14,
     textColor: "#22d3ee",
