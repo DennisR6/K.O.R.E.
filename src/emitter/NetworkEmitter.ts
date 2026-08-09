@@ -68,6 +68,11 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			handler.setRuleState((message as NetworkPhaseChanged).ruleState)
 			handler.setState(TurnSystem.stateForTeam((message as NetworkPhaseChanged).ruleState.activeTeam, handler.getTeam()))
 		}
-		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
+		if (message.type === NetworkMessageType.ERROR) {
+			console.warn("Server rejected input:", message.message)
+			// A rejected shot must not leave the client in Waiting_for_server.
+			// Restore the locally controlled turn from the authoritative active team.
+			handler.setState(TurnSystem.stateForTeam(handler.getActiveTeam(), handler.getTeam()))
+		}
 	})
 }
