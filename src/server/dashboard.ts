@@ -86,6 +86,7 @@ function operatorReplays(request: Request, database: Pick<GameDatabase, "listOpe
 		const gameId = requestedGameId?.trim() || undefined;
 		const body: DashboardReplayIndexResponse = { schemaVersion: 1, replays: database.listOperatorReplays(gameId), filter: gameId ? { gameId } : {} };
 		if (wantsJson(request)) return Response.json(body, { headers: { "cache-control": "no-store" } });
+		if (request.headers.get("HX-Request") === "true") return new Response(renderReplayRows(body, publicBaseUrl), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 		return new Response(renderReplayDashboard(body, publicBaseUrl), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
@@ -201,13 +202,18 @@ function renderDashboard(metrics: DashboardMetricsResponse): string {
 
 function renderReplayDashboard(response: DashboardReplayIndexResponse, publicBaseUrl?: string): string {
 	const filter = response.filter.gameId ?? "";
+	const replaySearchUrl = dashboardUrl(publicBaseUrl, DASHBOARD_REPLAYS_PATH);
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE replay archive</title><script src="https://unpkg.com/htmx.org@2.0.4"></script></head><body><main><h1>KORE replay archive</h1><p><a href="${dashboardUrl(publicBaseUrl, DASHBOARD_PATH)}">Dashboard</a></p><form method="get" action="${replaySearchUrl}"><label>Match ID <input name="id" value="${escapeHtml(filter)}" autocomplete="off" hx-get="${escapeHtml(replaySearchUrl)}" hx-trigger="input changed delay:500ms" hx-target="#replay-results" hx-swap="outerHTML" hx-push-url="true"></label><button type="submit">Filter</button></form><table><caption>Persisted match replays</caption><thead><tr><th>Match ID</th><th>Status</th><th>Updated</th><th>Actions</th><th>Replay</th></tr></thead>${renderReplayRows(response, publicBaseUrl)}</table></main></body></html>`;
+}
+
+function renderReplayRows(response: DashboardReplayIndexResponse, publicBaseUrl?: string): string {
 	const rows = response.replays.map(replay => {
 		const encodedId = encodeURIComponent(replay.gameId);
 		const downloadUrl = dashboardUrl(publicBaseUrl, `${DASHBOARD_REPLAYS_PATH}/${encodedId}`);
 		const viewUrl = dashboardUrl(publicBaseUrl, `${DASHBOARD_REPLAYS_PATH}/${encodedId}/view`);
 		return `<tr><td>${escapeHtml(replay.gameId)}</td><td>${escapeHtml(replay.status)}</td><td>${replay.updatedAt}</td><td>${replay.actionCount}</td><td><a href="${escapeHtml(viewUrl)}">View replay</a> <a href="${escapeHtml(downloadUrl)}">Download</a></td></tr>`;
 	}).join("") || "<tr><td colspan=\"5\">No replay found</td></tr>";
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>KORE replay archive</title></head><body><main><h1>KORE replay archive</h1><p><a href="${dashboardUrl(publicBaseUrl, DASHBOARD_PATH)}">Dashboard</a></p><form method="get"><label>Match ID <input name="id" value="${escapeHtml(filter)}" autocomplete="off"></label><button type="submit">Filter</button></form><table><caption>Persisted match replays</caption><thead><tr><th>Match ID</th><th>Status</th><th>Updated</th><th>Actions</th><th>Replay</th></tr></thead><tbody data-replays="index">${rows}</tbody></table></main></body></html>`;
+	return `<tbody id="replay-results" data-replays="index">${rows}</tbody>`;
 }
 
 function escapeHtml(value: string): string { return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
