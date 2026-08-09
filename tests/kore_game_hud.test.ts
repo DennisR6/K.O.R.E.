@@ -27,6 +27,16 @@ test("HUD projection is idempotent, draw is pure, and item command routes throug
 	expect(hud.drainSoundCommands()).toMatchObject([{ type: "playSound", soundId: "kore.ui.confirm" }]);
 });
 
+test("targeted item cards select first and use the next world click as the target", () => {
+	const commands: unknown[] = [];
+	const hud = createKoreGameHudSurface({ handle: command => commands.push(command) }, undefined, undefined, {}, undefined, (_itemId, point) => ({ type: "entity", entityId: `${point.x}:${point.y}` }));
+	hud.applyProjection(projection({ inventory: [{ itemId: "magnet", name: "Magnet", targetType: "entity", remainingUses: 1, enabled: true, showLabel: true }] }));
+	hud.updateMouse(530, 85); hud.handleMousePressed();
+	expect(commands).toEqual([]);
+	hud.updateMouse(120, 140); hud.handleMousePressed();
+	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "magnet", target: { type: "entity", entityId: "120:140" } } }]);
+});
+
 test("item-phase skip button remains clickable while gameplay input is locked", () => {
 	const commands: unknown[] = [];
 	const hud = createKoreGameHudSurface({ handle: command => { commands.push(command); return false; } });

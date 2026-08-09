@@ -4,8 +4,9 @@ import { MatchStatus, RulePhase, type MatchResult } from "../../rules/types.js";
 import type { UiSystem } from "../../systems/UiSystem.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 import type { UiComponentSettings } from "../../engine/ui-sdk/index.js";
+import type { ItemTargetType } from "../../item/types.js";
 
-export interface KoreHudItemProjection { itemId: string; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
+export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
 export interface KoreHudWorldPoint { x: number; y: number }
 export interface KoreHudWorldGuidance {
 	activeMarkers: Array<KoreHudWorldPoint & { radius: number }>;
@@ -39,7 +40,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	return {
 		revision: rule.turnNumber * 10_000 + rule.activeTeam * 100 + (result ? 1 : 0),
 		turn: { number: rule.turnNumber, activeTeam: rule.activeTeam, phase: rule.phase, engineState: state, selectedActorId: selectedActorId ?? null, aimAngle, power },
-		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => { const document = handler.getSettings()?.items?.find(candidate => candidate.id === item.itemId); return { itemId: item.itemId, remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true }; }),
+		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => { const document = handler.getSettings()?.items?.find(candidate => candidate.id === item.itemId); return { itemId: item.itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true }; }),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
 		aiThinking,
 		guidance: { activeMarkers, ...(aimPreview ? { aimPreview } : {}) },
