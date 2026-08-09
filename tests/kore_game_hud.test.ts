@@ -27,6 +27,15 @@ test("HUD projection is idempotent, draw is pure, and item command routes throug
 	expect(hud.drainSoundCommands()).toMatchObject([{ type: "playSound", soundId: "kore.ui.confirm" }]);
 });
 
+test("item-phase skip button remains clickable while gameplay input is locked", () => {
+	const commands: unknown[] = [];
+	const hud = createKoreGameHudSurface({ handle: command => { commands.push(command); return false; } });
+	hud.applyProjection(projection());
+	hud.updateMouse(600, 320);
+	hud.handleMousePressed();
+	expect(commands).toEqual([{ type: KoreHudCommand.SkipItemPhase, payload: undefined }]);
+});
+
 test("HUD command parser rejects unknown and malformed generic UI commands", () => {
 	expect(parseKoreHudCommand("kore.hud.unknown", undefined)).toBeUndefined();
 	expect(parseKoreHudCommand(KoreHudCommand.UseItem, undefined)).toBeUndefined();
