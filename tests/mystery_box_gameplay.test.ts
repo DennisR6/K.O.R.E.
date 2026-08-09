@@ -111,6 +111,7 @@ describe("Mystery Box gameplay", () => {
 
 		expect(handler.getRuleState()).toEqual({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 1 });
 		expect(emitter.recorder.getReplay().actions).toEqual([{ type: "itemUse", actorId: actor.getId(), itemId: MYSTERY_BOX_ITEM_ID, target: { type: "self" } }]);
+		expect(handler.getFeedbackTrace().at(-1)?.data).toMatchObject({ itemId: MYSTERY_BOX_ITEM_ID, rewardItemId: "anker", rewardName: "Anker" });
 	});
 
 	test("validates command and target through gameplay authority", () => {

@@ -54,8 +54,8 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 			winCondition: WinCondition.LastTeamStanding,
 			itemEconomy: {
 				fixedLoadouts: [
-					{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }, { itemId: mysteryBoxItem.id, uses: 1 }] },
-					{ team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }, { itemId: mysteryBoxItem.id, uses: 1 }] },
+					{ team: 0, items: [{ itemId: powerDashItem.id, uses: 1 }] },
+					{ team: 1, items: [{ itemId: powerDashItem.id, uses: 1 }] },
 				],
 				mapPickups: [createItemPickup({
 					itemId: mysteryBoxItem.id,

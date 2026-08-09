@@ -943,8 +943,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize })
 		const resolvedItemTarget = item.effects.some(effect => effect.type === ItemEffectType.DeferredEffect || effect.type === ItemEffectType.SpawnTrigger) ? resolveEffectTarget(target, { actor }) : undefined
 		if (item.id === MYSTERY_BOX_ITEM_ID) {
-			this.resolveMysteryBoxUse(actor, item)
-			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId } });
+			const rewardId = this.resolveMysteryBoxUse(actor, item)
+			const reward = this.items.find(candidate => candidate.id === rewardId)
+			this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId, data: { itemId, rewardItemId: rewardId, rewardName: reward?.name ?? rewardId } });
 			return
 		}
 		const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor
@@ -1166,7 +1167,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	}
 
 	/** Removes exactly one mystery box and adds exactly one reward use, atomically. */
-	private resolveMysteryBoxUse(actor: IEntity, item: ItemDocument): void {
+	private resolveMysteryBoxUse(actor: IEntity, item: ItemDocument): string {
 		const options = this.mysteryBoxRewardOptions(actor.getId())
 		// Resolve and validate the reward before mutating anything so a rejected
 		// pool or unknown reward never consumes the mystery box.
@@ -1175,6 +1176,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		consumeInventoryItem(inventory, item)
 		grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId })
 		actor.setInventory(inventory)
+		return rewardId
 	}
 	public loadEffects(effects: FullEffectSettings[]): void {
 		this.effectAlways = []

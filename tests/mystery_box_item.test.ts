@@ -18,7 +18,7 @@ describe("Mystery Box / Random Item Spawns", () => {
 		expect(registered).toBeDefined();
 		expect(registered?.name).toBe("Wunderkiste");
 		expect(registered?.type).toBe("utility");
-		expect(registered?.ui).toEqual({ component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: false });
+		expect(registered?.ui).toEqual({ component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: true });
 	});
 
 	test("generateRandomMapPickupPosition produces valid bounds within world size", () => {

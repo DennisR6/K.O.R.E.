@@ -92,5 +92,7 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 }
 
 function feedbackLabel(event: KoreGameplayFeedbackEvent): string {
-	return event.type === KoreGameplayFeedbackType.Result ? "Match complete" : event.type[0]!.toUpperCase() + event.type.slice(1);
+	if (event.type === KoreGameplayFeedbackType.Result) return "Match complete";
+	if (event.type === KoreGameplayFeedbackType.Item && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.rewardName === "string") return `Mystery Box: ${event.data.rewardName}`;
+	return event.type[0]!.toUpperCase() + event.type.slice(1);
 }
