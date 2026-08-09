@@ -142,7 +142,14 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	const filtered = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json&id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await filtered.json()).toMatchObject({ filter: { gameId: first.id }, replays: [{ gameId: first.id }] });
 	const page = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
-	expect(await page.text()).toContain(`data-replays="index"`);
+	const pageHtml = await page.text();
+	expect(pageHtml).toContain(`data-replays="index"`);
+	expect(pageHtml).toContain("Kill game");
+	const kill = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!;
+	expect(kill.status).toBe(303);
+	expect(registry.get(first.id)?.lifecycle.status).toBe("completed");
+	expect(registry.get(first.id)?.handler.getMatchResult()?.status).toBe(MatchStatus.Draw);
+	expect((await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!.status).toBe(404);
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
 	expect(completedHtml).toContain("View replay");

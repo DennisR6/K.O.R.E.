@@ -2,7 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
-import { RulePhase, type RuleState } from "../rules/types.js";
+import { MatchEndReason, MatchStatus, RulePhase, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
@@ -127,6 +127,17 @@ export class GameRegistry {
 		record.handler.dispose();
 		this.database.deleteGame(record.id);
 		return record;
+	}
+
+	/** Operator-only emergency completion for a stuck, non-completed match. */
+	public killGame(gameId: string): boolean {
+		const record = this.get(gameId);
+		if (!record || record.lifecycle.status === "completed") return false;
+		record.handler.finishMatch({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: record.turnNumber });
+		this.transition(record, "completed");
+		this.persist(record);
+		this.storeCompletedReplay(record);
+		return true;
 	}
 
 	/** Drops inactive handlers only. Durable SQLite state remains available. */

@@ -502,7 +502,9 @@ After every change, check whether this guide still reflects the implementation a
   and most-played-map metrics; an unset or short
   `KORE_DASHBOARD_OPERATOR_SECRET` disables the routes. Authenticated
   `/operator/replays` lists every persisted replay and filters by exact match
-  ID; `/operator/replays/<id>` downloads that deterministic replay document.
+  ID; `/operator/replays/<id>` downloads that deterministic replay document;
+  authenticated `POST /operator/replays/<id>/kill` force-completes a stuck
+  active match as a persisted draw.
   Every completed match automatically receives an unbroadcast replay token; the
   archive exposes a `View replay` link only to authenticated operators. These
   operator-only replay routes may expose match IDs and settings, while public
