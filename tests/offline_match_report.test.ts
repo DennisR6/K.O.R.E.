@@ -134,6 +134,15 @@ describe("browser-side offline match report", () => {
 		expect((record!.performanceLogs![0] as { type: string }).type).toBe("performance.frame-window");
 	});
 
+	test("omits verbose simulation diagnostics from persisted performance logs", () => {
+		const handler = createLocalGameplayHandler("ice-map-v1");
+		handler.log("turn.simulation.started", { snapshot: "large diagnostic" });
+		handler.log("turn.completed", { durationMs: 12 });
+		finish(handler);
+		const record = collectOfflineMatchRecord(handler, "hotseat", "ice-map-v1", handler.getMatchResult()!);
+		expect(record?.performanceLogs?.map(entry => (entry as { type: string }).type) ?? []).toEqual(["turn.completed"]);
+	});
+
 	test("reports exactly once per finished match and again after a rematch", () => {
 		const handler = createLocalGameplayHandler("ice-map-v1");
 		const reports: OfflineMatchRecordPayload[] = [];

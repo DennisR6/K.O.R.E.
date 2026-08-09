@@ -49,10 +49,20 @@ export function collectOfflineMatchRecord(handler: GameHandler, mode: MatchMode,
 		players: [...(handler.getSettings()?.allTeams ?? [])],
 		result,
 		replay,
-		performanceLogs: [...handler.getLogs(LoggerType.Performance)],
+		performanceLogs: handler.getLogs(LoggerType.Performance).filter(isPersistedPerformanceLog),
 	};
 	if (difficulty === "easy" || difficulty === "medium" || difficulty === "hard") record.difficulty = difficulty;
 	return record;
+}
+
+/** Excludes verbose simulation diagnostics that are not used by dashboard aggregation. */
+function isPersistedPerformanceLog(entry: { type: string }): boolean {
+	return entry.type === "turn.completed"
+		|| entry.type === "turn.playback.completed"
+		|| entry.type === "performance.frame-window"
+		|| entry.type === "performance.event-loop-window"
+		|| entry.type === "ai.fallback.completed"
+		|| entry.type.startsWith("ai.worker.");
 }
 
 /**
