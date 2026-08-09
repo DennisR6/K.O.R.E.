@@ -3,7 +3,7 @@ import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
-import type { NetworkItemUsed, NetworkPhaseChanged, NetworkSkipPhase, NetworkUseItem } from "../server/types.js";
+import type { NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /**
@@ -38,6 +38,11 @@ export class NetworkEmitter implements IInputEmitter {
 		this.socket.send(wrap<NetworkSkipPhase>({ type: NetworkMessageType.SKIP_PHASE }))
 	}
 	public requestReplayShare(): void { this.socket.send(wrap<NetworkCreateReplayShare>({ type: NetworkMessageType.CREATE_REPLAY_SHARE })); }
+	public sendReport(category: NetworkReportMatch["category"], text: string): boolean {
+		if (this.socket.readyState !== WebSocket.OPEN) return false;
+		this.socket.send(wrap<NetworkReportMatch>({ type: NetworkMessageType.REPORT_MATCH, category, text }));
+		return true;
+	}
 }
 
 /** Installs the authoritative TURN receiver for a client-side handler. */

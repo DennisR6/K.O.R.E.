@@ -220,6 +220,7 @@ export class UiRuntime {
 	public getActiveElements(): readonly UiRuntimeNode[] { return this.screens.get(this.activeScreen)!.elements; }
 	public getActiveScreen(): string { return this.activeScreen; }
 	public getFocusedElementId(): string | undefined { return this.activeLeaves().find(hasFocusable)?.id; }
+	public getElementValue(id: string): string | undefined { const element = this.findElementAnywhere(id); return element?.kind === "textInput" ? element.value : undefined; }
 	public getHoveredElementId(): string | undefined { return this.hovered; }
 	public getPressedTargetId(): string | undefined { return this.pendingPress; }
 	/** Applies a validated semantic action during an explicit host-controlled tick. */

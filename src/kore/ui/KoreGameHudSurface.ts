@@ -4,7 +4,7 @@ import type { IDrawer, RenderContext } from "../../engine/RenderContext.js";
 import { UiRuntime, type UiCommand, type UiRenderer } from "../../engine/ui-sdk/index.js";
 import { koreAudio } from "../audio.js";
 import { createGameHudComposition, validateKoreGameHudSettings, type KoreGameHudSettings } from "./gameHud.js";
-import { assertNeverHudCommand, parseKoreHudCommand, KoreHudCommand, type KoreHudCommandMessage } from "./hudCommands.js";
+import { assertNeverHudCommand, parseKoreHudCommand, KoreHudCommand, type KoreHudCommandMessage, type KoreReportCategory } from "./hudCommands.js";
 import { hudResultText, hudStateText, type KoreHudProjection } from "./gameHudProjection.js";
 import { KORE_HUD_ITEM_SLOTS, KoreHudColor, KoreHudElement, KoreHudId, KoreHudStyle, koreHudItemElementId } from "./hudVocabulary.js";
 import { RulePhase } from "../../rules/types.js";
@@ -12,7 +12,7 @@ import type { ItemTarget } from "../../item/target.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 
 export interface KoreHudCommandPort { handle(command: KoreHudCommandMessage): boolean | void; }
-export interface KoreGameHudCapabilities { canSkipItemPhase?: boolean; canPause?: boolean; }
+export interface KoreGameHudCapabilities { canSkipItemPhase?: boolean; canPause?: boolean; canReport?: boolean; }
 export type KoreHudItemTargetResolver = (itemId: string, point: { x: number; y: number }) => ItemTarget | undefined;
 
 /** SDK HUD adapter: projection in, typed semantic commands/audio out. */
@@ -21,10 +21,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	private readonly sounds = new AudioEmitter(KoreHudId.SoundSource);
 	private projection: KoreHudProjection | undefined;
 	private selectedItemId: string | undefined;
-	private mouse = { x: 0, y: 0 }; private paused = false; private rejection: string | undefined;
+	private mouse = { x: 0, y: 0 }; private paused = false; private reportOpen = false; private reportCategory: KoreReportCategory = "technical"; private rejection: string | undefined;
 	public readonly soundSourceId = this.sounds.soundSourceId;
 	public readonly acceptsUiInputWhileLocked = true;
-	public constructor(private readonly port: KoreHudCommandPort, private readonly gameplayInput?: IMouse, private readonly initialSettings: KoreGameHudSettings = createGameHudComposition().build(), private readonly capabilities: Required<KoreGameHudCapabilities> = { canSkipItemPhase: true, canPause: true }, private readonly language: LanguageCatalog = createEnglishLanguage(), private readonly resolveItemTarget?: KoreHudItemTargetResolver) { validateKoreGameHudSettings(initialSettings); this.runtime = UiRuntime.fromSettings(initialSettings.ui); }
+	public constructor(private readonly port: KoreHudCommandPort, private readonly gameplayInput?: IMouse, private readonly initialSettings: KoreGameHudSettings = createGameHudComposition().build(), private readonly capabilities: Required<KoreGameHudCapabilities> = { canSkipItemPhase: true, canPause: true, canReport: false }, private readonly language: LanguageCatalog = createEnglishLanguage(), private readonly resolveItemTarget?: KoreHudItemTargetResolver) { validateKoreGameHudSettings(initialSettings); this.runtime = UiRuntime.fromSettings(initialSettings.ui); }
 	public getRuntime(): UiRuntime { return this.runtime; }
 	public getGameplayInput(): IMouse | undefined { return this.gameplayInput; }
 	public isVisible(): boolean { return !!this.projection?.match.result; }
@@ -45,6 +45,8 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;
+		this.runtime.setElementVisible(KoreHudElement.Report, this.capabilities.canReport && !resultVisible && !this.reportOpen);
+		for (const id of [KoreHudElement.ReportPanel, KoreHudElement.ReportTitle, KoreHudElement.ReportCategoryConduct, KoreHudElement.ReportCategoryTechnical, KoreHudElement.ReportText, KoreHudElement.ReportSubmit, KoreHudElement.ReportCancel]) this.runtime.setElementVisible(id, this.reportOpen);
 		this.paused = projection.match.paused;
 		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.ReplayShare]) this.runtime.setElementVisible(id, resultVisible);
 		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || this.paused);
@@ -53,6 +55,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.setPauseControls(this.paused, resultVisible);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }
+	public handleKeyPressed(event: KeyboardEvent): void { if (!this.reportOpen) return; this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: event.key.length === 1 ? event.key : undefined } }); this.route(this.runtime.drainCommands()); }
 	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
 	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; this.gameplayInput?.updateMouse(x, y); }
 	public handleMousePressed(): void {
@@ -75,7 +78,13 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	public handleMouseWheel(event: WheelEvent): void { if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseWheel(event); }
 	public reset(): void { this.gameplayInput?.reset?.(); }
 	private route(commands: UiCommand[]): void {
-		for (const raw of commands) { const command = parseKoreHudCommand(raw.command, raw.payload); if (!command) { this.rejection = `Unknown HUD command '${raw.command}'`; continue; } try { this.handle(command); } catch (error) { this.rejection = error instanceof Error ? error.message : "HUD action rejected"; } }
+		for (const raw of commands) {
+			const command = raw.command === KoreHudCommand.SubmitReport && raw.payload === undefined
+				? { type: KoreHudCommand.SubmitReport as const, payload: { category: this.reportCategory, text: this.runtime.getElementValue(KoreHudElement.ReportText) ?? "" } }
+				: parseKoreHudCommand(raw.command, raw.payload);
+			if (!command) { this.rejection = `Unknown HUD command '${raw.command}'`; continue; }
+			try { this.handle(command); } catch (error) { this.rejection = error instanceof Error ? error.message : "HUD action rejected"; }
+		}
 	}
 	private handle(command: KoreHudCommandMessage): void {
 		switch (command.type) {
@@ -87,6 +96,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			case KoreHudCommand.SkipItemPhase: this.dispatch(command); return;
 			case KoreHudCommand.Pause: this.dispatch(command); this.setPauseControls(true); return;
 			case KoreHudCommand.Resume: this.dispatch(command); this.setPauseControls(false); return;
+			case KoreHudCommand.Report: this.reportOpen = true; this.applyProjection(this.projection!); return;
+			case KoreHudCommand.ReportCategory: this.reportCategory = command.payload.category; return;
+			case KoreHudCommand.SubmitReport: this.dispatch(command); this.reportOpen = false; this.applyProjection(this.projection!); return;
+			case KoreHudCommand.CancelReport: this.reportOpen = false; this.applyProjection(this.projection!); return;
 			case KoreHudCommand.Rematch: case KoreHudCommand.Replay: case KoreHudCommand.Share: case KoreHudCommand.ReplayShare: case KoreHudCommand.ReturnToMenu: this.dispatch(command); return;
 			default: return assertNeverHudCommand(command);
 		}
@@ -97,6 +110,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.runtime.setElementVisible(KoreHudElement.Paused, paused && this.capabilities.canPause);
 		this.runtime.setElementVisible(KoreHudElement.Resume, paused && this.capabilities.canPause);
 		this.runtime.setElementVisible(KoreHudElement.Pause, !paused && !resultVisible && this.capabilities.canPause);
+		this.runtime.setElementVisible(KoreHudElement.Report, this.capabilities.canReport && !paused && !resultVisible && !this.reportOpen);
 		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || paused);
 	}
 	private confirm(): void { this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId)); }
@@ -129,5 +143,5 @@ class KoreHudRenderer implements UiRenderer {
 }
 
 export function createKoreGameHudSurface(port: KoreHudCommandPort, gameplayInput?: IMouse, settings: KoreGameHudSettings | undefined = undefined, capabilities: KoreGameHudCapabilities = {}, language: LanguageCatalog = createEnglishLanguage(), resolveItemTarget?: KoreHudItemTargetResolver): KoreGameHudSurface {
-	return new KoreGameHudSurface(port, gameplayInput, settings ?? createGameHudComposition(language).build(), { canSkipItemPhase: capabilities.canSkipItemPhase ?? true, canPause: capabilities.canPause ?? true }, language, resolveItemTarget);
+	return new KoreGameHudSurface(port, gameplayInput, settings ?? createGameHudComposition(language).build(), { canSkipItemPhase: capabilities.canSkipItemPhase ?? true, canPause: capabilities.canPause ?? true, canReport: capabilities.canReport ?? false }, language, resolveItemTarget);
 }

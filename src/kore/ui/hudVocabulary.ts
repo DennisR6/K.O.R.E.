@@ -32,6 +32,14 @@ export enum KoreHudElement {
 	ReplayShare = "hud-replay-share",
 	Paused = "hud-paused",
 	Resume = "hud-resume",
+	Report = "hud-report",
+	ReportPanel = "hud-report-panel",
+	ReportTitle = "hud-report-title",
+	ReportCategoryConduct = "hud-report-conduct",
+	ReportCategoryTechnical = "hud-report-technical",
+	ReportText = "hud-report-text",
+	ReportSubmit = "hud-report-submit",
+	ReportCancel = "hud-report-cancel",
 }
 
 export enum KoreHudStyle {
@@ -71,6 +79,12 @@ export const KoreHudText = {
 	ReplayShare: LANGUAGE_KEYS.HudReplayShare,
 	Paused: LANGUAGE_KEYS.HudPaused,
 	Resume: LANGUAGE_KEYS.HudResume,
+	Report: LANGUAGE_KEYS.HudReport,
+	ReportTitle: LANGUAGE_KEYS.HudReportTitle,
+	ReportConduct: LANGUAGE_KEYS.HudReportConduct,
+	ReportTechnical: LANGUAGE_KEYS.HudReportTechnical,
+	ReportSubmit: LANGUAGE_KEYS.HudReportSubmit,
+	ReportCancel: LANGUAGE_KEYS.HudReportCancel,
 	None: LANGUAGE_KEYS.HudNone,
 	Waiting: LANGUAGE_KEYS.HudWaiting,
 } as const;

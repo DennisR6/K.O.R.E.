@@ -30,6 +30,7 @@ import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
 import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/performanceReport.js";
+import { buildMatchReportEndpoint, reportMatchHttp } from "./net/matchReport.js";
 import { flushOfflineMatchReports } from "./net/offlineMatchReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
 
@@ -180,6 +181,11 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 			canSkipItemPhase: true,
 			canPause: false,
 			onUseItem: (actorId, itemId, target) => { emitter.sendItemUse(actorId, itemId, target); return false; },
+			onReport: (category, text) => {
+				const sent = emitter.sendReport(category, text);
+				if (!sent && init.gameId && performanceUserId) void reportMatchHttp(buildMatchReportEndpoint(serverUrl, init.gameId), init.gameId, performanceUserId, category, text);
+				return false;
+			},
 			onRematch: () => { socket.send(wrap({ type: NetworkMessageType.REMATCH })); return false; },
 			onReplayShare: () => { replayShareAction = "view"; emitter.requestReplayShare(); return false; },
 			onReturnToMenu: () => { window.location.assign(window.location.pathname); return false; },

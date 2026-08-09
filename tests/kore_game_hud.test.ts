@@ -80,6 +80,17 @@ test("host capabilities hide unavailable network controls and suppress unconfirm
 	expect(hud.drainSoundCommands()).toEqual([]);
 });
 
+test("report dialog captures text and emits the selected category", () => {
+	const commands: unknown[] = [];
+	const hud = createKoreGameHudSurface({ handle: command => { commands.push(command); return false; } }, undefined, undefined, { canReport: true });
+	hud.applyProjection(projection());
+	hud.updateMouse(650, 20); hud.handleMousePressed();
+	hud.updateMouse(220, 220); hud.handleMousePressed();
+	hud.handleKeyPressed({ key: "B" } as KeyboardEvent);
+	hud.updateMouse(220, 300); hud.handleMousePressed();
+	expect(commands).toEqual([{ type: KoreHudCommand.SubmitReport, payload: { category: "technical", text: "B" } }]);
+});
+
 test("HUD renders projected active-player dots and three-line pull-arrow preview", () => {
 	const circles: Array<[number, number, number]> = []; const lines: Array<[number, number, number, number]> = [];
 	const hud = createKoreGameHudSurface({ handle() {} });

@@ -295,7 +295,7 @@ export class GameRegistry {
 		if (!record) return { ok: false, error: "No active game for this user" };
 		if (category !== "conduct" && category !== "technical" && category !== "other") return { ok: false, error: "Invalid report category" };
 		if (typeof text !== "string" || text.trim().length < 1 || text.length > 500) return { ok: false, error: "Invalid report text" };
-		try { return { ok: true, reportId: this.database.createMatchReport(record.id, userId, category, text.trim()) }; }
+		try { return { ok: true, reportId: this.database.createMatchReport(record.id, userId, category, text.trim(), record.turnNumber) }; }
 		catch { return { ok: false, error: "Report already submitted" }; }
 	}
 

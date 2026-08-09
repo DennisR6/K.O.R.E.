@@ -12,7 +12,13 @@ export enum KoreHudCommand {
 	Share = "kore.hud.share",
 	ReplayShare = "kore.hud.replay-share",
 	ReturnToMenu = "kore.hud.return-to-menu",
+	Report = "kore.hud.report",
+	ReportCategory = "kore.hud.report-category",
+	SubmitReport = "kore.hud.submit-report",
+	CancelReport = "kore.hud.cancel-report",
 }
+
+export type KoreReportCategory = "conduct" | "technical";
 
 export interface KoreHudCommandPayloads {
 	[KoreHudCommand.UseItem]: { itemId: string; target: ItemTarget };
@@ -24,6 +30,10 @@ export interface KoreHudCommandPayloads {
 	[KoreHudCommand.Share]: undefined;
 	[KoreHudCommand.ReplayShare]: undefined;
 	[KoreHudCommand.ReturnToMenu]: undefined;
+	[KoreHudCommand.Report]: undefined;
+	[KoreHudCommand.ReportCategory]: { category: KoreReportCategory };
+	[KoreHudCommand.SubmitReport]: { category: KoreReportCategory; text: string };
+	[KoreHudCommand.CancelReport]: undefined;
 }
 
 export type KoreHudCommandMessage = { [Command in KoreHudCommand]: { type: Command; payload: KoreHudCommandPayloads[Command] } }[KoreHudCommand];
@@ -35,6 +45,16 @@ export function parseKoreHudCommand(command: string, payload: JsonValue | undefi
 	if (command === KoreHudCommand.UseItem) {
 		if (!payload || typeof payload !== "object" || Array.isArray(payload) || typeof (payload as { itemId?: unknown }).itemId !== "string" || !("target" in payload)) return undefined;
 		return { type: command, payload: { itemId: (payload as { itemId: string }).itemId, target: (payload as { target: ItemTarget }).target } };
+	}
+	if (command === KoreHudCommand.ReportCategory) {
+		if (!payload || typeof payload !== "object" || Array.isArray(payload) || ((payload as { category?: unknown }).category !== "conduct" && (payload as { category?: unknown }).category !== "technical")) return undefined;
+		return { type: command, payload: { category: (payload as { category: KoreReportCategory }).category } };
+	}
+	if (command === KoreHudCommand.SubmitReport) {
+		if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+		const value = payload as { category?: unknown; text?: unknown };
+		if ((value.category !== "conduct" && value.category !== "technical") || typeof value.text !== "string") return undefined;
+		return { type: command, payload: { category: value.category, text: value.text } };
 	}
 	if (payload !== undefined) return undefined;
 	return { type: command, payload: undefined } as KoreHudCommandMessage;

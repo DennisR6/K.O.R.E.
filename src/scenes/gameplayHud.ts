@@ -3,7 +3,7 @@ import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { ItemPhaseUI } from "../ui/ItemPhaseUI.js";
 import { createKoreGameHudSurface, type KoreGameHudSurface } from "../kore/ui/KoreGameHudSurface.js";
-import { KoreHudCommand, type KoreHudCommandMessage } from "../kore/ui/hudCommands.js";
+import { KoreHudCommand, type KoreHudCommandMessage, type KoreReportCategory } from "../kore/ui/hudCommands.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import type { ItemTarget } from "../item/target.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
@@ -26,6 +26,7 @@ export type GameplayHudActions = {
 	onReplayShare?: () => boolean | void;
 	onPause?: () => boolean | void;
 	onResume?: () => boolean | void;
+	onReport?: (category: KoreReportCategory, text: string) => boolean | void;
 	language?: LanguageCatalog;
 };
 
@@ -46,7 +47,7 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 	emitter?.setErrorHandler(error => { rejection = hudRejection(error); });
 	const hud = createKoreGameHudSurface({
 		handle: command => handleHudCommand(command, handler, { ...actions, itemUi }),
-	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true }, actions.language ?? createEnglishLanguage(), (itemId, point) => resolveItemTarget(handler, uiSystem, itemId, point));
+	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true, canReport: !!actions.onReport }, actions.language ?? createEnglishLanguage(), (itemId, point) => resolveItemTarget(handler, uiSystem, itemId, point));
 	const feedback = new KoreGameplayFeedbackSurface();
 	let feedbackCursor = 0;
 	handler.setMouseHandler(hud);
@@ -103,6 +104,11 @@ function handleHudCommand(command: KoreHudCommandMessage, handler: GameHandler, 
 		case KoreHudCommand.Resume:
 			if (deps.onResume) return deps.onResume();
 			handler.setPaused(false);
+			return;
+		case KoreHudCommand.SubmitReport:
+			if (deps.onReport) return deps.onReport(command.payload.category, command.payload.text);
+			throw new Error("Reports are unavailable");
+		case KoreHudCommand.Report: case KoreHudCommand.ReportCategory: case KoreHudCommand.CancelReport:
 			return;
 	}
 }

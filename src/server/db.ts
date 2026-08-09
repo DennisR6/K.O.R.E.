@@ -141,6 +141,8 @@ export class GameDatabase {
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
+		const reportColumns = this.db.query("PRAGMA table_info(match_reports)").all() as Array<{ name: string }>;
+		if (!reportColumns.some(column => column.name === "turn_number")) this.db.run("ALTER TABLE match_reports ADD COLUMN turn_number INTEGER NOT NULL DEFAULT 0");
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS replay_shares (
 				token TEXT PRIMARY KEY NOT NULL,
@@ -301,6 +303,12 @@ export class GameDatabase {
 		return this.db.query("SELECT 1 AS found FROM games WHERE id = ?1").get(id) !== null;
 	}
 
+	public getGameTurnNumber(id: string): number {
+		const row = this.db.query("SELECT turn_number FROM games WHERE id = ?1").get(id) as { turn_number: number } | null;
+		if (!row) throw new Error("Unknown game");
+		return row.turn_number;
+	}
+
 	public getLifecycle(id: string): PersistedMatchLifecycle | undefined {
 		const row = this.db.query(`
 			SELECT version, status, created_at, status_changed_at, completed_at
@@ -412,10 +420,10 @@ export class GameDatabase {
 		return metrics;
 	}
 
-	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, now: number = Date.now()): string {
+	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, turnNumber: number, now: number = Date.now()): string {
 		const id = crypto.randomUUID();
-		this.db.query("INSERT INTO match_reports (id, game_id, reporter_user_id, category, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
-			.run(id, gameId, reporterUserId, category, text, now);
+		this.db.query("INSERT INTO match_reports (id, game_id, reporter_user_id, category, text, turn_number, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+			.run(id, gameId, reporterUserId, category, text, turnNumber, now);
 		return id;
 	}
 

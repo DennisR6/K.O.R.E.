@@ -6,6 +6,7 @@ import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
 import { servePublicReplayShare } from "./src/server/replayShares.ts";
 import { serveOfflineMatchReport } from "./src/server/offlineMatches.ts";
 import { servePerformanceReport } from "./src/server/performanceReports.ts";
+import { serveMatchReport } from "./src/server/matchReports.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -33,6 +34,8 @@ Bun.serve<WebSocketData>({
 		if (offline) return offline;
 		const performance = await servePerformanceReport(req, database);
 		if (performance) return performance;
+		const matchReport = await serveMatchReport(req, database);
+		if (matchReport) return matchReport;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
 		if (url.pathname === "/replay.html") return new Response(Bun.file("./replay.html"));
