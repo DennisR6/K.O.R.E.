@@ -48,6 +48,13 @@ test("item-phase skip button remains clickable while gameplay input is locked", 
 	expect(commands).toEqual([{ type: KoreHudCommand.SkipItemPhase, payload: undefined }]);
 });
 
+test("item phase explains that dragging skips item use", () => {
+	const hud = createKoreGameHudSurface({ handle() {} });
+	hud.applyProjection(projection());
+	const title = hud.getRuntime().toSettings().screens[0]?.elements.find(element => element.id === KoreHudElement.ItemsTitle);
+	expect(title && "text" in title ? title.text : "").toContain("drag to skip");
+});
+
 test("HUD command parser rejects unknown and malformed generic UI commands", () => {
 	expect(parseKoreHudCommand("kore.hud.unknown", undefined)).toBeUndefined();
 	expect(parseKoreHudCommand(KoreHudCommand.UseItem, undefined)).toBeUndefined();

@@ -77,15 +77,16 @@ export class AuthoritativeGameplayRenderer {
       renderer.push();
       if (item?.ui?.component) {
         renderer.drawImage(item.ui.component.source, pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
-        renderer.pop();
-        continue;
       }
+      const centerX = pickup.spawnRegion.x + pickup.spawnRegion.w / 2;
+      const centerY = pickup.spawnRegion.y + pickup.spawnRegion.h / 2;
+      const radius = Math.max(16, Math.min(pickup.spawnRegion.w, pickup.spawnRegion.h) / 2);
       renderer.setNoFill();
       renderer.setStrokeColor("#facc15");
       renderer.setStroke(2);
-      renderer.drawRect(pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+      renderer.drawCircle(centerX, centerY, radius);
       renderer.setFillColor("#713f12");
-      renderer.drawText(pickup.itemId, pickup.spawnRegion.x, pickup.spawnRegion.y - 4, 12);
+      renderer.drawText(item?.name ?? pickup.itemId, centerX - radius + 4, centerY + 4, 11);
       renderer.pop();
     }
   }
