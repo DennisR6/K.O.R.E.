@@ -2,8 +2,16 @@ import type { GameHandler } from "../engine/Handler.js";
 import { GameState } from "../engine/types.js";
 import { aggregatePerformanceLogs, type MatchPerformanceReport, type PerformanceClientMetadata } from "../performance/matchPerformance.js";
 
-export function buildPerformanceEndpoint(origin: string, gameId: string): string {
-	return `${origin.replace(/\/+$/, "")}/api/games/${encodeURIComponent(gameId)}/performance`;
+export function buildPerformanceEndpoint(baseUrl: string, gameId: string): string {
+	if (!baseUrl) return "";
+	const url = new URL(baseUrl);
+	if (url.protocol === "ws:") url.protocol = "http:";
+	if (url.protocol === "wss:") url.protocol = "https:";
+	const path = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
+	url.pathname = `${path}api/games/${encodeURIComponent(gameId)}/performance`;
+	url.search = "";
+	url.hash = "";
+	return url.toString();
 }
 
 export function collectMatchPerformanceReport(handler: GameHandler, gameId: string, userId: string, options: { engineVersion?: string; client?: PerformanceClientMetadata } = {}): MatchPerformanceReport {
@@ -11,20 +19,21 @@ export function collectMatchPerformanceReport(handler: GameHandler, gameId: stri
 }
 
 /** Reports one completed online match; failures never affect gameplay or replay. */
-export function installMatchPerformanceReport(handler: GameHandler, gameId: string, userId: string, reporter: (report: MatchPerformanceReport) => void | Promise<void> = report => { void reportMatchPerformance(report); }): void {
+export function installMatchPerformanceReport(handler: GameHandler, gameId: string, userId: string, reporter?: (report: MatchPerformanceReport) => void | Promise<void>, endpoint?: string): void {
 	let reported = false;
 	handler.addPostDrawer({
 		draw: () => {
 			if (handler.getState() !== GameState.Game_over) { reported = false; return; }
 			if (reported) return;
 			reported = true;
-		void Promise.resolve(reporter(collectMatchPerformanceReport(handler, gameId, userId)));
+			const report = collectMatchPerformanceReport(handler, gameId, userId);
+			void Promise.resolve(reporter === undefined ? reportMatchPerformance(report, { endpoint }) : reporter(report));
 		},
 	});
 }
 
 export async function reportMatchPerformance(report: MatchPerformanceReport, options: { endpoint?: string; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
-	const endpoint = options.endpoint ?? buildPerformanceEndpoint(globalThis.location?.origin ?? "", report.gameId);
+	const endpoint = options.endpoint ?? buildPerformanceEndpoint(globalThis.location?.href ?? globalThis.location?.origin ?? "", report.gameId);
 	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
 	if (typeof fetchImpl !== "function" || !endpoint || endpoint === "/") return false;
 	try {

@@ -29,7 +29,7 @@ import { runtimeNow, summarizeFrameWindow } from "./engine/runtimeLog.js";
 import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
-import { installMatchPerformanceReport } from "./net/performanceReport.js";
+import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/performanceReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
 
 const uri = new URL(window.location.href)
@@ -165,7 +165,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		handler.addSystem(new EmitterSystem(emitter))
 		handler.setRuleState(init.ruleState)
 		const performanceUserId = getUserUUUID();
-		if (init.gameId && performanceUserId) installMatchPerformanceReport(handler, init.gameId, performanceUserId)
+		if (init.gameId && performanceUserId) installMatchPerformanceReport(handler, init.gameId, performanceUserId, undefined, buildPerformanceEndpoint(serverUrl, init.gameId))
 		// The online branch installs the same gameplay HUD as every offline mode;
 		// only the semantic actions and capability limits differ.
 		installGameplayHud(handler, {
