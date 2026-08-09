@@ -35,6 +35,7 @@ Bun.serve<WebSocketData>({
 		if (performance) return performance;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
+		if (url.pathname === "/replay.html") return new Response(Bun.file("./replay.html"));
 		// The offline shell lives in public/ but must register at root scope.
 		if (url.pathname === "/sw.js") return new Response(Bun.file("./public/sw.js"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {

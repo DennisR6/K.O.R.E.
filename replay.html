@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>KORE Replay</title>
+	<style>
+		:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #020617; color: #e2e8f0; }
+		body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #172554, #020617 55%); }
+		main { width: min(1180px, 100%); margin: auto; padding: 24px; box-sizing: border-box; }
+		header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+		h1 { margin: 0; font-size: 24px; letter-spacing: .08em; }
+		label { display: block; color: #94a3b8; font-size: 12px; margin-bottom: 6px; }
+		input[type=text] { width: min(360px, 70vw); box-sizing: border-box; padding: 10px 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: inherit; }
+		button { border: 0; border-radius: 6px; padding: 10px 14px; background: #22d3ee; color: #082f49; font-weight: 700; cursor: pointer; }
+		button.secondary { background: #1e293b; color: #e2e8f0; }
+		button:disabled { opacity: .45; cursor: default; }
+		.viewer { overflow: hidden; border: 1px solid #1e3a8a; border-radius: 10px; background: #000; }
+		iframe { display: block; width: 100%; aspect-ratio: 16 / 9; min-height: 360px; border: 0; }
+		.controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 14px; background: #0f172a; }
+		.controls input[type=range] { flex: 1 1 260px; accent-color: #22d3ee; }
+		#status { min-width: 180px; color: #94a3b8; font-size: 13px; }
+		.load { display: flex; gap: 8px; align-items: end; }
+		@media (max-width: 640px) { main { padding: 12px; } header { display: block; } .load { margin-top: 14px; } iframe { min-height: 240px; } }
+	</style>
+</head>
+<body>
+	<main>
+		<header>
+			<div><h1>KORE / REPLAY</h1><p>Deterministic match playback</p></div>
+			<div class="load"><div><label for="token">Replay share ID</label><input id="token" type="text" autocomplete="off" spellcheck="false"></div><button id="load">Load</button></div>
+		</header>
+		<div class="viewer"><iframe id="game" title="KORE replay"></iframe><div class="controls">
+			<button class="secondary" id="previous">Previous turn</button>
+			<button id="play">Play</button>
+			<button class="secondary" id="next">Next turn</button>
+			<input id="timeline" type="range" min="0" max="0" value="0" aria-label="Replay turn">
+			<span id="turn">Turn 0 / 0</span><span id="status">Enter a replay share ID.</span>
+		</div></div>
+	</main>
+	<script>
+		const token = document.querySelector("#token");
+		const frame = document.querySelector("#game");
+		const timeline = document.querySelector("#timeline");
+		const turn = document.querySelector("#turn");
+		const status = document.querySelector("#status");
+		const targetOrigin = window.location.origin;
+		let current = 0;
+		let total = 0;
+		function send(type, actionIndex) { frame.contentWindow?.postMessage({ source: "kore-replay-host", type, ...(actionIndex === undefined ? {} : { actionIndex }) }, targetOrigin); }
+		function render(state) {
+			if (!state) return;
+			current = state.actionIndex; total = state.actionCount;
+			timeline.max = String(total); timeline.value = String(current);
+			turn.textContent = `Turn ${current} / ${total}`;
+			status.textContent = state.complete ? "Playback complete" : state.playing ? "Playing" : "Paused";
+			document.querySelector("#play").textContent = state.playing ? "Pause" : "Play";
+		}
+		function load() {
+			const value = token.value.trim();
+			if (!value) return;
+			const url = new URL("./", window.location.href);
+			url.searchParams.set("replay", value); url.searchParams.set("embed", "1");
+			status.textContent = "Loading replay…"; frame.src = url.toString();
+		}
+		document.querySelector("#load").addEventListener("click", load);
+		token.addEventListener("keydown", event => { if (event.key === "Enter") load(); });
+		document.querySelector("#play").addEventListener("click", () => send(current === 0 || document.querySelector("#play").textContent === "Play" ? "replay.play" : "replay.pause"));
+		document.querySelector("#previous").addEventListener("click", () => send("replay.seek", Math.max(0, current - 1)));
+		document.querySelector("#next").addEventListener("click", () => send("replay.seek", Math.min(total, current + 1)));
+		timeline.addEventListener("input", () => send("replay.seek", Number(timeline.value)));
+		window.addEventListener("message", event => {
+			if (event.source !== frame.contentWindow || event.origin !== targetOrigin) return;
+			const message = event.data;
+			if (!message || message.source !== "kore-replay") return;
+			if (message.type === "replay.error") status.textContent = message.message || "Replay command failed";
+			if (message.type === "replay.ready" || message.type === "replay.state") render(message.state);
+		});
+		const initial = new URL(window.location.href).searchParams.get("replay");
+		if (initial) { token.value = initial; load(); }
+	</script>
+</body>
+</html>

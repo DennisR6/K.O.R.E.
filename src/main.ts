@@ -39,6 +39,7 @@ const usersettings = {
 	mapbuilder: uri.searchParams.has("mapbuilder"),
 	skipmenu: ["1", "true"].includes(uri.searchParams.get("skipmenu") ?? ""),
 	replayToken: uri.searchParams.get("replay") ?? "",
+	embedReplay: ["1", "true"].includes(uri.searchParams.get("embed") ?? ""),
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 	modePreference: uri.searchParams.get("mode") ?? undefined,
 }
@@ -71,8 +72,8 @@ if (isUiDebugSandboxUrl(uri)) {
 	console.log(`[replay] replay mode with token ${usersettings.replayToken}`)
 	handler = kore.createHandler(GameSettings)
 	handler.setLanguage(activeLanguage!)
-	const viewer = startReplayViewer(usersettings.replayToken, activeLanguage!)
-	startGame(handler, () => handler, () => viewer.advance())
+	const viewer = startReplayViewer(usersettings.replayToken, activeLanguage!, usersettings.embedReplay)
+	startGame(handler, () => viewer.getPlayer()?.getHandler() ?? handler, () => { viewer.advance(); notifyReplayEmbed(viewer); })
 } else if (!usersettings.skipmenu) {
 	 startupMark("scene.init.started", { scene: "menu" });
 	 router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
@@ -191,7 +192,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 }
 
 /** A no-socket, read-only replay entry surface. Clipboard reads require a click. */
-function startReplayViewer(initialToken: string, language: LanguageCatalog): ReplayViewer {
+function startReplayViewer(initialToken: string, language: LanguageCatalog, embedded = false): ReplayViewer {
 	const viewer = new ReplayViewer(language);
 	(window as unknown as { replayViewer: ReplayViewer }).replayViewer = viewer;
 	const loadToken = async (rawToken: string) => {
@@ -211,12 +212,14 @@ function startReplayViewer(initialToken: string, language: LanguageCatalog): Rep
 			handler.setLanguage(language);
 			handler.setMouseHandler(surface);
 			handler.addPostDrawer(surface);
+			surface.setPlaybackLoaded(true);
 			const loadedPlayer = viewer.getPlayer()!;
 			const world = handler.getSettings()?.worldSize;
 			console.log(`[replay] loaded: state=${handler.getState()} entities=${handler.getEntityManager().getEntities().length} actions=${loadedPlayer.getActionCount()} world=${JSON.stringify(world)} rendererWorldWidth=${GameSettings.screenResolution.x}`);
 			surface.setStatus(loadedPlayer.getActionCount() > 0
 				? language.strings[LANGUAGE_KEYS.ReplayLoaded]
 				: language.strings[LANGUAGE_KEYS.ReplayLoadedEmpty]);
+			if (embedded) notifyReplayEmbed(viewer, "replay.ready");
 		} catch (error) {
 			console.error("[replay] replay load failed:", error);
 			surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayUnavailable]);
@@ -229,10 +232,43 @@ function startReplayViewer(initialToken: string, language: LanguageCatalog): Rep
 			catch { surface.setStatus(language.strings[LANGUAGE_KEYS.ReplayCopyUnavailable]); return undefined; }
 		},
 	}, language, initialToken);
+	if (embedded) {
+		window.addEventListener("message", event => {
+			if (event.source !== window.parent || event.origin !== window.location.origin) return;
+			const message = event.data as { source?: unknown; type?: unknown; actionIndex?: unknown };
+			if (!message || message.source !== "kore-replay-host") return;
+			try {
+				switch (message.type) {
+					case "replay.play": viewer.play(); break;
+					case "replay.pause": viewer.pause(); break;
+					case "replay.seek":
+						if (!Number.isSafeInteger(message.actionIndex)) throw new Error("Replay seek index must be an integer");
+						viewer.seek(message.actionIndex as number);
+						if (viewer.getPlayer()) {
+							handler = viewer.getPlayer()!.getHandler();
+							handler.setLanguage(language);
+							handler.setMouseHandler(surface);
+							handler.addPostDrawer(surface);
+							surface.setPlaybackLoaded(true);
+						}
+						break;
+					default: return;
+				}
+				notifyReplayEmbed(viewer);
+			} catch (error) {
+				window.parent.postMessage({ source: "kore-replay", type: "replay.error", message: error instanceof Error ? error.message : "Replay command failed" }, window.location.origin);
+			}
+		});
+	}
 	handler.setMouseHandler(surface);
 	handler.addPostDrawer(surface);
 	if (initialToken) void loadToken(initialToken);
 	return viewer;
+}
+
+function notifyReplayEmbed(viewer: ReplayViewer, type: "replay.state" | "replay.ready" = "replay.state"): void {
+	if (!usersettings.embedReplay || window.parent === window) return;
+	window.parent.postMessage({ source: "kore-replay", type, state: viewer.getPlaybackState() }, window.location.origin);
 }
 
 /** Share URLs are displayed first; clipboard access is an explicit second click. */
