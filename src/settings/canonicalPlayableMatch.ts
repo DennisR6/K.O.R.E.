@@ -9,7 +9,12 @@ import {
 	ankerItem,
 	durchlaessigkeitItem,
 	magnetItem,
+	falltuerItem,
+	verzoegerteMineItem,
+	miniWallItem,
 	freezeShotItem,
+	switchItem,
+	jaegermeisterElixierItem,
 	mysteryBoxItem,
 	generateRandomMapPickupPosition,
 } from "../item/officialItems.js";
@@ -50,7 +55,7 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 		myTeam: [0, 1],
 		allTeams: ["Local team 0", "Local team 1"],
 		playerIds: canonicalPlayerIds(base.players.length),
-		items: [powerDashItem, vodkaZeroItem, ankerItem, durchlaessigkeitItem, magnetItem, freezeShotItem, mysteryBoxItem],
+		items: [powerDashItem, vodkaZeroItem, ankerItem, durchlaessigkeitItem, magnetItem, falltuerItem, verzoegerteMineItem, miniWallItem, freezeShotItem, switchItem, jaegermeisterElixierItem, mysteryBoxItem],
 		gameMode: kore.createGameMode({
 			id: CANONICAL_PLAYABLE_MATCH.id,
 			phases: [RulePhase.Item, RulePhase.Physics],

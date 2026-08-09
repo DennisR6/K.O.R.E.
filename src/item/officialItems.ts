@@ -38,7 +38,20 @@ export const JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
 export const VODKA_ZERO_MAX_VARIANCE_DEGREES = 10;
 export const MYSTERY_BOX_ITEM_ID = "mystery-box";
 /** Default reward pool used when a game mode does not configure one. */
-export const DEFAULT_MYSTERY_BOX_POOL = ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
+/** Every official reward except the container itself. */
+export const DEFAULT_MYSTERY_BOX_POOL = [
+	"anker",
+	"durchlaessigkeit",
+	"magnet",
+	"falltuer",
+	"power-dash",
+	"verzoegerte-mine",
+	"mini-wall",
+	"freeze-shot",
+	"switch",
+	"jaegermeister-elixier",
+	"vodka-zero",
+];
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = createItem({

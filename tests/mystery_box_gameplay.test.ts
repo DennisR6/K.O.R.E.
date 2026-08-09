@@ -202,12 +202,16 @@ describe("Mystery Box gameplay", () => {
 
 		const rewardId = inventoryOf(actor).find(entry => entry.itemId !== MYSTERY_BOX_ITEM_ID)!.itemId;
 		expect(pool).toContain(rewardId);
-		expect(DEFAULT_MYSTERY_BOX_POOL).not.toContain(rewardId);
 
 		// The exact reward is the deterministic seed projection into the pool.
 		const baseSeed = hashString(GAME_ID);
 		const seed = deriveMysteryBoxSeed({ actorId: actor.getId(), turnNumber: 0, activeTeam: 0, baseSeed });
 		expect(rewardId).toBe(pool[Math.abs(seed) % pool.length]);
+	});
+
+	test("default mystery-box rewards include every official item except the box", () => {
+		const expected = officialItems().filter(item => item.id !== MYSTERY_BOX_ITEM_ID).map(item => item.id).sort();
+		expect([...DEFAULT_MYSTERY_BOX_POOL].sort()).toEqual(expected);
 	});
 
 	test("snapshots the game after resolution", () => {
