@@ -30,6 +30,7 @@ import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
 import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/performanceReport.js";
+import { flushOfflineMatchReports } from "./net/offlineMatchReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
 
 const uri = new URL(window.location.href)
@@ -51,6 +52,8 @@ const activeLanguage: LanguageCatalog | undefined = !isUiDebugSandboxUrl(uri)
 	? await loadLanguage(isLanguageCode(requestedLanguage) ? requestedLanguage : "en_en")
 	: undefined;
 startupMark("assets.load.completed", { category: "json/config" });
+void flushOfflineMatchReports();
+window.addEventListener("online", () => { void flushOfflineMatchReports(); });
 
 const ui = new UiSystem()
 // One browser media owner receives batches from any active game/menu runtime.
