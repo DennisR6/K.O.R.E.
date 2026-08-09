@@ -34,6 +34,7 @@ test("only the active team's live actor can be submitted from the initial view",
 	handler.addSystem(ui);
 	handler.setMouseHandler(ui);
 	handler.addSystem(new EmitterSystem(emitter));
+	handler.skipCurrentPhase();
 	const entities = handler.getEntityManager().getEntities();
 	const active = entities.find(entity => entity.getTeam().includes(0))!;
 	const inactive = entities.find(entity => !entity.getTeam().includes(0))!;
@@ -51,6 +52,7 @@ test("only the active team's live actor can be submitted from the initial view",
 	secondHandler.addSystem(secondUi);
 	secondHandler.setMouseHandler(secondUi);
 	secondHandler.addSystem(new EmitterSystem(secondEmitter));
+	secondHandler.skipCurrentPhase();
 	const inactiveActor = secondHandler.getEntityManager().getEntities().find(entity => !entity.getTeam().includes(0))!;
 	secondHandler.updateMouse(inactiveActor.getPos().x, inactiveActor.getPos().y);
 	secondHandler.handleMousePressed();
