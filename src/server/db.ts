@@ -39,11 +39,29 @@ export type StoredMap = { id: string; document: MapDocument; status: StoredMapSt
 /** Persisted offline/KI match; the validated replay document is retained in full. */
 export type StoredOfflineMatch = OfflineMatchReport & { id: string; createdAt: number };
 export type StoredOfflineMatchSummary = Omit<StoredOfflineMatch, "replay">;
-export type DashboardPerformancePeriod = { samples: number; average: number | null; median: number | null; p90: number | null; max: number | null; previousMedian: number | null };
+export type DashboardPerformanceTrendPoint = { samples: number; value: number | null };
+export type DashboardPerformancePeriod = { samples: number; average: number | null; median: number | null; p90: number | null; max: number | null; previousMedian: number | null; trend: DashboardPerformanceTrendPoint[] };
 export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; yesterday: DashboardPerformancePeriod; week: DashboardPerformancePeriod };
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
 const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
+type PerformanceSample = { createdAt: number; value: number };
+
+function performanceTrend(samples: PerformanceSample[], rangeStart: number, rangeEnd: number): DashboardPerformanceTrendPoint[] {
+	const bucketSize = (rangeEnd - rangeStart) / 8;
+	return Array.from({ length: 8 }, (_, index) => {
+		const start = rangeStart + index * bucketSize;
+		const end = index === 7 ? rangeEnd : start + bucketSize;
+		const values = samples.filter(sample => sample.createdAt >= start && sample.createdAt < end).map(sample => sample.value).sort((a, b) => a - b);
+		return { samples: values.length, value: values.length === 0 ? null : values[Math.ceil(values.length * 0.5) - 1]! };
+	});
+}
+
+function isDashboardPerformanceMetrics(value: unknown): value is DashboardPerformanceMetrics {
+	if (!value || typeof value !== "object") return false;
+	const metrics = value as Partial<DashboardPerformanceMetrics>;
+	return [metrics.today, metrics.yesterday, metrics.week].every(period => !!period && Array.isArray(period.trend));
+}
 
 type StoredGameRow = {
 	id: string;
@@ -346,16 +364,19 @@ export class GameDatabase {
 	public getDashboardPerformanceMetrics(now: number = Date.now()): DashboardPerformanceMetrics {
 		const cached = this.db.query("SELECT calculated_at, metrics_json FROM dashboard_performance_cache WHERE cache_key = ?1").get(DASHBOARD_PERFORMANCE_CACHE_KEY) as { calculated_at: number; metrics_json: string } | null;
 		if (cached && now - cached.calculated_at < DASHBOARD_PERFORMANCE_CACHE_TTL_MS) {
-			try { return JSON.parse(cached.metrics_json) as DashboardPerformanceMetrics; } catch { /* Recalculate malformed cache rows. */ }
+			try {
+				const metrics = JSON.parse(cached.metrics_json) as DashboardPerformanceMetrics;
+				if (isDashboardPerformanceMetrics(metrics)) return metrics;
+			} catch { /* Recalculate malformed cache rows. */ }
 		}
 		const day = 24 * 60 * 60 * 1_000;
 		const todayStart = Math.floor(now / day) * day;
-		const values = { today: [] as number[], yesterday: [] as number[], week: [] as number[] };
+		const values = { today: [] as PerformanceSample[], yesterday: [] as PerformanceSample[], week: [] as PerformanceSample[] };
 		const add = (createdAt: number, value: unknown): void => {
 			if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || createdAt < todayStart - 6 * day) return;
-			if (createdAt >= todayStart) values.today.push(value);
-			else if (createdAt >= todayStart - day) values.yesterday.push(value);
-			if (createdAt >= todayStart - 6 * day) values.week.push(value);
+			if (createdAt >= todayStart) values.today.push({ createdAt, value });
+			else if (createdAt >= todayStart - day) values.yesterday.push({ createdAt, value });
+			if (createdAt >= todayStart - 6 * day) values.week.push({ createdAt, value });
 		};
 		const reports = this.db.query("SELECT summary_json, created_at FROM game_performance_reports").all() as Array<{ summary_json: string; created_at: number }>;
 		for (const report of reports) {
@@ -374,15 +395,15 @@ export class GameDatabase {
 			}
 			if (rawSamples === 0) add(report.created_at, summary.turnDurationMs?.median);
 		}
-		const build = (sampleValues: number[], previousMedian: number | null): DashboardPerformancePeriod => {
-			if (sampleValues.length === 0) return { samples: 0, average: null, median: null, p90: null, max: null, previousMedian };
-			const sorted = [...sampleValues].sort((a, b) => a - b);
+		const build = (sampleValues: PerformanceSample[], previousMedian: number | null, rangeStart: number, rangeEnd: number): DashboardPerformancePeriod => {
+			if (sampleValues.length === 0) return { samples: 0, average: null, median: null, p90: null, max: null, previousMedian, trend: performanceTrend([], rangeStart, rangeEnd) };
+			const sorted = sampleValues.map(sample => sample.value).sort((a, b) => a - b);
 			const percentile = (rank: number) => sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)]!;
-			return { samples: sorted.length, average: Number((sorted.reduce((sum, value) => sum + value, 0) / sorted.length).toFixed(2)), median: percentile(0.5), p90: percentile(0.9), max: sorted[sorted.length - 1]!, previousMedian };
+			return { samples: sorted.length, average: Number((sorted.reduce((sum, value) => sum + value, 0) / sorted.length).toFixed(2)), median: percentile(0.5), p90: percentile(0.9), max: sorted[sorted.length - 1]!, previousMedian, trend: performanceTrend(sampleValues, rangeStart, rangeEnd) };
 		};
-		const yesterday = build(values.yesterday, null);
-		const week = build(values.week, null);
-		const metrics = { today: build(values.today, yesterday.median), yesterday: build(values.yesterday, week.median), week };
+		const yesterday = build(values.yesterday, null, todayStart - day, todayStart);
+		const week = build(values.week, null, todayStart - 6 * day, todayStart + day);
+		const metrics = { today: build(values.today, yesterday.median, todayStart, todayStart + day), yesterday, week };
 		this.db.query("INSERT INTO dashboard_performance_cache (cache_key, calculated_at, metrics_json) VALUES (?1, ?2, ?3) ON CONFLICT(cache_key) DO UPDATE SET calculated_at = excluded.calculated_at, metrics_json = excluded.metrics_json")
 			.run(DASHBOARD_PERFORMANCE_CACHE_KEY, now, JSON.stringify(metrics));
 		return metrics;
