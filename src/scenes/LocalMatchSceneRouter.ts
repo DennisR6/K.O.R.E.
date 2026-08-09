@@ -153,7 +153,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.handler = next;
 			this.aiWorkerHost = workerHost;
 			this.mapId = mapId;
-			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => { void reportOfflineMatch(record); });
+			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record));
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
 			startupMark("game.ready", { mode: this.mode, mapId });

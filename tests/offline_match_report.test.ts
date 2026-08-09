@@ -187,4 +187,15 @@ describe("browser-side offline match report", () => {
 		const rejectedFetch = async (_url: string, _init: RequestInit) => new Response("nope", { status: 500 });
 		expect(await reportOfflineMatch(record, { endpoint: "http://test.local/offline-matches", fetchImpl: rejectedFetch as never })).toBe(false);
 	});
+
+	test("retries transient report failures", async () => {
+		let calls = 0;
+		const fetchImpl = async () => {
+			calls++;
+			return new Response("{}", { status: calls < 3 ? 503 : 200 });
+		};
+
+		expect(await reportOfflineMatch(validReport(), { endpoint: "http://test.local/offline-matches", fetchImpl: fetchImpl as never })).toBe(true);
+		expect(calls).toBe(3);
+	});
 });

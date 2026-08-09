@@ -416,11 +416,12 @@ After every change, check whether this guide still reflects the implementation a
   scene (injectable `battleSeedSource`, exposed as `getBattleSeed()`), and the
   menu exit releases the local audio source before creating the fresh menu.
 - `src/net/offlineMatchReport.ts`: browser-side `installOfflineMatchReport`
-  (fires exactly once per finished match on the draw path, re-arms after a
-  rematch), `collectOfflineMatchRecord`, and `reportOfflineMatch` (same-origin
-  POST, never throws). The produced `OfflineMatchRecordPayload` carries the
-   mode header, map id, recorder seed, optional difficulty, players, result, and
-   the validated replay document.
+  (reports once per finished match on the draw path, retries failed delivery,
+  and re-arms after a rematch), `collectOfflineMatchRecord`, and
+  `reportOfflineMatch` (same-origin POST with retry and local pending-report
+  recovery). The produced `OfflineMatchRecordPayload` carries the mode header,
+  map id, recorder seed, optional difficulty, players, result, and the
+  validated replay document.
 - `src/net/performanceReport.ts`: browser-side aggregation and best-effort
   upload of completed online-match Handler performance logs. It stores no raw
   log buffer and never affects match or replay completion.
