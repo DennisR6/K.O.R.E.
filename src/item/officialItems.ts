@@ -218,6 +218,7 @@ export const mysteryBoxItem: ItemDocument = createItem({
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 3 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+	ui: { component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: false },
 });
 
 export interface MysteryBoxRewardOptions {

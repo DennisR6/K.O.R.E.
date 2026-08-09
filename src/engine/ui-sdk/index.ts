@@ -40,6 +40,12 @@ export type UiLayout =
 
 export type UiElementKind = "button" | "text" | "textInput" | "image" | "container";
 
+/** Host-rendered visual component. The generic SDK stores it but never loads assets. */
+export interface UiComponentSettings {
+	type: "image";
+	source: string;
+}
+
 export interface UiTextSettings {
 	kind: "text";
 	id: string;
@@ -57,6 +63,8 @@ export interface UiButtonSettings {
 	text: string;
 	/** Optional host-defined icon identifier, kept JSON-safe and asset-agnostic. */
 	icon?: string;
+	/** Optional visual component rendered inside the button by the host renderer. */
+	component?: UiComponentSettings;
 	visible?: boolean;
 	enabled?: boolean;
 	focusable?: boolean;
@@ -137,13 +145,14 @@ export interface IUiFocusable { focused: boolean }
 export interface IUiHovered { hovered: boolean }
 export interface IUiPressState { pressed: boolean }
 export interface IUiIcon { icon?: string }
+export interface IUiComponent { component?: UiComponentSettings }
 export interface IUiImage { source?: string }
 export interface IUiPointerTarget extends IUiPosition { containsPoint(point: UiPoint): boolean }
 export interface IUiPressable { action?: UiAction }
 export interface IUiTextContent { text: string }
 export interface IUiTextInput extends IUiTextContent, IUiFocusable { value: string; insertText(value: string): void; deleteBackward(): void }
 
-export interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiHovered>, Partial<IUiPressState>, Partial<IUiPressable>, Partial<IUiTextInput>, IUiIcon, IUiImage {
+export interface UiRuntimeElement extends IUiPosition, IUiVisible, IUiEnabled, Partial<IUiFocusable>, Partial<IUiHovered>, Partial<IUiPressState>, Partial<IUiPressable>, Partial<IUiTextInput>, IUiIcon, IUiImage, IUiComponent {
 	id: string;
 	kind: UiElementKind;
 	/** Authored local rectangle, retained separately from resolved world geometry. */
@@ -243,6 +252,14 @@ export class UiRuntime {
 		const element = this.findElementAnywhere(id);
 		if (!element) return false;
 		element.text = text;
+		return true;
+	}
+	/** Updates a host-rendered visual component without coupling the runtime to asset loading. */
+	public setElementComponent(id: string, component: UiComponentSettings | undefined): boolean {
+		if (component) validateUiComponent(component, `element "${id}" component`);
+		const element = this.findElementAnywhere(id);
+		if (!element || element.kind !== "button") return false;
+		element.component = component ? clone(component) : undefined;
 		return true;
 	}
 	public drainCommands(): UiCommand[] { const commands = this.emitted.map(clone); this.emitted = []; return commands; }
@@ -472,6 +489,8 @@ class UiElement implements UiRuntimeElement {
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get text(): string { return "text" in this.settings ? this.settings.text : ""; } public set text(value: string) { if ("text" in this.settings) this.settings.text = value; }
 	public get icon(): string | undefined { return this.settings.kind === "button" ? this.settings.icon : undefined; }
+	public get component(): UiComponentSettings | undefined { return this.settings.kind === "button" ? this.settings.component : undefined; }
+	public set component(value: UiComponentSettings | undefined) { if (this.settings.kind === "button") this.settings.component = value; }
 	public get source(): string | undefined { return this.settings.kind === "image" ? this.settings.source : undefined; }
 	public get style(): string | undefined { return this.settings.style; } public get action(): UiAction | undefined { return this.settings.kind === "text" ? undefined : (this.settings as UiButtonSettings | UiTextInputSettings).action; } public set action(value: UiAction | undefined) { if (this.settings.kind !== "text") (this.settings as UiButtonSettings | UiTextInputSettings).action = value; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
@@ -609,7 +628,7 @@ function mainAxisOffsets(count: number, gap: number, remaining: number, justify:
 
 const ELEMENT_KEYS: Record<Exclude<UiElementKind, "container">, ReadonlySet<string>> & { container: ReadonlySet<string> } = {
 	text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style"]),
-	button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "action"]),
+	button: new Set(["kind", "id", "rect", "text", "icon", "component", "visible", "enabled", "focusable", "style", "action"]),
 	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "action", "value"]),
 	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style"]),
 	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style"]),
@@ -681,6 +700,7 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 		} else {
 			if (typeof value.text !== "string") throw invalidElement(childPath, "invalid text");
 			if (value.icon !== undefined && (typeof value.icon !== "string" || value.icon.length === 0)) throw invalidElement(childPath, "invalid icon");
+			if (value.component !== undefined) validateUiComponent(value.component, `${childPath}.component`);
 			if (value.focusable !== undefined && typeof value.focusable !== "boolean") throw invalidElement(childPath, "invalid focusable state");
 			if (kind === "textInput" && value.value !== undefined && typeof value.value !== "string") throw invalidElement(childPath, "invalid value");
 			if (value.action !== undefined) validateAction(value.action as UiAction, screenIds, childPath, requireScreenTargets);
@@ -688,6 +708,10 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 	} finally {
 		ancestors.delete(value);
 	}
+}
+
+export function validateUiComponent(value: unknown, path: string = "component"): asserts value is UiComponentSettings {
+	if (!isRecord(value) || value.type !== "image" || typeof value.source !== "string" || value.source.length === 0 || Object.keys(value).some(key => key !== "type" && key !== "source")) throw new Error(`Invalid ${path}`);
 }
 
 function validateLayout(value: unknown, path: string): asserts value is UiLayout {
@@ -739,10 +763,13 @@ export const ui = {
 		if (input.visible !== undefined) result.visible = input.visible;
 		return result;
 	},
-	button(settings: UiButtonInput): UiButtonSettings { return { ...clone(settings), kind: "button", focusable: settings.focusable ?? true }; },
+	button(settings: UiButtonInput): UiButtonSettings { if (settings.component) validateUiComponent(settings.component); return { ...clone(settings), kind: "button", focusable: settings.focusable ?? true }; },
 	text(settings: UiTextElementInput): UiTextSettings { return { ...clone(settings), kind: "text", focusable: false }; },
 	textInput(settings: UiTextInputElementInput): UiTextInputSettings { return { ...clone(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text }; },
 	image(settings: UiImageInput): UiImageSettings { return { ...clone(settings), kind: "image" }; },
+	component: {
+		image(source: string): UiComponentSettings { const component = { type: "image", source } as UiComponentSettings; validateUiComponent(component); return component; },
+	},
 	container(settings: UiContainerInput): UiContainerSettings {
 		let input: UiContainerInput;
 		try {

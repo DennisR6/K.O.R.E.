@@ -1,7 +1,8 @@
 import { createItemDocument, type ItemDocument } from "./types.js";
 import { ItemValidator } from "./validate.js";
-import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
-import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
+
+const TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position";
+const MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity";
 
 function clone<T>(value: T): T { return structuredClone(value); }
 
@@ -17,6 +18,7 @@ export interface KoreItemInput {
 	description?: string;
 	cooldown?: number;
 	interaction?: ItemDocument["interaction"];
+	ui?: ItemDocument["ui"];
 }
 
 export function sdkItemEffectTypes(): readonly string[] {

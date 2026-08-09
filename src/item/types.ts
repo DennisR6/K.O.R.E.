@@ -1,3 +1,5 @@
+import type { UiComponentSettings } from "../engine/ui-sdk/index.js";
+
 export type ItemTargetType = "self" | "entity" | "position" | "zone";
 export type DurationType = "instant" | "turns" | "rounds";
 export type ActivationType = "collision" | "proximity";
@@ -28,6 +30,11 @@ export interface ItemInteractionPolicy {
 	order?: number;
 }
 
+export interface ItemUiSettings {
+	component?: UiComponentSettings;
+	showLabel?: boolean;
+}
+
 export interface ItemTargetValidation {
 	allowSelf: boolean;
 	allowAlly: boolean;
@@ -48,6 +55,7 @@ export interface ItemDocument {
 	targetValidation?: ItemTargetValidation;
 	cooldown?: number;
 	interaction?: ItemInteractionPolicy;
+	ui?: ItemUiSettings;
 }
 
 export interface InventoryItem {
@@ -119,6 +127,16 @@ export function validateItemDocument(document: unknown): asserts document is Ite
 	if (typeof doc.id !== "string" || !doc.id) throw new Error("Item document must have a non-empty string id");
 	if (typeof doc.name !== "string" || !doc.name) throw new Error("Item document must have a non-empty string name");
 	if (typeof doc.type !== "string") throw new Error("Item document must have a string type");
+	if (doc.ui !== undefined) {
+		if (typeof doc.ui !== "object" || doc.ui === null || Array.isArray(doc.ui)) throw new Error("Item ui must be an object");
+		const ui = doc.ui as Record<string, unknown>;
+		if (Object.keys(ui).some(key => key !== "component" && key !== "showLabel")) throw new Error("Item ui contains an unknown field");
+		if (ui.component !== undefined) {
+			const component = ui.component as Record<string, unknown>;
+			if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0 || Object.keys(component).some(key => key !== "type" && key !== "source")) throw new Error("Item ui component must be a non-empty image source");
+		}
+		if (ui.showLabel !== undefined && typeof ui.showLabel !== "boolean") throw new Error("Item ui showLabel must be a boolean");
+	}
 	if (!Array.isArray(doc.effects)) throw new Error("Item document must have an effects array");
 	if (!VALID_TARGET_TYPES.includes(doc.targetType as string)) throw new Error("Item document must have a valid target type");
 	if (typeof doc.duration !== "object" || doc.duration === null) throw new Error("Item document must have a duration object");

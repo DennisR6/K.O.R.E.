@@ -36,7 +36,8 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && !projection.match.inputLocked && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
-			this.setText(id, item ? `${item.itemId} (${item.remainingUses})` : "");
+			this.setText(id, item?.showLabel === false ? "" : item ? `${item.itemId} (${item.remainingUses})` : "");
+			this.runtime.setElementComponent(id, item?.component);
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;
@@ -101,7 +102,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 class KoreHudRenderer implements UiRenderer {
 	public constructor(private readonly renderer: RenderContext) { }
 	public drawText(element: Parameters<UiRenderer["drawText"]>[0]): void { if (!element.text) return; this.renderer.setFillColor(element.style === KoreHudStyle.Rejection ? KoreHudColor.Danger : KoreHudColor.Ink); this.renderer.drawText(element.text, element.rect.x, element.rect.y + (element.style === KoreHudStyle.ResultTitle ? 32 : 16), element.style === KoreHudStyle.Status ? 16 : element.style === KoreHudStyle.ResultTitle ? 28 : 14); }
-	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
+	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; if (element.component) { this.renderer.drawImage(element.component.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); return; } this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
   public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
   public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void { if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); }
 }
