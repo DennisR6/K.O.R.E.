@@ -49,6 +49,8 @@ export interface UiTextSettings {
 	enabled?: boolean;
 	focusable?: boolean;
 	style?: string;
+	/** Use the nearest parent container's style instead of this element's style. */
+	inheritStyle?: boolean;
 }
 export interface UiButtonSettings {
 	kind: "button";
@@ -61,6 +63,7 @@ export interface UiButtonSettings {
 	enabled?: boolean;
 	focusable?: boolean;
 	style?: string;
+	inheritStyle?: boolean;
 	action?: UiAction;
 }
 export interface UiTextInputSettings {
@@ -72,6 +75,7 @@ export interface UiTextInputSettings {
 	enabled?: boolean;
 	focusable?: boolean;
 	style?: string;
+	inheritStyle?: boolean;
 	action?: UiAction;
 	value?: string;
 }
@@ -84,6 +88,7 @@ export interface UiImageSettings {
 	visible?: boolean;
 	enabled?: boolean;
 	style?: string;
+	inheritStyle?: boolean;
 }
 /** Canonical container element: owns children and a layout definition. */
 export interface UiContainerSettings {
@@ -95,6 +100,7 @@ export interface UiContainerSettings {
 	visible?: boolean;
 	enabled?: boolean;
 	style?: string;
+	inheritStyle?: boolean;
 }
 export type UiElementSettings = UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings | UiContainerSettings;
 export interface UiScreenSettings { id: string; layout?: UiLayout; visible?: boolean; elements: UiElementSettings[] }
@@ -126,6 +132,7 @@ export type UiContainerInput = {
 	visible?: boolean;
 	enabled?: boolean;
 	style?: string;
+	inheritStyle?: boolean;
 };
 export type UiScreenInput = Omit<UiScreenSettings, "layout"> & { layout?: UiLayoutInput };
 
@@ -194,7 +201,7 @@ export class UiRuntime {
 		validateUiSettings(settings);
 		this.activeScreen = settings.activeScreen;
 		this.history = [...settings.history];
-		for (const screen of settings.screens) this.screens.set(screen.id, { settings: clone(screen), elements: screen.elements.map(createNode) });
+		for (const screen of settings.screens) this.screens.set(screen.id, { settings: clone(screen), elements: screen.elements.map(element => createNode(element)) });
 		this.systems = settings.framework.systemOrder.map(createUiSystem);
 		this.layout();
 	}
@@ -461,13 +468,14 @@ export class UiRuntime {
 class UiElement implements UiRuntimeElement {
 	public visible: boolean; public enabled: boolean; public focused: boolean; public hovered: boolean; public pressed: boolean; public value: string;
 	public readonly localRect: UiRect;
-	public constructor(private readonly settings: UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings) { this.localRect = clone(settings.rect); this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.hovered = false; this.pressed = false; this.value = "value" in settings ? settings.value ?? settings.text : "text" in settings ? settings.text : ""; }
+	private readonly resolvedStyle: string | undefined;
+	public constructor(private readonly settings: UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings, parentStyle?: string) { this.localRect = clone(settings.rect); this.visible = settings.visible ?? true; this.enabled = settings.enabled ?? true; this.focused = false; this.hovered = false; this.pressed = false; this.value = "value" in settings ? settings.value ?? settings.text : "text" in settings ? settings.text : ""; this.resolvedStyle = settings.style ?? (settings.inheritStyle ? parentStyle : undefined); }
 	public get id(): string { return this.settings.id; } public get kind(): UiElementKind { return this.settings.kind; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get text(): string { return "text" in this.settings ? this.settings.text : ""; } public set text(value: string) { if ("text" in this.settings) this.settings.text = value; }
 	public get icon(): string | undefined { return this.settings.kind === "button" ? this.settings.icon : undefined; }
 	public get source(): string | undefined { return this.settings.kind === "image" ? this.settings.source : undefined; }
-	public get style(): string | undefined { return this.settings.style; } public get action(): UiAction | undefined { return this.settings.kind === "text" ? undefined : (this.settings as UiButtonSettings | UiTextInputSettings).action; } public set action(value: UiAction | undefined) { if (this.settings.kind !== "text") (this.settings as UiButtonSettings | UiTextInputSettings).action = value; }
+	public get style(): string | undefined { return this.resolvedStyle; } public get action(): UiAction | undefined { return this.settings.kind === "text" ? undefined : (this.settings as UiButtonSettings | UiTextInputSettings).action; } public set action(value: UiAction | undefined) { if (this.settings.kind !== "text") (this.settings as UiButtonSettings | UiTextInputSettings).action = value; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public insertText(value: string): void { this.value += value; this.text = this.value; }
 	public deleteBackward(): void { this.value = this.value.slice(0, -1); this.text = this.value; }
@@ -484,16 +492,18 @@ class UiContainer implements UiContainerRuntime {
 	public readonly localRect: UiRect;
 	public readonly layout: UiLayout;
 	public readonly elements: UiRuntimeNode[];
-	public constructor(private readonly settings: UiContainerSettings) {
+	private readonly resolvedStyle: string | undefined;
+	public constructor(private readonly settings: UiContainerSettings, parentStyle?: string) {
 		this.localRect = clone(settings.rect);
 		this.visible = settings.visible ?? true;
 		this.enabled = settings.enabled ?? true;
 		this.layout = clone(settings.layout);
-		this.elements = settings.elements.map(createNode);
+		this.resolvedStyle = settings.style ?? (settings.inheritStyle ? parentStyle : undefined);
+		this.elements = settings.elements.map(child => createNode(child, this.resolvedStyle));
 	}
 	public get id(): string { return this.settings.id; } public get kind(): "container" { return "container"; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
-	public get style(): string | undefined { return this.settings.style; }
+	public get style(): string | undefined { return this.resolvedStyle; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public toSettings(): UiContainerSettings { return { ...clone(this.settings), rect: clone(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map(node => node.toSettings()) }; }
 }
@@ -537,7 +547,7 @@ export class UiMenuBuilder {
 	public explain(): string { return "Builds a JSON-safe explicit-tick UI menu with screens, semantic actions, and registry-selected systems."; }
 }
 
-function createNode(settings: UiElementSettings): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings); }
+function createNode(settings: UiElementSettings, parentStyle?: string): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned, parentStyle) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings, parentStyle); }
 function isContainerNode(node: UiRuntimeNode): node is UiContainerRuntime { return node.kind === "container"; }
 function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return "focused" in value && value.kind !== "text"; }
 function hasPressable(value: UiRuntimeElement): value is UiRuntimeElement & IUiPressable { return value.kind === "button"; }
@@ -602,11 +612,11 @@ function mainAxisOffsets(count: number, gap: number, remaining: number, justify:
 }
 
 const ELEMENT_KEYS: Record<Exclude<UiElementKind, "container">, ReadonlySet<string>> & { container: ReadonlySet<string> } = {
-	text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style"]),
-	button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "action"]),
-	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "action", "value"]),
-	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style"]),
-	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style"]),
+	text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle"]),
+	button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "inheritStyle", "action"]),
+	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle", "action", "value"]),
+	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style", "inheritStyle"]),
+	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle"]),
 };
 const LAYOUT_KEYS = new Set(["type", "gap", "padding", "justify", "align"]);
 const PADDING_KEYS = new Set(["top", "right", "bottom", "left"]);
@@ -665,6 +675,7 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 		if (value.visible !== undefined && typeof value.visible !== "boolean") throw invalidElement(childPath, "invalid visible state");
 		if (value.enabled !== undefined && typeof value.enabled !== "boolean") throw invalidElement(childPath, "invalid enabled state");
 		if (value.style !== undefined && typeof value.style !== "string") throw invalidElement(childPath, "invalid style");
+		if (value.inheritStyle !== undefined && typeof value.inheritStyle !== "boolean") throw invalidElement(childPath, "invalid inheritStyle");
 		if (kind === "container") {
 			if (value.layout === undefined) throw invalidElement(childPath, "missing layout");
 			validateLayout(value.layout, childPath);
@@ -754,6 +765,7 @@ export const ui = {
 		if (input.visible !== undefined) result.visible = input.visible;
 		if (input.enabled !== undefined) result.enabled = input.enabled;
 		if (input.style !== undefined) result.style = input.style;
+		if (input.inheritStyle !== undefined) result.inheritStyle = input.inheritStyle;
 		// Structural subtree validation (navigate targets are checked at menu build).
 		const ids = new Set<string>();
 		validateElement(result, ids, new Set<string>(), `container "${input.id}"`, new WeakSet<object>(), false);

@@ -66,6 +66,40 @@ test("icon buttons remain serializable and are exposed to the host renderer", ()
 	expect(() => ui.validate({ ...menu, screens: [{ ...menu.screens[0], elements: [{ ...menu.screens[0]!.elements[0], icon: 42 }] }] })).toThrow();
 });
 
+test("opt-in styles inherit through container parents and preserve authored settings", () => {
+	const menu = ui.createMenu({ id: "inheritance", size: { width: 300, height: 200 } })
+		.addScreen(ui.screen({ id: "main", elements: [
+			ui.container({ id: "panel", style: "parent", rect: { x: 0, y: 0, width: 300, height: 200 }, elements: [
+				ui.text({ id: "direct", text: "Direct", inheritStyle: true, style: "local", rect: { x: 0, y: 0, width: 80, height: 20 } }),
+				ui.container({ id: "nested", inheritStyle: true, rect: { x: 0, y: 30, width: 300, height: 100 }, elements: [
+					ui.button({ id: "nested-button", text: "Nested", inheritStyle: true, rect: { x: 0, y: 0, width: 80, height: 20 } }),
+				] }),
+			] }),
+		] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	const styles: Array<string | undefined> = [];
+	runtime.draw({
+		drawText(element) { styles.push(element.style); },
+		drawButton(element) { styles.push(element.style); },
+		drawTextInput() {},
+		drawImage() {},
+	});
+	expect(styles).toEqual(["local", "parent"]);
+	const serialized = runtime.toSettings();
+	expect(serialized.screens[0]!.elements[0]).toMatchObject({ style: "parent" });
+	const panel = serialized.screens[0]!.elements[0]!;
+	if (panel.kind !== "container") throw new Error("Expected panel container");
+	expect(panel.elements[0]).toMatchObject({ style: "local", inheritStyle: true });
+	expect(panel.elements[1]).toMatchObject({ inheritStyle: true });
+	const standalone = ui.fromSettings(ui.createMenu({ id: "standalone", size: { width: 100, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [ui.text({ id: "text", text: "Text", inheritStyle: true, rect: { x: 0, y: 0, width: 50, height: 20 } })] }))
+		.build());
+	let style: string | undefined;
+	standalone.draw({ drawText: element => { style = element.style; }, drawButton() {}, drawTextInput() {}, drawImage() {} });
+	expect(style).toBeUndefined();
+});
+
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {
 	const framework = ui.createDefaultFramework();
 	expect(framework.systemOrder).toEqual(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
@@ -108,4 +142,3 @@ function renderer(commands: string[] = []): UiRenderer {
 		drawImage(element) { commands.push(`image:${element.id}`); },
 	};
 }
-
