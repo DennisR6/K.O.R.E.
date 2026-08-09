@@ -139,7 +139,11 @@ class KoreMenuRenderer implements UiRenderer {
 		this.drawButton(element);
 	}
 	public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void {
-		if (element.source) this.ctx.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height);
+		if (!element.source) return;
+		const theme = findKoreButtonTheme(element.style);
+		const state = element.hovered ? "hover" : "normal";
+		const color = theme?.[state].textColor;
+		this.ctx.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height, undefined, undefined, undefined, undefined, color);
 	}
 
 	/** Mappt die Capability-Eigenschaften des SDK-Elements auf den Theme-Zustand */

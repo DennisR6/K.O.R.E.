@@ -22,7 +22,7 @@ export interface RenderContext {
 	rotate(x: number): void;
 	scale(x: number): void;
 	translate(x: number, y: number): void;
-	drawImage(key: AssetList | string, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number): void;
+	drawImage(key: AssetList | string, dx?: number, dy?: number, dWidth?: number, dHeight?: number, sx?: number, sy?: number, sWidth?: number, sHeight?: number, color?: string): void;
 	getScreenSize(): { width: number, height: number };
 	clear(color?: string): void;
 	// --- Zustandsspeicher (Wichtig für Junior!) ---

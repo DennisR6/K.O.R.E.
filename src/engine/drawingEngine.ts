@@ -132,7 +132,7 @@ export class P5Renderer implements RenderContext {
 			this.p5ctx.pop();
 		}
 	}
-	drawImage(key: AssetKey | string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number): void {
+	drawImage(key: AssetKey | string, dx: number = 0, dy: number = 0, dw: number = 0, dh: number = 0, sx?: number, sy?: number, sw?: number, sh?: number, color?: string): void {
 		const img = assetManager.get(key);
 		if (!img) return;
 
@@ -140,20 +140,29 @@ export class P5Renderer implements RenderContext {
 		const targetH = dh === 0 ? this.WORLD_SIZE_Y : dh;
 
 		const ctx = (this.p5ctx as any).drawingContext as CanvasRenderingContext2D;
-
-		if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined) {
-			ctx.drawImage(
-				img,
-				sx, sy, sw, sh,
-				this.toPixel(dx), this.toPixel(dy),
-				this.toPixel(targetW), this.toPixel(targetH)
-			);
+		const pixelX = this.toPixel(dx);
+		const pixelY = this.toPixel(dy);
+		const pixelW = this.toPixel(targetW);
+		const pixelH = this.toPixel(targetH);
+		if (color) {
+			const tinted = document.createElement("canvas");
+			tinted.width = Math.max(1, Math.ceil(pixelW));
+			tinted.height = Math.max(1, Math.ceil(pixelH));
+			const tintedContext = tinted.getContext("2d");
+			if (!tintedContext) return;
+			if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined) {
+				tintedContext.drawImage(img, sx, sy, sw, sh, 0, 0, tinted.width, tinted.height);
+			} else {
+				tintedContext.drawImage(img, 0, 0, tinted.width, tinted.height);
+			}
+			tintedContext.globalCompositeOperation = "source-in";
+			tintedContext.fillStyle = color;
+			tintedContext.fillRect(0, 0, tinted.width, tinted.height);
+			ctx.drawImage(tinted, pixelX, pixelY, pixelW, pixelH);
+		} else if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined) {
+			ctx.drawImage(img, sx, sy, sw, sh, pixelX, pixelY, pixelW, pixelH);
 		} else {
-			ctx.drawImage(
-				img,
-				this.toPixel(dx), this.toPixel(dy),
-				this.toPixel(targetW), this.toPixel(targetH)
-			);
+			ctx.drawImage(img, pixelX, pixelY, pixelW, pixelH);
 		}
 	}
 	beginClip() {
