@@ -47,6 +47,10 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 	sendShot(actorId: string, angle: number, power: number): void {
 		this.handler.log?.("input.received", { actionType: "shot", actorId, angle, power });
 		this.ruleState = this.handler.getRuleState()
+		// Choosing a figure and dragging it is an implicit decision to skip the
+		// optional item phase. The authoritative phase still has to be physics
+		// before the shot can be accepted.
+		if (this.ruleState.phase === RulePhase.Item) this.ruleState = this.handler.skipCurrentPhase();
 		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
 		// Reject the same invalid inputs as the authoritative server and the AI
 		// path before recording or simulating: a rejected shot never mutates the

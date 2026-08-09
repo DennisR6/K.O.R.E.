@@ -35,17 +35,17 @@ test("canonical gameplay exposes inventory, item allowance, skip, and physics tr
 	expect(handler.getState()).toBe(GameState.Your_turn);
 });
 
-test("a shot cannot bypass the canonical item phase and stale inventory is detached", () => {
+test("a shot can bypass the optional item phase while stale inventory stays detached", () => {
 	const settings = createCanonicalPlayableMatchSettings();
 	const handler = createCanonicalPlayableMatchHandler();
 	const actor = handler.getEntityManager().getEntities().find(entity => entity.getTeam().includes(0))!;
 	const emitter = new GameEmitter(handler, settings.gameMode!, 2, 1408);
 	const itemUI = new ItemPhaseUI(handler, emitter);
 
-	expect(() => emitter.sendShot(actor.getId(), 0, 1)).toThrow("physics phase");
+	expect(() => emitter.sendShot(actor.getId(), 0, 1)).not.toThrow();
+	expect(handler.getRuleState().phase).toBe(RulePhase.Physics);
 	const available = itemUI.getItems(actor.getId());
 	available[0]!.remainingUses = 0;
 	expect(itemUI.getItems(actor.getId())[0]!.remainingUses).toBe(1);
-	itemUI.skip();
 	expect(() => itemUI.skip()).toThrow("current phase");
 });

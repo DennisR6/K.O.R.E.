@@ -192,7 +192,8 @@ export class GameRegistry {
 		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
 		const team = record.teamByUser.get(userId)
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
-		if (record.ruleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
+		const shotRuleState = record.ruleState.phase === RulePhase.Item ? record.rules.advancePhase(record.ruleState) : record.ruleState;
+		if (shotRuleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
 		if (!isValidInput(input)) return { ok: false, error: "Invalid shot input" }
 
 		const actor = record.handler.getEntityManager().getEntityById(input.actorId)
@@ -200,8 +201,13 @@ export class GameRegistry {
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
 		if (!record.handler.isActorEligibleForAction(input.actorId)) return { ok: false, error: "Actor is locked from selection" }
 
+		const previousRuleState = record.ruleState;
 		record.resolving = true
 		try {
+			if (shotRuleState !== previousRuleState) {
+				record.ruleState = shotRuleState;
+				record.handler.setRuleState(shotRuleState);
+			}
 			let completed = false
 			record.recorder.recordShoot(input.actorId, input.angle, input.power)
 			const packet = record.handler.resolveTurn(input)
@@ -220,6 +226,12 @@ export class GameRegistry {
 			// It stays private until an explicit player share or operator lookup.
 			if (completed) this.storeCompletedReplay(record)
 			return { ok: true, record, packet }
+		} catch (error) {
+			if (shotRuleState !== previousRuleState) {
+				record.ruleState = previousRuleState;
+				record.handler.setRuleState(previousRuleState);
+			}
+			throw error;
 		} finally {
 			record.resolving = false
 			this.touch(record)

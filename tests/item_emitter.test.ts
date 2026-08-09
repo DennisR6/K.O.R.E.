@@ -9,6 +9,11 @@ import type { ItemTarget } from "../src/item/target.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { NetworkMessageType } from "../src/server/types.ts";
+import { GameDatabase } from "../src/server/db.ts";
+import { GameRegistry } from "../src/server/gameRegistry.ts";
+
+const userOne = "11111111-1111-4111-8111-111111111111";
+const userTwo = "22222222-2222-4222-8222-222222222222";
 
 function settings() {
 	const item = createItemDocument({ id: "switch", targetType: "self", useLimit: { perTurn: 1, perGame: 1 } });
@@ -35,6 +40,31 @@ test("local emitter applies item use and advances authoritative item state", () 
 
 	expect(handler.getRuleState()).toEqual({ phase: RulePhase.Item, activeTeam: 0, turnNumber: 0, itemUses: 1 });
 	expect(actor.getInventory()).toEqual([{ itemId: "switch", remainingUses: 0, usesThisTurn: 1 }]);
+});
+
+test("local shot implicitly skips the optional item phase", () => {
+	const gameSettings = settings();
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(gameSettings).build();
+	handler.setMyTeam([0]);
+	const actor = handler.getEntityManager().getEntities()[0]!;
+	const emitter = new GameEmitter(handler, gameSettings.gameMode, 2);
+
+	emitter.sendShot(actor.getId(), 0, 1);
+
+	expect(handler.getRuleState().phase).toBe(RulePhase.Physics);
+	expect(handler.getState()).toBe(GameState.Playing);
+});
+
+test("authoritative shot implicitly skips the optional item phase", () => {
+	const gameSettings = settings();
+	const registry = new GameRegistry(new GameDatabase(":memory:"));
+	const record = registry.create(gameSettings, [userOne, userTwo]);
+	const actor = record.handler.getEntityManager().getEntities()[0]!;
+
+	const result = registry.submitTurn(userOne, { actorId: actor.getId(), angle: 0, power: 1 });
+
+	expect(result.ok).toBe(true);
+	if (result.ok) expect(result.record.ruleState).toEqual({ phase: RulePhase.Item, activeTeam: 1, turnNumber: 1, itemUses: 0 });
 });
 
 test("network emitter sends a declarative item target", () => {
