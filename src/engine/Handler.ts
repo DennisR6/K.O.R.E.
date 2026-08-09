@@ -505,7 +505,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	 */
 	public handleMousePressed() {
 		if (this.disposed) return
-		if (this.ruleState.phase !== RulePhase.Physics) return
+		if (this.ruleState.phase !== RulePhase.Physics && !this.mouseHandler?.acceptsUiInputWhileLocked) return
 		if (this.context.state !== GameState.Starting && this.context.state !== GameState.Your_turn && this.context.state !== GameState.Game_over && !this.mouseHandler?.acceptsUiInputWhileLocked) return
 		this.mouseHandler?.handleMousePressed()
 	}
@@ -521,7 +521,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		 */
 	public handleMouseReleased() {
 		if (this.disposed) return
-		if (this.ruleState.phase !== RulePhase.Physics) return
+		if (this.ruleState.phase !== RulePhase.Physics && !this.mouseHandler?.acceptsUiInputWhileLocked) return
 		if (this.context.state !== GameState.Your_turn) return
 		this.mouseHandler?.handleMouseReleased()
 	}
