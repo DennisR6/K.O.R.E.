@@ -101,6 +101,8 @@ export interface UiContainerSettings {
 	enabled?: boolean;
 	style?: string;
 	inheritStyle?: boolean;
+	/** Propagate the container's hover state to visible descendant leaves. */
+	groupHover?: boolean;
 }
 export type UiElementSettings = UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings | UiContainerSettings;
 export interface UiScreenSettings { id: string; layout?: UiLayout; visible?: boolean; elements: UiElementSettings[] }
@@ -133,6 +135,7 @@ export type UiContainerInput = {
 	enabled?: boolean;
 	style?: string;
 	inheritStyle?: boolean;
+	groupHover?: boolean;
 };
 export type UiScreenInput = Omit<UiScreenSettings, "layout"> & { layout?: UiLayoutInput };
 
@@ -167,6 +170,7 @@ export interface UiContainerRuntime extends IUiPosition, IUiVisible, IUiEnabled 
 	/** Authored local rectangle, retained separately from resolved world geometry. */
 	readonly localRect: UiRect;
 	style?: string;
+	groupHover?: boolean;
 	layout: UiLayout;
 	elements: UiRuntimeNode[];
 	containsPoint(point: UiPoint): boolean;
@@ -268,8 +272,21 @@ export class UiRuntime {
 		const target = this.findPointerTarget(point);
 		this.hovered = target?.id;
 		if (target && "hovered" in target) target.hovered = true;
+		this.applyGroupHover(point, this.activeScreenNodes(), true, false);
 		if (target && input.pressed && "pressed" in target) target.pressed = true;
 		if (input.justPressed) this.pendingPress = target?.id;
+	}
+	private applyGroupHover(point: UiPoint, nodes: UiRuntimeNode[], parentVisible: boolean, parentGroupHovered: boolean): void {
+		for (const node of nodes) {
+			const visible = node.visible && parentVisible;
+			if (!visible) continue;
+			if (isContainerNode(node)) {
+				const groupHovered = parentGroupHovered || (node.groupHover === true && node.containsPoint(point));
+				this.applyGroupHover(point, node.elements, visible, groupHovered);
+			} else if (parentGroupHovered) {
+				node.hovered = true;
+			}
+		}
 	}
 	public focus(): void {
 		if (!this.pendingPress) return;
@@ -504,6 +521,7 @@ class UiContainer implements UiContainerRuntime {
 	public get id(): string { return this.settings.id; } public get kind(): "container" { return "container"; }
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get style(): string | undefined { return this.resolvedStyle; }
+	public get groupHover(): boolean | undefined { return this.settings.groupHover; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public toSettings(): UiContainerSettings { return { ...clone(this.settings), rect: clone(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map(node => node.toSettings()) }; }
 }
@@ -616,7 +634,7 @@ const ELEMENT_KEYS: Record<Exclude<UiElementKind, "container">, ReadonlySet<stri
 	button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "inheritStyle", "action"]),
 	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle", "action", "value"]),
 	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style", "inheritStyle"]),
-	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle"]),
+	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle", "groupHover"]),
 };
 const LAYOUT_KEYS = new Set(["type", "gap", "padding", "justify", "align"]);
 const PADDING_KEYS = new Set(["top", "right", "bottom", "left"]);
@@ -676,6 +694,7 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 		if (value.enabled !== undefined && typeof value.enabled !== "boolean") throw invalidElement(childPath, "invalid enabled state");
 		if (value.style !== undefined && typeof value.style !== "string") throw invalidElement(childPath, "invalid style");
 		if (value.inheritStyle !== undefined && typeof value.inheritStyle !== "boolean") throw invalidElement(childPath, "invalid inheritStyle");
+		if (value.groupHover !== undefined && typeof value.groupHover !== "boolean") throw invalidElement(childPath, "invalid groupHover");
 		if (kind === "container") {
 			if (value.layout === undefined) throw invalidElement(childPath, "missing layout");
 			validateLayout(value.layout, childPath);
@@ -766,6 +785,7 @@ export const ui = {
 		if (input.enabled !== undefined) result.enabled = input.enabled;
 		if (input.style !== undefined) result.style = input.style;
 		if (input.inheritStyle !== undefined) result.inheritStyle = input.inheritStyle;
+		if (input.groupHover !== undefined) result.groupHover = input.groupHover;
 		// Structural subtree validation (navigate targets are checked at menu build).
 		const ids = new Set<string>();
 		validateElement(result, ids, new Set<string>(), `container "${input.id}"`, new WeakSet<object>(), false);

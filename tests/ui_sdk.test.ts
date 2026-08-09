@@ -100,6 +100,26 @@ test("opt-in styles inherit through container parents and preserve authored sett
 	expect(style).toBeUndefined();
 });
 
+test("groupHover propagates container hover to visible descendant leaves", () => {
+	const menu = ui.createMenu({ id: "group-hover", size: { width: 200, height: 120 } })
+		.addScreen(ui.screen({ id: "main", elements: [
+			ui.container({ id: "group", groupHover: true, rect: { x: 0, y: 0, width: 200, height: 100 }, elements: [
+				ui.button({ id: "child", text: "Child", rect: { x: 10, y: 10, width: 60, height: 20 } }),
+			] }),
+		] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	let childHovered = false;
+	const draw = () => runtime.draw({ drawText() {}, drawTextInput() {}, drawImage() {}, drawButton(element) { childHovered = element.hovered === true; } });
+	runtime.tick({ pointer: { x: 180, y: 80 } });
+	draw();
+	expect(childHovered).toBe(true);
+	expect(runtime.getHoveredElementId()).toBeUndefined();
+	runtime.tick({ pointer: { x: 199, y: 119 } });
+	draw();
+	expect(childHovered).toBe(false);
+});
+
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {
 	const framework = ui.createDefaultFramework();
 	expect(framework.systemOrder).toEqual(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
