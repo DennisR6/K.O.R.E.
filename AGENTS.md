@@ -97,7 +97,10 @@ After every change, check whether this guide still reflects the implementation a
 - `server.ts`: Bun static-file and native WebSocket server, in-memory lobby,
   matchmaking loop, and the validated `/offline-matches` upload route backed by
   the SQLite offline-match store.
-- `src-website/index.html`: standalone map-editor page.
+- `src-website/index.html`: standalone map-editor page. `bun run mapbuilder:dev`
+  runs its live-server workflow; the typed development source is
+  `src/content/debugMap.ts` and `bun run build:debug-map` writes its validated
+  editor document to `public/map.json`.
 - `src-website/js/editor-draft.js`: browser-safe validated temporary-draft
   storage and in-place restore for the editor's shared `mapData` object.
 

@@ -6,6 +6,8 @@
   "scripts": {
     "start": "bun run server.ts",
     "dev": "concurrently \"bun run server.ts\" \"bun run watch:ts\"",
+    "build:debug-map": "bun run scripts/buildDebugMap.ts",
+    "mapbuilder:dev": "concurrently \"bun run server.ts\" \"bun run watch:ts\" \"bun run scripts/watchDebugMap.ts\" \"live-server . --port=4002 --open=/src-website/index.html\"",
     "watch:ts": "tsc --watch",
     "serve": "live-server",
     "build": "tsc && cp index.html dist/ && cp -r public dist/",
