@@ -3,6 +3,7 @@ import { GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { GameState } from "../src/engine/types.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { NetworkEmitter, installTurnReceiver } from "../src/emitter/NetworkEmitter.ts";
+import { EmitterSystem } from "../src/systems/Emitter.ts";
 import { createItemDocument } from "../src/item/types.ts";
 import type { ItemTarget } from "../src/item/target.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
@@ -83,4 +84,12 @@ test("network errors restore the actionable turn state", () => {
 	installTurnReceiver(socket, handler);
 	listener?.({ data: JSON.stringify({ type: NetworkMessageType.ERROR, message: "The game is not in the physics phase" }) } as MessageEvent);
 	expect(handler.getState()).toBe(GameState.Your_turn);
+});
+
+test("restored emitter transport is replaceable for network startup", () => {
+	const sent: string[] = [];
+	const restored = new EmitterSystem();
+	restored.setEmitter({ sendShot: () => { sent.push("shot"); } });
+	restored.emitter.sendShot("actor", 0, 1);
+	expect(sent).toEqual(["shot"]);
 });

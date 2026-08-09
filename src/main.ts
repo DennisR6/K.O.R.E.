@@ -162,7 +162,9 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		handler.setLanguage(language)
 		handler.addSystem(ui)
 		handler.setMouseHandler(ui)
-		handler.addSystem(new EmitterSystem(emitter))
+		const restoredEmitter = handler.getSystems().find(system => (system as { systemId?: string }).systemId === "core.emitter") as EmitterSystem | undefined
+		if (restoredEmitter) restoredEmitter.setEmitter(emitter)
+		else handler.addSystem(new EmitterSystem(emitter))
 		handler.setRuleState(init.ruleState)
 		const performanceUserId = getUserUUUID();
 		if (init.gameId && performanceUserId) installMatchPerformanceReport(handler, init.gameId, performanceUserId, undefined, buildPerformanceEndpoint(serverUrl, init.gameId))
