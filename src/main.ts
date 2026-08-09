@@ -154,13 +154,14 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		const init = message as NetworkInit
 		if (init.mapId) loading.setMessage(formatLanguage(language, LANGUAGE_KEYS.LoadingStarting, { map: init.mapId }))
 		const settings = init.settings
-		const ui = new UiSystem()
 
 		const emitter = new NetworkEmitter(socket)
 		let replayShareAction: "view" | "share" | undefined
 		handler = kore.restoreHandler(settings)
 		handler.setLanguage(language)
-		handler.addSystem(ui)
+		const restoredUi = handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined
+		const ui = restoredUi ?? new UiSystem()
+		if (!restoredUi) handler.addSystem(ui)
 		handler.setMouseHandler(ui)
 		const restoredEmitter = handler.getSystems().find(system => (system as { systemId?: string }).systemId === "core.emitter") as EmitterSystem | undefined
 		if (restoredEmitter) restoredEmitter.setEmitter(emitter)
