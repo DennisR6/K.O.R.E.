@@ -278,7 +278,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 
 /** Runs a spectator battle behind the menu without exposing its input surface. */
 class MenuBattlePreview {
-	private handler = createAiBattleHandler("ice-map-v1");
+	private workerHost = new HardAiWorkerHost();
+	private handler = createAiBattleHandler("ice-map-v1", undefined, undefined, this.workerHost);
 	private visible = false;
 
 	public tick(visible: boolean): void {
@@ -286,7 +287,9 @@ class MenuBattlePreview {
 		if (!visible) return;
 		if (this.handler.getState() === GameState.Game_over) {
 			this.handler.dispose();
-			this.handler = createAiBattleHandler("ice-map-v1");
+			this.workerHost.dispose();
+			this.workerHost = new HardAiWorkerHost();
+			this.handler = createAiBattleHandler("ice-map-v1", undefined, undefined, this.workerHost);
 		}
 		this.handler.tick();
 	}
@@ -299,6 +302,7 @@ class MenuBattlePreview {
 
 	public dispose(): void {
 		this.handler.dispose();
+		this.workerHost.dispose();
 	}
 }
 
