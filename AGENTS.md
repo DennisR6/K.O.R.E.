@@ -421,8 +421,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/net/offlineMatchReport.ts`: browser-side `installOfflineMatchReport`
   (reports once per finished match on the draw path, retries failed delivery,
   and re-arms after a rematch), `collectOfflineMatchRecord`, and
-  `reportOfflineMatch` (same-origin POST with retry and local pending-report
-  recovery). The produced `OfflineMatchRecordPayload` carries the mode header,
+  `reportOfflineMatch` (POSTs against the server-advertised `KORE_BASE_URL`,
+  with retry and local pending-report recovery). The produced
+  `OfflineMatchRecordPayload` carries the mode header,
   map id, recorder seed, optional difficulty, players, result, and the
   validated replay document.
 - `src/net/performanceReport.ts`: browser-side aggregation and best-effort

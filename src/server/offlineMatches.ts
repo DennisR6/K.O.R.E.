@@ -12,7 +12,9 @@ const MAX_REPORT_BYTES = 2_000_000;
  */
 export async function serveOfflineMatchReport(request: Request, database: GameDatabase): Promise<Response | undefined> {
 	const url = new URL(request.url);
-	if (url.pathname !== OFFLINE_MATCHES_PATH) return undefined;
+	// Deployments may mount the application below a path such as `/kore/`.
+	// Accept that forwarded prefix while keeping the endpoint suffix exact.
+	if (url.pathname !== OFFLINE_MATCHES_PATH && !url.pathname.endsWith(OFFLINE_MATCHES_PATH)) return undefined;
 	if (request.method !== "POST") {
 		return new Response("Method not allowed", { status: 405, headers: { allow: "POST", "cache-control": "no-store" } });
 	}
