@@ -39,9 +39,7 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain('data-period="yesterday"');
 	expect(page).toContain('data-period="week"');
 	expect(page).toContain('id="latency-median"');
-	expect(page).toContain('"median":5');
-	expect(page).toContain('"median":10');
-	expect(page).toContain('"median":7');
+	expect(page).toContain("No data");
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
 	const mountedPage = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!.text();
@@ -76,7 +74,7 @@ test.serial("dashboard exposes durable map counts, percentages, and the most pla
 	registry.create(createDefaultGameSettings(2, 1), users, "cue-clash");
 	registry.create(createDefaultGameSettings(2, 1), ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-844444444444"], "cue-clash");
 	registry.create(createDefaultGameSettings(2, 1), ["55555555-5555-4555-8555-555555555555", "66666666-6666-4666-8666-666666666666"], "ice-map-v1");
-	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await response.json()).toMatchObject({
 		mostPlayedMap: { mapId: "cue-clash", games: 2, percentage: 66.67 },
 		mapUsage: [
@@ -101,14 +99,19 @@ test.serial("dashboard includes production offline and AI match reports", async 
 		players: ["easy KI", "hard KI"],
 		result: { status: MatchStatus.Winner, winnerTeam: 0, reason: MatchEndReason.LastTeamStanding, turnNumber: 4 },
 		replay,
+		performanceLogs: [
+			{ type: "turn.completed", timestampMs: 1, turnNumber: 1, data: { durationMs: 5 } },
+			{ type: "turn.completed", timestampMs: 2, turnNumber: 2, data: { durationMs: 10 } },
+		],
 	});
-	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await response.json()).toMatchObject({
 		counts: { allTime: 1, offlineMatches: 1, playersAllTime: 2 },
 		offlineModes: [{ mode: "ai-battle", games: 1 }],
 		mapUsage: [{ mapId: "cue-clash", games: 1, percentage: 100 }],
+		performance: { today: { samples: 2, median: 5, p90: 10, average: 7.5, max: 10 } },
 	});
-	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret })).text();
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database)).text();
 	expect(page).toContain('data-metric="offlineMatches">1');
 	expect(page).toContain("Offline / KI breakdown");
 	expect(page).toContain("AI vs AI");

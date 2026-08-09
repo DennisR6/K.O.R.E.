@@ -12,7 +12,8 @@ import type { AuthoritativeMatchStatus, MapUsageMetric, OfflineModeMetric, Persi
 import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import type { OfflineMatchReport } from "./offlineMatchContract.js";
 import type { MatchResult } from "../rules/types.js";
-import { validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
+import { aggregatePerformanceLogs, validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
+import type { RuntimeLogEntry } from "../engine/runtimeLog.js";
 
 export type StoredGame = {
 	id: string;
@@ -38,6 +39,8 @@ export type StoredMap = { id: string; document: MapDocument; status: StoredMapSt
 /** Persisted offline/KI match; the validated replay document is retained in full. */
 export type StoredOfflineMatch = OfflineMatchReport & { id: string; createdAt: number };
 export type StoredOfflineMatchSummary = Omit<StoredOfflineMatch, "replay">;
+export type DashboardPerformancePeriod = { samples: number; average: number | null; median: number | null; p90: number | null; max: number | null; previousMedian: number | null };
+export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; yesterday: DashboardPerformancePeriod; week: DashboardPerformancePeriod };
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
 
 type StoredGameRow = {
@@ -328,6 +331,45 @@ export class GameDatabase {
 			.all() as Array<{ map_id: string; games: number }>;
 		const total = rows.reduce((sum, row) => sum + row.games, 0);
 		return rows.map(row => ({ mapId: row.map_id, games: row.games, percentage: total === 0 ? 0 : Number(((row.games / total) * 100).toFixed(2)) }));
+	}
+
+	/** Combines persisted online summaries and offline runtime logs for the operator dashboard. */
+	public getDashboardPerformanceMetrics(now: number = Date.now()): DashboardPerformanceMetrics {
+		const day = 24 * 60 * 60 * 1_000;
+		const todayStart = Math.floor(now / day) * day;
+		const values = { today: [] as number[], yesterday: [] as number[], week: [] as number[] };
+		const add = (createdAt: number, value: unknown): void => {
+			if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || createdAt < todayStart - 6 * day) return;
+			if (createdAt >= todayStart) values.today.push(value);
+			else if (createdAt >= todayStart - day) values.yesterday.push(value);
+			if (createdAt >= todayStart - 6 * day) values.week.push(value);
+		};
+		const reports = this.db.query("SELECT summary_json, created_at FROM game_performance_reports").all() as Array<{ summary_json: string; created_at: number }>;
+		for (const report of reports) {
+			const summary = JSON.parse(report.summary_json) as { turnDurationMs?: { median?: number } };
+			add(report.created_at, summary.turnDurationMs?.median);
+		}
+		const offline = this.db.query("SELECT performance_logs_json, created_at FROM offline_matches").all() as Array<{ performance_logs_json: string; created_at: number }>;
+		for (const report of offline) {
+			const logs = JSON.parse(report.performance_logs_json) as RuntimeLogEntry[];
+			const summary = aggregatePerformanceLogs(logs, { gameId: "offline", userId: "offline" }).summary;
+			let rawSamples = 0;
+			for (const entry of logs) {
+				if (entry.type !== "turn.completed" || !entry.data || typeof entry.data !== "object") continue;
+				const duration = (entry.data as { turnDurationMs?: unknown; durationMs?: unknown }).turnDurationMs ?? (entry.data as { durationMs?: unknown }).durationMs;
+				if (typeof duration === "number" && Number.isFinite(duration)) { add(report.created_at, duration); rawSamples++; }
+			}
+			if (rawSamples === 0) add(report.created_at, summary.turnDurationMs?.median);
+		}
+		const build = (sampleValues: number[], previousMedian: number | null): DashboardPerformancePeriod => {
+			if (sampleValues.length === 0) return { samples: 0, average: null, median: null, p90: null, max: null, previousMedian };
+			const sorted = [...sampleValues].sort((a, b) => a - b);
+			const percentile = (rank: number) => sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)]!;
+			return { samples: sorted.length, average: Number((sorted.reduce((sum, value) => sum + value, 0) / sorted.length).toFixed(2)), median: percentile(0.5), p90: percentile(0.9), max: sorted[sorted.length - 1]!, previousMedian };
+		};
+		const yesterday = build(values.yesterday, null);
+		const week = build(values.week, null);
+		return { today: build(values.today, yesterday.median), yesterday: build(values.yesterday, week.median), week };
 	}
 
 	public createMatchReport(gameId: string, reporterUserId: string, category: "conduct" | "technical" | "other", text: string, now: number = Date.now()): string {
