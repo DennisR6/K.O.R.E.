@@ -93,6 +93,7 @@ export enum KoreMenuStyle {
 
 export enum KoreMenuColor {
 	Prompt = "#3b82f6",
+	HoverText = "#60a5fa",
 	Text = "#f8fafc",
 	Error = "#b91c1c",
 }

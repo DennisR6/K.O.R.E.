@@ -108,7 +108,7 @@ class KoreMenuRenderer implements UiRenderer {
 			return;
 		}
 
-		this.ctx.setFillColor(KoreMenuColor.Text);
+		this.ctx.setFillColor(element.hovered ? KoreMenuColor.HoverText : KoreMenuColor.Text);
 		const fontSize = element.style === KoreMenuStyle.MapTitle ? 34
 			: element.style === KoreMenuStyle.DifficultyTitle ? 28
 			: element.style === KoreMenuStyle.MapNote ? 16 : 20;
