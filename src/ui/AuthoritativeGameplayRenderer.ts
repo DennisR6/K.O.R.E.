@@ -41,7 +41,7 @@ export class AuthoritativeGameplayRenderer {
   }
 
   private drawStructure(renderer: RenderContext, structure: MapBoundarySettings): void {
-    if (structure.drawingEnabled === false) return;
+    if (structure.drawingEnabled === false || structure.color === "transparent") return;
     const role = structure.role;
     const color = structure.color ?? "#64748b";
     if (role !== "containment") {

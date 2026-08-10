@@ -76,7 +76,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
-		if (!this.color || !this.isDrawingEnabled) return
+		if (!this.color || this.color === "transparent" || !this.isDrawingEnabled) return
 		ctx.push()
 		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
