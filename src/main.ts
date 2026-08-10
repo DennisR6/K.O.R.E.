@@ -503,6 +503,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		window.addEventListener("touchcancel", releaseTouch, { passive: false });
 		window.addEventListener("keydown", (e) => {
 			const active = getActiveHandler() as GameHandler & { handleKeyPressed?: (event: KeyboardEvent) => void };
+			if (["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "].includes(e.key)) e.preventDefault();
 			active.handleKeyPressed?.(e);
 		});
 
