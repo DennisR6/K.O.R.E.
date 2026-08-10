@@ -24,7 +24,7 @@ import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
 import { createKoreReplayViewerSurface } from "./kore/ui/replayViewerSurface.js";
 import { createKoreShareSurface } from "./kore/ui/shareSurface.js";
-import type { IMouse } from "./engine/types.js";
+import { GameState, type IMouse } from "./engine/types.js";
 import { runtimeNow, summarizeFrameWindow } from "./engine/runtimeLog.js";
 import { kore } from "./kore/sdk/index.js";
 import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
@@ -34,6 +34,8 @@ import { buildMatchReportEndpoint, reportMatchHttp } from "./net/matchReport.js"
 import { flushOfflineMatchReports } from "./net/offlineMatchReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
 import { buildFeedbackEndpoint, installFeedbackPrompt } from "./net/feedback.js";
+import { ActionManager, GameAction } from "./input/actions.js";
+import { ControllerInput } from "./input/controller.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -339,6 +341,42 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		let previousFrameAt: number | undefined;
 		let frameWindowStartedAt: number | undefined;
 		const frameSamples: number[] = [];
+		const controller = new ControllerInput(new ActionManager());
+		let controllerDragging = false;
+		let controllerPushWasDown = false;
+		let controllerOwner: GameHandler | undefined;
+		const releaseControllerDrag = (active: GameHandler): void => {
+			if (!controllerDragging) return;
+			active.handleMouseReleased();
+			controllerDragging = false;
+		};
+		const pollController = (active: GameHandler): void => {
+			if (!controller.getActiveGamepad() || active !== controllerOwner) {
+				if (controllerOwner) releaseControllerDrag(controllerOwner);
+				controllerOwner = active;
+				controllerPushWasDown = false;
+			}
+			if (active.getState() !== GameState.Your_turn || active.getRuleState().phase === "item") {
+				releaseControllerDrag(active);
+				controllerPushWasDown = false;
+				return;
+			}
+			const aim = controller.getAimVector();
+			const length = Math.hypot(aim.x, aim.y);
+			const actor = active.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(active.getActiveTeam()));
+			if (!actor || length < 0.15) { controllerPushWasDown = controller.isActionPressed(GameAction.Push); return; }
+			if (!controllerDragging) {
+				active.updateMouse(actor.getPos().x, actor.getPos().y);
+				active.handleMousePressed();
+				controllerDragging = true;
+			}
+			const power = Math.max(1, controller.getChargePressure() * 10);
+			const direction = { x: aim.x / length, y: aim.y / length };
+			active.updateMouse(actor.getPos().x - direction.x * power * 10, actor.getPos().y - direction.y * power * 10);
+			const pushDown = controller.isActionPressed(GameAction.Push);
+			if (pushDown && !controllerPushWasDown) releaseControllerDrag(active);
+			controllerPushWasDown = pushDown;
+		};
 		const adapted = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
 		const scale = adapted.scale;
 		p.setup = () => {
@@ -372,6 +410,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 					frameSamples.length = 0;
 					frameWindowStartedAt = frameStarted;
 				}
+				pollController(active)
 				active.tick()
 				afterTick?.()
 				flushBrowserAudio(active)

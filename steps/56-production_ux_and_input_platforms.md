@@ -13,6 +13,10 @@ Status: `[-]` in progress
   and release without changing canonical gameplay state.
 - Made failed online connection controls keyboard accessible: Enter retries and
   Escape returns to the menu.
+- Added an opt-in gamepad polling path for connected browsers: the left stick
+  aims, the trigger sets power, and the push button releases the shot through
+  the existing mouse/input authority boundary. Gamepad release qualification
+  remains pending.
 
 ## Remaining work
 
