@@ -60,14 +60,14 @@ test.serial("dashboard counts remain server-derived across lifecycle changes", a
 	const record = registry.create(createDefaultGameSettings(2, 1), users);
 	registry.setPaused(record.id, true, 10);
 	let response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 1, sleeping: 0 } });
 	registry.setPaused(record.id, false, 11);
 	registry.evictInactive(Date.now() + 2);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 0, sleeping: 1 } });
 	registry.connectUser(users[0]);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 1, paused: 0, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 1, now: 1, paused: 0, sleeping: 0 } });
 	database.close();
 });
 

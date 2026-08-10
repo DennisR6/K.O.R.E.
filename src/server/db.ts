@@ -118,11 +118,13 @@ export class GameDatabase {
 				game_id TEXT NOT NULL,
 				user_id TEXT NOT NULL,
 				team INTEGER NOT NULL,
+				connected INTEGER NOT NULL DEFAULT 0,
 				PRIMARY KEY (game_id, user_id),
 				FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 			)
 		`);
 		this.migrateGamePlayerKey();
+		this.migrateGamePlayerConnection();
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS game_lifecycle (
 				game_id TEXT PRIMARY KEY NOT NULL,
@@ -254,6 +256,7 @@ export class GameDatabase {
 		// single-server deployment, so any stale resident row is sleeping now.
 		this.db.query("UPDATE game_lifecycle SET status = 'sleeping', status_changed_at = ?1 WHERE status = 'resident'")
 			.run(Date.now());
+		this.db.run("UPDATE game_players SET connected = 0");
 	}
 
 	/** Creates a consistent SQLite image for an authenticated operator backup. */
@@ -273,7 +276,7 @@ export class GameDatabase {
 				VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 			`).run(game.id, snapshot, game.currentTeam, game.turnNumber, game.updatedAt, game.mapId ?? "unknown");
 			this.writeLifecycle(game.id, lifecycle);
-			const insertPlayer = this.db.query("INSERT INTO game_players (game_id, user_id, team) VALUES (?1, ?2, ?3)");
+			const insertPlayer = this.db.query("INSERT INTO game_players (game_id, user_id, team, connected) VALUES (?1, ?2, ?3, 0)");
 			game.users.forEach((user, team) => insertPlayer.run(game.id, user, team));
 		})();
 	}
@@ -325,6 +328,10 @@ export class GameDatabase {
 		return row?.game_id;
 	}
 
+	public setGamePlayerConnected(gameId: string, userId: string, connected: boolean): void {
+		this.db.query("UPDATE game_players SET connected = ?1 WHERE game_id = ?2 AND user_id = ?3").run(connected ? 1 : 0, gameId, userId);
+	}
+
 	private migrateGamePlayerKey(): void {
 		const columns = this.db.query("PRAGMA table_info(game_players)").all() as Array<{ name: string; pk: number }>;
 		const userColumn = columns.find(column => column.name === "user_id");
@@ -341,6 +348,11 @@ export class GameDatabase {
 			this.db.run("INSERT INTO game_players (game_id, user_id, team) SELECT game_id, user_id, team FROM game_players_legacy");
 			this.db.run("DROP TABLE game_players_legacy");
 		})();
+	}
+
+	private migrateGamePlayerConnection(): void {
+		const columns = this.db.query("PRAGMA table_info(game_players)").all() as Array<{ name: string }>;
+		if (!columns.some(column => column.name === "connected")) this.db.run("ALTER TABLE game_players ADD COLUMN connected INTEGER NOT NULL DEFAULT 0");
 	}
 
 	/** Removes an abandoned match and all membership rows through SQLite cascades. */
@@ -382,7 +394,7 @@ export class GameDatabase {
 		const offlinePlayers = this.db.query("SELECT players_json FROM offline_matches").all() as Array<{ players_json: string }>;
 		for (const row of offlinePlayers) for (const player of JSON.parse(row.players_json) as string[]) playerIds.add(player);
 		const playersAllTime = { count: playerIds.size };
-		const playersOnline = this.db.query("SELECT count(DISTINCT game_players.user_id) AS count FROM game_players JOIN game_lifecycle ON game_lifecycle.game_id = game_players.game_id WHERE game_lifecycle.status != 'sleeping'").get() as { count: number };
+		const playersOnline = this.db.query("SELECT count(DISTINCT game_players.user_id) AS count FROM game_players WHERE game_players.connected = 1").get() as { count: number };
 		const statuses = this.db.query(`
 			SELECT status, count(*) AS count FROM game_lifecycle
 			WHERE status IN ('paused', 'sleeping') GROUP BY status

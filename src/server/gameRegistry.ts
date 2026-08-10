@@ -103,13 +103,15 @@ export class GameRegistry {
 		const record = gameId ? this.get(gameId) : undefined
 		if (!record) return undefined
 		record.connectedUsers.add(userId)
+		this.database.setGamePlayerConnected(record.id, userId, true)
 		return this.touch(record)
 	}
 
 	/** Evicts the cached handler immediately when the final connected user leaves. */
 	public disconnectUser(userId: string): void {
-		const gameId = this.database.findActiveGameIdForUser(userId)
+		const gameId = this.database.findActiveGameIdForUser(userId) ?? this.database.findGameIdForUser(userId)
 		if (!gameId) return
+		this.database.setGamePlayerConnected(gameId, userId, false)
 		const record = this.games.get(gameId)
 		if (!record) return
 		record.connectedUsers.delete(userId)

@@ -34,6 +34,10 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 	const paused = registry.create(createDefaultGameSettings(2, 1), users.slice(2, 4), "cue-clash");
 	const sleeping = registry.create(createDefaultGameSettings(2, 1), users.slice(4, 6), "cue-clash");
 	const completed = registry.create(settingsWithOneDeadTeam(), users.slice(6, 8), "frostbite-arena");
+	registry.connectUser(users[0]);
+	registry.connectUser(users[1]);
+	registry.connectUser(users[6]);
+	registry.connectUser(users[7]);
 	registry.setPaused(paused.id, true, 20);
 	registry.connectUser(users[4]);
 	registry.connectUser(users[5]);
@@ -48,7 +52,7 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 		offlineMatches: 0,
 		offlineModes: [],
 		playersAllTime: 8,
-		playersOnline: 6,
+		playersOnline: 4,
 		now: 1,
 		paused: 1,
 		sleeping: 1,
@@ -91,12 +95,12 @@ test.serial("lifecycle transitions are idempotent and paused games reject action
 	registry.disconnectUser(users[0]);
 	registry.disconnectUser(users[1]);
 	registry.evictInactive(100);
-	expect(registry.getMetrics(101)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 });
+	expect(registry.getMetrics(101)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 1, sleeping: 0 });
 
 	const restored = registry.connectUser(users[0])!;
 	expect(restored.id).toBe(record.id);
-	expect(registry.getMetrics(102)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 });
+	expect(registry.getMetrics(102)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 1, now: 0, paused: 1, sleeping: 0 });
 	registry.setPaused(record.id, false, 103);
-	expect(registry.getMetrics(104)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 2, now: 1, paused: 0, sleeping: 0 });
+	expect(registry.getMetrics(104)).toMatchObject({ allTime: 1, playersAllTime: 2, playersOnline: 1, now: 1, paused: 0, sleeping: 0 });
 	database.close();
 });
