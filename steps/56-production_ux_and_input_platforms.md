@@ -38,4 +38,4 @@ Status: `[-]` in progress
 - `tests/kore_game_hud.test.ts`
 - `tests/status_surface.test.ts`
 - `tests/ui_sdk.test.ts`
-- `tests/browser/browser_startup.e2e.test.ts`
+- `tests/browser/browser_startup.e2e.test.ts` (including keyboard menu navigation)

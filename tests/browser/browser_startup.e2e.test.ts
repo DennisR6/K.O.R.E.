@@ -183,6 +183,9 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(info.handlerCtor).toBe("GameHandler");
 			// Menu state: no match settings before the play action.
 			expect(info.settingsMode).toBeNull();
+			await page.keyboard.press("Tab");
+			await page.keyboard.press("Enter");
+			await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.getRuntime?.()?.getActiveScreen?.() === "main"), 5_000, 50, "keyboard menu navigation");
 
 			// The documented debug surface reflects the active handler.
 			const activeHandler = await page.evaluate(() => (window as any).game.handler.constructor.name);
