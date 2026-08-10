@@ -24,11 +24,11 @@ export function createMagmaCradleMap(worldSize: Vector2D): MapDocument {
 	.addRectangle({ x: 400 * scaleX, y: 150 * scaleY, w: 10 * scaleX, h: 150 * scaleY ,color: "#07d4f800"})
 	.addForceZone({ id: "west-vent", x: 300 * scaleX, y: 225 * scaleY, r: 28 * scale, angle: 0, power: 4, color: "#07d4f8" })
 	.addForceZone({ id: "east-vent", x: 500 * scaleX, y: 225 * scaleY, r: 28 * scale, angle: 180, power: 4, color: "#07d4f8" })
-	.addKillZone({ id: "north-lava", x: 400 * scaleX, y: 43 * scaleY, r: 20 * scale, color: "#539cfc00" })
-	.addKillZone({ id: "south-lava", x: 400 * scaleX, y: 406 * scaleY, r: 20 * scale, color: "#539cfc00" })
-	.addKillZone({ id: "north-west-corner-lava", x: 72 * scaleX, y: 57 * scaleY, r: 20 * scale, color: "#ff00aa00" })
-	.addKillZone({ id: "north-east-corner-lava", x: 728 * scaleX, y: 57 * scaleY, r: 20 * scale, color: "#ff00aa00" })
-	.addKillZone({ id: "south-west-corner-lava", x: 72 * scaleX, y: 390 * scaleY, r: 20 * scale, color: "#ff00aa00" })
-	.addKillZone({ id: "south-east-corner-lava", x: 728 * scaleX, y: 390 * scaleY, r: 20 * scale, color: "#ff00aa00" })
+	.addKillZone({ id: "north-lava", x: 400 * scaleX, y: 43 * scaleY, r: 20 * scale, color: "transparent" })
+	.addKillZone({ id: "south-lava", x: 400 * scaleX, y: 406 * scaleY, r: 20 * scale, color: "transparent" })
+	.addKillZone({ id: "north-west-corner-lava", x: 72 * scaleX, y: 57 * scaleY, r: 20 * scale, color: "transparent" })
+	.addKillZone({ id: "north-east-corner-lava", x: 728 * scaleX, y: 57 * scaleY, r: 20 * scale, color: "transparent" })
+	.addKillZone({ id: "south-west-corner-lava", x: 72 * scaleX, y: 390 * scaleY, r: 20 * scale, color: "transparent" })
+	.addKillZone({ id: "south-east-corner-lava", x: 728 * scaleX, y: 390 * scaleY, r: 20 * scale, color: "transparent" })
 	.buildMapDocument();
 }
