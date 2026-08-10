@@ -33,6 +33,7 @@ function buildUi(language: LanguageCatalog): UiMenuSettings {
 		ui.text({ id: KoreHudElement.Turn, text: "", rect: rect(18, 12, 350, 20), style: KoreHudStyle.Status }),
 		ui.text({ id: KoreHudElement.State, text: "", rect: rect(18, 32, 350, 18), style: KoreHudStyle.StatusSmall }),
 		ui.text({ id: KoreHudElement.Aim, text: "", rect: rect(18, 50, 350, 18), style: KoreHudStyle.StatusSmall }),
+		ui.text({ id: KoreHudElement.Tutorial, text: translate(language, KoreHudText.Tutorial), rect: rect(18, 72, 470, 18), style: KoreHudStyle.StatusSmall, visible: false }),
 		ui.text({ id: KoreHudElement.Rejection, text: "", rect: rect(18, 420, 500, 20), style: KoreHudStyle.Rejection, visible: false }),
 		ui.button({ id: KoreHudElement.Pause, text: translate(language, KoreHudText.Pause), rect: rect(710, 10, 76, 30), style: KoreHudStyle.Pause, action: ui.action.emit(KoreHudCommand.Pause) }),
 		ui.button({ id: KoreHudElement.Report, text: translate(language, KoreHudText.Report), rect: rect(625, 10, 76, 30), style: KoreHudStyle.Pause, action: ui.action.emit(KoreHudCommand.Report) }),

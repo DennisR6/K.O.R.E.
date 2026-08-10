@@ -47,6 +47,7 @@
     "kore.ui.hud.reportCancel": "Abbrechen",
     "kore.ui.hud.none": "Keine",
     "kore.ui.hud.waiting": "Warte auf Gegner/Server",
+    "kore.ui.hud.tutorial": "Figur auswählen, zum Zielen ziehen und zum Schießen loslassen"
     "kore.ui.hud.aiThinking": "Schwieriger Zug - die KI denkt noch nach...",
     "kore.ui.hud.turn": "Team {team} | {phase} | Zug {turn}",
     "kore.ui.hud.actor": "Figur: {actor}",

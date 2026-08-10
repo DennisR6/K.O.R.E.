@@ -9,6 +9,8 @@ Status: `[-]` in progress
   mouse input, including HUD/result controls and release outside the canvas.
 - Disabled browser touch gestures on the game canvas while a touch action is
   active.
+- Added a localized first-turn onboarding hint explaining select, drag, aim,
+  and release without changing canonical gameplay state.
 
 ## Remaining work
 
@@ -22,3 +24,4 @@ Status: `[-]` in progress
 - `src/main.ts`
 - `tests/touch_input.test.ts`
 - `tests/controller_input.test.ts`
+- `tests/kore_game_hud.test.ts`

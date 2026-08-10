@@ -47,6 +47,7 @@
     "kore.ui.hud.reportCancel": "Cancel",
     "kore.ui.hud.none": "None",
     "kore.ui.hud.waiting": "Waiting for opponent/server",
+    "kore.ui.hud.tutorial": "Select a figure, drag to aim, then release to shoot",
     "kore.ui.hud.aiThinking": "This is a hard move - the AI is still thinking...",
     "kore.ui.hud.turn": "Team {team} | {phase} | Turn {turn}",
     "kore.ui.hud.actor": "Actor: {actor}",
