@@ -5,6 +5,7 @@ export type FeedbackSubmission = {
 	userId?: string;
 	mode?: FeedbackMode;
 	mapId?: string;
+	rating?: number;
 	text: string;
 };
 
@@ -16,4 +17,5 @@ export function validateFeedbackSubmission(value: unknown): asserts value is Fee
 	if (input.userId !== undefined && (typeof input.userId !== "string" || input.userId.length < 1 || input.userId.length > 120)) throw new Error("Invalid feedback user");
 	if (input.mode !== undefined && input.mode !== "online" && input.mode !== "hotseat" && input.mode !== "human-vs-ai" && input.mode !== "ai-battle") throw new Error("Invalid feedback mode");
 	if (input.mapId !== undefined && (typeof input.mapId !== "string" || input.mapId.length < 1 || input.mapId.length > 120)) throw new Error("Invalid feedback map");
+	if (input.rating !== undefined && (typeof input.rating !== "number" || !Number.isSafeInteger(input.rating) || input.rating < 1 || input.rating > 5)) throw new Error("Invalid feedback rating");
 }
