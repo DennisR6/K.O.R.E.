@@ -11,6 +11,8 @@ Status: `[-]` in progress
   active.
 - Added a localized first-turn onboarding hint explaining select, drag, aim,
   and release without changing canonical gameplay state.
+- Made failed online connection controls keyboard accessible: Enter retries and
+  Escape returns to the menu.
 
 ## Remaining work
 
@@ -25,3 +27,4 @@ Status: `[-]` in progress
 - `tests/touch_input.test.ts`
 - `tests/controller_input.test.ts`
 - `tests/kore_game_hud.test.ts`
+- `tests/status_surface.test.ts`
