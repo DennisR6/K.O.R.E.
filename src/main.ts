@@ -386,6 +386,9 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (canvasEl) {
+				canvasEl.tabIndex = 0;
+				canvasEl.setAttribute("role", "application");
+				canvasEl.setAttribute("aria-label", "KORE gameplay canvas");
 				canvasEl.style.touchAction = "none";
 				canvasEl.addEventListener("wheel", (e) => {
 				const active = getActiveHandler();
@@ -440,6 +443,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
 			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
 			const active = getActiveHandler()
+			canvasEl.focus();
 			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 			active.handleMousePressed()
 		})
@@ -479,6 +483,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			const bounds = canvas.getBoundingClientRect();
 			if (touch.clientX < bounds.left || touch.clientX > bounds.right || touch.clientY < bounds.top || touch.clientY > bounds.bottom) return;
 			event.preventDefault();
+			canvas.focus();
 			activeTouchId = event.changedTouches[0]!.identifier;
 			updateTouch(touch);
 			getActiveHandler().handleMousePressed();

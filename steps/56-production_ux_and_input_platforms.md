@@ -22,6 +22,8 @@ Status: `[-]` in progress
   distinguishable without relying on hover or color alone.
 - Touch cancellation now clears the active drag instead of accidentally
   submitting a shot; normal touch release keeps the existing submission path.
+- The production canvas is now keyboard-focusable and exposes an application
+  role and accessible label for assistive technology.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification

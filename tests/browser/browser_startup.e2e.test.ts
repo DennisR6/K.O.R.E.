@@ -169,6 +169,9 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 				return {
 					title: document.title,
 					canvasCount: document.querySelectorAll("canvas").length,
+					canvasRole: document.querySelector("canvas")?.getAttribute("role"),
+					canvasLabel: document.querySelector("canvas")?.getAttribute("aria-label"),
+					canvasTabIndex: (document.querySelector("canvas") as HTMLCanvasElement | null)?.tabIndex ?? -1,
 					gameSurface: typeof game,
 					gameKeys: game ? Object.keys(game).sort() : [],
 					handlerCtor: game?.handler?.constructor?.name ?? null,
@@ -178,6 +181,9 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 
 			expect(info.title).toBe("KORE");
 			expect(info.canvasCount).toBeGreaterThan(0);
+			expect(info.canvasRole).toBe("application");
+			expect(info.canvasLabel).toBe("KORE gameplay canvas");
+			expect(info.canvasTabIndex).toBe(0);
 			expect(info.gameSurface).toBe("object");
 				expect(info.gameKeys).toEqual(["aiWorkerMetrics", "audio", "handler", "logs", "mapId", "startup"]);
 			expect(info.handlerCtor).toBe("GameHandler");
