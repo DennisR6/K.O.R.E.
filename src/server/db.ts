@@ -161,6 +161,15 @@ export class GameDatabase {
 			)
 		`);
 		this.db.run(`
+			CREATE TABLE IF NOT EXISTS offline_operator_replay_views (
+				token TEXT PRIMARY KEY NOT NULL,
+				offline_match_id TEXT NOT NULL UNIQUE,
+				replay_json TEXT NOT NULL,
+				updated_at INTEGER NOT NULL,
+				FOREIGN KEY (offline_match_id) REFERENCES offline_matches(id) ON DELETE CASCADE
+			)
+		`);
+		this.db.run(`
 			CREATE TABLE IF NOT EXISTS offline_matches (
 				id TEXT PRIMARY KEY NOT NULL,
 				mode TEXT NOT NULL CHECK (mode IN ('hotseat', 'human-vs-ai', 'ai-battle')),
@@ -301,6 +310,10 @@ export class GameDatabase {
 		return this.db.query("SELECT 1 AS found FROM games WHERE id = ?1").get(id) !== null;
 	}
 
+	public hasOfflineMatch(id: string): boolean {
+		return this.db.query("SELECT 1 AS found FROM offline_matches WHERE id = ?1").get(id) !== null;
+	}
+
 	public getLifecycle(id: string): PersistedMatchLifecycle | undefined {
 		const row = this.db.query(`
 			SELECT version, status, created_at, status_changed_at, completed_at
@@ -336,13 +349,33 @@ export class GameDatabase {
 		const rows = (gameId === undefined
 			? this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status, replay_shares.token FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id LEFT JOIN replay_shares ON replay_shares.game_id = games.id AND replay_shares.revoked_at IS NULL ORDER BY games.updated_at DESC, games.id ASC").all()
 			: this.db.query("SELECT games.id, games.snapshot, games.updated_at, game_lifecycle.status, replay_shares.token FROM games JOIN game_lifecycle ON game_lifecycle.game_id = games.id LEFT JOIN replay_shares ON replay_shares.game_id = games.id AND replay_shares.revoked_at IS NULL WHERE games.id = ?1 ORDER BY games.updated_at DESC, games.id ASC").all(gameId)) as OperatorReplayRow[];
-		return rows.map(row => ({ gameId: row.id, status: row.status, updatedAt: row.updated_at, actionCount: decompress(row.snapshot).actions.length, ...(row.token ? { replayToken: row.token } : {}) }));
+		const online = rows.map(row => ({ gameId: row.id, status: row.status, updatedAt: row.updated_at, actionCount: decompress(row.snapshot).actions.length, ...(row.token ? { replayToken: row.token } : {}) }));
+		const offlineRows = (gameId === undefined
+			? this.db.query("SELECT id, replay_json, created_at FROM offline_matches ORDER BY created_at DESC, id ASC").all()
+			: this.db.query("SELECT id, replay_json, created_at FROM offline_matches WHERE id = ?1").all(gameId)) as Array<{ id: string; replay_json: string; created_at: number }>;
+		const offline = offlineRows.flatMap(row => {
+			try {
+				const replay = JSON.parse(row.replay_json) as ReplayDocument;
+				validateReplayDocument(replay);
+				return [{ gameId: row.id, status: "completed" as AuthoritativeMatchStatus, updatedAt: row.created_at, actionCount: replay.actions.length }];
+			} catch { return []; }
+		});
+		return [...online, ...offline].sort((left, right) => right.updatedAt - left.updatedAt || left.gameId.localeCompare(right.gameId));
 	}
 
 	/** Returns the deterministic replay document for any persisted match. */
 	public getOperatorReplay(gameId: string): ReplayDocument | undefined {
 		const game = this.loadGame(gameId);
-		if (!game?.initialSettings) return undefined;
+		if (!game?.initialSettings) {
+			const row = this.db.query("SELECT replay_json FROM offline_matches WHERE id = ?1").get(gameId) as { replay_json: string } | null;
+			if (!row) return undefined;
+			try {
+				const replay = JSON.parse(row.replay_json) as ReplayDocument;
+				validateReplayDocument(replay);
+				validateReplayOrigin(replay);
+				return structuredClone(replay);
+			} catch { return undefined; }
+		}
 		const replay: ReplayDocument = { schemaVersion: 1, initialSettings: game.initialSettings, seed: 12345, actions: game.actions ?? [] };
 		validateReplayDocument(replay);
 		try {
@@ -570,9 +603,19 @@ export class GameDatabase {
 
 	/** Upserts a private, operator-generated view token with the latest persisted actions. */
 	public createOperatorReplayView(gameId: string, replay: ReplayDocument, now: number = Date.now()): PublicOperatorReplayView {
-		if (!this.hasGame(gameId)) throw new Error("Unknown game");
 		validateReplayDocument(replay);
 		validateReplayOrigin(replay);
+		if (!this.hasGame(gameId)) {
+			if (!this.hasOfflineMatch(gameId)) throw new Error("Unknown game");
+			const existing = this.db.query("SELECT token FROM offline_operator_replay_views WHERE offline_match_id = ?1").get(gameId) as { token: string } | null;
+			if (existing) {
+				this.db.query("UPDATE offline_operator_replay_views SET replay_json = ?2, updated_at = ?3 WHERE offline_match_id = ?1").run(gameId, JSON.stringify(replay), now);
+				return { token: existing.token, replay: structuredClone(replay), updatedAt: now };
+			}
+			const token = crypto.randomUUID().replaceAll("-", "");
+			this.db.query("INSERT INTO offline_operator_replay_views (token, offline_match_id, replay_json, updated_at) VALUES (?1, ?2, ?3, ?4)").run(token, gameId, JSON.stringify(replay), now);
+			return { token, replay: structuredClone(replay), updatedAt: now };
+		}
 		const existing = this.db.query("SELECT token FROM operator_replay_views WHERE game_id = ?1").get(gameId) as { token: string } | null;
 		if (existing) {
 			this.db.query("UPDATE operator_replay_views SET replay_json = ?2, updated_at = ?3 WHERE game_id = ?1").run(gameId, JSON.stringify(replay), now);
@@ -587,15 +630,16 @@ export class GameDatabase {
 	public getPublicOperatorReplayView(token: string): PublicOperatorReplayView | undefined {
 		if (!/^[a-f0-9]{32}$/.test(token)) return undefined;
 		const row = this.db.query("SELECT replay_json, updated_at FROM operator_replay_views WHERE token = ?1").get(token) as { replay_json: string; updated_at: number } | null;
-		if (!row || row.replay_json.length > 2_000_000) return undefined;
+		const offlineRow = row ?? this.db.query("SELECT replay_json, updated_at FROM offline_operator_replay_views WHERE token = ?1").get(token) as { replay_json: string; updated_at: number } | null;
+		if (!offlineRow || offlineRow.replay_json.length > 2_000_000) return undefined;
 		try {
-			const replay = JSON.parse(row.replay_json) as ReplayDocument;
+			const replay = JSON.parse(offlineRow.replay_json) as ReplayDocument;
 			validateReplayDocument(replay);
 			// The operator may have snapshotted a legacy live fallback before
 			// origin validation existed; such views are unplayable and are no
 			// longer served instead of failing inside the viewer.
 			validateReplayOrigin(replay);
-			return { token, replay: structuredClone(replay), updatedAt: row.updated_at };
+			return { token, replay: structuredClone(replay), updatedAt: offlineRow.updated_at };
 		} catch { return undefined; }
 	}
 
