@@ -348,6 +348,7 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (canvasEl) {
+				canvasEl.style.touchAction = "none";
 				canvasEl.addEventListener("wheel", (e) => {
 				const active = getActiveHandler();
 				if (active.handleMouseWheel) {
@@ -413,6 +414,54 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 			active.handleMouseReleased()
 		})
+		let activeTouchId: number | undefined;
+		let latestTouch: { clientX: number; clientY: number } | undefined;
+		const touchPoint = (event: TouchEvent): { clientX: number; clientY: number } | undefined => {
+			if (activeTouchId === undefined) return event.changedTouches[0];
+			for (let index = 0; index < event.changedTouches.length; index++) {
+				const touch = event.changedTouches[index];
+				if (touch?.identifier === activeTouchId) return touch;
+			}
+			return undefined;
+		};
+		const updateTouch = (touch: { clientX: number; clientY: number }): void => {
+			const canvas = (p as any).canvas as unknown as HTMLCanvasElement;
+			if (!canvas) return;
+			const bounds = canvas.getBoundingClientRect();
+			const active = getActiveHandler();
+			active.updateMouse(ctx.toWorld(touch.clientX - bounds.left), ctx.toWorld(touch.clientY - bounds.top));
+			latestTouch = touch;
+		};
+		window.addEventListener("touchstart", (event) => {
+			if (activeTouchId !== undefined) return;
+			const canvas = (p as any).canvas as unknown as HTMLCanvasElement;
+			const touch = touchPoint(event);
+			if (!canvas || !touch) return;
+			const bounds = canvas.getBoundingClientRect();
+			if (touch.clientX < bounds.left || touch.clientX > bounds.right || touch.clientY < bounds.top || touch.clientY > bounds.bottom) return;
+			event.preventDefault();
+			activeTouchId = event.changedTouches[0]!.identifier;
+			updateTouch(touch);
+			getActiveHandler().handleMousePressed();
+		}, { passive: false });
+		window.addEventListener("touchmove", (event) => {
+			if (activeTouchId === undefined) return;
+			const touch = touchPoint(event);
+			if (!touch) return;
+			event.preventDefault();
+			updateTouch(touch);
+		}, { passive: false });
+		const releaseTouch = (event: TouchEvent): void => {
+			if (activeTouchId === undefined) return;
+			const touch = touchPoint(event) ?? latestTouch;
+			if (touch) updateTouch(touch);
+			event.preventDefault();
+			getActiveHandler().handleMouseReleased();
+			activeTouchId = undefined;
+			latestTouch = undefined;
+		};
+		window.addEventListener("touchend", releaseTouch, { passive: false });
+		window.addEventListener("touchcancel", releaseTouch, { passive: false });
 		window.addEventListener("keydown", (e) => {
 			const active = getActiveHandler() as GameHandler & { handleKeyPressed?: (event: KeyboardEvent) => void };
 			active.handleKeyPressed?.(e);
