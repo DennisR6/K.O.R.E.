@@ -47,7 +47,7 @@ export class AuthoritativeGameplayRenderer {
     if (role !== "containment") {
       renderer.push();
       renderer.setFillColor(color);
-      renderer.setStrokeColor(color);
+      renderer.noStroke();
       this.drawShape(renderer, structure);
       renderer.pop();
     }

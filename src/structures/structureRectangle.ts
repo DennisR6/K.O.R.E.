@@ -92,7 +92,7 @@ export class StructureRectangle implements IStructure, IPhysics<SHAPE.RECTANGLE>
 		if (!this.color || !this.isDrawingEnabled) return
 		ctx.push()
 		ctx.setFillColor(this.color)
-		ctx.setStrokeColor(this.color)
+		ctx.noStroke()
 		ctx.drawRect(this.x, this.y, this.w, this.h)
 		ctx.pop()
 	}
