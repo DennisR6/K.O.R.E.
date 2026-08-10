@@ -14,6 +14,8 @@ Status: `[-]` in progress
 - Kept the full artifact checks on the first seeded run while using the second
   run for deterministic state comparison, avoiding duplicate replay/restore
   work without weakening the determinism assertion.
+- Added four-worker matrix execution; all 2,880 shipped combinations now
+  complete within the qualification timeout.
 
 These thresholds are qualification signals, not claims that the game is
 balanced. Human playtesting and content tuning remain required before release.
@@ -32,3 +34,5 @@ balanced. Human playtesting and content tuning remain required before release.
 - `src/content/balanceTargets.ts`
 - `tests/gameplay_balance_targets.test.ts`
 - `tests/support/matrixSummary.ts`
+- `tests/support/gameplayQualificationWorker.ts`
+- `tests/gameplay_content_matrix.test.ts

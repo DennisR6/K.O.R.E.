@@ -283,6 +283,28 @@ export function qualifyGameplayCase(testCase: GameplayQualificationCase): Gamepl
 	}
 }
 
-export function qualifyGameplayMatrix(): GameplayQualificationResult[] {
-	return gameplayMatrixCases().map(qualifyGameplayCase);
+export async function qualifyGameplayMatrix(): Promise<GameplayQualificationResult[]> {
+	const cases = gameplayMatrixCases();
+	const requestedWorkers = Number.parseInt(process.env.GAMEPLAY_MATRIX_WORKERS ?? "4", 10);
+	const workerCount = Number.isSafeInteger(requestedWorkers) ? Math.max(1, Math.min(requestedWorkers, cases.length)) : 4;
+	if (workerCount === 1 || typeof Worker === "undefined") return cases.map(qualifyGameplayCase);
+	const chunks = Array.from({ length: workerCount }, () => [] as GameplayQualificationCase[]);
+	cases.forEach((testCase, index) => chunks[index % workerCount]!.push(testCase));
+	const workers = chunks.map(() => new Worker(new URL("./gameplayQualificationWorker.ts", import.meta.url), { type: "module" }));
+	try {
+		const results = await Promise.all(workers.map((worker, index) => new Promise<GameplayQualificationResult[]>((resolve, reject) => {
+			worker.onmessage = event => {
+				if (event.data && !Array.isArray(event.data) && typeof event.data.error === "string") reject(new Error(event.data.error));
+				else resolve(event.data as GameplayQualificationResult[]);
+			};
+			worker.onerror = event => reject(new Error(event.message || "Gameplay matrix worker failed"));
+			worker.postMessage(chunks[index]!);
+		})));
+		return cases.map(testCase => {
+			const index = cases.indexOf(testCase);
+			return results[index % workerCount]!.shift()!;
+		});
+	} finally {
+		workers.forEach(worker => worker.terminate());
+	}
 }

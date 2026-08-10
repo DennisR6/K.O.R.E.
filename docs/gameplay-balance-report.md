@@ -132,7 +132,7 @@ questionnaire evidence remain incomplete.
 
 | Gate area | Evidence and result |
 | --- | --- |
-| Matrix qualification | 1,152 deterministic configurations executed; the canonical selectable Ice Duel is qualified, while source-present maps, blocked mode/AI/economy combinations remain blocked from selection. |
+| Matrix qualification | 2,880 deterministic configurations executed with four matrix workers; the canonical selectable Ice Duel is qualified, while source-present maps, blocked mode/AI/economy combinations remain blocked from selection. |
 | Softlock detection | Focused deterministic fixtures pass; fairness samples still produce ongoing safety-limit warnings and are not promoted to completed-match evidence. |
 | Pacing | 10 deterministic hazard-seeking matches pass: 3 / 7 / 11 / 11 / 11 turns, 0% draws, 0% instant deaths, 0% turn-limit matches. |
 | Spawn-side fairness | 24 mirrored tournament matches are deterministic with no invariant violations; all 24 are ongoing at the current hard-AI safety limit, so no winner imbalance is inferred. |
