@@ -349,7 +349,7 @@ function pushZoneCommand(hazard: EditorPushHazard): CollisionCommandBinding {
 	return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * hazard.params.force, y: Math.sin(radians) * hazard.params.force } });
 }
 
-type HazardZone = { x: number; y: number; r: number };
+type HazardZone = { x: number; y: number; r: number; color?: string };
 type ForceHazardConfig = HazardZone & { angle: number; power: number };
 
 function isMapHazard(value: unknown): value is HazardDocument {
@@ -361,7 +361,7 @@ function isMapHazard(value: unknown): value is HazardDocument {
 
 function isHazardZone(value: Record<string, unknown>): value is Record<string, unknown> & HazardZone {
 	const { x, y, r } = value;
-	return [x, y, r].every(item => typeof item === "number" && Number.isFinite(item)) && typeof r === "number" && r > 0
+	return [x, y, r].every(item => typeof item === "number" && Number.isFinite(item)) && typeof r === "number" && r > 0 && (value.color === undefined || typeof value.color === "string")
 }
 
 function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
@@ -371,7 +371,7 @@ function hazardToBoundary(hazard: HazardDocument): MapBoundarySettings {
 		x: zone.x,
 		y: zone.y,
 		r: zone.r,
-		color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
+		color: typeof zone.color === "string" ? zone.color : hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
 		effects: [],
 		...(hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }),
 	};

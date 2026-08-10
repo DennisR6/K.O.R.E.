@@ -301,7 +301,7 @@ export class KoreMapBuilder {
 	/** Adds a declarative lethal circular zone to the canonical map and runtime build. */
 	public addKillZone(settings: KoreHazardZone): this {
 		this.assertHazardZone(settings);
-		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, ...(settings.color === undefined ? {} : { color: settings.color }) } });
 		const structureIndex = this.structures.length;
 		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
 			{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
@@ -316,7 +316,7 @@ export class KoreMapBuilder {
 		this.assertHazardZone(settings);
 		if (!Number.isFinite(settings.angle) || settings.angle < 0 || settings.angle >= 360 || !Number.isFinite(settings.power) || settings.power <= 0) throw new Error("Force hazard requires an angle in [0, 360) and positive power");
 		const radians = settings.angle * Math.PI / 180;
-		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
+		this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power, ...(settings.color === undefined ? {} : { color: settings.color }) } });
 		const structureIndex = this.structures.length;
 		this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
 		this.generatedHazardStructureIndexes.add(structureIndex);
