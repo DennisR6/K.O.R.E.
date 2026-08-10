@@ -9,6 +9,8 @@ Status: `[-]` in progress
 - Replaced duplicated matrix-summary thresholds with those named guardrails.
 - Added focused tests proving the guardrails are explicit and used by the
   qualification summary.
+- Reduced repeated qualification setup by caching immutable map documents and
+  the official item catalog in the deterministic matrix harness.
 
 These thresholds are qualification signals, not claims that the game is
 balanced. Human playtesting and content tuning remain required before release.

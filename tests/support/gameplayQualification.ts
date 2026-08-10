@@ -83,11 +83,17 @@ const AI_PAIRS: AiPair[] = AI_DIFFICULTIES.flatMap(first => AI_DIFFICULTIES.map(
 const ECONOMIES: GameplayEconomy[] = ["disabled", "fixed-loadout", "map-pickup", "seeded-draw"];
 const AI_LIMITS = { maxSimulations: 1, maxAngleSamples: 1, maxForceSamples: 1 };
 
+const MAP_DOCUMENTS = {
+	"cue-clash": createCueClashMap(WORLD),
+	"frostbite-arena": createFrostbiteArenaMap(WORLD),
+	"magma-cradle": createMagmaCradleMap(WORLD),
+} as const;
+const OFFICIAL_ITEMS = createOfficialItemLoader().getAll();
 const mapFactories = {
 	"ice-map-v1": (template: GameSettings) => template,
-	"cue-clash": (template: GameSettings) => loadMapDocument(createCueClashMap(WORLD), template),
-	"frostbite-arena": (template: GameSettings) => loadMapDocument(createFrostbiteArenaMap(WORLD), template),
-	"magma-cradle": (template: GameSettings) => loadMapDocument(createMagmaCradleMap(WORLD), template),
+	"cue-clash": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["cue-clash"], template),
+	"frostbite-arena": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["frostbite-arena"], template),
+	"magma-cradle": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["magma-cradle"], template),
 } as const;
 
 const aiFactories = { easy: EasyAi, medium: MediumAi, hard: HardAi } as const;
@@ -199,7 +205,7 @@ function makeSettings(testCase: GameplayQualificationCase): GameSettings {
 	const settings = clone(mapFactories[testCase.mapId as keyof typeof mapFactories](base));
 	settings.id = `00000000-0000-4000-8000-${String(testCase.seed).padStart(12, "0")}`;
 	settings.players.forEach((player, index) => { player.id = `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`; });
-	settings.items = createOfficialItemLoader().getAll();
+	settings.items = clone(OFFICIAL_ITEMS);
 	settings.gameMode = makeMode(testCase.modeId, makeEconomy(testCase.economy, testCase.seed, "power-dash"));
 	settings.ai = { difficulty: testCase.aiPair.split("-vs-")[1] as AiDifficulty, seed: testCase.seed, team: 1 };
 	return settings;
