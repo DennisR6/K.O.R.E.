@@ -139,7 +139,10 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	}
 	socket.addEventListener("open", () => {
 		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingFindingOpponent])
-		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference, modePreference: usersettings.modePreference, friendRole: usersettings.friendRole ?? undefined, friendCode: usersettings.friendCode }))
+		// Two friend-room tabs can share origin localStorage. Do not reuse the
+		// normal matchmaking identity for either side; the server assigns each
+		// connection a distinct player identity for this room.
+		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: usersettings.friendRole ? undefined : (getUserUUUID() ?? undefined), mapPreference: usersettings.mapPreference, modePreference: usersettings.modePreference, friendRole: usersettings.friendRole ?? undefined, friendCode: usersettings.friendCode }))
 	})
 	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
 	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))
