@@ -56,7 +56,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.setPauseControls(this.paused, resultVisible);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }
-	public handleKeyPressed(event: KeyboardEvent): void { if (!this.reportOpen) return; this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: event.key.length === 1 ? event.key : undefined } }); this.route(this.runtime.drainCommands()); }
+	public handleKeyPressed(event: KeyboardEvent): void {
+		this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: this.reportOpen && event.key.length === 1 ? event.key : undefined } });
+		this.route(this.runtime.drainCommands());
+	}
 	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
 	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; this.gameplayInput?.updateMouse(x, y); }
 	public handleMousePressed(): void {
