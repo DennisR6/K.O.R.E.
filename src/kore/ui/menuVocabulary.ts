@@ -110,6 +110,7 @@ export const KoreMenuText = {
 	Back: LANGUAGE_KEYS.MenuBackButton,
 	ChooseAiDifficulty: LANGUAGE_KEYS.MenuDifficultyTitle,
 	Ki: LANGUAGE_KEYS.MenuKiLabel,
+	Matchmaking: LANGUAGE_KEYS.MenuMatchmakingLabel,
 } as const;
 
 const COMMANDS = new Set<string>(Object.values(KoreMenuCommand));

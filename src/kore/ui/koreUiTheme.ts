@@ -73,18 +73,18 @@ const BLUE_BUTTON_THEME: UiElementTheme = {
 
 const BACK_BUTTON_THEME: UiElementTheme = {
   normal: {
-    background: "#0f172a",
-    backgroundAlpha: 0,
-    borderColor: "#334155",
+    background: "#8d1f1f",
+    backgroundAlpha: 0.45,
+    borderColor: "#550202",
     borderWidth: 2,
     borderRadius: 12,
     textColor: "#cbd5e1",
     fontSize: 18,
   },
   hover: {
-    background: "#1e293b",
-    backgroundAlpha: 0,
-    borderColor: "#f97316",
+    background: "#fa0505",
+    backgroundAlpha: 1,
+    borderColor: "#fa0505",
     borderWidth: 3,
     borderRadius: 12,
     textColor: "#ffffff",

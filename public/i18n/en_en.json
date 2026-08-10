@@ -14,6 +14,7 @@
     "kore.ui.menu.difficultyTitle": "Choose AI difficulty",
     "kore.ui.menu.kiLabel": "AI",
     "kore.ui.menu.mapTitle": "Choose Map",
+    "kore.ui.menu.matchmakingLabel": "vs Someone",
     "kore.ui.hud.pause": "Pause",
     "kore.ui.hud.items": "Items",
     "kore.ui.hud.skipPhase": "Skip phase",

@@ -25,8 +25,8 @@ export const MAIN_ACTIONS = {
 const SIZE = { width: 800, height: 450 };
 const MENU_TITLE = "KORE";
 
-const BTN_W = 180;
-const BTN_H = 48;
+// const BTN_W = 180;
+// const BTN_H = 48;
 
 /** The sole production source for KORE's menu screens, actions, and audio intent. */
 export class KoreMainMenuComposition {
@@ -78,73 +78,541 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 	);
 
 	// 1. MAIN MENU
-	builder.addScreen(
-		ui.screen({
-			id: KoreMenuScreen.Main,
-			layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 0, right: 30, bottom: 40, left: 30 } }),
-			elements: [
-        ui.container({
-          id: "HelpContainer",
-          rect: rect(0, 0, 740, 240),
-          style: "HelpContainer",
-          elements: 
-          [
-            ui.button({ id: "HelpButton", rect: rect(250, 40, 240, 270), style: "HelpButton", text:"" }),
+builder.addScreen(
+    ui.screen({
+        id: KoreMenuScreen.Main,
+        layout: ui.layout.vertical({
+            gap: 20,
+            justify: "center",
+            align: "center",
+            padding: { top: 0, right: 30, bottom: 40, left: 30 }
+        }),
+        elements: [
             ui.container({
-					id: KoreMenuElement.MainActions,
-					rect: rect(0, 0, 740, 240),
-					layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center", padding: { top:  0, right: 0, bottom: 30, left: 0 } }),
-					style: KoreMenuStyle.MainActions,
-					elements: [
-            ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 60, 48), style: KoreMenuStyle.MapTitle }),
-						ui.container({
-    id: "image-text-button",
-    rect: { x: 0, y: 0, width: 220, height: 60 },
-    layout: ui.layout.absolute(), style: KoreMenuStyle.OnlineButton,
-	groupHover: true,
-    elements: [
-        ui.button({
-            id: "action",
-            text: "",
-            rect: { x: 0, y: 0, width: 220, height: 60 },
-			style: KoreMenuStyle.OnlineButton,
-            action: ui.action.emit("ui.action.navigate(KoreMenuScreen.OnlineSub)"),
-        }),
-        ui.image({
-            id: "icon",
-            source: "/public/picture/menuicons/users.svg",
-            rect: { x: 12, y: 10, width: 40, height: 40 },
-			style: KoreMenuStyle.OnlineButton,
-        }),
-        ui.text({
-            id: "label",
-            text: translate(language, KoreMenuText.Online),	
-            rect: { x: 64, y: 20, width: 140, height: 20 },
-			style: KoreMenuStyle.OnlineButton,
-        }),
-    ],
-}),
-						menuButton(KoreMenuElement.MainLocal, translate(language, KoreMenuText.Local), KoreMenuScreen.LocalSub, KoreMenuStyle.LocalButton),
-						ui.button({ id: KoreMenuElement.MainSettings, text: "Settings", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.SettingsButton, action: ui.action.navigate(KoreMenuScreen.Settings) }),
-						ui.button({ id: KoreMenuElement.MainCredits, text: "Credits", rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.CreditsButton, action: ui.action.navigate(KoreMenuScreen.Credits) }),
-					],
-				}),]
-          }
-        ),
-			],
-		})
-	);
+                id: "HelpContainer",
+                rect: rect(0, 0, 740, 240),
+                style: "HelpContainer",
+                elements: [
+                    ui.button({
+                        id: "HelpButton",
+                        rect: rect(250, 40, 240, 270),
+                        style: "HelpButton",
+                        text: ""
+                    }),
+                    ui.container({
+                        id: KoreMenuElement.MainActions,
+                        rect: rect(0, 0, 740, 240),
+                        layout: ui.layout.vertical({
+                            gap: 12,
+                            justify: "center",
+                            align: "center",
+                            padding: { top: 0, right: 0, bottom: 30, left: 0 }
+                        }),
+                        style: KoreMenuStyle.MainActions,
+                        elements: [
+                            ui.text({
+                                id: KoreMenuElement.MainTitle,
+                                text: translate(language, KoreMenuText.Title),
+                                rect: rect(0, 0, 60, 48),
+                                style: KoreMenuStyle.MapTitle
+                            }),
+
+                            // Online Button
+                            ui.container({
+                                id: "image-text-button-online",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.OnlineButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-online",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.OnlineButton,
+                                        action: ui.action.navigate(KoreMenuScreen.OnlineSub),
+                                    }),
+                                    ui.image({
+                                        id: "icon-online",
+                                        source: "/public/picture/menuicons/users.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+									ui.image({
+                                        id: "trenn-online",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+                                    ui.text({
+                                        id: "label-online",
+                                        text: translate(language, KoreMenuText.Online),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    })
+                                ]
+                            }),
+
+                            // Local Button
+                            ui.container({
+                                id: "image-text-button-local",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LocalButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-local",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.LocalButton,
+                                        action: ui.action.navigate(KoreMenuScreen.LocalSub)
+                                    }),
+                                    ui.image({
+                                        id: "icon-local",
+                                        source: "/public/picture/menuicons/gamepad-2.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+									ui.image({
+                                        id: "trenn-local",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.text({
+                                        id: "label-local",
+                                        text: translate(language, KoreMenuText.Local),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.LocalButton
+                                    })
+                                ]
+                            }),
+
+                            // Settings Button
+                            ui.container({
+                                id: "image-text-button-settings",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.SettingsButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-settings",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.SettingsButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Settings)
+                                    }),
+                                    ui.image({
+                                        id: "icon-settings",
+                                        source: "/public/picture/menuicons/settings.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    }),
+									ui.image({
+                                        id: "trenn-settings",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    }),
+                                    ui.text({
+                                        id: "label-settings",
+                                        text: "Settings",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    })
+                                ]
+                            }),
+
+                            // Credits Button
+                            ui.container({
+                                id: "image-text-button-credits",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.CreditsButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-credits",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.CreditsButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Credits)
+                                    }),
+                                    ui.image({
+                                        id: "icon-credits",
+                                        source: "/public/picture/menuicons/circle-star.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.CreditsButton
+                                    }),
+									ui.image({
+                                        id: "trenn-credits",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.CreditsButton
+                                    }),
+                                    ui.text({
+                                        id: "label-credits",
+                                        text: "Credits",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.CreditsButton
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            })
+        ]
+    })
+);
 
 	// 2. ONLINE AND LOCAL SUBMENUS
-	builder.addScreen(submenuScreen(KoreMenuScreen.OnlineSub, translate(language, KoreMenuText.Online), [
-		ui.button({ id: "online-btn-matchmaking", text: "Matchmaking", rect: rect(0, 0, 180, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.navigate(KoreMenuScreen.MapOnline) }),
-		ui.button({ id: "online-btn-friends", text: "vs Friends", rect: rect(0, 0, 180, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenOnlineFriends) }),
-	]));
-	builder.addScreen(submenuScreen(KoreMenuScreen.LocalSub, translate(language, KoreMenuText.Local), [
-		ui.button({ id: "local-btn-vski", text: "vs KI", rect: rect(0, 0, 180, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.navigate(KoreMenuScreen.Difficulty) }),
-		ui.button({ id: "local-btn-vsplayer", text: "vs Player", rect: rect(0, 0, 180, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
-		ui.button({ id: "local-btn-kivski", text: "KI vs KI", rect: rect(0, 0, 180, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.navigate(KoreMenuScreen.MapBattle) }),
-	]));
+	builder.addScreen(
+    ui.screen({
+        id: KoreMenuScreen.OnlineSub,
+        layout: ui.layout.vertical({
+            gap: 20,
+            justify: "center",
+            align: "center",
+            padding: { top: 0, right: 30, bottom: 40, left: 30 }
+        }),
+        elements: [
+            ui.container({
+                id: "OnlineSubHelpContainer",
+                rect: rect(0, 0, 740, 240),
+                style: "HelpContainer",
+                elements: [
+                    ui.button({
+                        id: "OnlineSubHelpButton",
+                        rect: rect(250, 40, 240, 270),
+                        style: "HelpButton",
+                        text: ""
+                    }),
+                    ui.container({
+                        id: "OnlineSubActions",
+                        rect: rect(0, 0, 740, 240),
+                        layout: ui.layout.vertical({
+                            gap: 12,
+                            justify: "center",
+                            align: "center",
+                            padding: { top: 0, right: 0, bottom: 30, left: 0 }
+                        }),
+                        style: KoreMenuStyle.MainActions,
+                        elements: [
+                            // Titel des Submenüs
+                            ui.text({
+                                id: "OnlineSubTitle",
+                                text: translate(language, KoreMenuText.Online),
+                                rect: rect(0, 0, 60, 48),
+                                style: KoreMenuStyle.MapTitle
+                            }),
+
+                            // Matchmaking Button
+                            ui.container({
+                                id: "image-text-button-matchmaking",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.OnlineButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "online-btn-matchmaking",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.OnlineButton,
+                                        action: ui.action.navigate(KoreMenuScreen.MapOnline)
+                                    }),
+                                    ui.image({
+                                        id: "icon-matchmaking",
+                                        source: "/public/picture/menuicons/hand-fist.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+                                    ui.image({
+                                        id: "trenn-matchmaking",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+                                    ui.text({
+                                        id: "label-matchmaking",
+                                        text: translate(language, KoreMenuText.Matchmaking),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    })
+                                ]
+                            }),
+
+                            // vs Friends Button
+                            ui.container({
+                                id: "image-text-button-friends",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.OnlineButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "online-btn-friends",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.OnlineButton,
+                                        action: ui.action.emit(KoreMenuCommand.OpenOnlineFriends)
+                                    }),
+                                    ui.image({
+                                        id: "icon-friends",
+                                        source: "/public/picture/menuicons/users.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+                                    ui.image({
+                                        id: "trenn-friends",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+                                    ui.text({
+                                        id: "label-friends",
+                                        text: "vs Friends",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    })
+                                ]
+                            }),
+
+                            // Back Button
+                            ui.container({
+                                id: "image-text-button-back",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.Back,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "online-btn-back",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.Back,
+                                        action: ui.action.navigate(KoreMenuScreen.Main) // Navigiert zurück zum Hauptmenü
+                                    }),
+                                    ui.image({
+                                        id: "icon-back",
+                                        source: "/public/picture/menuicons/log-out.svg", // Pfad für das Pfeil-Icon ggf. anpassen
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.Back
+                                    }),
+                                    ui.image({
+                                        id: "trenn-back",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.Back
+                                    }),
+                                    ui.text({
+                                        id: "label-back",
+                                        text: translate(language, KoreMenuText.Back),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.Back
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            })
+        ]
+    })
+);
+	builder.addScreen(
+    ui.screen({
+        id: KoreMenuScreen.LocalSub,
+        layout: ui.layout.vertical({
+            gap: 20,
+            justify: "center",
+            align: "center",
+            padding: { top: 0, right: 30, bottom: 40, left: 30 }
+        }),
+        elements: [
+            ui.container({
+                id: "LocalSubHelpContainer",
+                rect: rect(0, 0, 740, 240),
+                style: "HelpContainer",
+                elements: [
+                    ui.button({
+                        id: "LocalSubHelpButton",
+                        rect: rect(250, 40, 240, 270),
+                        style: "HelpButton",
+                        text: ""
+                    }),
+                    ui.container({
+                        id: "LocalSubActions",
+                        rect: rect(0, 0, 740, 240),
+                        layout: ui.layout.vertical({
+                            gap: 12,
+                            justify: "center",
+                            align: "center",
+                            padding: { top: 0, right: 0, bottom: 30, left: 0 }
+                        }),
+                        style: KoreMenuStyle.MainActions,
+                        elements: [
+                            // Titel des Submenüs
+                            ui.text({
+                                id: "LocalSubTitle",
+                                text: translate(language, KoreMenuText.Local),
+                                rect: rect(0, 0, 60, 48),
+                                style: KoreMenuStyle.MapTitle
+                            }),
+
+                            // 1. Button: vs Player
+                            ui.container({
+                                id: "image-text-button-vsplayer",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LocalButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "local-btn-vsplayer",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.LocalButton,
+                                        action: ui.action.emit(KoreMenuCommand.StartLocal)
+                                    }),
+                                    ui.image({
+                                        id: "icon-vsplayer",
+                                        source: "/public/picture/menuicons/users-round.svg", // Pfad ggf. anpassen
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.image({
+                                        id: "trenn-vsplayer",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.text({
+                                        id: "label-vsplayer",
+                                        text: "vs Player",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.LocalButton
+                                    })
+                                ]
+                            }),
+
+                            // 2. Button: vs KI
+                            ui.container({
+                                id: "image-text-button-vski",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LocalButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "local-btn-vski",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.LocalButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Difficulty)
+                                    }),
+                                    ui.image({
+                                        id: "icon-vski",
+                                        source: "/public/picture/menuicons/bot.svg", // Pfad ggf. anpassen
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.image({
+                                        id: "trenn-vski",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.text({
+                                        id: "label-vski",
+                                        text: "vs KI",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.LocalButton
+                                    })
+                                ]
+                            }),
+
+                            // 3. Button: KI vs KI
+                            ui.container({
+                                id: "image-text-button-kivski",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LocalButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "local-btn-kivski",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.LocalButton,
+                                        action: ui.action.navigate(KoreMenuScreen.MapBattle)
+                                    }),
+                                    ui.image({
+                                        id: "icon-kivski",
+                                        source: "/public/picture/menuicons/bot-message-square.svg", // Pfad ggf. anpassen
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.image({
+                                        id: "trenn-kivski",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.text({
+                                        id: "label-kivski",
+                                        text: "KI vs KI",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.LocalButton
+                                    })
+                                ]
+                            }),
+
+                            // 4. Button: Zurück
+                            ui.container({
+                                id: "image-text-button-local-back",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.Back,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "local-btn-back",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.Back,
+                                        action: ui.action.navigate(KoreMenuScreen.Main)
+                                    }),
+                                    ui.image({
+                                        id: "icon-local-back",
+                                        source: "/public/picture/menuicons/log-out.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.Back
+                                    }),
+                                    ui.image({
+                                        id: "trenn-local-back",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.Back
+                                    }),
+                                    ui.text({
+                                        id: "label-local-back",
+                                        text: translate(language, KoreMenuText.Back),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.Back
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            })
+        ]
+    })
+);
 	builder.addScreen(simpleScreen(KoreMenuScreen.Settings, "Settings", language));
 	builder.addScreen(simpleScreen(KoreMenuScreen.Credits, "Credits", language));
 
@@ -157,11 +625,11 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 }
 
 /** Primary menu actions navigate; the navigation target is authored per button. */
-function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen, style: KoreMenuStyle) {
+/*function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen, style: KoreMenuStyle) {
 	return ui.button({ id, text, rect: rect(0, 0, BTN_W, BTN_H), style, action: ui.action.navigate(target) });
-}
+}*/
 
-function submenuScreen(id: KoreMenuScreen, title: string, buttons: ReturnType<typeof ui.button>[]) {
+/*function submenuScreen(id: KoreMenuScreen, title: string, buttons: ReturnType<typeof ui.button>[]) {
 	return ui.screen({
 		id,
 		layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
@@ -170,7 +638,7 @@ function submenuScreen(id: KoreMenuScreen, title: string, buttons: ReturnType<ty
 			ui.container({ id: `${id}-actions`, rect: rect(0, 0, 740, 220), layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center" }), elements: [...buttons, ui.button({ id: `${id}-back`, text: "Back", rect: rect(0, 0, 120, 36), style: KoreMenuStyle.Back, action: ui.action.back() })] }),
 		],
 	});
-}
+}*/
 
 function simpleScreen(id: KoreMenuScreen, title: string, language: LanguageCatalog) {
 	return ui.screen({
