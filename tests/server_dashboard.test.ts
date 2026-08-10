@@ -229,12 +229,14 @@ test("dashboard routes fail closed and never expose errors", async () => {
 });
 
 test("read-only API tokens authenticate metrics but not operator routes", async () => {
-	const token = "t".repeat(32);
-	const config = readDashboardConfig({ KORE_DASHBOARD_API_TOKEN: token });
+	const database = new GameDatabase(":memory:");
+	const token = database.createDashboardApiToken("test-bot").token;
+	const config = readDashboardConfig({ KORE_DASHBOARD_OPERATOR_SECRET: secret });
 	const registry = { getMetrics: () => ({ allTime: 0, offlineMatches: 0, offlineModes: [], playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0, mapUsage: [], mostPlayedMap: null, measuredAt: 1, consistency: "now is scoped to this server process's resident registry cache" }) } as unknown as GameRegistry;
-	const metrics = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${token}`), registry, config))!;
+	const metrics = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${token}`), registry, config, database))!;
 	expect(metrics.status).toBe(200);
-	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config))!.status).toBe(404);
+	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config, database))!.status).toBe(404);
+	database.close();
 });
 
 test("operator login creates an HttpOnly signed cookie accepted by dashboard routes", async () => {

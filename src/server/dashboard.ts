@@ -8,12 +8,13 @@ export const DASHBOARD_PATH = "/operator/dashboard";
 export const DASHBOARD_LOGIN_PATH = "/operator/login";
 export const DASHBOARD_LOGOUT_PATH = "/operator/logout";
 export const DASHBOARD_DATABASE_PATH = "/operator/db";
+export const DASHBOARD_API_TOKENS_PATH = "/operator/api-tokens";
 export const DASHBOARD_REPLAYS_PATH = "/operator/replays";
 const DASHBOARD_COOKIE = "kore_operator_session";
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 const FRESHNESS = "allTime, offlineMatches, playersAllTime, and map usage include durable online and production-reported offline/KI matches; playersOnline, paused, and sleeping describe authoritative online matches; now is scoped to this server process's resident registry cache.";
 
-export type DashboardConfig = { operatorSecret: string | undefined; apiToken?: string };
+export type DashboardConfig = { operatorSecret: string | undefined };
 
 export type DashboardMetricsResponse = {
 	schemaVersion: 1;
@@ -31,15 +32,11 @@ export type DashboardReplayIndexResponse = { schemaVersion: 1; replays: Operator
 /** Reads a deployment-only secret; unset or weak values deliberately disable routes. */
 export function readDashboardConfig(env: Record<string, string | undefined> = process.env): DashboardConfig {
 	const secret = env.KORE_DASHBOARD_OPERATOR_SECRET;
-	const apiToken = env.KORE_DASHBOARD_API_TOKEN;
-	return {
-		operatorSecret: typeof secret === "string" && Buffer.byteLength(secret) >= 32 ? secret : undefined,
-		...(typeof apiToken === "string" && Buffer.byteLength(apiToken) >= 32 ? { apiToken } : {}),
-	};
+	return { operatorSecret: typeof secret === "string" && Buffer.byteLength(secret) >= 32 ? secret : undefined };
 }
 
 export function isDashboardPath(pathname: string): boolean {
-	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH || pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`);
+	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH || pathname === DASHBOARD_API_TOKENS_PATH || pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`);
 }
 
 /**
@@ -49,13 +46,14 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics" | "killGame">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics" | "listFeedback">, publicBaseUrl?: string): Promise<Response | undefined> {
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics" | "killGame">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics" | "listFeedback" | "createDashboardApiToken" | "listDashboardApiTokens" | "revokeDashboardApiToken" | "isDashboardApiTokenValid">, publicBaseUrl?: string): Promise<Response | undefined> {
 	const url = new URL(request.url); const pathname = url.pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
-	if (!isAuthorized(request, config.operatorSecret, pathname === DASHBOARD_METRICS_PATH ? config.apiToken : undefined)) return notFound();
+	if (!isAuthorized(request, config.operatorSecret) && !(pathname === DASHBOARD_METRICS_PATH && database && isBearerApiToken(request, database))) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
+	if (pathname === DASHBOARD_API_TOKENS_PATH || pathname.startsWith(`${DASHBOARD_API_TOKENS_PATH}/`)) return apiTokens(request, database, pathname);
 	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, registry, database, pathname, url.searchParams.get("id"), publicBaseUrl);
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	try {
@@ -70,6 +68,22 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
 	}
+}
+
+async function apiTokens(request: Request, database: Pick<GameDatabase, "createDashboardApiToken" | "listDashboardApiTokens" | "revokeDashboardApiToken"> | undefined, pathname: string): Promise<Response> {
+	if (!database) return new Response("dashboard_unavailable", { status: 503 });
+	if (pathname !== DASHBOARD_API_TOKENS_PATH) {
+		if (request.method !== "DELETE") return new Response("Method not allowed", { status: 405 });
+		const id = pathname.slice(`${DASHBOARD_API_TOKENS_PATH}/`.length);
+		return database.revokeDashboardApiToken(id) ? Response.json({ ok: true }) : notFound();
+	}
+	if (request.method === "GET") return Response.json({ tokens: database.listDashboardApiTokens() });
+	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "GET, POST" } });
+	try {
+		const body = await request.json() as { label?: unknown };
+		const created = database.createDashboardApiToken(typeof body.label === "string" ? body.label : "bot");
+		return Response.json(created, { status: 201, headers: { "cache-control": "no-store" } });
+	} catch { return new Response("Invalid token request", { status: 400 }); }
 }
 
 function operatorReplays(request: Request, registry: Pick<GameRegistry, "killGame">, database: Pick<GameDatabase, "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView"> | undefined, pathname: string, requestedGameId: string | null, publicBaseUrl?: string): Response {
@@ -149,12 +163,16 @@ function emptyPerformanceMetrics(): DashboardPerformanceMetrics {
 	return { today: empty, yesterday: empty, week: empty };
 }
 
-function isAuthorized(request: Request, secret: string | undefined, apiToken?: string): boolean {
+function isAuthorized(request: Request, secret: string | undefined): boolean {
 	const authorization = request.headers.get("authorization");
-	if (apiToken && authorization?.startsWith("Bearer ") && equalSecret(authorization.slice("Bearer ".length), apiToken)) return true;
 	if (!secret) return false;
 	if (authorization?.startsWith("Bearer ") && equalSecret(authorization.slice("Bearer ".length), secret)) return true;
 	return isSessionToken(readCookie(request.headers.get("cookie"), DASHBOARD_COOKIE), secret);
+}
+
+function isBearerApiToken(request: Request, database: Pick<GameDatabase, "isDashboardApiTokenValid">): boolean {
+	const authorization = request.headers.get("authorization");
+	return authorization?.startsWith("Bearer ") === true && database.isDashboardApiTokenValid(authorization.slice("Bearer ".length));
 }
 
 async function login(request: Request, secret: string | undefined, publicBaseUrl?: string): Promise<Response> {

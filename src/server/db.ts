@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -46,6 +46,7 @@ export type DashboardPerformanceTrendPoint = { samples: number; value: number | 
 export type DashboardPerformancePeriod = { samples: number; average: number | null; median: number | null; p90: number | null; max: number | null; previousMedian: number | null; trend: DashboardPerformanceTrendPoint[] };
 export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; yesterday: DashboardPerformancePeriod; week: DashboardPerformancePeriod };
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
+export type StoredDashboardApiToken = { id: string; label: string; createdAt: number; lastUsedAt: number | null };
 const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 type PerformanceSample = { createdAt: number; value: number };
@@ -102,6 +103,15 @@ export class GameDatabase {
 		this.db = new Database(path);
 		this.db.run("PRAGMA journal_mode = WAL");
 		this.db.run("PRAGMA foreign_keys = ON");
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS dashboard_api_tokens (
+				id TEXT PRIMARY KEY,
+				token_hash TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				last_used_at INTEGER
+			)
+		`);
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS games (
 				id TEXT PRIMARY KEY NOT NULL,
@@ -737,6 +747,26 @@ export class GameDatabase {
 	}
 
 	public close(): void { this.db.close() }
+
+	public createDashboardApiToken(label: string): { token: string; record: StoredDashboardApiToken } {
+		const normalized = label.trim().slice(0, 80) || "bot";
+		const token = `kore_${randomBytes(32).toString("base64url")}`;
+		const id = crypto.randomUUID();
+		const createdAt = Date.now();
+		this.db.query("INSERT INTO dashboard_api_tokens (id, token_hash, label, created_at) VALUES (?1, ?2, ?3, ?4)").run(id, createHash("sha256").update(token).digest("hex"), normalized, createdAt);
+		return { token, record: { id, label: normalized, createdAt, lastUsedAt: null } };
+	}
+	public listDashboardApiTokens(): StoredDashboardApiToken[] {
+		return this.db.query("SELECT id, label, created_at, last_used_at FROM dashboard_api_tokens ORDER BY created_at DESC").all().map(row => { const value = row as { id: string; label: string; created_at: number; last_used_at: number | null }; return { id: value.id, label: value.label, createdAt: value.created_at, lastUsedAt: value.last_used_at }; });
+	}
+	public revokeDashboardApiToken(id: string): boolean { return this.db.query("DELETE FROM dashboard_api_tokens WHERE id = ?1").run(id).changes > 0; }
+	public isDashboardApiTokenValid(token: string): boolean {
+		const hash = createHash("sha256").update(token).digest("hex");
+		const row = this.db.query("SELECT id FROM dashboard_api_tokens WHERE token_hash = ?1").get(hash) as { id: string } | null;
+		if (!row) return false;
+		this.db.query("UPDATE dashboard_api_tokens SET last_used_at = ?2 WHERE id = ?1").run(row.id, Date.now());
+		return true;
+	}
 
 	private writeLifecycle(id: string, lifecycle: PersistedMatchLifecycle): void {
 		this.db.query(`
