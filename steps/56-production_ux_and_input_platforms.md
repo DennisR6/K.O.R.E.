@@ -26,7 +26,7 @@ Status: `[-]` in progress
   role and accessible label for assistive technology.
 - Mobile canvas scaling no longer applies the desktop 0.5 minimum, preventing
   400px canvas overflow on narrow 390px viewports; browser coverage verifies
-  the responsive bound.
+  the responsive bound and mobile touch menu navigation.
 - Rejected HUD actions now emit a distinct semantic UI rejection cue while
   preserving the existing actionable text.
 - Added an opt-in gamepad polling path for connected browsers: the left stick

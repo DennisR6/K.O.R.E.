@@ -370,6 +370,14 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(geometry.width).toBeLessThanOrEqual(390);
 			expect(geometry.height).toBeLessThanOrEqual(844);
 			expect(await page.evaluate(() => ({ role: document.querySelector("canvas")?.getAttribute("role"), tabIndex: (document.querySelector("canvas") as HTMLCanvasElement | null)?.tabIndex }))).toEqual({ role: "application", tabIndex: 0 });
+			await page.evaluate(() => {
+				const canvas = document.querySelector("canvas")!;
+				const rect = canvas.getBoundingClientRect();
+				const touch = new Touch({ identifier: 11, target: canvas, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 });
+				canvas.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [touch], changedTouches: [touch] }));
+				canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [touch] }));
+			});
+			await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.getRuntime?.()?.getActiveScreen?.() === "main"), 5_000, 50, "mobile touch menu navigation");
 		} finally {
 			await closeBrowser(browser);
 			await server.stop();
