@@ -107,19 +107,30 @@ test.serial("dashboard includes production offline and AI match reports", async 
 			{ type: "turn.completed", timestampMs: 2, turnNumber: 2, data: { durationMs: 10 } },
 		],
 	});
+	const playerOffline = database.storeOfflineMatch({
+		mode: "hotseat",
+		mapId: "cue-clash",
+		seed: 124,
+		players: ["Player 1", "Player 2"],
+		result: { status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 4 },
+		replay: new ReplayRecorder(createCanonicalPlayableMatchSettings(), 124).getReplay(),
+	});
 	const offlineIndex = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
-	expect((await offlineIndex.json() as { replays: Array<{ gameId: string; status: string; updatedAt: number; actionCount: number }> }).replays).toContainEqual({ gameId: offline.id, status: "completed", updatedAt: offline.createdAt, actionCount: 0 });
+	expect((await offlineIndex.json() as { replays: Array<{ gameId: string; gameType: string; status: string; updatedAt: number; actionCount: number }> }).replays).toEqual(expect.arrayContaining([
+		{ gameId: offline.id, gameType: "ai", status: "completed", updatedAt: offline.createdAt, actionCount: 0 },
+		{ gameId: playerOffline.id, gameType: "player", status: "completed", updatedAt: playerOffline.createdAt, actionCount: 0 },
+	]));
 	const offlineView = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${offline.id}/view`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(offlineView.status).toBe(303);
 	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await response.json()).toMatchObject({
-		counts: { allTime: 1, offlineMatches: 1, playersAllTime: 2 },
-		offlineModes: [{ mode: "ai-battle", games: 1 }],
-		mapUsage: [{ mapId: "cue-clash", games: 1, percentage: 100 }],
+		counts: { allTime: 2, offlineMatches: 2, playersAllTime: 4 },
+		offlineModes: [{ mode: "ai-battle", games: 1 }, { mode: "hotseat", games: 1 }],
+		mapUsage: [{ mapId: "cue-clash", games: 2, percentage: 100 }],
 		performance: { today: { samples: 2, median: 5, p90: 10, average: 7.5, max: 10 } },
 	});
 	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database)).text();
-	expect(page).toContain('data-metric="offlineMatches">1');
+	expect(page).toContain('data-metric="offlineMatches">2');
 	expect(page).toContain("Offline / KI breakdown");
 	expect(page).toContain("AI vs AI");
 	database.close();
@@ -139,16 +150,17 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	expect(unauthorized.status).toBe(404);
 	const index = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(index.status).toBe(200);
-	const indexBody = await index.json() as { schemaVersion: number; filter: object; replays: Array<{ gameId: string; actionCount: number }> };
+	const indexBody = await index.json() as { schemaVersion: number; filter: object; replays: Array<{ gameId: string; gameType: string; actionCount: number }> };
 	expect(indexBody.schemaVersion).toBe(1);
 	expect(indexBody.filter).toEqual({});
-	expect(indexBody.replays.map(replay => ({ gameId: replay.gameId, actionCount: replay.actionCount })).sort((left, right) => left.gameId.localeCompare(right.gameId))).toEqual([{ gameId: first.id, actionCount: 0 }, { gameId: second.id, actionCount: 0 }, { gameId: completed.id, actionCount: 1 }].sort((left, right) => left.gameId.localeCompare(right.gameId)));
+	expect(indexBody.replays.map(replay => ({ gameId: replay.gameId, gameType: replay.gameType, actionCount: replay.actionCount })).sort((left, right) => left.gameId.localeCompare(right.gameId))).toEqual([{ gameId: first.id, gameType: "player", actionCount: 0 }, { gameId: second.id, gameType: "player", actionCount: 0 }, { gameId: completed.id, gameType: "player", actionCount: 1 }].sort((left, right) => left.gameId.localeCompare(right.gameId)));
 	const filtered = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json&id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await filtered.json()).toMatchObject({ filter: { gameId: first.id }, replays: [{ gameId: first.id }] });
 	const page = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const pageHtml = await page.text();
 	expect(pageHtml).toContain(`data-replays="index"`);
 	expect(pageHtml).toContain('hx-trigger="input changed delay:500ms"');
+	expect(pageHtml).toContain(">Type<");
 	expect(pageHtml).toContain("Kill game");
 	const kill = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!;
 	expect(kill.status).toBe(303);
