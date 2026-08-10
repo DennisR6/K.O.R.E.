@@ -67,35 +67,26 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 
 // 0. LANDING SCREEN
 builder.addScreen(
-    ui.screen({
-        id: KoreMenuScreen.Landing,
-        layout: ui.layout.absolute(),
-        elements: [
-            ui.button({
-                id: KoreMenuElement.LandingStart,
-                text: "",
-                rect: rect(0, 0, 800, 450),
-                style: KoreMenuStyle.LandingHitbox,
-                action: ui.action.navigate(KoreMenuScreen.Main)
-            }),
-            ui.container({
-                id: KoreMenuElement.LandingContainer,
-                rect: rect(290, 300, 220, 50),
-                layout: ui.layout.absolute(),
-                style: KoreMenuStyle.LandingPrompt,
-                groupHover: true,
-                visible: true,
-                elements: [
-                    ui.text({
-                        id: KoreMenuElement.LandingPrompt,
-                        text: translate(language, KoreMenuText.LandingPrompt),
-                        rect: rect(0, 15, 220, 20),
-                        style: KoreMenuStyle.OnlineButton
-                    })
-                ]
-            })
-        ]
-    })
+	ui.screen({
+		id: KoreMenuScreen.Landing,
+		layout: ui.layout.absolute(),
+		elements: [
+			ui.text({
+				id: KoreMenuElement.LandingPrompt,
+				text: translate(language, KoreMenuText.LandingPrompt),
+				rect: rect(160, 330, 480, 58),
+				style: KoreMenuStyle.LandingPrompt,
+				visible: true,
+			}),
+			ui.button({
+				id: KoreMenuElement.LandingStart,
+				text: "",
+				rect: rect(0, 0, 800, 450),
+				style: KoreMenuStyle.LandingHitbox,
+				action: ui.action.navigate(KoreMenuScreen.Main),
+			}),
+		],
+	})
 );
 
 	// 1. MAIN MENU
