@@ -10,6 +10,7 @@ import {
 	captureConsole,
 	canvasGeometry,
 	clickWorld,
+	worldToPixel,
 	ensureBrowserBuild,
 	launchBrowser,
 	closeBrowser,
@@ -234,6 +235,24 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(matchInfo.settingsMode).toBe("local-ice-duel-v1");
 			// Twelve figures (six per team) exist in the authoritative handler.
 			expect(matchInfo.entities).toBe(12);
+
+			const firstPlayer = await page.evaluate(() => {
+				const player = (window as any).game.handler.getEntityManager().getEntities()[0];
+				return player.getPos();
+			});
+			const geometry = await canvasGeometry(page);
+			const start = worldToPixel(geometry, firstPlayer.x, firstPlayer.y);
+			const end = worldToPixel(geometry, firstPlayer.x - 60, firstPlayer.y);
+			await page.evaluate(({ start, end }) => {
+				const canvas = document.querySelector("canvas")!;
+				const touch = (identifier: number, point: { x: number; y: number }) => new Touch({ identifier, target: canvas, clientX: point.x, clientY: point.y });
+				const down = touch(7, start);
+				canvas.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [down], changedTouches: [down] }));
+				const moved = touch(7, end);
+				canvas.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true, touches: [moved], changedTouches: [moved] }));
+				canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [moved] }));
+			}, { start, end });
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.handler.getState())) !== "Your_turn", 5_000, 50, "touch shot submission");
 
 			assertCleanConsole(capture);
 		} finally {

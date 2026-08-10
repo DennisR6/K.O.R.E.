@@ -28,3 +28,4 @@ Status: `[-]` in progress
 - `tests/controller_input.test.ts`
 - `tests/kore_game_hud.test.ts`
 - `tests/status_surface.test.ts`
+- `tests/browser/browser_startup.e2e.test.ts`
