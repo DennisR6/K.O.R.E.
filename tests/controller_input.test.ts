@@ -31,6 +31,12 @@ describe("ControllerInput", () => {
 		expect(controller.isActionPressed(GameAction.Push)).toBe(true);
 	});
 
+	test("gamepad access failures are isolated from gameplay", () => {
+	const controller = new ControllerInput(new ActionManager(), { getGamepads: () => { throw new Error("permission denied"); } });
+	expect(controller.getActiveGamepad()).toBeNull();
+	expect(controller.getAimVector()).toEqual({ x: 0, y: 0 });
+});
+
 	test("calculates aim vector from axes with deadzone", () => {
 		const actionManager = new ActionManager();
 		const mockGamepad = {

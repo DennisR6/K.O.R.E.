@@ -27,7 +27,8 @@ Status: `[-]` in progress
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
-  remains pending.
+  remains pending; unsupported or permission-denied browser gamepad access is
+  isolated so it cannot interrupt rendering.
 
 ## Remaining work
 
