@@ -48,6 +48,8 @@ const usersettings = {
 	autoRestart: ["1", "true"].includes(uri.searchParams.get("autorestart") ?? ""),
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 	modePreference: uri.searchParams.get("mode") ?? undefined,
+	friendRole: uri.searchParams.get("friend") as "create" | "join" | null,
+	friendCode: uri.searchParams.get("code") ?? undefined,
 }
 
 const requestedLanguage = uri.searchParams.get("lang");
@@ -86,7 +88,12 @@ if (isUiDebugSandboxUrl(uri)) {
 	 startupMark("scene.init.started", { scene: "menu" });
 		router = new LocalMatchSceneRouter(undefined, undefined, (mapId, modeId) => {
 		 void buildOnlineJoinUrl(window.location.href, { ...(mapId ? { mapPreference: mapId } : {}), ...(modeId ? { modePreference: modeId } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Online join failed", error))
-	}, activeLanguage!, usersettings.autoRestart)
+	}, activeLanguage!, usersettings.autoRestart, () => {
+		const role = window.confirm("Create a friend room? OK = Create, Cancel = Join") ? "create" : "join";
+		const code = role === "join" ? window.prompt("Enter the 6-digit friend code")?.trim() : undefined;
+		if (role === "join" && (!code || !/^\\d{6}$/.test(code))) return;
+		void buildOnlineJoinUrl(window.location.href, { friendRole: role, ...(code ? { friendCode: code } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Friend room failed", error));
+	})
 	 handler = router.getHandler()
 	 startupMark("scene.init.completed", { scene: "menu" });
 	 startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())
@@ -132,7 +139,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	}
 	socket.addEventListener("open", () => {
 		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingFindingOpponent])
-		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference, modePreference: usersettings.modePreference }))
+		socket.send(wrap<NetworkLogin>({ type: NetworkMessageType.LOGIN, userid: getUserUUUID() ?? undefined, mapPreference: usersettings.mapPreference, modePreference: usersettings.modePreference, friendRole: usersettings.friendRole ?? undefined, friendCode: usersettings.friendCode }))
 	})
 	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
 	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))
@@ -149,8 +156,12 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 			setUserUUUID((message as NetworkNewUser).userid)
 			return
 		}
+		if (message.type === NetworkMessageType.FRIEND_ROOM_CREATED) {
+			loading.setMessage(`Friend room code: ${(message as { code: string }).code}`)
+			return
+		}
 		if (message.type === NetworkMessageType.WAITINGROOM) {
-		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingWaitingOpponent])
+			if (usersettings.friendRole !== "create") loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingWaitingOpponent])
 			return
 		}
 		if (message.type === NetworkMessageType.ERROR) {

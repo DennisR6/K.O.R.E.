@@ -17,7 +17,7 @@ export class ServerRuntime {
 	private sockets = new Map<string, ServerSocket>();
 	private userByConnection = new Map<string, string>();
 	private connectionByUser = new Map<string, string>();
-	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string }> = [];
+	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string; friendCode?: string }> = [];
 
 	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository) { }
 
@@ -43,7 +43,7 @@ export class ServerRuntime {
 
 		switch (message.type) {
 			case NetworkMessageType.LOGIN:
-				this.login(socket, message.userid, message.mapPreference, message.modePreference)
+				this.login(socket, message.userid, message.mapPreference, message.modePreference, message.friendRole, message.friendCode)
 				return
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
@@ -89,7 +89,14 @@ export class ServerRuntime {
 	public matchmakeOnce(): void {
 		this.games.evictInactive()
 		while (this.waitingUsers.length >= 2) {
-			const waiting = this.waitingUsers.splice(0, 2)
+			const first = this.waitingUsers[0]!;
+			const secondIndex = first.friendCode
+				? this.waitingUsers.findIndex((candidate, index) => index > 0 && candidate.friendCode === first.friendCode)
+				: this.waitingUsers.findIndex((candidate, index) => index > 0 && !candidate.friendCode);
+			if (secondIndex < 0) return;
+			const waiting = [first, this.waitingUsers[secondIndex]!];
+			this.waitingUsers.splice(secondIndex, 1);
+			this.waitingUsers.splice(0, 1);
 			const users = waiting.map(entry => entry.userId)
 			const mapId = this.chooseMap(waiting[0].mapPreference, waiting[1].mapPreference)
 			const modeId = this.chooseMode(waiting[0].modePreference, waiting[1].modePreference)
@@ -152,7 +159,7 @@ export class ServerRuntime {
 		}
 	}
 
-	private login(socket: ServerSocket, requestedUserId: unknown, mapPreference?: unknown, modePreference?: unknown): void {
+	private login(socket: ServerSocket, requestedUserId: unknown, mapPreference?: unknown, modePreference?: unknown, friendRole?: unknown, friendCode?: unknown): void {
 		const userId = typeof requestedUserId === "string" && requestedUserId.length > 0
 			? requestedUserId
 			: crypto.randomUUID()
@@ -171,8 +178,23 @@ export class ServerRuntime {
 		if (mapPreference !== undefined && !preference) return this.sendError(socket, "Invalid map preference")
 		const selectedMode = this.validateModePreference(modePreference)
 		if (modePreference !== undefined && !selectedMode) return this.sendError(socket, "Invalid mode preference")
-		if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId, mapPreference: preference, modePreference: selectedMode })
+		let roomCode: string | undefined
+		if (friendRole === "create") {
+			roomCode = this.createFriendCode()
+			socket.send(wrap({ type: NetworkMessageType.FRIEND_ROOM_CREATED, code: roomCode }))
+		} else if (friendRole === "join") {
+			if (typeof friendCode !== "string" || !/^\d{6}$/.test(friendCode) || !this.waitingUsers.some(waiting => waiting.friendCode === friendCode)) return this.sendError(socket, "Unknown friend join code")
+			roomCode = friendCode
+		} else if (friendRole !== undefined) return this.sendError(socket, "Invalid friend room role")
+		if (!this.waitingUsers.some(waiting => waiting.userId === userId)) this.waitingUsers.push({ userId, mapPreference: preference, modePreference: selectedMode, friendCode: roomCode })
 		socket.send(wrap<NetworkWaitingRoom>({ type: NetworkMessageType.WAITINGROOM }))
+	}
+
+	private createFriendCode(): string {
+		for (;;) {
+			const code = String(Math.floor(100000 + Math.random() * 900000));
+			if (!this.waitingUsers.some(waiting => waiting.friendCode === code)) return code;
+		}
 	}
 
 	private validateMapPreference(value: unknown): string | undefined {

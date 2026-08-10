@@ -51,6 +51,7 @@ export const enum NetworkMessageType {
 	LOGIN = "LOGIN",
 	NEWUSER = "NEWUSER",
 	WAITINGROOM = "WAITINGROOM",
+	FRIEND_ROOM_CREATED = "FRIEND_ROOM_CREATED",
 	TURN = "TURN",
 	ERROR = "ERROR",
 	REMATCH = "REMATCH",
@@ -96,6 +97,7 @@ export type UnTypedNetworkMessage =
 	NetworkLogin |
 	NetworkGame |
 	NetworkWaitingRoom |
+	NetworkFriendRoomCreated |
 	NetworkTurn |
 	NetworkNewUser |
 	NetworkError
@@ -126,12 +128,15 @@ export interface NetworkLogin {
 	userid: UUID | undefined,
 	mapPreference?: string,
 	modePreference?: string,
+	friendRole?: "create" | "join",
+	friendCode?: string,
 }
 export interface NetworkGame {
 	type: NetworkMessageType.GAME,
 	id: UUID
 }
 export interface NetworkWaitingRoom { type: NetworkMessageType.WAITINGROOM }
+export interface NetworkFriendRoomCreated { type: NetworkMessageType.FRIEND_ROOM_CREATED; code: string }
 export interface NetworkTurn {
 	type: NetworkMessageType.TURN,
 	sim: TurnPacket,

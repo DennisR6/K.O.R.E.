@@ -69,6 +69,8 @@ export async function buildOnlineJoinUrl(
 		configPath?: string;
 		mapPreference?: string;
 		modePreference?: string;
+		friendRole?: "create" | "join";
+		friendCode?: string;
 	} = {},
 ): Promise<string> {
 	const url = new URL(pageUrl);
@@ -76,5 +78,7 @@ export async function buildOnlineJoinUrl(
 	url.searchParams.set("url", await resolveOnlineServerUrl(options));
 	if (options.mapPreference) url.searchParams.set("map", options.mapPreference);
 	if (options.modePreference) url.searchParams.set("mode", options.modePreference);
+	if (options.friendRole) url.searchParams.set("friend", options.friendRole);
+	if (options.friendCode) url.searchParams.set("code", options.friendCode);
 	return url.toString();
 }

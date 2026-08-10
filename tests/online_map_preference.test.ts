@@ -27,6 +27,21 @@ test.serial("online map preferences reject maps outside the production roster", 
 	database.close();
 });
 
+test.serial("friend room codes pair only the intended two players", () => {
+	const database = new GameDatabase(":memory:");
+	const runtime = new ServerRuntime(new GameRegistry(database));
+	const host = new Socket({ connectionId: "ffffffff-ffff-4fff-8fff-ffffffffffff" });
+	const guest = new Socket({ connectionId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" });
+	runtime.open(host); runtime.open(guest);
+	runtime.message(host, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "66666666-6666-4666-8666-666666666666", friendRole: "create" }));
+	const code = JSON.parse(host.sent.find(value => value.includes("FRIEND_ROOM_CREATED"))!).code;
+	runtime.message(guest, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "77777777-7777-4777-8777-777777777777", friendRole: "join", friendCode: code }));
+	runtime.matchmakeOnce();
+	expect(packet(host).type).toBe(NetworkMessageType.INIT);
+	expect(packet(guest).type).toBe(NetworkMessageType.INIT);
+	database.close();
+});
+
 test.serial("invalid or mismatched preferences never become a server map payload", () => {
 	const database = new GameDatabase(":memory:");
 	const runtime = new ServerRuntime(new GameRegistry(database));

@@ -49,6 +49,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly onPlayOnline?: (mapId?: string, modeId?: string) => void,
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
 		private readonly autoRestartAiBattle = false,
+		private readonly onPlayOnlineFriends?: () => void,
 	) {
 		this.handler = new GameHandler();
 		this.handler.setLanguage(this.language);
@@ -275,7 +276,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId),
 			getStartError: () => this.error,
 			onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId),
-			onPlayOnlineFriends: () => this.onPlayOnline?.(),
+			onPlayOnlineFriends: () => this.onPlayOnlineFriends?.(),
 			onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId),
 			onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId),
 			drawBackground: renderer => {
