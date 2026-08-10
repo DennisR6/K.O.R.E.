@@ -44,7 +44,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => { const document = handler.getSettings()?.items?.find(candidate => candidate.id === item.itemId); return { itemId: item.itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true }; }),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
 		aiThinking,
-		...(rule.turnNumber === 0 && state === GameState.Your_turn && !result ? { tutorial: true } : {}),
+		...(rule.turnNumber === 0 && rule.phase === RulePhase.Physics && state === GameState.Your_turn && !result ? { tutorial: true } : {}),
 		guidance: { activeMarkers, ...(aimPreview ? { aimPreview } : {}) },
 		...(rejection ? { rejection: rejection.replace(/[\r\n]+/g, " ").slice(0, 160) } : {}),
 	};

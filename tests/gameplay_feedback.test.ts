@@ -35,6 +35,9 @@ test("HUD projection exposes authoritative turn, selection, aim, power, and item
 		{ itemId: "power-dash", name: "Power-Dash", description: "Boosts the next applied force by a configured multiplier.", targetType: "self", remainingUses: 1, enabled: true, showLabel: true },
 	]);
 	expect(state.match.inputLocked).toBe(false);
+	expect(state.tutorial).toBeUndefined();
+	handler.setRuleState({ ...handler.getRuleState(), phase: RulePhase.Physics });
+	expect(createKoreHudProjection(handler, ui).tutorial).toBe(true);
 });
 
 test("HUD projection marks playback as locked and clears results after rematch", () => {

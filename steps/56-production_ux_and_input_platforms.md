@@ -10,7 +10,8 @@ Status: `[-]` in progress
 - Disabled browser touch gestures on the game canvas while a touch action is
   active.
 - Added a localized first-turn onboarding hint explaining select, drag, aim,
-  and release without changing canonical gameplay state.
+  and release without changing canonical gameplay state; it appears only after
+  the optional item phase so it does not conflict with item instructions.
 - Made failed online connection controls keyboard accessible: Enter retries and
   Escape returns to the menu.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
