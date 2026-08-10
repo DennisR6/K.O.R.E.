@@ -3,6 +3,7 @@ import { GameState } from "../engine/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import type { KoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
+import { KoreMenuScreen } from "../kore/ui/menuVocabulary.js";
 import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
@@ -277,7 +278,11 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			onPlayOnlineFriends: () => this.onPlayOnline?.(),
 			onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId),
 			onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId),
-			drawBackground: renderer => preview.draw(renderer),
+			drawBackground: renderer => {
+				const surface = this.menuSurface();
+				if (surface && surface.getRuntime().getActiveScreen() === KoreMenuScreen.Landing) return false;
+				return preview.draw(renderer);
+			},
 			onImportModFile: () => this.pickModFile(),
 			onReadModClipboard: () => readClipboardText(),
 			onLaunchMod1v1: mod => this.startModMatch(mod),
