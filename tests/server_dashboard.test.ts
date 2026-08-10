@@ -95,7 +95,7 @@ test.serial("dashboard includes production offline and AI match reports", async 
 	const database = new GameDatabase(":memory:");
 	const registry = new GameRegistry(database);
 	const replay = new ReplayRecorder(createCanonicalPlayableMatchSettings(), 123).getReplay();
-	database.storeOfflineMatch({
+	const offline = database.storeOfflineMatch({
 		mode: "ai-battle",
 		mapId: "cue-clash",
 		seed: 123,
@@ -107,6 +107,10 @@ test.serial("dashboard includes production offline and AI match reports", async 
 			{ type: "turn.completed", timestampMs: 2, turnNumber: 2, data: { durationMs: 10 } },
 		],
 	});
+	const offlineIndex = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect((await offlineIndex.json() as { replays: Array<{ gameId: string; status: string; updatedAt: number; actionCount: number }> }).replays).toContainEqual({ gameId: offline.id, status: "completed", updatedAt: offline.createdAt, actionCount: 0 });
+	const offlineView = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${offline.id}/view`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(offlineView.status).toBe(303);
 	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await response.json()).toMatchObject({
 		counts: { allTime: 1, offlineMatches: 1, playersAllTime: 2 },
