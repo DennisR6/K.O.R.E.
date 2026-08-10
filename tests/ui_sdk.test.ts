@@ -178,6 +178,18 @@ test("multiple UI runtimes are independent and the architecture record matches t
 	for (const heading of ["Purpose", "Layer model", "Passive engine lifecycle", "Capability model", "System model", "Input lifecycle", "Rendering lifecycle", "Serialization lifecycle", "Engine switching", "UI actions", "Framework composition", "Generic versus KORE responsibilities", "Extension and generation model", "Stability guarantees"]) expect(document).toContain(heading);
 });
 
+test("images pass pointer clicks through to actionable elements below", () => {
+	const menu = ui.createMenu({ id: "image-pass-through", size: { width: 200, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [
+			ui.button({ id: "underlay", text: "Underlay", rect: { x: 20, y: 20, width: 120, height: 50 }, action: ui.action.emit("underlay-clicked") }),
+			ui.image({ id: "overlay", source: "overlay.svg", rect: { x: 20, y: 20, width: 120, height: 50 } }),
+		] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	runtime.tick({ pointer: { x: 60, y: 40, justPressed: true } });
+	expect(runtime.drainCommands()).toEqual([{ command: "underlay-clicked" }]);
+});
+
 test("overlapping UI elements prioritize top-most (later declared) elements for hit testing", () => {
 	const menu = ui.createMenu({ id: "overlap", size: { width: 400, height: 300 } })
 		.addScreen(ui.screen({ id: "main", layout: ui.layout.absolute(), elements: [

@@ -604,7 +604,7 @@ export class UiMenuBuilder {
 
 function createNode(settings: UiElementSettings, parentStyle?: string): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned, parentStyle) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings, parentStyle); }
 function isContainerNode(node: UiRuntimeNode): node is UiContainerRuntime { return node.kind === "container"; }
-function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return "focused" in value && value.kind !== "text"; }
+function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return value.kind === "button" || value.kind === "textInput"; }
 function hasTextInput(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput" && value.focused === true; }
 function isTextInputElement(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput"; }
 function positive(value: number): boolean { return Number.isFinite(value) && value > 0; }
