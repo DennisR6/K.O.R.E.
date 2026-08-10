@@ -52,7 +52,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.ReplayShare]) this.runtime.setElementVisible(id, resultVisible);
 		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || this.paused);
 		this.setText(KoreHudElement.Result, hudResultText(projection.match.result, this.language));
-		this.rejection = projection.rejection; this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? formatLanguage(this.language, LANGUAGE_KEYS.HudActionRejected, { reason: this.rejection }) : "");
+		const previousRejection = this.rejection;
+		this.rejection = projection.rejection;
+		if (this.rejection && this.rejection !== previousRejection) this.sounds.emit(koreAudio.command.uiReject(this.soundSourceId));
+		this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? formatLanguage(this.language, LANGUAGE_KEYS.HudActionRejected, { reason: this.rejection }) : "");
 		this.setPauseControls(this.paused, resultVisible);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }

@@ -24,6 +24,8 @@ Status: `[-]` in progress
   submitting a shot; normal touch release keeps the existing submission path.
 - The production canvas is now keyboard-focusable and exposes an application
   role and accessible label for assistive technology.
+- Rejected HUD actions now emit a distinct semantic UI rejection cue while
+  preserving the existing actionable text.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
