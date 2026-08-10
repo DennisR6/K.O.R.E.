@@ -24,7 +24,7 @@ import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
-type MenuPreviewFrame = { players: Array<{ x: number; y: number; rotation: number }> };
+type MenuPreviewFrame = { players: Array<{ x: number; y: number; rotation: number; dead?: boolean }> };
 type MenuPreviewAsset = { schemaVersion: 1; frameIntervalMs: number; frames: MenuPreviewFrame[] };
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
@@ -311,7 +311,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 
 /** Renders precomputed spectator snapshots behind the menu without simulation. */
 class MenuBattlePreview {
-	private handler = createLocalGameplayHandler("ice-map-v1");
+	private handler = createLocalGameplayHandler("magma-cradle");
 	private frames: MenuPreviewFrame[] = [];
 	private frameIndex = 0;
 	private elapsedMs = 0;
@@ -348,7 +348,7 @@ class MenuBattlePreview {
 			if (!response.ok) return;
 			const value = await response.json() as Partial<MenuPreviewAsset>;
 			if (value.schemaVersion !== 1 || typeof value.frameIntervalMs !== "number" || !Number.isFinite(value.frameIntervalMs) || value.frameIntervalMs <= 0 || !Array.isArray(value.frames) || value.frames.length === 0) return;
-			const frames = value.frames.filter(frame => Array.isArray(frame.players) && frame.players.every(player => Number.isFinite(player.x) && Number.isFinite(player.y) && Number.isFinite(player.rotation)));
+			const frames = value.frames.filter(frame => Array.isArray(frame.players) && frame.players.every(player => Number.isFinite(player.x) && Number.isFinite(player.y) && Number.isFinite(player.rotation) && (player.dead === undefined || typeof player.dead === "boolean")));
 			if (frames.length === 0) return;
 			const frameIntervalMs = value.frameIntervalMs;
 			if (typeof frameIntervalMs !== "number") return;
@@ -368,6 +368,7 @@ class MenuBattlePreview {
 			const player = frame.players[index]!;
 			entity.setPos({ x: player.x, y: player.y });
 			entity.setRotation(player.rotation);
+			if (typeof player.dead === "boolean" && "setIsDead" in entity) (entity as { setIsDead(dead: boolean): void }).setIsDead(player.dead);
 		}
 	}
 }
