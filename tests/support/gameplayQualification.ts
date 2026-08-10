@@ -235,7 +235,7 @@ function outcome(handler: GameHandler): "winner" | "draw" | "ongoing" {
 	return handler.getMatchResult()?.status === "draw" ? "draw" : "winner";
 }
 
-function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[]; softlock: SoftlockAnalysis } {
+function runOnce(testCase: GameplayQualificationCase, verifyArtifacts = true): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[]; softlock: SoftlockAnalysis } {
 	const violations: string[] = [];
 	const settings = makeSettings(testCase);
 	const handler = build(settings);
@@ -251,16 +251,20 @@ function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<Ga
 	]);
 	if (softlock.detected) violations.push(`softlock: ${softlock.reason}`);
 	const snapshot = handler.toSettings();
-	const restored = build(snapshot);
-	const restoreOk = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
-	if (!restoreOk) violations.push("engine snapshot did not restore identically");
-	let replayOk = false;
-	try {
-		const replay = new ReplayPlayer(emitter.recorder.getReplay());
-		quiet(() => replay.playAll());
-		replayOk = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
-	} catch (error) { violations.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`); }
-	if (!replayOk) violations.push("replay did not reproduce the live snapshot");
+	let restoreOk = true;
+	let replayOk = true;
+	if (verifyArtifacts) {
+		const restored = build(snapshot);
+		restoreOk = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
+		if (!restoreOk) violations.push("engine snapshot did not restore identically");
+		replayOk = false;
+		try {
+			const replay = new ReplayPlayer(emitter.recorder.getReplay());
+			quiet(() => replay.playAll());
+			replayOk = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
+		} catch (error) { violations.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`); }
+		if (!replayOk) violations.push("replay did not reproduce the live snapshot");
+	}
 	return { snapshot, replay: emitter.recorder.getReplay(), actionAccepted, turns: handler.getTurnNumber(), outcome: outcome(handler), replayOk, restoreOk, violations, softlock };
 }
 
@@ -269,7 +273,7 @@ export function qualifyGameplayCase(testCase: GameplayQualificationCase): Gamepl
 		? "qualified" : "blocked-from-selection";
 	try {
 		const first = runOnce(testCase);
-		const second = runOnce(testCase);
+		const second = runOnce(testCase, false);
 		const deterministic = JSON.stringify(first.snapshot) === JSON.stringify(second.snapshot);
 		const violations = [...first.violations];
 		if (!deterministic) violations.push("duplicate seeded run diverged");

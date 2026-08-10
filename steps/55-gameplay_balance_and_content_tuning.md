@@ -11,6 +11,9 @@ Status: `[-]` in progress
   qualification summary.
 - Reduced repeated qualification setup by caching immutable map documents and
   the official item catalog in the deterministic matrix harness.
+- Kept the full artifact checks on the first seeded run while using the second
+  run for deterministic state comparison, avoiding duplicate replay/restore
+  work without weakening the determinism assertion.
 
 These thresholds are qualification signals, not claims that the game is
 balanced. Human playtesting and content tuning remain required before release.
