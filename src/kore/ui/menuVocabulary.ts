@@ -54,6 +54,7 @@ export enum KoreMenuScreen {
 export enum KoreMenuElement {
 	LandingPrompt = "landing-prompt",
 	LandingStart = "landing-start",
+	LandingContainer = "landing-container",
 	MainTitle = "main-title",
 	MainActions = "main-actions",
 	MainAi = "main-ai",

@@ -65,17 +65,63 @@ export const koreMenuCommands = KoreMenuCommand;
 function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 	const builder = ui.createMenu({ id: KoreMenuId.Runtime, size: SIZE });
 
-	// 0. LANDING SCREEN
-	builder.addScreen(
-		ui.screen({
-			id: KoreMenuScreen.Landing,
-			layout: ui.layout.absolute(),
-			elements: [
-				ui.text({ id: KoreMenuElement.LandingPrompt, text: translate(language, KoreMenuText.LandingPrompt), rect: rect(200, 180, 480, 58), style: KoreMenuStyle.LandingPrompt, visible: false }),
-				ui.button({ id: KoreMenuElement.LandingStart, text: "", rect: rect(0, 0, 800, 450), style: KoreMenuStyle.LandingHitbox, action: ui.action.navigate(KoreMenuScreen.Main) }),
-			],
-		})
-	);
+// 0. LANDING SCREEN
+builder.addScreen(
+    ui.screen({
+        id: KoreMenuScreen.Landing,
+        layout: ui.layout.vertical({
+            gap: 20,
+            justify: "center",
+            align: "center",
+            padding: { top: 300, right: 30, bottom: 40, left: 30 }
+        }),
+        elements: [
+            ui.container({
+                id: "LandingHelpContainer",
+                rect: rect(0, 0, 740, 240),
+                style: "HelpContainer",
+                elements: [
+                    ui.container({
+                        id: "LandingActions",
+                        rect: rect(0, 0, 740, 240),
+                        layout: ui.layout.vertical({
+                            gap: 12,
+                            justify: "center",
+                            align: "center",
+                            padding: { top: 0, right: 0, bottom: 30, left: 0 }
+                        }),
+                        style: KoreMenuStyle.MainActions,
+                        elements: [
+                            ui.container({
+                                id: KoreMenuElement.LandingContainer,
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LandingPrompt,
+                                groupHover: true,
+                                visible: false,
+                                elements: [
+                                    ui.button({
+                                        id: KoreMenuElement.LandingStart,
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 48 },
+                                        style: KoreMenuStyle.OnlineButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Main)
+                                    }),
+                                    ui.text({
+                                        id: KoreMenuElement.LandingPrompt,
+                                        text: translate(language, KoreMenuText.LandingPrompt),
+                                        rect: rect(80, 15, 60, 45),
+                                        style: KoreMenuStyle.OnlineButton
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            })
+        ]
+    })
+);
 
 	// 1. MAIN MENU
 builder.addScreen(

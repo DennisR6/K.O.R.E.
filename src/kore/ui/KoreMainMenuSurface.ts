@@ -44,7 +44,7 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 		// Keep pointer state flowing through the SDK even when no button event
 		// occurred. This is what makes the renderer's hover state live.
 		this.runtime.tick({ pointer: { ...this.mouse } });
-		if (this.runtime.getActiveScreen() === KoreMenuScreen.Landing && this.landingTicks++ > 300) this.runtime.setElementVisible(KoreMenuElement.LandingPrompt, true);
+		if (this.runtime.getActiveScreen() === KoreMenuScreen.Landing && this.landingTicks++ > 300) this.runtime.setElementVisible(KoreMenuElement.LandingContainer, true);
 		this.handleCommands(this.runtime.drainCommands());
 	}
 	public draw(ctx: RenderContext): void {
