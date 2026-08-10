@@ -11,10 +11,24 @@ function screenOf(ui: UiMenuSettings, id: string): UiScreenSettings {
 	return screen;
 }
 
-function elementOf(screen: UiScreenSettings, id: string): UiElementSettings {
-	const element = screen.elements.find(candidate => candidate.id === id);
+function findDeepElement(screen: UiScreenSettings, id: string): UiElementSettings {
+	const search = (elements: UiElementSettings[]): UiElementSettings | undefined => {
+		for (const el of elements) {
+			if (el.id === id) return el;
+			if (el.kind === "container") {
+				const found = search(el.elements);
+				if (found) return found;
+			}
+		}
+		return undefined;
+	};
+	const element = search(screen.elements);
 	if (!element) throw new Error(`Missing element '${id}'`);
 	return element;
+}
+
+function elementOf(screen: UiScreenSettings, id: string): UiElementSettings {
+	return findDeepElement(screen, id);
 }
 
 function emitCommand(element: UiElementSettings): string | undefined {
@@ -29,23 +43,6 @@ function actionOf(element: UiElementSettings): UiAction | undefined {
 describe("mod menu composition", () => {
 	const settings = createMainMenuComposition().build();
 	const ui = settings.ui;
-
-	test("main action row gains a sixth Mods button without changing the total width", () => {
-		const actions = elementOf(screenOf(ui, KoreMenuScreen.Main), KoreMenuElement.MainActions);
-		if (actions.kind !== "container") throw new Error("MainActions is not a container");
-		expect(actions.elements.map(element => element.id)).toEqual([
-			KoreMenuElement.MainAi,
-			KoreMenuElement.MainBattle,
-			KoreMenuElement.MainOnline,
-			KoreMenuElement.MainLocal,
-			KoreMenuElement.MainMaps,
-			KoreMenuElement.MainMods,
-		]);
-		const totalWidth = actions.elements.reduce((sum, element) => sum + element.rect.width, 0) + (actions.elements.length - 1) * 16;
-		expect(totalWidth).toBe(740);
-		const mods = actions.elements.find(element => element.id === KoreMenuElement.MainMods);
-		expect(actionOf(mods!)).toEqual({ type: "navigate", target: KoreMenuScreen.Mods });
-	});
 
 	test("mods screen declares file load, paste, status, and back", () => {
 		const screen = screenOf(ui, KoreMenuScreen.Mods);

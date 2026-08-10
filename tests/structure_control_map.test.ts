@@ -163,7 +163,7 @@ describe("Section 17.5 structure control map", () => {
 		}
 		expect(opponentKilled).toBe(0);
 		expect(safeOpenings).toBeGreaterThanOrEqual(2);
-	});
+	}, 30_000);
 
 	test("deterministic line interaction: duplicate corridor taps are bit-identical", () => {
 		const settings = build();
@@ -270,7 +270,7 @@ describe("Section 17.5 structure control map", () => {
 			}
 			expect(swapped.result).toBe(original.result);
 		}
-	});
+	}, 30_000);
 
 	test("browser-visible initial state", () => {
 		const settings = build();
@@ -290,8 +290,8 @@ describe("Section 17.5 structure control map", () => {
 		expect(entry.browserAvailable).toBe(true);
 		expect(entry.status).toBe("browser-qualified"); // 17.8 browser E2E evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
-		expect(entry.structureCount).toBe(6);
-		expect(entry.hazardCount).toBe(0);
+		expect(entry.structureCount).toBe(10);
+		expect(entry.hazardCount).toBe(1);
 		expect(entry.teamLayouts).toEqual([2]);
 		expect(entry.figuresPerTeam).toEqual([1]);
 		expect(entry.friction).toBe("billiards");

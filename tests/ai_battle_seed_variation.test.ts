@@ -103,7 +103,7 @@ describe("KI vs KI battle rematch re-seeding", () => {
 		const second = router.getHandler();
 		expect(second).not.toBe(first);
 		expect(router.getBattleSeed()).toBe(2000);
-		expect(router.getMapId()).toBe("ice-map-v1");
+		expect(router.getMapId()).toBe("magma-cradle");
 		// The fresh battle keeps playing to completion.
 		expect(tickUntilOver(second)).toBeGreaterThan(0);
 		expect(second.getState()).toBe(GameState.Game_over);

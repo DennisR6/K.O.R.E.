@@ -23,8 +23,7 @@ export function createHazardControlMap(worldSize: Vector2D): MapDocument {
 	const scaleY = worldSize.y / blueprint.y;
 	const scale = Math.min(scaleX, scaleY);
 	const map = kore.createDefaultMap({ id: "hazard-control", name: "Hazard Control", description: "A mirrored arena whose center corridor is guarded by two lethal kill zones; flank and drive opponents backward into the hazard.", worldSize, friction: FRICTION_TABLE.tiles });
-	addOpenPerimeterWalls(map, worldSize);
 	map.addPlayerSpawn({ teamNr: 0, x: 138 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
 	map.addPlayerSpawn({ teamNr: 1, x: 638 * scaleX, y: 213 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
-	return map.addKillZone({ id: "west-kill", x: 300 * scaleX, y: 225 * scaleY, r: 28 * scale }).addKillZone({ id: "east-kill", x: 500 * scaleX, y: 225 * scaleY, r: 28 * scale }).addKillZone({ id: "east-edge-kill-top", x: 785 * scaleX, y: 225 * scaleY, r: 15 * scale }).addKillZone({ id: "east-edge-kill-middle", x: 785 * scaleX, y: 325 * scaleY, r: 15 * scale }).addKillZone({ id: "east-edge-kill-bottom", x: 785 * scaleX, y: 425 * scaleY, r: 15 * scale }).buildMapDocument();
+	return map.addKillZone({ id: "west-kill", x: 300 * scaleX, y: 225 * scaleY, r: 28 * scale }).addKillZone({ id: "east-kill", x: 500 * scaleX, y: 225 * scaleY, r: 28 * scale }).buildMapDocument();
 }

@@ -538,9 +538,8 @@ class UiElement implements UiRuntimeElement {
 	public insertText(value: string): void { this.value += value; this.text = this.value; }
 	public deleteBackward(): void { this.value = this.value.slice(0, -1); this.text = this.value; }
 	public toSettings(): UiElementSettings {
-		const base = { ...clone(this.settings), rect: clone(this.localRect), text: this.text, visible: this.visible, enabled: this.enabled };
-		// The leaf union keeps `value` only on text inputs; the runtime spreads
-		// the authored settings back into the same canonical kind.
+		const base = { ...clone(this.settings), rect: clone(this.localRect), visible: this.visible, enabled: this.enabled };
+		if (this.kind !== "image") (base as Record<string, unknown>).text = this.text;
 		return this.kind === "textInput" ? { ...base, value: this.value } as UiTextInputSettings : base as UiTextSettings | UiButtonSettings | UiImageSettings;
 	}
 }

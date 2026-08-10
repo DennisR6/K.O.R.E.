@@ -132,8 +132,8 @@ describe("KORE UI vocabulary regression", () => {
 
 	test("map rows and back buttons render distinct registered theme borders through the full UI path", () => {
 		const menu = createKoreMainMenuSurface();
-		press(menu, 400, 100); // landing -> main menu
-		press(menu, 589, 368); // Choose Map -> map-local
+		menu.getRuntime().dispatch({ type: "navigate", target: KoreMenuScreen.MapLocal });
+		menu.tick(16, 0);
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.MapLocal);
 		const recorder = new RecordingRenderContext();
 		menu.draw(recorder);

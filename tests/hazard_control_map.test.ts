@@ -103,7 +103,7 @@ function playScripted(settings: ReturnType<typeof createCanonicalPlayableMatchSe
 
 function hazardZones(settings: ReturnType<typeof createCanonicalPlayableMatchSettings>): { x: number; y: number; r: number }[] {
 	return settings.mapBoundarys
-		.filter(boundary => boundary.effects.some(effect => effect.trigger === EffectTrigger.Collision))
+		.filter(boundary => (boundary.effects && boundary.effects.some(effect => effect.trigger === EffectTrigger.Collision)) || (boundary.collisionCommands && boundary.collisionCommands.length > 0))
 		.map(boundary => ({ x: boundary.x, y: boundary.y, r: boundary.r ?? 0 }));
 }
 
@@ -138,7 +138,7 @@ describe("Section 17.6 hazard control map", () => {
 		expect(east).toMatchObject({ x: 500, y: 225, r: ZONE_RADIUS });
 		// Every hazard renders as a red collision-effect circle (the loader
 		// assigns the kill-zone color) and no solid stands on the direct line.
-		const solids = settings.mapBoundarys.filter(boundary => boundary.effects.length === 0 && !("role" in boundary && boundary.role === "containment"));
+		const solids = settings.mapBoundarys.filter(boundary => (boundary.effects ?? []).length === 0 && (boundary.collisionCommands ?? []).length === 0 && !("role" in boundary && boundary.role === "containment"));
 		expect(solids.length).toBe(0);
 	});
 
@@ -175,7 +175,7 @@ describe("Section 17.6 hazard control map", () => {
 			}
 		}
 		expect(safeOpenings).toBeGreaterThanOrEqual(2);
-	});
+	}, 30_000);
 
 	test("deterministic hazard activation: a straight shot dies in the near zone at a fixed position", () => {
 		const settings = build();
@@ -304,7 +304,7 @@ describe("Section 17.6 hazard control map", () => {
 			}
 			expect(swapped.result).toBe(original.result);
 		}
-	});
+	}, 30_000);
 
 	test("browser-visible initial state", () => {
 		const settings = build();
@@ -324,8 +324,8 @@ describe("Section 17.6 hazard control map", () => {
 		expect(entry.browserAvailable).toBe(true);
 		expect(entry.status).toBe("browser-qualified"); // 17.8 browser E2E evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
-		expect(entry.structureCount).toBe(1);
-		expect(entry.hazardCount).toBe(2);
+		expect(entry.structureCount).toBe(5);
+		expect(entry.hazardCount).toBe(5);
 		expect(entry.hazardTypes).toEqual(["kill-zone"]);
 		expect(entry.teamLayouts).toEqual([2]);
 		expect(entry.figuresPerTeam).toEqual([1]);

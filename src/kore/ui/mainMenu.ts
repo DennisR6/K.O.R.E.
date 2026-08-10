@@ -25,16 +25,8 @@ export const MAIN_ACTIONS = {
 const SIZE = { width: 800, height: 450 };
 const MENU_TITLE = "KORE";
 
-<<<<<<< HEAD
 // const BTN_W = 180;
 // const BTN_H = 48;
-=======
-// The production menu is authored in world coordinates and consumed by the
-// generic UI SDK. Keep these bounds aligned with the browser/world contract.
-// The centered bottom row holds six actions: 6 * 110 + 5 * 16 gap = 740.
-const BTN_W = 110;
-const BTN_H = 58;
->>>>>>> staging
 
 /** The sole production source for KORE's menu screens, actions, and audio intent. */
 export class KoreMainMenuComposition {
@@ -77,20 +69,59 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
 builder.addScreen(
     ui.screen({
         id: KoreMenuScreen.Landing,
+        layout: ui.layout.absolute(),
+        elements: [
+            ui.button({
+                id: KoreMenuElement.LandingStart,
+                text: "",
+                rect: rect(0, 0, 800, 450),
+                style: KoreMenuStyle.LandingHitbox,
+                action: ui.action.navigate(KoreMenuScreen.Main)
+            }),
+            ui.container({
+                id: KoreMenuElement.LandingContainer,
+                rect: rect(290, 300, 220, 50),
+                layout: ui.layout.absolute(),
+                style: KoreMenuStyle.LandingPrompt,
+                groupHover: true,
+                visible: true,
+                elements: [
+                    ui.text({
+                        id: KoreMenuElement.LandingPrompt,
+                        text: translate(language, KoreMenuText.LandingPrompt),
+                        rect: rect(0, 15, 220, 20),
+                        style: KoreMenuStyle.OnlineButton
+                    })
+                ]
+            })
+        ]
+    })
+);
+
+	// 1. MAIN MENU
+builder.addScreen(
+    ui.screen({
+        id: KoreMenuScreen.Main,
         layout: ui.layout.vertical({
             gap: 20,
             justify: "center",
             align: "center",
-            padding: { top: 300, right: 30, bottom: 40, left: 30 }
+            padding: { top: 0, right: 30, bottom: 40, left: 30 }
         }),
         elements: [
             ui.container({
-                id: "LandingHelpContainer",
+                id: "HelpContainer",
                 rect: rect(0, 0, 740, 240),
                 style: "HelpContainer",
                 elements: [
+                    ui.button({
+                        id: "HelpButton",
+                        rect: rect(250, 40, 240, 270),
+                        style: "HelpButton",
+                        text: ""
+                    }),
                     ui.container({
-                        id: "LandingActions",
+                        id: KoreMenuElement.MainActions,
                         rect: rect(0, 0, 740, 240),
                         layout: ui.layout.vertical({
                             gap: 12,
@@ -100,26 +131,153 @@ builder.addScreen(
                         }),
                         style: KoreMenuStyle.MainActions,
                         elements: [
+                            ui.text({
+                                id: KoreMenuElement.MainTitle,
+                                text: translate(language, KoreMenuText.Title),
+                                rect: rect(0, 0, 60, 48),
+                                style: KoreMenuStyle.MapTitle
+                            }),
+
+                            // Online Button
                             ui.container({
-                                id: KoreMenuElement.LandingContainer,
+                                id: "image-text-button-online",
                                 rect: { x: 0, y: 0, width: 220, height: 50 },
                                 layout: ui.layout.absolute(),
-                                style: KoreMenuStyle.LandingPrompt,
+                                style: KoreMenuStyle.OnlineButton,
                                 groupHover: true,
-                                visible: false,
                                 elements: [
                                     ui.button({
-                                        id: KoreMenuElement.LandingStart,
+                                        id: "action-online",
                                         text: "",
-                                        rect: { x: 0, y: 0, width: 220, height: 48 },
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
                                         style: KoreMenuStyle.OnlineButton,
-                                        action: ui.action.navigate(KoreMenuScreen.Main)
+                                        action: ui.action.navigate(KoreMenuScreen.OnlineSub),
+                                    }),
+                                    ui.image({
+                                        id: "icon-online",
+                                        source: "/public/picture/menuicons/users.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.OnlineButton
+                                    }),
+									ui.image({
+                                        id: "trenn-online",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.OnlineButton
                                     }),
                                     ui.text({
-                                        id: KoreMenuElement.LandingPrompt,
-                                        text: translate(language, KoreMenuText.LandingPrompt),
-                                        rect: rect(80, 15, 60, 45),
+                                        id: "label-online",
+                                        text: translate(language, KoreMenuText.Online),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
                                         style: KoreMenuStyle.OnlineButton
+                                    })
+                                ]
+                            }),
+
+                            // Local Button
+                            ui.container({
+                                id: "image-text-button-local",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.LocalButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-local",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.LocalButton,
+                                        action: ui.action.navigate(KoreMenuScreen.LocalSub)
+                                    }),
+                                    ui.image({
+                                        id: "icon-local",
+                                        source: "/public/picture/menuicons/gamepad-2.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+									ui.image({
+                                        id: "trenn-local",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.LocalButton
+                                    }),
+                                    ui.text({
+                                        id: "label-local",
+                                        text: translate(language, KoreMenuText.Local),
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.LocalButton
+                                    })
+                                ]
+                            }),
+
+                            // Settings Button
+                            ui.container({
+                                id: "image-text-button-settings",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.SettingsButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-settings",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.SettingsButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Settings)
+                                    }),
+                                    ui.image({
+                                        id: "icon-settings",
+                                        source: "/public/picture/menuicons/settings.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    }),
+									ui.image({
+                                        id: "trenn-settings",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    }),
+                                    ui.text({
+                                        id: "label-settings",
+                                        text: "Settings",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.SettingsButton
+                                    })
+                                ]
+                            }),
+
+                            // Credits Button
+                            ui.container({
+                                id: "image-text-button-credits",
+                                rect: { x: 0, y: 0, width: 220, height: 50 },
+                                layout: ui.layout.absolute(),
+                                style: KoreMenuStyle.CreditsButton,
+                                groupHover: true,
+                                elements: [
+                                    ui.button({
+                                        id: "action-credits",
+                                        text: "",
+                                        rect: { x: 0, y: 0, width: 220, height: 50 },
+                                        style: KoreMenuStyle.CreditsButton,
+                                        action: ui.action.navigate(KoreMenuScreen.Credits)
+                                    }),
+                                    ui.image({
+                                        id: "icon-credits",
+                                        source: "/public/picture/menuicons/circle-star.svg",
+                                        rect: { x: 12, y: 10, width: 40, height: 30 },
+                                        style: KoreMenuStyle.CreditsButton
+                                    }),
+									ui.image({
+                                        id: "trenn-credits",
+                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        rect: { x: 55, y: 15, width: 24, height: 24 },
+                                        style: KoreMenuStyle.CreditsButton
+                                    }),
+                                    ui.text({
+                                        id: "label-credits",
+                                        text: "Credits",
+                                        rect: { x: 75, y: 15, width: 140, height: 20 },
+                                        style: KoreMenuStyle.CreditsButton
                                     })
                                 ]
                             })
@@ -130,32 +288,6 @@ builder.addScreen(
         ]
     })
 );
-
-	// 1. HAUPTMENÜ. All interaction remains declared in SDK settings; the
-	// renderer only projects the resulting runtime state.
-	builder.addScreen(
-		ui.screen({
-			id: KoreMenuScreen.Main,
-			layout: ui.layout.vertical({ gap: 28, justify: "space-between", align: "center", padding: { top: 35, right: 30, bottom: 50, left: 30 } }),
-			elements: [
-				ui.text({ id: KoreMenuElement.MainTitle, text: translate(language, KoreMenuText.Title), rect: rect(0, 0, 200, 48), style: KoreMenuStyle.MapTitle }),
-				ui.container({
-					id: KoreMenuElement.MainActions,
-					rect: rect(0, 0, 740, BTN_H),
-					layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
-					style: KoreMenuStyle.MainActions,
-					elements: [
-						menuButton(KoreMenuElement.MainAi, translate(language, KoreMenuText.Ai), KoreMenuScreen.Difficulty),
-						menuButton(KoreMenuElement.MainBattle, translate(language, KoreMenuText.Battle), KoreMenuScreen.MapBattle),
-						menuButton(KoreMenuElement.MainOnline, translate(language, KoreMenuText.Online), KoreMenuScreen.MapOnline),
-						ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
-						ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, BTN_W, BTN_H), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenLocalMaps) }),
-						menuButton(KoreMenuElement.MainMods, translate(language, KoreMenuText.Mods), KoreMenuScreen.Mods),
-					],
-				}),
-			],
-		})
-	);
 
 	// 2. ONLINE AND LOCAL SUBMENUS
 	builder.addScreen(
@@ -518,22 +650,6 @@ builder.addScreen(
 	return builder.build();
 }
 
-/** Primary menu actions navigate; the navigation target is authored per button. */
-/*function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen, style: KoreMenuStyle) {
-	return ui.button({ id, text, rect: rect(0, 0, BTN_W, BTN_H), style, action: ui.action.navigate(target) });
-}*/
-
-/*function submenuScreen(id: KoreMenuScreen, title: string, buttons: ReturnType<typeof ui.button>[]) {
-	return ui.screen({
-		id,
-		layout: ui.layout.vertical({ gap: 20, justify: "center", align: "center", padding: { top: 35, right: 30, bottom: 40, left: 30 } }),
-		elements: [
-			ui.text({ id: `${id}-title`, text: title, rect: rect(0, 0, 200, 40), style: KoreMenuStyle.MapTitle }),
-			ui.container({ id: `${id}-actions`, rect: rect(0, 0, 740, 220), layout: ui.layout.vertical({ gap: 12, justify: "center", align: "center" }), elements: [...buttons, ui.button({ id: `${id}-back`, text: "Back", rect: rect(0, 0, 120, 36), style: KoreMenuStyle.Back, action: ui.action.back() })] }),
-		],
-	});
-}*/
-
 function simpleScreen(id: KoreMenuScreen, title: string, language: LanguageCatalog) {
 	return ui.screen({
 		id,
@@ -601,11 +717,11 @@ function modsScreen(language: LanguageCatalog) {
 		id: KoreMenuScreen.Mods,
 		layout: ui.layout.absolute(),
 		elements: [
-			ui.text({ id: KoreMenuElement.ModsTitle, text: translate(language, KoreMenuText.ModsTitle), rect: rect(250, 32, 300, 40), style: KoreMenuStyle.MapTitle }),
-			ui.button({ id: KoreMenuElement.ModsLoadFile, text: translate(language, KoreMenuText.ModsLoadFile), rect: rect(250, 130, 300, 46), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModFile) }),
-			ui.button({ id: KoreMenuElement.ModsPaste, text: translate(language, KoreMenuText.ModsPasteJson), rect: rect(250, 192, 300, 46), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModPaste) }),
-			ui.text({ id: KoreMenuElement.ModsStatus, text: translate(language, KoreMenuText.ModsStatusEmpty), rect: rect(120, 262, 560, 36), style: KoreMenuStyle.MapNote }),
-			ui.button({ id: KoreMenuElement.ModsBack, text: translate(language, KoreMenuText.Back), rect: rect(250, 336, 300, 40), style: KoreMenuStyle.Back, action: ui.action.back() }),
+			ui.text({ id: KoreMenuElement.ModsTitle, text: translate(language, KoreMenuText.ModsTitle), rect: rect(265, 40, 300, 32), style: KoreMenuStyle.MapTitle }),
+			ui.button({ id: KoreMenuElement.ModsLoadFile, text: translate(language, KoreMenuText.ModsLoadFile), rect: rect(250, 95, 300, 42), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModFile) }),
+			ui.button({ id: KoreMenuElement.ModsPaste, text: translate(language, KoreMenuText.ModsPasteJson), rect: rect(250, 150, 300, 42), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModPaste) }),
+			ui.text({ id: KoreMenuElement.ModsStatus, text: translate(language, KoreMenuText.ModsStatusEmpty), rect: rect(200, 215, 400, 24), style: KoreMenuStyle.MapNote }),
+			ui.button({ id: KoreMenuElement.ModsBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 320, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
 	});
 }
@@ -615,11 +731,11 @@ function modImportScreen(language: LanguageCatalog) {
 		id: KoreMenuScreen.ModImport,
 		layout: ui.layout.absolute(),
 		elements: [
-			ui.text({ id: KoreMenuElement.ModImportTitle, text: translate(language, KoreMenuText.ModImportTitle), rect: rect(250, 28, 300, 40), style: KoreMenuStyle.MapTitle }),
-			ui.text({ id: KoreMenuElement.ModImportHint, text: translate(language, KoreMenuText.ModImportHint), rect: rect(130, 74, 540, 26), style: KoreMenuStyle.MapNote }),
-			ui.textInput({ id: KoreMenuElement.ModImportInput, text: "", value: "", rect: rect(130, 114, 540, 132), style: KoreMenuStyle.MainButton }),
-			ui.button({ id: KoreMenuElement.ModImportValidate, text: translate(language, KoreMenuText.ModImportValidate), rect: rect(250, 274, 300, 44), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ValidateMod) }),
-			ui.button({ id: KoreMenuElement.ModImportBack, text: translate(language, KoreMenuText.Back), rect: rect(250, 336, 300, 40), style: KoreMenuStyle.Back, action: ui.action.back() }),
+			ui.text({ id: KoreMenuElement.ModImportTitle, text: translate(language, KoreMenuText.ModImportTitle), rect: rect(240, 30, 320, 32), style: KoreMenuStyle.MapTitle }),
+			ui.text({ id: KoreMenuElement.ModImportHint, text: translate(language, KoreMenuText.ModImportHint), rect: rect(150, 68, 500, 24), style: KoreMenuStyle.MapNote }),
+			ui.textInput({ id: KoreMenuElement.ModImportInput, text: "", rect: rect(150, 100, 500, 180), style: KoreMenuStyle.MapRow }),
+			ui.button({ id: KoreMenuElement.ModImportValidate, text: translate(language, KoreMenuText.ModImportValidate), rect: rect(250, 295, 140, 36), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ValidateMod) }),
+			ui.button({ id: KoreMenuElement.ModImportBack, text: translate(language, KoreMenuText.Back), rect: rect(410, 295, 140, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
 	});
 }
@@ -629,11 +745,11 @@ function modResultScreen(language: LanguageCatalog) {
 		id: KoreMenuScreen.ModResult,
 		layout: ui.layout.absolute(),
 		elements: [
-			ui.text({ id: KoreMenuElement.ModResultTitle, text: translate(language, KoreMenuText.ModResultTitle), rect: rect(250, 28, 300, 40), style: KoreMenuStyle.MapTitle }),
-			ui.text({ id: KoreMenuElement.ModResultSummary, text: "", rect: rect(110, 84, 580, 132), style: KoreMenuStyle.MapNote }),
-			ui.button({ id: KoreMenuElement.ModResult1v1, text: translate(language, KoreMenuText.ModTest1v1), rect: rect(130, 244, 260, 44), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.LaunchMod1v1) }),
-			ui.button({ id: KoreMenuElement.ModResultBattle, text: translate(language, KoreMenuText.ModTestBattle), rect: rect(410, 244, 260, 44), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.LaunchModAiBattle) }),
-			ui.button({ id: KoreMenuElement.ModResultBack, text: translate(language, KoreMenuText.Back), rect: rect(250, 320, 300, 40), style: KoreMenuStyle.Back, action: ui.action.back() }),
+			ui.text({ id: KoreMenuElement.ModResultTitle, text: translate(language, KoreMenuText.ModResultTitle), rect: rect(240, 30, 320, 32), style: KoreMenuStyle.MapTitle }),
+			ui.text({ id: KoreMenuElement.ModResultSummary, text: "", rect: rect(150, 80, 500, 120), style: KoreMenuStyle.MapNote }),
+			ui.button({ id: KoreMenuElement.ModResult1v1, text: translate(language, KoreMenuText.ModTest1v1), rect: rect(240, 220, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchMod1v1) }),
+			ui.button({ id: KoreMenuElement.ModResultBattle, text: translate(language, KoreMenuText.ModTestBattle), rect: rect(240, 270, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchModAiBattle) }),
+			ui.button({ id: KoreMenuElement.ModResultBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 330, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
 	});
 }
