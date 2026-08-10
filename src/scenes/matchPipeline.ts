@@ -64,9 +64,12 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 		case "ai-battle": {
 			// One seed per battle, derived seeds per team so the battle is fully
 			// reproducible from its recorder.
+			// Spectator battles prioritize stable turn cadence over speculative
+			// search. Easy AI remains a real deterministic producer while avoiding
+			// multi-second hard-AI decision pauses between turns.
 			const aiSettings: AiSettings[] = [
-				kore.ai.createSettings({ difficulty: "hard", seed: seed * 2, team: 0, decisionLimits: AI_BATTLE_LIMITS }),
-				kore.ai.createSettings({ difficulty: "hard", seed: seed * 2 + 1, team: 1, decisionLimits: AI_BATTLE_LIMITS }),
+				kore.ai.createSettings({ difficulty: "easy", seed: seed * 2, team: 0 }),
+				kore.ai.createSettings({ difficulty: "easy", seed: seed * 2 + 1, team: 1 }),
 			];
 			gameEmitter.setAiWorkerSettings(aiSettings);
 			// The passive battle input becomes the wrapped gameplay input of the

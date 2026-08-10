@@ -380,9 +380,9 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameMod
 /**
  * Builds an autonomous KI-vs-KI battle on the canonical arena through the
  * same pipeline as every other offline match, replacing human input with an
- * `AiBattleSystem` that drives both teams. The battle seed defaults to a fresh
- * random draw and varies the hard-AI decisions deterministically; pass an
- * explicit seed for reproducible games.
+ * `AiBattleSystem` that drives both teams using deterministic Easy AI for a
+ * stable turn cadence. The battle seed defaults to a fresh random draw; pass
+ * an explicit seed for reproducible games.
  */
 export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage, aiWorkerHost?: HardAiWorkerHost): GameHandler {
 	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod, aiWorkerHost });

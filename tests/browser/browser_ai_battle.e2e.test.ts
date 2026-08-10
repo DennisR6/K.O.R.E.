@@ -117,7 +117,7 @@ test("autonomous AI battle progresses without a player pause surface", async () 
 		expect(activeBrowserServers()).toBe(0);
 });
 
-test("production Hard AI worker overlaps playback without blocking the event loop", async () => {
+test("production Easy AI worker keeps battle turns responsive", async () => {
 	await ensureBrowserBuild();
 	const server = await startTestServer();
 	const browser = await launchBrowser();
