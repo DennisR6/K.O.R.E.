@@ -57,6 +57,9 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTicker({ tick: (dt) => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing", dt * 16.666) });
 		this.handler.addPreTickAndDraw(menu);
+		// Start the browser worker while the menu is idle so the first AI turn
+		// does not expose worker startup as a gameplay loading pause.
+		if (typeof window !== "undefined" && typeof Worker !== "undefined") this.prewarmedWorkerHost = new HardAiWorkerHost();
 	}
 
 	public getHandler(): GameHandler { return this.handler; }
@@ -75,6 +78,12 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
 	public getAiWorkerMetrics(): HardAiWorkerMetrics | undefined { return this.aiWorkerHost?.getMetrics(); }
+	public dispose(): void {
+		this.handler.dispose();
+		this.aiWorkerHost?.dispose();
+		this.prewarmedWorkerHost?.dispose();
+		this.prewarmedWorkerHost = undefined;
+	}
 	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
@@ -153,6 +162,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			startupMark("game.scene.init.started", { scene: this.mode ?? "game" });
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
+			if (this.mode !== "ai-battle") { this.prewarmedWorkerHost?.dispose(); this.prewarmedWorkerHost = undefined; }
 			this.menuPreview?.dispose();
 			this.menuPreview = undefined;
 			this.aiWorkerHost?.dispose();
@@ -328,9 +338,7 @@ class MenuBattlePreview {
 		return true;
 	}
 
-	public dispose(): void {
-		this.handler.dispose();
-	}
+	public dispose(): void { this.handler.dispose(); }
 
 	private asset: MenuPreviewAsset | undefined;
 	private async load(): Promise<void> {

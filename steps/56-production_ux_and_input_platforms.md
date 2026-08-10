@@ -29,6 +29,8 @@ Status: `[-]` in progress
   the responsive bound and mobile touch menu navigation.
 - Rejected HUD actions now emit a distinct semantic UI rejection cue while
   preserving the existing actionable text.
+- Browser AI workers are prewarmed while the menu is idle, avoiding worker
+  startup latency when entering an AI match.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
