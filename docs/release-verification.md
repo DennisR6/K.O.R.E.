@@ -95,9 +95,10 @@ The working tree is intentionally uncommitted. Focused gate:
   mirrored matches are deterministic, with ongoing safety-limit warnings.
 - Meaningful agency: `tests/player_agency_validation.test.ts`; the healthy
   trace passes, but matrix-wide agency remains open.
-- Item-use findings / item usefulness-economy: `tests/item_gameplay_qualification.test.ts`; 33
-  cases pass continuity and consumption checks, but all 11 items report the
-  known `effect-disappears-after-use` finding.
+- Item-use findings / item usefulness-economy: `tests/item_gameplay_qualification.test.ts`; 36
+  cases pass availability, consumption, declarative-effect observation,
+  replay, and snapshot continuity. Terminal winner correlation remains
+  unavailable, and human item-picker clarity remains pending.
 - Vertical-slice E2E: `tests/local_match_lifecycle.integration.test.ts` and
   `tests/playtest_build_gate.test.ts` cover the local lifecycle and Linux
   package artifacts. Human menu-to-result completion is not claimed.
@@ -127,7 +128,7 @@ The working tree is intentionally uncommitted. Focused gate:
 - Remaining usability concerns: unassessed until the two-match protocol is
   completed.
 - Known balance limitations: blocked matrix configurations, hard-AI safety-limit
-  behavior, and item effects that disappear after use remain documented.
+  behavior, and human item-picker/usability qualification remain documented.
 
 ### Final Gameplay Release Status
 
