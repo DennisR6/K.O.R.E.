@@ -33,6 +33,14 @@ test("generic UI runtime changes state only through explicit ticks and reconstru
 	expect(restored.toSettings()).toEqual(serialized);
 });
 
+test("keyboard navigation focuses and activates visible controls", () => {
+	const runtime = ui.fromSettings(settings());
+	runtime.tick({ keyboard: { pressedKeys: ["Tab"] } });
+	expect(runtime.getFocusedElementId()).toBe("next");
+	runtime.tick({ keyboard: { pressedKeys: ["Enter"] } });
+	expect(runtime.getActiveScreen()).toBe("form");
+});
+
 test("draw is pure, capability systems skip unsupported elements, and semantic commands are explicit", () => {
 	const runtime = ui.fromSettings(settings());
 	const before = runtime.toSettings();

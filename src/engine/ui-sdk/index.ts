@@ -295,6 +295,20 @@ export class UiRuntime {
 	}
 	public keyboard(input: UiKeyboardState | undefined): void {
 		this.pendingKeyboard = input;
+		const keys = input?.pressedKeys ?? [];
+		const focusable = this.activeLeaves().filter(element => hasFocusable(element) && element.visible && element.enabled);
+		if (focusable.length === 0) return;
+		const current = focusable.findIndex(element => element.focused);
+		const forward = keys.includes("Tab") || keys.includes("ArrowRight") || keys.includes("ArrowDown");
+		const backward = keys.includes("ArrowLeft") || keys.includes("ArrowUp") || (keys.includes("Tab") && keys.includes("Shift"));
+		if (forward || backward) {
+			const next = current < 0 ? 0 : (current + (backward ? -1 : 1) + focusable.length) % focusable.length;
+			for (const element of focusable) element.focused = element === focusable[next];
+		}
+		if (keys.includes("Enter") || keys.includes(" ")) {
+			const focused = focusable.find(element => element.focused);
+			if (focused && focused.kind !== "textInput") this.pendingPress = focused.id;
+		}
 	}
 	public textInput(): void {
 		const focused = this.activeLeaves().find(hasTextInput);

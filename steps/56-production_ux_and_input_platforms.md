@@ -14,6 +14,8 @@ Status: `[-]` in progress
   the optional item phase so it does not conflict with item instructions.
 - Made failed online connection controls keyboard accessible: Enter retries and
   Escape returns to the menu.
+- Added generic UI keyboard focus navigation: Tab/arrows move through visible
+  controls and Enter/Space activates the focused control.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
@@ -33,4 +35,5 @@ Status: `[-]` in progress
 - `tests/controller_input.test.ts`
 - `tests/kore_game_hud.test.ts`
 - `tests/status_surface.test.ts`
+- `tests/ui_sdk.test.ts`
 - `tests/browser/browser_startup.e2e.test.ts`
