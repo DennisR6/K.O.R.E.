@@ -389,8 +389,9 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		window.addEventListener("mousemove", (e) => {
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (!canvasEl) return
-			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
-			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
+			const { left, top } = canvasEl.getBoundingClientRect()
+			// Continue updating an active drag after it leaves the canvas so the
+			// aim preview and release position do not freeze at the edge.
 			getActiveHandler().updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 		})
 		window.addEventListener("mousedown", (e) => {
@@ -405,8 +406,9 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		window.addEventListener("mouseup", (e) => {
 			const canvasEl = (p as any).canvas as unknown as HTMLCanvasElement;
 			if (!canvasEl) return
-			const { left, top, right, bottom } = canvasEl.getBoundingClientRect()
-			if (e.clientX < left || e.clientX > right || e.clientY < top || e.clientY > bottom) return
+			const { left, top } = canvasEl.getBoundingClientRect()
+			// Release globally: a drag started on the canvas must still submit when
+			// the pointer is released outside its bounds.
 			const active = getActiveHandler()
 			active.updateMouse(ctx.toWorld(e.clientX - left), ctx.toWorld(e.clientY - top))
 			active.handleMouseReleased()
