@@ -309,6 +309,17 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 	},
 ];
 
+/**
+ * Deliberate final-release roster. Source-present maps that are not browser
+ * qualified (currently Frostbite Arena) remain available to qualification and
+ * diagnostics but cannot enter production map selection.
+ */
+export const FINAL_RELEASE_MAP_IDS = MAP_CATALOG.filter(entry => entry.browserAvailable).map(entry => entry.id) as readonly string[];
+
+export function getFinalReleaseMapEntries(forBattle = false): readonly MapCatalogEntry[] {
+	return MAP_CATALOG.filter(entry => entry.browserAvailable && (!forBattle || entry.battleAvailable));
+}
+
 /** Looks up a catalog entry by stable map ID; unknown IDs are rejected. */
 export function getMapCatalogEntry(mapId: string): MapCatalogEntry {
 	const entry = MAP_CATALOG.find(candidate => candidate.id === mapId);

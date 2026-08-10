@@ -2,7 +2,7 @@ import { audio, type AudioRuntimeSettings, validateAudioSettings } from "../../e
 import { engine } from "../../engine/sdk/index.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
 import { ui, validateUiSettings, type UiMenuSettings } from "../../engine/ui-sdk/index.js";
-import { MAP_CATALOG } from "../../content/mapCatalog.js";
+import { getFinalReleaseMapEntries } from "../../content/mapCatalog.js";
 import { koreAudio, createKoreAudioSettings } from "../audio.js";
 import { KoreMenuCommand, KoreMenuDifficulty, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, KoreMenuText, isKoreMenuCommand, koreMenuDifficultyElementId, koreMenuMapBackElementId, koreMenuMapElementId, koreMenuMapScreen, koreMenuMapTitleElementId } from "./menuVocabulary.js";
 import { createEnglishLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
@@ -114,7 +114,7 @@ function menuButton(id: KoreMenuElement, text: string, target: KoreMenuScreen) {
 }
 
 function mapScreen(intent: KoreMenuMapIntent, difficulty: KoreMenuDifficulty | undefined, language: LanguageCatalog) {
-	const eligible = MAP_CATALOG.filter(entry => entry.browserAvailable && (intent !== KoreMenuMapIntent.Battle || entry.battleAvailable));
+	const eligible = getFinalReleaseMapEntries(intent === KoreMenuMapIntent.Battle);
 	const withModes = intent === KoreMenuMapIntent.Local || intent === KoreMenuMapIntent.Online;
 	const modes = withModes ? getSelectableGameModes() : [undefined];
 	const rowHeight = withModes ? 18 : 36;
