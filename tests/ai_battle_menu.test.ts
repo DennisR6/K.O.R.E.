@@ -1,14 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
-import { MAP_CATALOG } from "../src/content/mapCatalog.js";
+import { getFinalReleaseMapEntries } from "../src/content/mapCatalog.js";
 
-const firstMapId = MAP_CATALOG.find(entry => entry.browserAvailable)!.id;
+const firstMapId = getFinalReleaseMapEntries()[0]!.id;
 // First map row at world (150..650, 80..120).
 const MAP_ROW = { x: 400, y: 100 };
-// Back sits below the rows: local mode shows 6 rows (y 388..422), battle
-// mode shows only the battleAvailable rows (5 -> y 338..372).
-const LOCAL_BACK = { x: 210, y: 405 };
-const BATTLE_BACK = { x: 210, y: 385 };
+// Back sits below the single currently visible production map row.
+const LOCAL_BACK = { x: 210, y: 125 };
+const BATTLE_BACK = { x: 210, y: 125 };
 
 function pressAt(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);
@@ -61,7 +60,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		const recorder = { local: [] as string[], battle: [] as string[], online: 0 };
 		const menu = menuWithCallbacks(recorder);
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		const battleMaps = MAP_CATALOG.filter(entry => entry.browserAvailable && entry.battleAvailable);
+		const battleMaps = getFinalReleaseMapEntries(true);
 		// Rows are packed from the top; re-enter battle mode for every row
 		// because the page stays active after a selection in this unit setup.
 		const picked: string[] = [];
@@ -76,9 +75,9 @@ describe("main menu KI vs KI battle map selection", () => {
 		// Non-terminating maps (e.g. symmetric-duel) stay selectable for
 		// human local play on the local path.
 		pressAt(menu, 400, 100); // landing -> menu
-		pressAt(menu, 589, 368); // Choose Map (local mode, all 6 rows)
+		pressAt(menu, 589, 368); // Choose Map (local mode, one visible production row)
 		pressAt(menu, 400, 100); // first row: ice-map-v1
-		expect(recorder.local).toEqual(["ice-map-v1"]);
+		expect(recorder.local).toEqual([firstMapId]);
 	});
 
 	test("does not fire any action for presses outside the buttons", () => {

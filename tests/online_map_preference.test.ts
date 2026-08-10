@@ -13,7 +13,7 @@ class Socket implements ServerSocket {
 }
 const packet = (socket: Socket) => JSON.parse(socket.sent.at(-1)!);
 
-test.serial("online map preferences select only a shared eligible catalog map and otherwise fall back", () => {
+test.serial("online map preferences reject maps outside the production roster", () => {
 	const database = new GameDatabase(":memory:");
 	const runtime = new ServerRuntime(new GameRegistry(database));
 	const one = new Socket({ connectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
@@ -22,8 +22,8 @@ test.serial("online map preferences select only a shared eligible catalog map an
 	runtime.message(one, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "11111111-1111-4111-8111-111111111111", mapPreference: "cue-clash" }));
 	runtime.message(two, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "22222222-2222-4222-8222-222222222222", mapPreference: "cue-clash" }));
 	runtime.matchmakeOnce();
-	expect(packet(one).mapId).toBe("cue-clash");
-	expect(packet(two).mapId).toBe("cue-clash");
+	expect(packet(one)).toEqual({ type: NetworkMessageType.ERROR, message: "Invalid map preference" });
+	expect(packet(two)).toEqual({ type: NetworkMessageType.ERROR, message: "Invalid map preference" });
 	database.close();
 });
 

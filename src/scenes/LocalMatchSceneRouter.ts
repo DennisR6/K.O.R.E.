@@ -86,7 +86,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
 	/** Starts exactly one canonical hotseat match on the given map; failures leave the menu handler usable. */
-	public startLocalMatch(mapId: string = "ice-map-v1", modeId?: string): boolean {
+	public startLocalMatch(mapId: string = "magma-cradle", modeId?: string): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		this.mode = "hotseat";
 		return this.startScene(() => this.createLocalHandler(mapId, modeId), mapId);
@@ -102,7 +102,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	 * Starts one autonomous KI-vs-KI battle on the canonical arena. Every
 	 * start draws a fresh battle seed so the AI plays a new game.
 	 */
-	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
+	public startAiBattle(mapId: string = "magma-cradle"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
 		const workerHost = this.takePrewarmedWorkerHost();
@@ -131,7 +131,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	/** Starts one human-controlled team against a computer-controlled team. */
-	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
+	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "magma-cradle"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
 		const workerHost = this.takePrewarmedWorkerHost();
@@ -168,7 +168,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.handler = next;
 			this.aiWorkerHost = workerHost;
 			this.mapId = mapId;
-			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
+			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "magma-cradle", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
 				if (this.aiBattle && this.handler === next) this.restartAiBattle();
 			} : undefined);
 			if (this.mode === "hotseat" || this.mode === "human-vs-ai") {
@@ -176,7 +176,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 				// do not require the browser `window` global just to install the
 				// optional post-match feedback prompt.
 				const feedbackBaseUrl = typeof window !== "undefined" ? window.location.href : "http://localhost/";
-				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "ice-map-v1" }, buildFeedbackEndpoint(feedbackBaseUrl));
+				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "magma-cradle" }, buildFeedbackEndpoint(feedbackBaseUrl));
 			}
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
@@ -199,7 +199,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private restartAiBattle(): void {
 		const seed = this.battleSeedSource();
 		const workerHost = new HardAiWorkerHost();
-		const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed, undefined, workerHost), this.mapId, workerHost);
+		const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "magma-cradle", seed, undefined, workerHost), this.mapId, workerHost);
 		if (restarted) this.battleSeed = seed;
 	}
 	private captureSoundCommands(value: unknown): void {
@@ -232,7 +232,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 				// seed instead of replaying the same seeded decisions.
 				const seed = this.battleSeedSource();
 				const workerHost = new HardAiWorkerHost();
-				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed, undefined, workerHost), this.mapId, workerHost);
+				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "magma-cradle", seed, undefined, workerHost), this.mapId, workerHost);
 				if (restarted) this.battleSeed = seed;
 				return;
 			}
@@ -327,7 +327,7 @@ class MenuBattlePreview {
 }
 
 /** Builds a local hotseat match handler on any browser-available catalog map. */
-export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameModeId?: string, mod?: LoadedContentPackage): GameHandler {
+export function createLocalGameplayHandler(mapId: string = "magma-cradle", gameModeId?: string, mod?: LoadedContentPackage): GameHandler {
 	return createMatchHandler({ mode: "hotseat", mapId, gameModeId, mod });
 }
 
@@ -338,11 +338,11 @@ export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameMod
  * stable turn cadence. The battle seed defaults to a fresh random draw; pass
  * an explicit seed for reproducible games.
  */
-export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage, aiWorkerHost?: HardAiWorkerHost): GameHandler {
+export function createAiBattleHandler(mapId: string = "magma-cradle", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage, aiWorkerHost?: HardAiWorkerHost): GameHandler {
 	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod, aiWorkerHost });
 }
 
 /** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
-export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff), aiWorkerHost?: HardAiWorkerHost): GameHandler {
+export function createHumanVsAiHandler(mapId: string = "magma-cradle", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff), aiWorkerHost?: HardAiWorkerHost): GameHandler {
 	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed, aiWorkerHost });
 }

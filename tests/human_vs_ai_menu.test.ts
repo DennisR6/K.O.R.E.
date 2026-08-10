@@ -3,9 +3,9 @@ import { GameState } from "../src/engine/types.ts";
 import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createHumanVsAiHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
-import { MAP_CATALOG } from "../src/content/mapCatalog.ts";
+import { getFinalReleaseMapEntries } from "../src/content/mapCatalog.ts";
 
-const firstMapId = MAP_CATALOG.find(entry => entry.browserAvailable)!.id;
+const firstMapId = getFinalReleaseMapEntries()[0]!.id;
 
 function press(menu: KoreMainMenuSurface, x: number, y: number): void {
 	menu.updateMouse(x, y);

@@ -2,7 +2,7 @@ import { GameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
-import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
+import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
 import { GameState } from "../engine/types.js";
@@ -293,11 +293,11 @@ function withMode(template: GameSettings, modeId: string): GameSettings {
 function validateMapPreference(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	const entry = MAP_CATALOG.find(candidate => candidate.id === value);
-	return entry?.browserAvailable && isMapLoadable(value) ? value : undefined;
+	return entry?.browserAvailable && FINAL_RELEASE_MAP_IDS.includes(entry.id as typeof FINAL_RELEASE_MAP_IDS[number]) && isMapLoadable(value) ? value : undefined;
 }
 
 function chooseMap(first: string | undefined, second: string | undefined): string {
-	return first !== undefined && first === second ? first : "ice-map-v1";
+	return first !== undefined && first === second && FINAL_RELEASE_MAP_IDS.includes(first as typeof FINAL_RELEASE_MAP_IDS[number]) ? first : FINAL_RELEASE_MAP_IDS[0];
 }
 
 function parseMessage(value: string): UnTypedNetworkMessage | undefined {

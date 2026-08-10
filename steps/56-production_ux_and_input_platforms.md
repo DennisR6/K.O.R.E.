@@ -35,6 +35,8 @@ Status: `[-]` in progress
   bouncing, and deaths are real rather than precomputed positions.
 - The spectator KI-vs-KI mode uses deterministic Easy AI on both teams instead
   of hard speculative search, keeping real AI turns responsive and playable.
+- The complete map catalog remains intact for qualification and future work,
+  while the production map store/selection roster exposes only `magma-cradle`.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification

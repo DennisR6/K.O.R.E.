@@ -314,10 +314,13 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
  * qualified (currently Frostbite Arena) remain available to qualification and
  * diagnostics but cannot enter production map selection.
  */
-export const FINAL_RELEASE_MAP_IDS = MAP_CATALOG.filter(entry => entry.browserAvailable).map(entry => entry.id) as readonly string[];
+// Keep the complete catalog available for qualification and future iteration,
+// but expose only the currently polished map through production "store"
+// surfaces. Adding the next map is an explicit release-roster change.
+export const FINAL_RELEASE_MAP_IDS = ["magma-cradle"] as const;
 
 export function getFinalReleaseMapEntries(forBattle = false): readonly MapCatalogEntry[] {
-	return MAP_CATALOG.filter(entry => entry.browserAvailable && (!forBattle || entry.battleAvailable));
+	return MAP_CATALOG.filter(entry => FINAL_RELEASE_MAP_IDS.includes(entry.id as typeof FINAL_RELEASE_MAP_IDS[number]) && (!forBattle || entry.battleAvailable));
 }
 
 /** Looks up a catalog entry by stable map ID; unknown IDs are rejected. */

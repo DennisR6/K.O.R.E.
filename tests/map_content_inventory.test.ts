@@ -23,7 +23,9 @@ const plannedMapIds: string[] = [];
 const allMapIds = [...shippedMapIds, ...plannedMapIds];
 
 describe("Section 17.2 map content inventory", () => {
-	test("final release roster excludes blocked maps from production selection", () => {
+	test("final release roster exposes only Magma Cradle while retaining the full catalog", () => {
+		expect(FINAL_RELEASE_MAP_IDS).toEqual(["magma-cradle"]);
+		expect(MAP_CATALOG.length).toBeGreaterThan(FINAL_RELEASE_MAP_IDS.length);
 		expect(FINAL_RELEASE_MAP_IDS).not.toContain("frostbite-arena");
 		expect(getFinalReleaseMapEntries().every(entry => entry.browserAvailable && entry.status !== "blocked")).toBe(true);
 		expect(getFinalReleaseMapEntries(true).every(entry => entry.browserAvailable && entry.battleAvailable && entry.status !== "blocked")).toBe(true);
