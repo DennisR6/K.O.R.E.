@@ -46,4 +46,4 @@ data
 /.cocoindex_code/
 **/*.*shm
 **/*.*wal
-
+**/*.env
