@@ -109,8 +109,12 @@ export interface UiContainerSettings {
 	enabled?: boolean;
 	style?: string;
 	inheritStyle?: boolean;
+	/** Optional label; when present the container behaves like a composed button. */
+	text?: string;
 	/** Propagate the container's hover state to visible descendant leaves. */
 	groupHover?: boolean;
+	/** Optional action for clicks/touch on otherwise empty container space. */
+	action?: UiAction;
 }
 export type UiElementSettings = UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings | UiContainerSettings;
 export interface UiScreenSettings { id: string; layout?: UiLayout; visible?: boolean; elements: UiElementSettings[] }
@@ -144,6 +148,8 @@ export type UiContainerInput = {
 	style?: string;
 	inheritStyle?: boolean;
 	groupHover?: boolean;
+	text?: string;
+	action?: UiAction;
 };
 export type UiScreenInput = Omit<UiScreenSettings, "layout"> & { layout?: UiLayoutInput };
 
@@ -180,6 +186,7 @@ export interface UiContainerRuntime extends IUiPosition, IUiVisible, IUiEnabled 
 	readonly localRect: UiRect;
 	style?: string;
 	groupHover?: boolean;
+	action?: UiAction;
 	layout: UiLayout;
 	elements: UiRuntimeNode[];
 	containsPoint(point: UiPoint): boolean;
@@ -343,8 +350,9 @@ export class UiRuntime {
 	}
 	public press(): void {
 		if (!this.pendingPress) return;
-		const found = this.findLeaf(this.pendingPress);
-		if (found && hasPressable(found.element) && found.enabled && found.visible && found.element.action) this.pendingActions.push(clone(found.element.action));
+		const found = this.findNode(this.pendingPress);
+		if (!found || !found.enabled || !found.visible || !found.action) return;
+		this.pendingActions.push(clone(found.action));
 	}
 	public navigate(): void {
 		for (const action of this.pendingActions.splice(0)) this.applyAction(action);
@@ -446,7 +454,7 @@ export class UiRuntime {
 		walk(this.activeScreenNodes());
 		return leaves;
 	}
-	private findPointerTarget(point: UiPoint, nodes: UiRuntimeNode[] = this.activeScreenNodes(), parentVisible: boolean = true, parentEnabled: boolean = true): UiRuntimeElement | undefined {
+	private findPointerTarget(point: UiPoint, nodes: UiRuntimeNode[] = this.activeScreenNodes(), parentVisible: boolean = true, parentEnabled: boolean = true): UiRuntimeNode | undefined {
 		for (let i = nodes.length - 1; i >= 0; i--) {
 			const node = nodes[i]!;
 			const visible = node.visible && parentVisible;
@@ -454,22 +462,10 @@ export class UiRuntime {
 			if (isContainerNode(node)) {
 				const hit = this.findPointerTarget(point, node.elements, visible, enabled);
 				if (hit) return hit;
+				if (visible && enabled && node.action && node.containsPoint(point)) return node;
 				continue;
 			}
-			if (visible && enabled && node.containsPoint(point)) return node;
-		}
-		return undefined;
-	}
-	private findLeaf(id: string, nodes: UiRuntimeNode[] = this.activeScreenNodes(), parentVisible: boolean = true, parentEnabled: boolean = true): { element: UiRuntimeElement; visible: boolean; enabled: boolean } | undefined {
-		for (const node of nodes) {
-			const visible = node.visible && parentVisible;
-			const enabled = node.enabled && parentEnabled;
-			if (isContainerNode(node)) {
-				const found = this.findLeaf(id, node.elements, visible, enabled);
-				if (found) return found;
-				continue;
-			}
-			if (node.id === id) return { element: node, visible, enabled };
+			if (visible && enabled && (node.action || hasFocusable(node)) && node.containsPoint(point)) return node;
 		}
 		return undefined;
 	}
@@ -562,6 +558,7 @@ class UiContainer implements UiContainerRuntime {
 	public get rect(): UiRect { return this.settings.rect; } public set rect(value: UiRect) { this.settings.rect = value; }
 	public get style(): string | undefined { return this.resolvedStyle; }
 	public get groupHover(): boolean | undefined { return this.settings.groupHover; }
+	public get action(): UiAction | undefined { return this.settings.action ? clone(this.settings.action) : undefined; }
 	public containsPoint(point: UiPoint): boolean { return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height; }
 	public toSettings(): UiContainerSettings { return { ...clone(this.settings), rect: clone(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map(node => node.toSettings()) }; }
 }
@@ -608,7 +605,6 @@ export class UiMenuBuilder {
 function createNode(settings: UiElementSettings, parentStyle?: string): UiRuntimeNode { const cloned = clone(settings); return cloned.kind === "container" ? new UiContainer(cloned, parentStyle) : new UiElement(cloned as UiTextSettings | UiButtonSettings | UiTextInputSettings | UiImageSettings, parentStyle); }
 function isContainerNode(node: UiRuntimeNode): node is UiContainerRuntime { return node.kind === "container"; }
 function hasFocusable(value: UiRuntimeElement): value is UiRuntimeElement & IUiFocusable { return "focused" in value && value.kind !== "text"; }
-function hasPressable(value: UiRuntimeElement): value is UiRuntimeElement & IUiPressable { return value.kind === "button"; }
 function hasTextInput(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput" && value.focused === true; }
 function isTextInputElement(value: UiRuntimeElement): value is UiRuntimeElement & IUiTextInput { return value.kind === "textInput"; }
 function positive(value: number): boolean { return Number.isFinite(value) && value > 0; }
@@ -674,7 +670,7 @@ const ELEMENT_KEYS: Record<Exclude<UiElementKind, "container">, ReadonlySet<stri
 	button: new Set(["kind", "id", "rect", "text", "icon", "component", "visible", "enabled", "focusable", "style", "inheritStyle", "action"]),
 	textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle", "action", "value"]),
 	image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style", "inheritStyle"]),
-	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle", "groupHover"]),
+	container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle", "groupHover", "text", "action"]),
 };
 const LAYOUT_KEYS = new Set(["type", "gap", "padding", "justify", "align"]);
 const PADDING_KEYS = new Set(["top", "right", "bottom", "left"]);
@@ -735,6 +731,8 @@ function validateElement(value: unknown, ids: Set<string>, screenIds: Set<string
 		if (value.style !== undefined && typeof value.style !== "string") throw invalidElement(childPath, "invalid style");
 		if (value.inheritStyle !== undefined && typeof value.inheritStyle !== "boolean") throw invalidElement(childPath, "invalid inheritStyle");
 		if (value.groupHover !== undefined && typeof value.groupHover !== "boolean") throw invalidElement(childPath, "invalid groupHover");
+		if (value.text !== undefined && typeof value.text !== "string") throw invalidElement(childPath, "invalid text");
+		if (kind === "container" && value.action !== undefined) validateAction(value.action as UiAction, screenIds, childPath, requireScreenTargets);
 		if (kind === "container") {
 			if (value.layout === undefined) throw invalidElement(childPath, "missing layout");
 			validateLayout(value.layout, childPath);
@@ -827,13 +825,18 @@ export const ui = {
 			id: input.id,
 			rect: clone(input.rect),
 			layout: normalizeLayout(input.layout ?? ({ type: "absolute" } as const)),
-			elements: input.elements.map(element => clone(element)),
+			elements: [
+				...(input.text === undefined ? [] : [{ kind: "text" as const, id: `${input.id}__text`, text: input.text, rect: { x: 0, y: 0, width: input.rect.width, height: input.rect.height }, focusable: false }]),
+			...input.elements.map(element => clone(element)),
+			],
 		};
 		if (input.visible !== undefined) result.visible = input.visible;
 		if (input.enabled !== undefined) result.enabled = input.enabled;
 		if (input.style !== undefined) result.style = input.style;
 		if (input.inheritStyle !== undefined) result.inheritStyle = input.inheritStyle;
 		if (input.groupHover !== undefined) result.groupHover = input.groupHover;
+		if (input.text !== undefined) result.text = input.text;
+		if (input.action !== undefined) result.action = clone(input.action);
 		// Structural subtree validation (navigate targets are checked at menu build).
 		const ids = new Set<string>();
 		validateElement(result, ids, new Set<string>(), `container "${input.id}"`, new WeakSet<object>(), false);

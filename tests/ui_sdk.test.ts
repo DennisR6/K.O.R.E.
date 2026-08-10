@@ -33,6 +33,22 @@ test("generic UI runtime changes state only through explicit ticks and reconstru
 	expect(restored.toSettings()).toEqual(serialized);
 });
 
+test("containers can activate actions from empty pointer space", () => {
+	const menu = ui.createMenu({ id: "container-action", size: { width: 200, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [
+			ui.container({ id: "surface", text: "Surface", rect: { x: 0, y: 0, width: 200, height: 100 }, action: ui.action.emit("surface-pressed"), elements: [
+				ui.text({ id: "label", text: "Surface", rect: { x: 20, y: 20, width: 100, height: 20 } }),
+			] }),
+		] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	runtime.tick({ pointer: { x: 180, y: 80, justPressed: true } });
+	expect(runtime.drainCommands()).toEqual([{ command: "surface-pressed" }]);
+	const surface = runtime.toSettings().screens[0]!.elements[0]!;
+	expect(surface).toMatchObject({ text: "Surface", action: { type: "emit", command: "surface-pressed" } });
+	expect(surface.kind === "container" ? surface.elements[0] : undefined).toMatchObject({ kind: "text", text: "Surface" });
+});
+
 test("keyboard navigation focuses and activates visible controls", () => {
 	const runtime = ui.fromSettings(settings());
 	runtime.tick({ keyboard: { pressedKeys: ["Tab"] } });
@@ -139,7 +155,6 @@ test("button components are authored through the generic UI SDK and can be repla
 	expect(source).toBe("public/items/mystery_box.svg");
 	expect(runtime.setElementComponent("item", ui.component.image("replacement.svg"))).toBe(true);
 	expect(runtime.toSettings().screens[0]!.elements[0]).toMatchObject({ component: { type: "image", source: "replacement.svg" } });
-});
 });
 
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {
