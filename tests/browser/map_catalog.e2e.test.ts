@@ -57,15 +57,8 @@ const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;
 
-/** Verified grid-exact containment suicide drags per team-1 spawn index. */
-const SUICIDE_DRAGS = [
-	{ from: { x: 650, y: 225 }, to: { x: 533.125, y: 195.625 } },
-	{ from: { x: 750, y: 225 }, to: { x: 630, y: 225 } },
-	{ from: { x: 650, y: 325 }, to: { x: 533.125, y: 295.625 } },
-	{ from: { x: 750, y: 325 }, to: { x: 630, y: 325 } },
-	{ from: { x: 650, y: 425 }, to: { x: 531.25, y: 403.75 } },
-	{ from: { x: 750, y: 425 }, to: { x: 630, y: 425 } },
-] as const;
+/** Spawn-row targets used to select the next live team-1 actor. */
+const SUICIDE_ROWS = [225, 225, 325, 325, 425, 425] as const;
 
 /**
  * The qualified maps in production selection order (catalog order filtered
@@ -201,8 +194,11 @@ async function waitForPlaybackOrResolution(page: import("playwright").Page, labe
  */
 async function playSuicideTurn(page: import("playwright").Page, spawnIndex: number, expectEnd: boolean): Promise<void> {
 	await skipItemPhase(page);
-	const drag = SUICIDE_DRAGS[spawnIndex]!;
-	await dragWorld(page, drag.from, drag.to);
+	const state = await readMatchState(page);
+	const row = SUICIDE_ROWS[spawnIndex]!;
+	const shooter = state.entities.filter(entity => entity.team.includes(1) && !entity.dead).sort((a, b) => Math.abs(a.y - row) - Math.abs(b.y - row))[0]!;
+	const from = quantized(shooter);
+	await dragWorld(page, from, { x: from.x - 120, y: from.y });
 	await waitForPlaybackOrResolution(page, "playback start");
 	await waitFor(async () => (await readMatchState(page)).state === (expectEnd ? "GameState.Game_over" : "GameState.Your_turn"), 90_000, 100, expectEnd ? "terminal result" : "suicide turn resolution");
 }
@@ -219,9 +215,9 @@ async function skipItemPhase(page: import("playwright").Page): Promise<void> {
 /** Plays one full Hazard Control terminal match (weak opening + 6 wall suicides). */
 async function playHazardTerminalMatch(page: import("playwright").Page): Promise<void> {
 	await playWeakOpening(page);
-	for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
-		await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
-		if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
+	for (let i = 0; i < SUICIDE_ROWS.length; i++) {
+		await playSuicideTurn(page, i, i === SUICIDE_ROWS.length - 1);
+		if (i < SUICIDE_ROWS.length - 1) await playHazardWeak(page);
 	}
 }
 
@@ -336,9 +332,9 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 			// arena wall (the verified containment terminal route; the wall
 			// kills exactly the shooter without touching team 0), with team-0
 			// weak turns in between. The sixth wall suicide ends the match.
-			for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
-				await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
-				if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
+			for (let i = 0; i < SUICIDE_ROWS.length; i++) {
+				await playSuicideTurn(page, i, i === SUICIDE_ROWS.length - 1);
+				if (i < SUICIDE_ROWS.length - 1) await playHazardWeak(page);
 			}
 
 			const result = await readMatchResult(page);

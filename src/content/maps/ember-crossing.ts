@@ -2,6 +2,7 @@ import type { MapDocument } from "../../contracts/documents.js";
 import type { Vector2D } from "../../physics/physics.js";
 import { kore } from "../../kore/sdk/index.js";
 import { FRICTION_TABLE } from "../../settings/settings.js";
+import { addOpenPerimeterWalls } from "./perimeterWalls.js";
 
 /** Mirrored hazard map; the center zones leave safe north and south crossings. */
 export function createEmberCrossingMap(worldSize: Vector2D = { x: 800, y: 450 }): MapDocument {
@@ -11,6 +12,7 @@ export function createEmberCrossingMap(worldSize: Vector2D = { x: 800, y: 450 })
 	const sx = worldSize.x / 800;
 	const sy = worldSize.y / 450;
 	const scale = Math.min(sx, sy);
+	addOpenPerimeterWalls(map, worldSize);
 	return map
 		.addKillZone({ id: "ember-west", x: 310 * sx, y: 225 * sy, r: 22 * scale, color: "#b9472f" })
 		.addKillZone({ id: "ember-east", x: 490 * sx, y: 225 * sy, r: 22 * scale, color: "#b9472f" })

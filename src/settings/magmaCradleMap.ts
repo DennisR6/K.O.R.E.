@@ -2,6 +2,7 @@ import type { MapDocument } from "../contracts/documents.js";
 import type { Vector2D } from "../physics/physics.js";
 import { kore } from "../kore/sdk/index.js";
 import { FRICTION_TABLE } from "./settings.js";
+import { addOpenPerimeterWalls } from "../content/maps/perimeterWalls.js";
 
 const blueprint = { x: 800, y: 450 };
 
@@ -12,6 +13,7 @@ export function createMagmaCradleMap(worldSize: Vector2D): MapDocument {
 	const scaleY = worldSize.y / blueprint.y;
 	const scale = Math.min(scaleX, scaleY);
 	const map = kore.createDefaultMap({ id: "magma-cradle", name: "Magma Cradle", description: "A hot arena with volcanic vents and lethal lava pools.", worldSize, friction: FRICTION_TABLE.tiles });
+	addOpenPerimeterWalls(map, worldSize);
 	const rect = (x: number, y: number, w: number, h: number) => map.addRectangle({ x: x * scaleX, y: y * scaleY, w: w * scaleX, h: h * scaleY });
 	map.addPlayerSpawn({ teamNr: 0, x: 120 * scaleX, y: 120 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
 	map.addPlayerSpawn({ teamNr: 1, x: 560 * scaleX, y: 120 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
