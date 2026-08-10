@@ -5,6 +5,9 @@ import { readServerConfig, resolveGameDatabasePath, serveConfig } from "./src/se
 import { readDashboardConfig, serveDashboard } from "./src/server/dashboard.ts";
 import { servePublicReplayShare } from "./src/server/replayShares.ts";
 import { serveOfflineMatchReport } from "./src/server/offlineMatches.ts";
+import { servePerformanceReport } from "./src/server/performanceReports.ts";
+import { serveMatchReport } from "./src/server/matchReports.ts";
+import { serveFeedback } from "./src/server/feedbackRoute.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -30,8 +33,15 @@ Bun.serve<WebSocketData>({
 		if (replay) return replay;
 		const offline = await serveOfflineMatchReport(req, database);
 		if (offline) return offline;
+		const performance = await servePerformanceReport(req, database);
+		if (performance) return performance;
+		const matchReport = await serveMatchReport(req, database);
+		if (matchReport) return matchReport;
+		const feedback = await serveFeedback(req, database);
+		if (feedback) return feedback;
 		if (url.pathname === "/config") return serveConfig(serverConfig);
 		if (url.pathname === "/") return new Response(Bun.file("./index.html"));
+		if (url.pathname === "/replay.html") return new Response(Bun.file("./replay.html"));
 		// The offline shell lives in public/ but must register at root scope.
 		if (url.pathname === "/sw.js") return new Response(Bun.file("./public/sw.js"));
 		if (url.pathname.startsWith("/public/") || url.pathname.startsWith("/dist/")) {

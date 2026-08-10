@@ -2,10 +2,11 @@ import { GameSettings } from "../settings/settings.js";
 import { wrap } from "../utils/net.js";
 import { GameRegistry } from "./gameRegistry.js";
 import { parseDiscordInvite } from "../discord/invites.js";
-import { MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
+import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
-import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { GameState } from "../engine/types.js";
+	import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
@@ -50,6 +51,9 @@ export class ServerRuntime {
 			case NetworkMessageType.USE_ITEM:
 				this.useItem(socket, message)
 				return
+			case NetworkMessageType.SKIP_PHASE:
+				this.skipPhase(socket)
+				return
 			case NetworkMessageType.REMATCH:
 				this.rematch(socket)
 				return
@@ -64,6 +68,9 @@ export class ServerRuntime {
 				return
 			case NetworkMessageType.LEAVE_GAME:
 				this.leaveGame(socket)
+				return
+			case NetworkMessageType.SURRENDER_GAME:
+				this.surrenderGame(socket)
 				return
 			case NetworkMessageType.PONG:
 				socket.send(wrap({ type: NetworkMessageType.PING }))
@@ -92,7 +99,7 @@ export class ServerRuntime {
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
-				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId, modeId: record.handler.getSettings()?.gameMode?.id }))
+				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId, modeId: record.handler.getSettings()?.gameMode?.id }))
 			}
 		}
 	}
@@ -119,6 +126,16 @@ export class ServerRuntime {
 		for (const user of record.users) this.socketForUser(user)?.send(wrap(ended));
 	}
 
+	private surrenderGame(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before surrendering");
+		const surrendered = this.games.surrenderGameForUser(userId);
+		if (!surrendered) return this.sendError(socket, "No active game for this user");
+		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", result: surrendered.result };
+		for (const user of surrendered.record.users) this.socketForUser(user)?.send(wrap(ended));
+		socket.send(wrap<NetworkSurrendered>({ type: NetworkMessageType.SURRENDERED, result: surrendered.result }));
+	}
+
 	private handleDiscordJoin(socket: ServerSocket, payload: unknown): void {
 		const userId = this.userByConnection.get(socket.data.connectionId)
 		if (!userId) return this.sendError(socket, "Login is required before joining via invite")
@@ -129,7 +146,7 @@ export class ServerRuntime {
 				return this.sendError(socket, "Game not found or expired")
 			}
 			this.games.connectUser(userId)
-			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
 		} catch (error) {
 			this.sendError(socket, error instanceof Error ? error.message : "Invalid invite payload")
 		}
@@ -147,7 +164,7 @@ export class ServerRuntime {
 		if (requestedUserId === undefined) socket.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: userId as NetworkNewUser["userid"] }))
 		const record = this.games.connectUser(userId)
 		if (record) {
-				socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
 			return
 		}
 		const preference = this.validateMapPreference(mapPreference)
@@ -193,6 +210,7 @@ export class ServerRuntime {
 			turnNumber: result.record.turnNumber,
 			activeTeam: result.record.currentTeam,
 			ruleState: result.record.ruleState,
+			gameOver: result.record.handler.getState() === GameState.Game_over,
 		}
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
@@ -219,6 +237,15 @@ export class ServerRuntime {
 		}
 	}
 
+	private skipPhase(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId)
+		if (!userId) return this.sendError(socket, "Login is required before skipping a phase")
+		const result = this.games.skipPhase(userId)
+		if (!result.ok) return this.sendError(socket, result.error)
+		const packet: NetworkPhaseChanged = { type: NetworkMessageType.PHASE_CHANGED, ruleState: result.record.ruleState }
+		for (const user of result.record.users) this.socketForUser(user)?.send(wrap(packet))
+	}
+
 	private rematch(socket: ServerSocket): void {
 		const userId = this.userByConnection.get(socket.data.connectionId)
 		if (!userId) return this.sendError(socket, "Login is required before rematching")
@@ -226,7 +253,7 @@ export class ServerRuntime {
 		if (!result.ok) return this.sendError(socket, result.error)
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
-			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState, modeId: result.record.handler.getSettings()?.gameMode?.id }))
+			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: result.record.id, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState, modeId: result.record.handler.getSettings()?.gameMode?.id }))
 		}
 	}
 
@@ -266,11 +293,11 @@ function withMode(template: GameSettings, modeId: string): GameSettings {
 function validateMapPreference(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	const entry = MAP_CATALOG.find(candidate => candidate.id === value);
-	return entry?.browserAvailable && isMapLoadable(value) ? value : undefined;
+	return entry?.browserAvailable && FINAL_RELEASE_MAP_IDS.includes(entry.id as typeof FINAL_RELEASE_MAP_IDS[number]) && isMapLoadable(value) ? value : undefined;
 }
 
 function chooseMap(first: string | undefined, second: string | undefined): string {
-	return first !== undefined && first === second ? first : "ice-map-v1";
+	return first !== undefined && first === second && FINAL_RELEASE_MAP_IDS.includes(first as typeof FINAL_RELEASE_MAP_IDS[number]) ? first : FINAL_RELEASE_MAP_IDS[0];
 }
 
 function parseMessage(value: string): UnTypedNetworkMessage | undefined {

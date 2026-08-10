@@ -11,7 +11,7 @@ function handlerWithItems(items: ReturnType<typeof createItemDocument>[]) {
 }
 
 test("declarative conflict rejection is atomic at the public item boundary", () => {
-	const first = createItemDocument({ id: "first", effects: [{ type: "freeze", value: { speedFactor: 0.5, durationTurns: 2 } }] });
+	const first = createItemDocument({ id: "first", effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } } }] });
 	const conflicting = createItemDocument({
 		id: "conflicting",
 		effects: [{ type: "ghostMode", value: { durationTurns: 2 } }],
@@ -27,16 +27,18 @@ test("declarative conflict rejection is atomic at the public item boundary", () 
 });
 
 test("replacement and ordering are deterministic and survive a snapshot", () => {
-	const oldItem = createItemDocument({ id: "old", effects: [{ type: "freeze", value: { speedFactor: 0.5, durationTurns: 2 } }], interaction: { mode: "stack", order: 20 } });
+	const oldItem = createItemDocument({ id: "old", effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } } }], interaction: { mode: "stack", order: 20 } });
 	const replacement = createItemDocument({ id: "replacement", effects: [{ type: "ghostMode", value: { durationTurns: 2 } }], interaction: { mode: "replace", with: { old: "replace" }, order: 10 } });
 	const handler = handlerWithItems([oldItem, replacement]);
 	const actor = handler.getEntityManager().getEntities()[0]!;
 	handler.useItem(actor.getId(), oldItem.id);
 	handler.useItem(actor.getId(), replacement.id);
 	const effects = actor.getItemEffects();
-	expect(effects).toHaveLength(1);
-	expect(effects[0]!.itemId).toBe(replacement.id);
-	expect(effects[0]!.order).toBe(10);
+	const temporal = actor.getTemporalModifiers();
+	const collisionFilters = actor.getCollisionFilters();
+	expect(effects).toHaveLength(0);
+	expect(temporal).toHaveLength(0);
+	expect(collisionFilters).toHaveLength(1);
 
 	const snapshot = handler.toSettings();
 	const restored = new GameHandlerBuilder().defaultSystems().fromSettings(structuredClone(snapshot)).build();
@@ -44,12 +46,12 @@ test("replacement and ordering are deterministic and survive a snapshot", () => 
 });
 
 test("turn-scoped combinations expire on the declared boundary", () => {
-	const temporary = createItemDocument({ id: "temporary", effects: [{ type: "freeze", value: { speedFactor: 0.5, durationTurns: 2 } }] });
+	const temporary = createItemDocument({ id: "temporary", effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: 2, effect: { schemaVersion: 1, type: "movement.scale-speed", typeValue: { factor: 0.5 } } } }] });
 	const handler = handlerWithItems([temporary]);
 	const actor = handler.getEntityManager().getEntities()[0]!;
 	handler.useItem(actor.getId(), temporary.id);
 	handler.setTurnNumber(1);
-	expect(actor.getItemEffects()).toHaveLength(1);
+	expect(actor.getTemporalModifiers()).toHaveLength(1);
 	handler.setTurnNumber(2);
-	expect(actor.getItemEffects()).toHaveLength(0);
+	expect(actor.getTemporalModifiers()).toHaveLength(0);
 });

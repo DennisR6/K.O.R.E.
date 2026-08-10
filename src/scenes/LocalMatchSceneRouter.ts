@@ -2,6 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState } from "../engine/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
+import type { KoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
@@ -9,9 +10,17 @@ import { koreAudio } from "../kore/audio.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import { installGameplayHud } from "./gameplayHud.js";
 import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
-import { installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
+import { flushOfflineMatchReports, installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
+import { buildFeedbackEndpoint, installFeedbackPrompt } from "../net/feedback.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 import type { RenderContext } from "../engine/RenderContext.js";
+import { readClipboardText } from "../mods/browserClipboard.js";
+import { createModFileInput } from "../mods/browserFileInput.js";
+import type { LoadedContentPackage } from "../content/package.js";
+import { HardAiWorkerHost } from "../ai/worker/host.js";
+import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
+import { startupMark } from "../engine/startupTelemetry.js";
+import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -27,7 +36,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private battleSeed: number | undefined;
 	private menuPreview: MenuBattlePreview | undefined;
 	private hud: ReturnType<typeof installGameplayHud> | undefined;
+	private modFileInput: ReturnType<typeof createModFileInput> | undefined;
 	private pendingSoundCommands: AudioCommand[] = [];
+	private aiWorkerHost: HardAiWorkerHost | undefined;
+	private prewarmedWorkerHost: HardAiWorkerHost | undefined;
 	public readonly soundSourceId = "kore.scene-router";
 
 	public constructor(
@@ -35,6 +47,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly battleSeedSource: () => number = () => Math.floor(Math.random() * 0x7fffffff),
 		private readonly onPlayOnline?: (mapId?: string, modeId?: string) => void,
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
+		private readonly autoRestartAiBattle = false,
 	) {
 		this.handler = new GameHandler();
 		this.handler.setLanguage(this.language);
@@ -42,6 +55,9 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.handler.setMouseHandler(menu);
 		this.handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
 		this.handler.addPreTickAndDraw(menu);
+		// Start the browser worker while the menu is idle so the first AI turn
+		// does not expose worker startup as a gameplay loading pause.
+		if (typeof window !== "undefined" && typeof Worker !== "undefined") this.prewarmedWorkerHost = new HardAiWorkerHost();
 	}
 
 	public getHandler(): GameHandler { return this.handler; }
@@ -59,25 +75,39 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 	/** The seed of the currently running KI battle, or undefined in the menu. */
 	public getBattleSeed(): number | undefined { return this.battleSeed; }
+	public getAiWorkerMetrics(): HardAiWorkerMetrics | undefined { return this.aiWorkerHost?.getMetrics(); }
+	public dispose(): void {
+		this.handler.dispose();
+		this.aiWorkerHost?.dispose();
+		this.prewarmedWorkerHost?.dispose();
+		this.prewarmedWorkerHost = undefined;
+	}
 	/** Carries semantic menu cues across an immediate menu -> scene replacement. */
 	public drainSoundCommands(): AudioCommand[] { const commands = this.pendingSoundCommands.map(command => structuredClone(command)); this.pendingSoundCommands = []; return commands; }
 
 	/** Starts exactly one canonical hotseat match on the given map; failures leave the menu handler usable. */
-	public startLocalMatch(mapId: string = "ice-map-v1", modeId?: string): boolean {
+	public startLocalMatch(mapId: string = "magma-cradle", modeId?: string): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		this.mode = "hotseat";
 		return this.startScene(() => this.createLocalHandler(mapId, modeId), mapId);
+	}
+	public startModMatch(mod: LoadedContentPackage): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		this.mode = "hotseat";
+		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
+		return this.startScene(() => createLocalGameplayHandler(mapId, undefined, mod), mapId);
 	}
 
 	/**
 	 * Starts one autonomous KI-vs-KI battle on the canonical arena. Every
 	 * start draws a fresh battle seed so the AI plays a new game.
 	 */
-	public startAiBattle(mapId: string = "ice-map-v1"): boolean {
+	public startAiBattle(mapId: string = "magma-cradle"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "ai-battle";
-		const started = this.startScene(() => createAiBattleHandler(mapId, seed), mapId);
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed, undefined, workerHost), mapId, workerHost);
 		if (started) {
 			this.aiBattle = true;
 			this.battleSeed = seed;
@@ -86,13 +116,27 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		}
 		return started;
 	}
-
-	/** Starts one human-controlled team against a computer-controlled team. */
-	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "ice-map-v1"): boolean {
+	public startModAiBattle(mod: LoadedContentPackage): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
 		const seed = this.battleSeedSource();
+		const workerHost = this.takePrewarmedWorkerHost();
+		this.mode = "ai-battle";
+		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
+		const started = this.startScene(() => createAiBattleHandler(mapId, seed, mod, workerHost), mapId, workerHost);
+		if (started) {
+			this.aiBattle = true;
+			this.battleSeed = seed;
+		} else this.mode = undefined;
+		return started;
+	}
+
+	/** Starts one human-controlled team against a computer-controlled team. */
+	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "magma-cradle"): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		const seed = this.battleSeedSource();
+		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "human-vs-ai";
-		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed), mapId);
+		const started = this.startScene(() => createHumanVsAiHandler(mapId, difficulty, seed, workerHost), mapId, workerHost);
 		if (started) {
 			this.aiBattle = false;
 			this.battleSeed = seed;
@@ -102,27 +146,61 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		return started;
 	}
 
-	private startScene(factory: () => GameHandler, mapId: string | null): boolean {
+	private startScene(factory: () => GameHandler, mapId: string | null, workerHost?: HardAiWorkerHost): boolean {
+		void flushOfflineMatchReports();
 		this.starting = true;
 		try {
+			startupMark("game.build.started", { mode: this.mode, mapId });
 			const next = factory();
+			startupMark("game.build.completed", { mode: this.mode, mapId });
+			// Asset warmup is a browser rendering concern. Headless/server hosts do
+			// not have the public asset URL space and should not emit false load
+			// failures while constructing a valid local match.
+			if (typeof window !== "undefined") void new AssetPreloader().warm(next.toSettings());
+			startupMark("game.scene.init.started", { scene: this.mode ?? "game" });
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
+			if (this.mode !== "ai-battle") { this.prewarmedWorkerHost?.dispose(); this.prewarmedWorkerHost = undefined; }
 			this.menuPreview?.dispose();
 			this.menuPreview = undefined;
+			this.aiWorkerHost?.dispose();
 			this.handler.dispose();
 			this.handler = next;
+			this.aiWorkerHost = workerHost;
 			this.mapId = mapId;
-			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => { void reportOfflineMatch(record); });
+			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "magma-cradle", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
+				if (this.aiBattle && this.handler === next) this.restartAiBattle();
+			} : undefined);
+			if (this.mode === "hotseat" || this.mode === "human-vs-ai") {
+				// Scene construction is also used by headless tests and desktop hosts;
+				// do not require the browser `window` global just to install the
+				// optional post-match feedback prompt.
+				const feedbackBaseUrl = typeof window !== "undefined" ? window.location.href : "http://localhost/";
+				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "magma-cradle" }, buildFeedbackEndpoint(feedbackBaseUrl));
+			}
 			this.installResultOverlay(next);
+			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
+			startupMark("game.ready", { mode: this.mode, mapId });
 			this.error = undefined;
 			return true;
 		} catch (error) {
+			workerHost?.dispose();
 			this.error = error instanceof Error ? error.message : "Unable to start match";
 			return false;
 		} finally {
 			this.starting = false;
 		}
+	}
+	private takePrewarmedWorkerHost(): HardAiWorkerHost {
+		const host = this.prewarmedWorkerHost;
+		this.prewarmedWorkerHost = undefined;
+		return host ?? new HardAiWorkerHost();
+	}
+	private restartAiBattle(): void {
+		const seed = this.battleSeedSource();
+		const workerHost = new HardAiWorkerHost();
+		const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "magma-cradle", seed, undefined, workerHost), this.mapId, workerHost);
+		if (restarted) this.battleSeed = seed;
 	}
 	private captureSoundCommands(value: unknown): void {
 		if (!value || typeof value !== "object" || typeof (value as Partial<ISoundEmitter>).drainSoundCommands !== "function") return;
@@ -153,7 +231,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 				// A battle rematch must be a fresh game: re-draw the battle
 				// seed instead of replaying the same seeded decisions.
 				const seed = this.battleSeedSource();
-				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "ice-map-v1", seed), this.mapId);
+				const workerHost = new HardAiWorkerHost();
+				const restarted = this.startScene(() => createAiBattleHandler(this.mapId ?? "magma-cradle", seed, undefined, workerHost), this.mapId, workerHost);
 				if (restarted) this.battleSeed = seed;
 				return;
 			}
@@ -161,6 +240,8 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			return;
 		}
 		this.handler.dispose();
+		this.aiWorkerHost?.dispose();
+		this.aiWorkerHost = undefined;
 		// The application mixer owns the global music slot. Explicitly release the
 		// local match source before the fresh menu requests lower-priority music.
 		this.pendingSoundCommands.push(audio.command.stopSource({ sourceId: "kore.game.local", fadeOutMs: 150 }));
@@ -174,6 +255,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 
 	private createMenuHandler(): GameHandler {
+		void flushOfflineMatchReports();
 		const handler = new GameHandler();
 		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
@@ -187,53 +269,81 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.menuPreview?.dispose();
 		const preview = new MenuBattlePreview();
 		this.menuPreview = preview;
-		return createKoreMainMenuSurface({ onPlayLocal: () => this.startLocalMatch(), onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId), getStartError: () => this.error, onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId), onPlayOnlineFriends: () => this.onPlayOnline?.(), onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId), onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId), drawBackground: renderer => preview.draw(renderer) }, createMainMenuComposition(this.language).build());
+		return createKoreMainMenuSurface({
+			onPlayLocal: () => this.startLocalMatch(),
+			onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId),
+			getStartError: () => this.error,
+			onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId),
+			onPlayOnlineFriends: () => this.onPlayOnline?.(),
+			onPlayAiBattle: (mapId: string) => this.startAiBattle(mapId),
+			onPlayAiOpponent: (difficulty, mapId) => this.startAiOpponent(difficulty, mapId),
+			drawBackground: renderer => preview.draw(renderer),
+			onImportModFile: () => this.pickModFile(),
+			onReadModClipboard: () => readClipboardText(),
+			onLaunchMod1v1: mod => this.startModMatch(mod),
+			onLaunchModAiBattle: mod => this.startModAiBattle(mod),
+		}, createMainMenuComposition(this.language).build(), this.language);
+	}
+
+	/** Opens the hidden mod file picker; the picked text enters the menu surface import. */
+	private pickModFile(): void {
+		this.modFileInput?.dispose();
+		this.modFileInput = createModFileInput({
+			onText: (text, fileName) => {
+				const surface = this.menuSurface();
+				surface?.importModText(text, { kind: "file", fileName });
+			},
+			onError: error => {
+				const surface = this.menuSurface();
+				surface?.importModError(error, { kind: "file", fileName: "unknown" });
+			},
+		});
+		this.modFileInput.open();
+	}
+
+	private menuSurface(): KoreMainMenuSurface | undefined {
+		const mouse = this.handler.getMouseHandler();
+		if (!mouse || !("getRuntime" in mouse)) return undefined;
+		return mouse as KoreMainMenuSurface;
 	}
 }
 
-/** Runs a spectator battle behind the menu without exposing its input surface. */
+/** Runs a lightweight real AI battle behind the main menu. */
 class MenuBattlePreview {
-	private handler = createAiBattleHandler("ice-map-v1");
-	private visible = false;
+	private readonly handler = createAiBattleHandler("magma-cradle", 202608);
 
 	public tick(visible: boolean): void {
-		this.visible = visible;
 		if (!visible) return;
-		if (this.handler.getState() === GameState.Game_over) {
-			this.handler.dispose();
-			this.handler = createAiBattleHandler("ice-map-v1");
-		}
+		if (this.handler.getState() === GameState.Game_over) this.handler.rematch();
 		this.handler.tick();
 	}
 
 	public draw(renderer: RenderContext): boolean {
-		if (!this.visible) return false;
+		if (!this.handler) return false;
 		this.handler.drawWorld(renderer);
 		return true;
 	}
 
-	public dispose(): void {
-		this.handler.dispose();
-	}
+	public dispose(): void { this.handler.dispose(); }
 }
 
 /** Builds a local hotseat match handler on any browser-available catalog map. */
-export function createLocalGameplayHandler(mapId: string = "ice-map-v1", gameModeId?: string): GameHandler {
-	return createMatchHandler({ mode: "hotseat", mapId, gameModeId });
+export function createLocalGameplayHandler(mapId: string = "magma-cradle", gameModeId?: string, mod?: LoadedContentPackage): GameHandler {
+	return createMatchHandler({ mode: "hotseat", mapId, gameModeId, mod });
 }
 
 /**
  * Builds an autonomous KI-vs-KI battle on the canonical arena through the
  * same pipeline as every other offline match, replacing human input with an
- * `AiBattleSystem` that drives both teams. The battle seed defaults to a fresh
- * random draw and varies the hard-AI decisions deterministically; pass an
- * explicit seed for reproducible games.
+ * `AiBattleSystem` that drives both teams using deterministic Easy AI for a
+ * stable turn cadence. The battle seed defaults to a fresh random draw; pass
+ * an explicit seed for reproducible games.
  */
-export function createAiBattleHandler(mapId: string = "ice-map-v1", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	return createMatchHandler({ mode: "ai-battle", mapId, seed });
+export function createAiBattleHandler(mapId: string = "magma-cradle", seed: number = Math.floor(Math.random() * 0x7fffffff), mod?: LoadedContentPackage, aiWorkerHost?: HardAiWorkerHost): GameHandler {
+	return createMatchHandler({ mode: "ai-battle", mapId, seed, mod, aiWorkerHost });
 }
 
 /** Builds a local human team (team 0) against one selectable AI opponent (team 1). */
-export function createHumanVsAiHandler(mapId: string = "ice-map-v1", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff)): GameHandler {
-	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed });
+export function createHumanVsAiHandler(mapId: string = "magma-cradle", difficulty: AiDifficulty = "medium", seed: number = Math.floor(Math.random() * 0x7fffffff), aiWorkerHost?: HardAiWorkerHost): GameHandler {
+	return createMatchHandler({ mode: "human-vs-ai", mapId, difficulty, seed, aiWorkerHost });
 }

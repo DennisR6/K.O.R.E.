@@ -9,6 +9,8 @@ import { ReplayRecorder } from "../replay/recorder.js";
 import { isValidInput } from "../input/validate.js";
 import { AudioEmitter, type ISoundEmitter } from "../engine/audio-sdk/index.js";
 import { koreAudio } from "../kore/audio.js";
+import type { HardAiWorkerHost } from "../ai/worker/host.js";
+import type { AiSettings } from "../ai/types.js";
 
 /**
  * Der "Local Player" Emitter.
@@ -24,21 +26,31 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 	private rules: RuleInterpreter
 	private ruleState: RuleState
 	private teamCount: number
+	private aiWorkerSettings = new Map<number, AiSettings>()
+	private readonly aiWorkerHost?: HardAiWorkerHost
 	public recorder: ReplayRecorder
-	constructor(handler: GameHandler, mode: GameModeSettings = currentTurnMode, teamCount: number = handler.getTeam().length, seed: number = 12345) {
+	constructor(handler: GameHandler, mode: GameModeSettings = currentTurnMode, teamCount: number = handler.getTeam().length, seed: number = 12345, aiWorkerHost?: HardAiWorkerHost) {
 		if (teamCount < 1) throw new Error("Local game requires at least one team")
 		this.handler = handler
 		this.rules = new RuleInterpreter(mode)
 		this.ruleState = handler.getRuleState()
 		this.teamCount = teamCount
+		this.aiWorkerHost = aiWorkerHost
 		const settings = typeof (handler as any).toSettings === "function" ? (handler as any).toSettings() : ((handler as any).settings ?? { schemaVersion: 1, id: crypto.randomUUID(), screenResolution: { x: 16, y: 9 }, worldSize: { x: 16, y: 9 }, players: [], mapBoundarys: [], background: { type: "color", color: "#000" }, friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }, drift: 0, effects: [], items: [], myTeam: [], allTeamSize: 2, playerCount: 2, figuresPerPlayer: 6, minPlayers: 2, maxPlayers: 2 });
 		this.recorder = new ReplayRecorder(settings, seed)
 		this.sounds.emit(koreAudio.command.matchMusic(this.soundSourceId))
 	}
 	public drainSoundCommands() { return this.sounds.drainSoundCommands(); }
+	public setAiWorkerSettings(settings: readonly AiSettings[]): void { this.aiWorkerSettings = new Map(settings.map(setting => [setting.team, structuredClone(setting)])); }
+	public isAiThinking(): boolean { return this.aiWorkerHost?.isThinking() ?? false; }
 
 	sendShot(actorId: string, angle: number, power: number): void {
+		this.handler.log?.("input.received", { actionType: "shot", actorId, angle, power });
 		this.ruleState = this.handler.getRuleState()
+		// Choosing a figure and dragging it is an implicit decision to skip the
+		// optional item phase. The authoritative phase still has to be physics
+		// before the shot can be accepted.
+		if (this.ruleState.phase === RulePhase.Item) this.ruleState = this.handler.skipCurrentPhase();
 		if (this.ruleState.phase !== RulePhase.Physics) throw new Error("Local shot is not in the physics phase")
 		// Reject the same invalid inputs as the authoritative server and the AI
 		// path before recording or simulating: a rejected shot never mutates the
@@ -47,11 +59,20 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		const actor = this.handler.getEntityManager().getEntityById(actorId)
 		if (!actor) throw new Error(`Actor ${actorId} not found`)
 		if (actor.isDead()) throw new Error(`Actor ${actorId} is not active`)
+		this.handler.log?.("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+		this.handler.log?.("turn.started", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+		const validateActor = (this.handler as Partial<GameHandler>).validateActorForAction;
+		if (validateActor) validateActor.call(this.handler, actorId);
+		const acceptedAction = { actorId, angle, power };
+		this.handler.beginTurnTiming?.();
+		const nextRuleState = this.rules.startNextTurn(this.rules.advancePhase(this.ruleState), this.teamCount);
+		const nextAiSettings = this.aiWorkerSettings.get(nextRuleState.activeTeam);
+		if (this.aiWorkerHost && nextAiSettings) this.aiWorkerHost.prepareTurn({ snapshot: this.handler.toSettings(), acceptedAction, nextRuleState, aiSettings: nextAiSettings });
 		this.recorder.recordShoot(actorId, angle, power)
 		const sim = this.handler.simulateTurn(actorId, angle, power)
 		// this.handler.setState(GameState.Playing)
 		this.handler.playTurn(sim, () => {
-			if (this.handler.getState?.() === GameState.Game_over) return
+			if (this.handler.getState?.() === GameState.Game_over) { this.aiWorkerHost?.invalidate(); return }
 			this.ruleState = this.rules.advancePhase(this.ruleState)
 			this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount)
 			const startTurn = (this.handler as Partial<GameHandler>).startTurn
@@ -62,6 +83,7 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 				this.handler.setRuleState(this.ruleState)
 			}
 			this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()))
+			this.aiWorkerHost?.completeAuthoritativeTurn(this.handler)
 		})
 		// This is emitted only after the validated local turn was accepted and
 		// playback began; simulations and browser resources remain separate.
@@ -74,6 +96,8 @@ export class GameEmitter implements IInputEmitter, ISoundEmitter {
 		if (this.ruleState.itemUses >= this.rules.getMaxItemsPerTurn()) throw new Error("Item allowance has been exhausted")
 		const actor = this.handler.getEntityManager().getEntityById(actorId)
 		if (!actor || actor.isDead()) throw new Error("Actor is not active")
+		const validateActor = (this.handler as Partial<GameHandler>).validateActorForAction;
+		if (validateActor) validateActor.call(this.handler, actorId);
 		this.recorder.recordItemUse(actorId, itemId, target)
 		this.handler.useItem(actorId, itemId, target)
 		this.ruleState = this.rules.useItem(this.ruleState)

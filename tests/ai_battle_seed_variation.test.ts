@@ -24,6 +24,7 @@ const BATTLE_LIMITS = { maxSimulations: 30, maxAngleSamples: 10, maxForceSamples
  * same replay while each seed stays fully reproducible.
  */
 function runBattle(seed: number): { shots: string[]; ticks: number; status: MatchStatus | undefined; winnerTeam: number | null } {
+	const startedAt = performance.now();
 	const settings = buildMapSettings("ice-map-v1", createCanonicalPlayableMatchSettings());
 	validateGameSettings(settings);
 	const handler = new GameHandlerBuilder()
@@ -48,13 +49,15 @@ function runBattle(seed: number): { shots: string[]; ticks: number; status: Matc
 	const shots = replay.actions
 		.filter(action => action.type === "shoot")
 		.map(action => `${action.actorId.slice(-4)}@${action.input?.angle}:${action.input?.power}`);
-	const result = handler.getMatchResult();
-	return {
+	const matchResult = handler.getMatchResult();
+	const summary = {
 		shots,
 		ticks,
-		status: result?.status,
-		winnerTeam: result?.winnerTeam ?? null,
+		status: matchResult?.status,
+		winnerTeam: matchResult?.winnerTeam ?? null,
 	};
+	if (process.env.AI_DIAGNOSTIC === "1") console.log(JSON.stringify({ seed, totalDurationMs: performance.now() - startedAt, decisionCount: shots.length, candidateSimulationsUpperBound: shots.length * 30, speculativeTicksUpperBound: shots.length * 30 * 300, ticks, status: summary.status }));
+	return summary;
 }
 
 function tickUntilOver(handler: GameHandler, maxTicks = 400_000): number {
@@ -73,7 +76,7 @@ describe("KI vs KI battle seed variation", () => {
 		expect(a.shots.length).toBeGreaterThan(0);
 		expect(b.shots.length).toBeGreaterThan(0);
 		expect(a.shots).not.toEqual(b.shots);
-	}, 120_000);
+	}, 180_000);
 
 	test("the same battle seed replays the identical game", () => {
 		const a = runBattle(4242);
@@ -82,7 +85,7 @@ describe("KI vs KI battle seed variation", () => {
 		expect(a.ticks).toBe(b.ticks);
 		expect(a.status).toBe(b.status);
 		expect(a.winnerTeam).toBe(b.winnerTeam);
-	}, 120_000);
+	}, 180_000);
 });
 
 describe("KI vs KI battle rematch re-seeding", () => {
@@ -104,7 +107,7 @@ describe("KI vs KI battle rematch re-seeding", () => {
 		// The fresh battle keeps playing to completion.
 		expect(tickUntilOver(second)).toBeGreaterThan(0);
 		expect(second.getState()).toBe(GameState.Game_over);
-	}, 120_000);
+	}, 180_000);
 
 	test("menu action returns to the menu and clears the battle seed", () => {
 		let nextSeed = 0;

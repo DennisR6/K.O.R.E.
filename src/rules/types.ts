@@ -116,6 +116,7 @@ export interface RuleState {
 export const enum MatchEndReason {
 	LastTeamStanding = "last-team-standing",
 	Draw = "draw",
+	Surrendered = "surrendered",
 }
 
 /**

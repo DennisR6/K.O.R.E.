@@ -55,6 +55,27 @@ test("a deliberate drag still creates one shot", () => {
 	expect(emitter.getLastShot()).toEqual({ actorId: player.getId(), angle: 180, power: 2 })
 })
 
+test("a drag released outside the canvas still creates a shot", () => {
+	const ui = new UiSystem()
+	const emitter = new ObjectEmitter()
+	const player = new Player(createPlayerSettings({ position: { x: 100, y: 100 } }))
+	const handler = new GameHandlerBuilder()
+		.defaultSystems()
+		.addPlayer(player)
+		.addSystem(ui)
+		.addUIMouse(ui)
+		.addSystem(new EmitterSystem(emitter))
+		.build()
+
+	handler.updateMouse(100, 100)
+	handler.handleMousePressed()
+	handler.updateMouse(900, 100)
+	handler.handleMouseReleased()
+	handler.tick()
+
+	expect(emitter.getLastShot()).toEqual({ actorId: player.getId(), angle: 180, power: 10 })
+})
+
 test("simulation and playback phases reject pointer input", () => {
 	const ui = new UiSystem()
 	const emitter = new ObjectEmitter()

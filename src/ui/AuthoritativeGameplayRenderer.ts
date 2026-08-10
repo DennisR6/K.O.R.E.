@@ -1,6 +1,6 @@
 import type { RenderContext } from "../engine/RenderContext.js";
 import { GameState } from "../engine/types.js";
-import type { ItemPickup, ItemPickupState } from "../item/types.js";
+import type { ItemDocument, ItemPickup, ItemPickupState } from "../item/types.js";
 import { type MatchResult, type RuleState } from "../rules/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { SHAPE } from "../physics/physics.js";
@@ -17,6 +17,7 @@ export interface AuthoritativeGameplaySnapshot {
   matchResult: MatchResult | undefined;
   structures: MapBoundarySettings[];
   players: PlayerSettings[];
+  items: ItemDocument[];
   pickups: ItemPickup[];
   pickupState: ItemPickupState | undefined;
 }
@@ -35,11 +36,12 @@ export class AuthoritativeGameplayRenderer {
     const snapshot = this.state.getAuthoritativeRenderState();
 
     for (const structure of snapshot.structures) this.drawStructure(renderer, structure);
-    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState);
+    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState, snapshot.items);
     for (const player of snapshot.players) this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
   }
 
   private drawStructure(renderer: RenderContext, structure: MapBoundarySettings): void {
+    if (structure.drawingEnabled === false) return;
     const role = structure.role;
     const color = structure.color ?? "#64748b";
     if (role !== "containment") {
@@ -67,17 +69,24 @@ export class AuthoritativeGameplayRenderer {
     }
   }
 
-  private drawPickups(renderer: RenderContext, pickups: ItemPickup[], state: ItemPickupState | undefined): void {
+  private drawPickups(renderer: RenderContext, pickups: ItemPickup[], state: ItemPickupState | undefined, items: ItemDocument[]): void {
     for (const [index, pickup] of pickups.entries()) {
       const collected = state?.pickups[index]?.collected ?? 0;
       if (collected >= (pickup.maxPickupsPerTurn ?? 1)) continue;
+      const item = items.find(candidate => candidate.id === pickup.itemId);
       renderer.push();
+      if (item?.ui?.component) {
+        renderer.drawImage(item.ui.component.source, pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+      }
+      const centerX = pickup.spawnRegion.x + pickup.spawnRegion.w / 2;
+      const centerY = pickup.spawnRegion.y + pickup.spawnRegion.h / 2;
+      const radius = Math.max(16, Math.min(pickup.spawnRegion.w, pickup.spawnRegion.h) / 2);
       renderer.setNoFill();
       renderer.setStrokeColor("#facc15");
       renderer.setStroke(2);
-      renderer.drawRect(pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+      renderer.drawCircle(centerX, centerY, radius);
       renderer.setFillColor("#713f12");
-      renderer.drawText(pickup.itemId, pickup.spawnRegion.x, pickup.spawnRegion.y - 4, 12);
+      renderer.drawText(item?.name ?? pickup.itemId, centerX - radius + 4, centerY + 4, 11);
       renderer.pop();
     }
   }
@@ -85,7 +94,7 @@ export class AuthoritativeGameplayRenderer {
   private drawPlayer(renderer: RenderContext, player: PlayerSettings, activeTeam: number): void {
     const position = player.position;
     renderer.push();
-    if (player.isDead) {
+    if (!player.isPhysicsEnabled && !player.isDrawingEnabled) {
       renderer.setFillColor("#64748b");
       renderer.setStrokeColor("#cbd5e1");
       renderer.drawCircle(position.x, position.y, player.size);
@@ -104,13 +113,13 @@ export class AuthoritativeGameplayRenderer {
       // renderer.setStroke(2);
       // renderer.drawCircle(position.x, position.y, player.size);
     }
-    // player.effects.forEach((effect, index) => {
-    // renderer.setNoFill();
-    // renderer.setStrokeColor("#a78bfa");
-    // renderer.drawCircle(position.x, position.y, player.size + 7 + index * 3);
-    // renderer.setFillColor("#4c1d95");
-    // renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
-    // });
+		player.effects.forEach((effect, index) => {
+			renderer.setNoFill();
+			renderer.setStrokeColor("#a78bfa");
+			renderer.drawCircle(position.x, position.y, player.size + 7 + index * 3);
+			renderer.setFillColor("#4c1d95");
+			renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
+		});
     renderer.pop();
   }
 }

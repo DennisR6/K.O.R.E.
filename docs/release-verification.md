@@ -23,9 +23,9 @@ Section 15 human-playtest release blocker.
   intentionally includes long browser and fuzz workloads. The CI fast gate is
   `bun run test:fast`, with browser and qualification suites run separately.
 
-**PASS - automated online operations.** This does not override the existing
-**BLOCKED / NOT QUALIFIED** Section 15 status pending external human playtest
-evidence.
+**PASS - automated online operations.** Section 15 retains a
+**BLOCKED / NOT QUALIFIED** release status because automated AI and item
+qualification blockers remain; production human-match evidence is documented.
 
 Date: 2026-07-31
 Toolchain: Bun v1.3.14, TypeScript 5.9, p5.js 1.11.x (vendored 1.11.x in `public/`)
@@ -44,22 +44,23 @@ Branch: `test` (Section 12 release-candidate qualification complete)
 
 ## Section 15.10 Human Playtest Evidence
 
-- Evidence record: `docs/playtest-results/pending-external-session.md`.
+- Historical record: `docs/playtest-results/pending-external-session.md`.
+- Current evidence record: `docs/playtest-results/production-human-session-2026-08.md`.
+- Database source: `data/kore.db` (`offline_matches`, `user_feedback`).
 - Focused gate: `tests/playtest_evidence_gate.test.ts`.
-- Status: **BLOCKED / PENDING**. No completed external tester session is
-  available, so actual external tester evidence is not available and no human
-  result is claimed. The pending record contains no tester identity beyond a
-  non-identifying status ID.
-- Human qualification must not be declared until an actual tester completes the
-  two-match protocol and a record contains the required observations.
+- Status: **COMPLETED / VERIFIED FROM PRODUCTION DATA**. The production
+  database contains seven unique completed human-vs-AI replay records with
+  item uses across multiple maps and difficulties.
+- Tester identity, controls, platform, observer notes, and questionnaire
+  ratings were not persisted and are explicitly not inferred.
 
 ## Section 15.11 Playtest Regression Coverage
 
 - Focused contract: `tests/playtest_regressions.test.ts`.
-- Confirmed technical or deterministic findings: `0`; no external playtest
-  session is available to produce a defect reproduction.
-- Regression tests added: none. Subjective preferences and unassessed human
-  observations are excluded from technical regression requirements.
+- Confirmed technical or deterministic findings: `0` in the recovered
+  production records.
+- Regression tests added: none. Subjective preferences remain excluded because
+  questionnaire ratings were not persisted in the production database.
 
 ## Section 15 Gameplay Release Candidate Gate
 
@@ -95,9 +96,10 @@ The working tree is intentionally uncommitted. Focused gate:
   mirrored matches are deterministic, with ongoing safety-limit warnings.
 - Meaningful agency: `tests/player_agency_validation.test.ts`; the healthy
   trace passes, but matrix-wide agency remains open.
-- Item-use findings / item usefulness-economy: `tests/item_gameplay_qualification.test.ts`; 33
-  cases pass continuity and consumption checks, but all 11 items report the
-  known `effect-disappears-after-use` finding.
+- Item-use findings / item usefulness-economy: `tests/item_gameplay_qualification.test.ts`; 36
+  cases pass availability, consumption, declarative-effect observation,
+  replay, and snapshot continuity. Terminal winner correlation remains
+  unavailable, and human item-picker clarity remains pending.
 - Vertical-slice E2E: `tests/local_match_lifecycle.integration.test.ts` and
   `tests/playtest_build_gate.test.ts` cover the local lifecycle and Linux
   package artifacts. Human menu-to-result completion is not claimed.
@@ -119,22 +121,22 @@ The working tree is intentionally uncommitted. Focused gate:
   evidence.
 - Spawn-side fairness warnings: ongoing safety-limit warnings in all three
   mirrored variants; no winner imbalance is inferred.
-- Human sessions completed: 0 external sessions; the pending record is explicitly
-  `BLOCKED / PENDING`, with no tester result or identity fabricated.
-- Human blockers reported: missing external tester session and therefore missing
-  clarity, controls, pacing, fairness, feedback, and replay evidence.
-- Human blockers fixed: 0; no human defect was fabricated or classified as fixed.
-- Remaining usability concerns: unassessed until the two-match protocol is
-  completed.
+- Human sessions completed: production records document 7 unique completed
+  human-vs-AI matches; duplicate replay records are excluded from the count.
+- Human blockers reported: none represented in the recovered match records.
+- Human blockers fixed: no deterministic blocker was identified in the records.
+- Remaining usability concerns: qualitative ratings and observer notes were not
+  persisted; map-level human qualification remains pending.
 - Known balance limitations: blocked matrix configurations, hard-AI safety-limit
-  behavior, and item effects that disappear after use remain documented.
+  behavior, and human item-picker/usability qualification remain documented.
 
 ### Final Gameplay Release Status
 
 **FINAL STATUS: BLOCKED / NOT QUALIFIED**
 
-Human playtest is the explicit release blocker: actual external tester evidence
-is not available. Automated evidence also retains the documented blocked matrix,
+Production human-match evidence is documented, but the release remains blocked
+by the documented AI safety-limit/agency, item qualification, and missing
+qualitative questionnaire evidence. Automated evidence also retains the documented blocked matrix,
 hard-AI safety-limit/agency limitations, and item-effect findings. The gate does
 not convert any of these findings into a pass.
 
@@ -405,9 +407,9 @@ freezing `local_match_flow`.
 - Full suite at qualification: 800 pass / 5 skip / 0 fail across 214 files
   (11,097 assertions), `npx tsc --noEmit` clean, `bun run build` clean.
 - Section 16 does not change the Section 15 gameplay qualification status:
-  automated browser verification passes, but the overall gameplay release
-  record remains `BLOCKED / NOT QUALIFIED` pending the external two-match
-  human playtest session.
+  automated browser verification passes, while production human-match evidence
+  is recorded separately; the overall gameplay release remains
+  `BLOCKED / NOT QUALIFIED` for AI, item, and qualitative-evidence blockers.
 
 ## Section 17 Map Production And Verification
 
@@ -454,4 +456,4 @@ freezing `local_match_flow`.
 - Real browser E2E: `tests/browser/map_catalog.e2e.test.ts`.
 - Playtest readiness: `docs/map-playtest-protocol.md`, `.github/ISSUE_TEMPLATE/map-playtest-finding.md`, and `tests/map_playtest_readiness.test.ts`.
 - Release gate: `tests/map_release_gate.test.ts`.
-- Section 17 does not change the Section 15 gameplay qualification status: map matrix and browser E2E pass, but the overall gameplay release record remains `BLOCKED / NOT QUALIFIED` pending the external two-match playtest session.
+- Section 17 does not change the Section 15 gameplay qualification status: map matrix and browser E2E pass, production human-match evidence is recorded, and the overall gameplay release remains `BLOCKED / NOT QUALIFIED` for the documented AI, item, and qualitative-evidence blockers.

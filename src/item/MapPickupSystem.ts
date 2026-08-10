@@ -3,19 +3,36 @@ import type { IGameContext, ISystem } from "../systems/types.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import { type ItemDocument, type ItemPickup, type ItemPickupState, validateItemPickupState } from "./types.js";
 
+export type ItemPickupCollector = (entity: IEntity, item: ItemDocument) => void;
+
 /** Collects configured map pickups when an active, live entity enters their region. */
 export class MapPickupSystem implements ISystem {
 	private pickups: ItemPickup[] = [];
 	private items = new Map<string, ItemDocument>();
 	private state: ItemPickupState | undefined;
+	private worldSize = { x: 800, y: 450 };
+	private collect: ItemPickupCollector = (entity, item) => {
+		const inventory = entity.getInventory();
+		addDrawnInventoryItem(inventory, item);
+		entity.setInventory(inventory);
+	};
 
-	public configure(pickups: ItemPickup[], items: ItemDocument[]): void {
+	public configure(pickups: ItemPickup[], items: ItemDocument[], worldSize: { x: number; y: number } = this.worldSize): void {
 		this.pickups = structuredClone(pickups);
 		this.items = new Map(items.map(item => [item.id, item]));
+		this.worldSize = { ...worldSize };
 		for (const pickup of this.pickups) {
 			if (!this.items.has(pickup.itemId)) throw new Error(`Map pickup references unknown item '${pickup.itemId}'`);
 		}
 		this.state = this.pickups.length === 0 ? undefined : createItemPickupState(this.pickups.length);
+	}
+
+	public setCollector(collector: ItemPickupCollector | undefined): void {
+		this.collect = collector ?? ((entity, item) => {
+			const inventory = entity.getInventory();
+			addDrawnInventoryItem(inventory, item);
+			entity.setInventory(inventory);
+		});
 	}
 
 	public restore(state: ItemPickupState | undefined): void {
@@ -26,6 +43,7 @@ export class MapPickupSystem implements ISystem {
 		if (!state) throw new Error("Configured map pickups require a serialized pickup state");
 		validateItemPickupState(state, this.pickups.length);
 		this.state = clonePickupState(state);
+		for (const [index, pickupState] of this.state.pickups.entries()) if (pickupState.spawnRegion) this.pickups[index]!.spawnRegion = { ...pickupState.spawnRegion };
 	}
 
 	public reset(): void {
@@ -56,9 +74,7 @@ export class MapPickupSystem implements ISystem {
 			const limit = pickup.maxPickupsPerTurn ?? 1;
 			for (const entity of entitiesInRegion) {
 				if (pickupState.collected >= limit || pickupState.occupants.includes(entity.getId())) continue;
-				const inventory = entity.getInventory();
-				addDrawnInventoryItem(inventory, item);
-				entity.setInventory(inventory);
+				this.collect(entity, item);
 				pickupState.collected++;
 			}
 			pickupState.occupants = [...occupants];
@@ -84,6 +100,10 @@ export class MapPickupSystem implements ISystem {
 				if (state.respawnCountdown <= 0) {
 					state.collected = 0;
 					state.respawnCountdown = undefined;
+					if (pickup.respawnConfig?.relocate) {
+						pickup.spawnRegion = relocatedRegion(pickup.spawnRegion, index, turnNumber, this.worldSize);
+						state.spawnRegion = { ...pickup.spawnRegion };
+					}
 				}
 			}
 		}
@@ -109,6 +129,14 @@ function createItemPickupState(pickupCount: number, turnNumber: number = 0): Ite
 function clonePickupState(state: ItemPickupState): ItemPickupState {
 	return {
 		turnNumber: state.turnNumber,
-		pickups: state.pickups.map(pickup => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...(pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown }) })),
+		pickups: state.pickups.map(pickup => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...(pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown }), ...(pickup.spawnRegion ? { spawnRegion: { ...pickup.spawnRegion } } : {}) })),
 	};
+}
+
+function relocatedRegion(region: { x: number; y: number; w: number; h: number }, pickupIndex: number, turnNumber: number, worldSize: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
+	const seed = Math.imul((turnNumber + 1) ^ ((pickupIndex + 1) * 0x45d9f3b), 0x27d4eb2d) >>> 0;
+	const padding = Math.max(0, Math.min(40, Math.floor(Math.min(worldSize.x - region.w, worldSize.y - region.h) / 2)));
+	const maxX = Math.max(padding, Math.floor(worldSize.x - region.w - padding));
+	const maxY = Math.max(padding, Math.floor(worldSize.y - region.h - padding));
+	return { ...region, x: maxX === padding ? padding : padding + seed % (maxX - padding + 1), y: maxY === padding ? padding : padding + Math.floor(seed / (maxX - padding + 1)) % (maxY - padding + 1) };
 }

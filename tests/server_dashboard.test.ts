@@ -5,6 +5,9 @@ import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 import { servePublicReplayShare } from "../src/server/replayShares.ts";
 import { ReplayViewer } from "../src/menu/replayViewer.ts";
+import { ReplayRecorder } from "../src/replay/recorder.ts";
+import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
+import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 
 const secret = "0123456789abcdef0123456789abcdef";
 const users = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
@@ -13,6 +16,8 @@ const request = (path: string, authorization?: string, method = "GET") => new Re
 test.serial("dashboard returns only versioned aggregate metrics and matching visible labels", async () => {
 	const database = new GameDatabase(":memory:");
 	const registry = new GameRegistry(database);
+	database.storeFeedback({ mode: "hotseat", mapId: "ice-map-v1", text: "Older feedback" }, 100);
+	database.storeFeedback({ mode: "online", mapId: "cue-clash", text: "Newest feedback" }, 200);
 	const response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(response.status).toBe(200);
 	expect(response.headers.get("cache-control")).toBe("no-store");
@@ -22,7 +27,7 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 		freshness: metricsResponse(registry.getMetrics()).freshness,
 	});
 
-	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!.text();
 	expect(page).toContain('data-metric="allTime">0');
 	expect(page).toContain("All-time matches");
 	expect(page).toContain("All-time players");
@@ -30,11 +35,30 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain("Matches now");
 	expect(page).toContain("Paused matches");
 	expect(page).toContain("Sleeping matches");
+	expect(page).toContain("https://cdn.tailwindcss.com");
+	expect(page).toContain("https://unpkg.com/htmx.org@2.0.4");
+	expect(page).toContain('hx-trigger="every 60s"');
+	expect(page).toContain('hx-select="#dashboard-live"');
+	expect(page).toContain("Latency comparison");
+	expect(page).toContain('data-period="today"');
+	expect(page).toContain('data-period="yesterday"');
+	expect(page).toContain('data-period="week"');
+	expect(page).toContain('id="latency-median"');
+	expect(page).toContain("No data");
+	expect(page).toContain("Recent feedback");
+	expect(page).toContain("Newest feedback");
+	expect(page).toContain("Older feedback");
+	expect(page.indexOf("Newest feedback")).toBeLessThan(page.indexOf("Older feedback"));
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
+	const mountedPage = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!.text();
+	expect(mountedPage).toContain('href="https://operator.example/kore/operator/replays"');
+	expect(mountedPage).toContain('href="https://operator.example/kore/operator/db"');
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
 	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
+	const jsonWithFeedback = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(await jsonWithFeedback.json()).toMatchObject({ feedback: [{ text: "Newest feedback" }, { text: "Older feedback" }] });
 	database.close();
 });
 
@@ -44,14 +68,14 @@ test.serial("dashboard counts remain server-derived across lifecycle changes", a
 	const record = registry.create(createDefaultGameSettings(2, 1), users);
 	registry.setPaused(record.id, true, 10);
 	let response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 0, paused: 1, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 1, sleeping: 0 } });
 	registry.setPaused(record.id, false, 11);
 	registry.evictInactive(Date.now() + 2);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 0, now: 0, paused: 0, sleeping: 1 } });
 	registry.connectUser(users[0]);
 	response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
-	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 2, now: 1, paused: 0, sleeping: 0 } });
+	expect(await response.json()).toMatchObject({ counts: { allTime: 1, playersAllTime: 2, playersOnline: 1, now: 1, paused: 0, sleeping: 0 } });
 	database.close();
 });
 
@@ -61,7 +85,7 @@ test.serial("dashboard exposes durable map counts, percentages, and the most pla
 	registry.create(createDefaultGameSettings(2, 1), users, "cue-clash");
 	registry.create(createDefaultGameSettings(2, 1), ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-844444444444"], "cue-clash");
 	registry.create(createDefaultGameSettings(2, 1), ["55555555-5555-4555-8555-555555555555", "66666666-6666-4666-8666-666666666666"], "ice-map-v1");
-	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await response.json()).toMatchObject({
 		mostPlayedMap: { mapId: "cue-clash", games: 2, percentage: 66.67 },
 		mapUsage: [
@@ -72,6 +96,51 @@ test.serial("dashboard exposes durable map counts, percentages, and the most pla
 	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
 	expect(page).toContain('data-metric="mostPlayedMap">cue-clash (2 games, 66.67%)');
 	expect(page).toContain('data-metric="mapUsage"');
+	database.close();
+});
+
+test.serial("dashboard includes production offline and AI match reports", async () => {
+	const database = new GameDatabase(":memory:");
+	const registry = new GameRegistry(database);
+	const replay = new ReplayRecorder(createCanonicalPlayableMatchSettings(), 123).getReplay();
+	const offline = database.storeOfflineMatch({
+		mode: "ai-battle",
+		mapId: "cue-clash",
+		seed: 123,
+		players: ["easy KI", "hard KI"],
+		result: { status: MatchStatus.Winner, winnerTeam: 0, reason: MatchEndReason.LastTeamStanding, turnNumber: 4 },
+		replay,
+		performanceLogs: [
+			{ type: "turn.completed", timestampMs: 1, turnNumber: 1, data: { durationMs: 5 } },
+			{ type: "turn.completed", timestampMs: 2, turnNumber: 2, data: { durationMs: 10 } },
+		],
+	});
+	const playerOffline = database.storeOfflineMatch({
+		mode: "hotseat",
+		mapId: "cue-clash",
+		seed: 124,
+		players: ["Player 1", "Player 2"],
+		result: { status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: 4 },
+		replay: new ReplayRecorder(createCanonicalPlayableMatchSettings(), 124).getReplay(),
+	});
+	const offlineIndex = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect((await offlineIndex.json() as { replays: Array<{ gameId: string; gameType: string; status: string; updatedAt: number; actionCount: number }> }).replays).toEqual(expect.arrayContaining([
+		{ gameId: offline.id, gameType: "ai", status: "completed", updatedAt: offline.createdAt, actionCount: 0 },
+		{ gameId: playerOffline.id, gameType: "player", status: "completed", updatedAt: playerOffline.createdAt, actionCount: 0 },
+	]));
+	const offlineView = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${offline.id}/view`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(offlineView.status).toBe(303);
+	const response = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(await response.json()).toMatchObject({
+		counts: { allTime: 2, offlineMatches: 2, playersAllTime: 4 },
+		offlineModes: [{ mode: "ai-battle", games: 1 }, { mode: "hotseat", games: 1 }],
+		mapUsage: [{ mapId: "cue-clash", games: 2, percentage: 100 }],
+		performance: { today: { samples: 2, median: 5, p90: 10, average: 7.5, max: 10 } },
+	});
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database)).text();
+	expect(page).toContain('data-metric="offlineMatches">2');
+	expect(page).toContain("Offline / KI breakdown");
+	expect(page).toContain("AI vs AI");
 	database.close();
 });
 
@@ -89,17 +158,39 @@ test.serial("authenticated dashboard lists every persisted replay and filters/do
 	expect(unauthorized.status).toBe(404);
 	const index = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(index.status).toBe(200);
-	const indexBody = await index.json() as { schemaVersion: number; filter: object; replays: Array<{ gameId: string; actionCount: number }> };
+	const indexBody = await index.json() as { schemaVersion: number; filter: object; replays: Array<{ gameId: string; gameType: string; actionCount: number }> };
 	expect(indexBody.schemaVersion).toBe(1);
 	expect(indexBody.filter).toEqual({});
-	expect(indexBody.replays.map(replay => ({ gameId: replay.gameId, actionCount: replay.actionCount })).sort((left, right) => left.gameId.localeCompare(right.gameId))).toEqual([{ gameId: first.id, actionCount: 0 }, { gameId: second.id, actionCount: 0 }, { gameId: completed.id, actionCount: 1 }].sort((left, right) => left.gameId.localeCompare(right.gameId)));
+	expect(indexBody.replays.map(replay => ({ gameId: replay.gameId, gameType: replay.gameType, actionCount: replay.actionCount })).sort((left, right) => left.gameId.localeCompare(right.gameId))).toEqual([{ gameId: first.id, gameType: "player", actionCount: 0 }, { gameId: second.id, gameType: "player", actionCount: 0 }, { gameId: completed.id, gameType: "player", actionCount: 1 }].sort((left, right) => left.gameId.localeCompare(right.gameId)));
 	const filtered = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?format=json&id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await filtered.json()).toMatchObject({ filter: { gameId: first.id }, replays: [{ gameId: first.id }] });
 	const page = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
-	expect(await page.text()).toContain(`data-replays="index"`);
+	const pageHtml = await page.text();
+	expect(pageHtml).toContain(`data-replays="index"`);
+	expect(pageHtml).toContain('hx-trigger="input changed delay:500ms"');
+	expect(pageHtml).toContain(">Type<");
+	expect(pageHtml).toContain("Kill game");
+	const kill = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!;
+	expect(kill.status).toBe(303);
+	expect(registry.get(first.id)?.lifecycle.status).toBe("completed");
+	expect(registry.get(first.id)?.handler.getMatchResult()?.status).toBe(MatchStatus.Draw);
+	expect((await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}/${encodeURIComponent(first.id)}/kill`, `Bearer ${secret}`, "POST"), registry, { operatorSecret: secret }, database))!.status).toBe(404);
+	expect(pageHtml).toContain('hx-target="#replay-table"');
+	const htmxSearch = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, { headers: { authorization: `Bearer ${secret}`, "HX-Request": "true" } }), registry, { operatorSecret: secret }, database))!;
+	expect(htmxSearch.headers.get("content-type")).toContain("text/html");
+	const firstSummary = database.listOperatorReplays(first.id)[0]!;
+	const htmxHtml = await htmxSearch.text();
+	expect(htmxHtml).toContain('id="replay-table"');
+	expect(htmxHtml).toContain('class="w-full min-w-[820px] text-left"');
+	expect(htmxHtml).toContain(`>${firstSummary.gameType}<`);
+	expect(htmxHtml).toContain(`>${firstSummary.status}<`);
+	expect(htmxHtml).toContain(`href="/operator/replays/${first.id}/view"`);
+	expect(htmxHtml).toContain('target="_blank" rel="noopener noreferrer"');
 	const completedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(completed.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	const completedHtml = await completedPage.text();
 	expect(completedHtml).toContain("View replay");
+	expect(completedHtml).toContain('hx-target="#replay-table"');
+	expect(completedHtml).toContain('id="replay-table"');
 	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}/view`);
 	expect(completedHtml).toContain(`${DASHBOARD_REPLAYS_PATH}/${completed.id}`);
 	const mountedPage = (await serveDashboard(request(`${DASHBOARD_REPLAYS_PATH}?id=${encodeURIComponent(first.id)}`, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!;

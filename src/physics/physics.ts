@@ -61,8 +61,13 @@ export interface PhysicsContact {
 
 /** JSON-safe contact lifecycle state at a completed physics-tick boundary. */
 export interface PhysicsContactState {
-	/** Sorted canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<index>` keys. */
+	/** Sorted canonical `entity:<id>|entity:<id>` / `entity:<id>|structure:<id>` keys. */
 	activePairs: string[];
+}
+
+/** Shared physical-participation boundary used by ticking and settlement. */
+export function isPhysicsParticipant(entity: { isDead(): boolean; physicsEnabled(): boolean }): boolean {
+	return !entity.isDead() && entity.physicsEnabled();
 }
 
 /** True when both vector components are finite numbers. */

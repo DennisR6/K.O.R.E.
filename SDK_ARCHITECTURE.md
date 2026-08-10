@@ -101,10 +101,16 @@ state-manager profile through that selector. The current KORE runtime factory
 continues to use `GameHandlerBuilder.defaultSystems()` so existing behavior and
 serialized system contracts remain unchanged.
 
+`CounterSystem` and the generic command family interpreted by `MovementSystem`
+are the reference qualification cases for the trusted predefined runtime host.
+`dispatchPredefinedEffect()` resolves the target and routes each command to one
+installed interpreter; it does not load arbitrary executable systems. The
+Engine SDK registry remains metadata-oriented, while runtime Systems expose the
+small internal interpreter contract through the KORE runtime boundary.
+
 Another game can register its own system definitions and build a framework
-without importing KORE. A future generic runtime host may consume the same
-framework snapshot to instantiate actual systems through a game-provided
-catalog.
+without importing KORE. Custom executable System loading remains a separate
+future trusted-extension concern; normal content remains data-only.
 
 ## 9. Extension and generated artifacts
 

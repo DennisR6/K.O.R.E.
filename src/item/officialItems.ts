@@ -3,6 +3,16 @@ import { ItemValidator } from "./validate.js";
 import { addDrawnInventoryItem } from "./inventory.js";
 import type { InventoryItem, ItemDocument } from "./types.js";
 import { createItem } from "./sdkItemFactory.js";
+import { SHAPE } from "../physics/physics.js";
+import type { MapBoundarySettingsCircle } from "../settings/settings.js";
+import type { TriggerDefinition } from "./triggerDefinitions.js";
+import { createEngineEffectComposition } from "../engine/sdk/composition.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
+import { TRANSFORM_SET_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
+import { createCollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../engine/sdk/movementCapability.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -10,6 +20,10 @@ export const GHOST_MODE_DURATION_TURNS = 2;
 export const MAGNET_RANGE = 200;
 export const MAGNET_FORCE = 2;
 export const FALLTUER_RADIUS = 25;
+export const FALLTUER_DURATION_TURNS = 2;
+export const FALLTUER_STRUCTURE_ID = "falltuer-slot-0";
+export const FALLTUER_ACTIVATE_TRIGGER_ID = "falltuer.activate";
+export const FALLTUER_DEACTIVATE_TRIGGER_ID = "falltuer.deactivate";
 export const POWER_DASH_FACTOR = 1.5;
 export const DELAYED_MINE_DELAY_TICKS = 3;
 export const DELAYED_MINE_RADIUS = 60;
@@ -24,7 +38,20 @@ export const JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
 export const VODKA_ZERO_MAX_VARIANCE_DEGREES = 10;
 export const MYSTERY_BOX_ITEM_ID = "mystery-box";
 /** Default reward pool used when a game mode does not configure one. */
-export const DEFAULT_MYSTERY_BOX_POOL = ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
+/** Every official reward except the container itself. */
+export const DEFAULT_MYSTERY_BOX_POOL = [
+	"anker",
+	"durchlaessigkeit",
+	"magnet",
+	"falltuer",
+	"power-dash",
+	"verzoegerte-mine",
+	"mini-wall",
+	"freeze-shot",
+	"switch",
+	"jaegermeister-elixier",
+	"vodka-zero",
+];
 
 /** Declarative built-in Anker item: halves the affected force. */
 export const ankerItem: ItemDocument = createItem({
@@ -56,7 +83,7 @@ export const magnetItem: ItemDocument = createItem({
 	name: "Magnet",
 	description: "Attracts a targeted figure within a configured range.",
 	type: "offensive",
-	effects: [{ type: "magnet", value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
+	effects: [{ type: MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, value: { mode: "attract", force: MAGNET_FORCE, range: MAGNET_RANGE } }],
 	targetType: "entity",
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 2 },
@@ -66,14 +93,49 @@ export const magnetItem: ItemDocument = createItem({
 export const falltuerItem: ItemDocument = createItem({
 	id: "falltuer",
 	name: "Falltür",
-	description: "Spawns a kill zone at a selected position.",
+	description: "Activates a kill zone at a selected position.",
 	type: "trap",
-	effects: [{ type: "spawnTrigger", value: { triggerId: "falltuer-kill-zone", delayTurns: 0, radius: FALLTUER_RADIUS } }],
+	effects: [
+		{ type: "spawnTrigger", value: { triggerId: FALLTUER_ACTIVATE_TRIGGER_ID, delayTurns: 0, structureId: FALLTUER_STRUCTURE_ID } },
+		{ type: "spawnTrigger", value: { triggerId: FALLTUER_DEACTIVATE_TRIGGER_ID, delayTurns: FALLTUER_DURATION_TURNS, structureId: FALLTUER_STRUCTURE_ID } },
+	],
 	targetType: "position",
-	duration: { type: "turns", value: 1 },
+	duration: { type: "turns", value: FALLTUER_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
 	targetValidation: { allowSelf: true, allowAlly: true, allowEnemy: true, maxRange: 300 },
 });
+
+const falltuerDeathCollision = createCollisionCommandBinding(createEngineEffectComposition([
+	{ schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+	{ schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } },
+]));
+
+/** One canonical dormant trap slot reused by the declarative Falltür item. */
+export const falltuerStructure: MapBoundarySettingsCircle = {
+	id: FALLTUER_STRUCTURE_ID,
+	type: SHAPE.CIRCLE,
+	x: 0,
+	y: 0,
+	r: FALLTUER_RADIUS,
+	color: "#7c3aed",
+	role: "solid",
+	physicsEnabled: false,
+	drawingEnabled: false,
+	effects: [],
+	collisionCommands: [falltuerDeathCollision],
+};
+
+const falltuerPosition = { schemaVersion: 1 as const, type: TRANSFORM_SET_POSITION_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { x: 0, y: 0 } };
+const falltuerEnablePhysics = { schemaVersion: 1 as const, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+const falltuerEnableDrawing = { schemaVersion: 1 as const, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: true } };
+const falltuerDisablePhysics = { schemaVersion: 1 as const, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+const falltuerDisableDrawing = { schemaVersion: 1 as const, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, target: { type: "structure" as const, structureId: FALLTUER_STRUCTURE_ID }, typeValue: { enabled: false } };
+
+/** Data-only trigger catalog entries used by the official Falltür item. */
+export const falltuerTriggerDefinitions: TriggerDefinition[] = [
+	{ schemaVersion: 1, id: FALLTUER_ACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerPosition, falltuerEnablePhysics, falltuerEnableDrawing]) },
+	{ schemaVersion: 1, id: FALLTUER_DEACTIVATE_TRIGGER_ID, effect: createEngineEffectComposition([falltuerDisablePhysics, falltuerDisableDrawing]) },
+];
 
 export const powerDashItem: ItemDocument = createItem({
 	id: "power-dash",
@@ -92,7 +154,7 @@ export const verzoegerteMineItem: ItemDocument = createItem({
 	name: "Verzögerte Mine",
 	description: "Creates a delayed repelling force explosion at a selected position.",
 	type: "trap",
-	effects: [{ type: "delayedEffect", value: { effectType: "magnet", effectValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS }, delayTicks: DELAYED_MINE_DELAY_TICKS } }],
+	effects: [{ type: "deferredEffect", value: { durationUnit: "ticks", duration: DELAYED_MINE_DELAY_TICKS, effect: { schemaVersion: 1, type: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } } } }],
 	targetType: "position",
 	duration: { type: "turns", value: 1 },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -104,7 +166,7 @@ export const miniWallItem: ItemDocument = createItem({
 	name: "Mini-Wall",
 	description: "Spawns a temporary portable wall at a selected position.",
 	type: "defensive",
-	effects: [{ type: "temporaryWall", value: { wallId: "mini-wall", x: 0, y: 0, w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, durationTurns: MINI_WALL_DURATION_TURNS } }],
+	effects: [{ type: "structureLifecycle", value: { durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } } }],
 	targetType: "position",
 	duration: { type: "turns", value: MINI_WALL_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -116,7 +178,7 @@ export const freezeShotItem: ItemDocument = createItem({
 	name: "Freeze-Shot",
 	description: "Temporarily slows a targeted figure.",
 	type: "offensive",
-	effects: [{ type: "freeze", value: { speedFactor: FREEZE_SHOT_SPEED_FACTOR, durationTurns: FREEZE_SHOT_DURATION_TURNS } }],
+	effects: [{ type: "temporalModifier", value: { durationUnit: "turns", duration: FREEZE_SHOT_DURATION_TURNS, effect: { schemaVersion: 1, type: MOVEMENT_SCALE_SPEED_EFFECT_ID, typeValue: { factor: FREEZE_SHOT_SPEED_FACTOR } } } }],
 	targetType: "entity",
 	duration: { type: "turns", value: FREEZE_SHOT_DURATION_TURNS },
 	useLimit: { perTurn: 1, perGame: 2 },
@@ -128,7 +190,7 @@ export const switchItem: ItemDocument = createItem({
 	name: "Switch",
 	description: "Swaps the active figure's position with a targeted ally.",
 	type: "utility",
-	effects: [{ type: "swapPosition", value: {} }],
+	effects: [{ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, value: {} }],
 	targetType: "entity",
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 1 },
@@ -169,6 +231,7 @@ export const mysteryBoxItem: ItemDocument = createItem({
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 3 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+	ui: { component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: true },
 });
 
 export interface MysteryBoxRewardOptions {
@@ -201,7 +264,7 @@ export function resolveMysteryBoxReward(options: MysteryBoxRewardOptions = {}): 
 	// The whole pool is validated, not just the drawn entry: an unknown or
 	// recursive entry is rejected even if the current seed never selects it.
 	for (const itemId of pool) validateMysteryBoxReward(itemId, options);
-	const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 100000);
+	const seed = options.seed ?? 0;
 	const index = Math.abs(seed) % pool.length;
 	return pool[index]!;
 }
@@ -241,7 +304,7 @@ export function generateRandomMapPickupPosition(worldSize: { x: number; y: numbe
 	const maxX = Math.max(minX + 1, worldSize.x - padding - 40);
 	const minY = padding;
 	const maxY = Math.max(minY + 1, worldSize.y - padding - 40);
-	const rng = seed !== undefined ? Math.abs(seed) : Math.floor(Math.random() * 100000);
+	const rng = Math.abs(seed ?? 0);
 	const x = minX + (rng % Math.floor(maxX - minX + 1));
 	const y = minY + (Math.floor(rng / 7) % Math.floor(maxY - minY + 1));
 	return { x, y, w: 40, h: 40 };
@@ -252,14 +315,14 @@ export function createOfficialItemLoader(): ItemLoader {
 	const validator = new ItemValidator();
 	validator.registerEffectType("modifyForce");
 	validator.registerEffectType("ghostMode");
-	validator.registerEffectType("magnet");
+	validator.registerEffectType(MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID);
 	validator.registerEffectType("spawnTrigger");
-	validator.registerEffectType("delayedEffect");
-	validator.registerEffectType("temporaryWall");
-	validator.registerEffectType("freeze");
-	validator.registerEffectType("swapPosition");
+	validator.registerEffectType("deferredEffect");
+	validator.registerEffectType("structureLifecycle");
+	validator.registerEffectType(TRANSFORM_SWAP_POSITION_EFFECT_ID);
 	validator.registerEffectType("selectionLock");
 	validator.registerEffectType("aimVariance");
+	validator.registerEffectType("temporalModifier");
 	const loader = new ItemLoader(validator);
 	loader.registerBuiltIn(ankerItem);
 	loader.registerBuiltIn(durchlaessigkeitItem);

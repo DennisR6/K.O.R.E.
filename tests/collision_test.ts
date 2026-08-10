@@ -5,8 +5,7 @@ import { EmitterSystem } from "../src/systems/Emitter.ts"
 import { UiSystem } from "../src/systems/UiSystem.ts";
 import { FRICTION_TABLE } from "../src/settings/settings.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
-import { EffectDamage } from "../src/effects/damage.ts";
-import { EffectTrigger } from "../src/effects/types.ts";
+import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { EffectPhysics } from "../src/effects/physics.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
@@ -35,8 +34,7 @@ describe("Testing Collisions with effects", () => {
 					...new EffectPhysics({ typeValue: physics }).toSettings()
 				},
 				{
-					trigger: EffectTrigger.Collision, triggerValue: [],
-					...new EffectDamage({ typeValue: { damage: 30 } }).toSettings()
+					trigger: EffectTrigger.Collision, triggerValue: [], schemaVersion: 1, type: EffectType.NumericAdd, typeValue: { stateId: "hp", amount: -30 }
 				},
 			]))
 			.addPlayer(new Player(createPlayerSettings({

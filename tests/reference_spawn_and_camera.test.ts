@@ -14,7 +14,8 @@ test("canonical players start alive, contained, visible, and in the fixed camera
 	expect(camera.getPosition()).toEqual({ x: 0, y: 0 });
 	expect(camera.getWorldBounds()).toEqual({ x: 0, y: 0, w: 800, h: 450 });
 	for (const player of settings.players) {
-		expect(player.isDead).toBe(false);
+		expect(player.isPhysicsEnabled).toBe(true);
+		expect(player.isDrawingEnabled).toBe(true);
 		expect(camera.containsCircle(player.position, player.size)).toBe(true);
 	}
 
@@ -33,6 +34,7 @@ test("only the active team's live actor can be submitted from the initial view",
 	handler.addSystem(ui);
 	handler.setMouseHandler(ui);
 	handler.addSystem(new EmitterSystem(emitter));
+	handler.skipCurrentPhase();
 	const entities = handler.getEntityManager().getEntities();
 	const active = entities.find(entity => entity.getTeam().includes(0))!;
 	const inactive = entities.find(entity => !entity.getTeam().includes(0))!;
@@ -50,6 +52,7 @@ test("only the active team's live actor can be submitted from the initial view",
 	secondHandler.addSystem(secondUi);
 	secondHandler.setMouseHandler(secondUi);
 	secondHandler.addSystem(new EmitterSystem(secondEmitter));
+	secondHandler.skipCurrentPhase();
 	const inactiveActor = secondHandler.getEntityManager().getEntities().find(entity => !entity.getTeam().includes(0))!;
 	secondHandler.updateMouse(inactiveActor.getPos().x, inactiveActor.getPos().y);
 	secondHandler.handleMousePressed();
@@ -71,7 +74,7 @@ test("reference spawn and camera validation rejects clipped, dead, and mismatche
 		mutator(settings);
 		expect(() => validateReferenceSpawnAndCamera(settings)).toThrow();
 	};
-	invalid(settings => { settings.players[0]!.isDead = true; });
+	invalid(settings => { settings.players[0]!.isPhysicsEnabled = false; });
 	invalid(settings => { settings.players[0]!.position.x = 5; });
 	invalid(settings => { settings.worldSize.x = 801; });
 	expect(() => new FitWorldCamera({ x: Number.NaN, y: 450 })).toThrow();

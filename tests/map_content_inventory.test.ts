@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { MAP_CATALOG, buildMapSettings, getMapCatalogEntry } from "../src/content/mapCatalog.js";
+import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, getFinalReleaseMapEntries, getMapCatalogEntry } from "../src/content/mapCatalog.js";
 import { createDefaultGameSettings, validateGameSettings } from "../src/settings/settings.js";
 
 /**
@@ -23,6 +23,14 @@ const plannedMapIds: string[] = [];
 const allMapIds = [...shippedMapIds, ...plannedMapIds];
 
 describe("Section 17.2 map content inventory", () => {
+	test("final release roster exposes only Magma Cradle while retaining the full catalog", () => {
+		expect(FINAL_RELEASE_MAP_IDS).toEqual(["magma-cradle"]);
+		expect(MAP_CATALOG.length).toBeGreaterThan(FINAL_RELEASE_MAP_IDS.length);
+		expect(FINAL_RELEASE_MAP_IDS).not.toContain("frostbite-arena");
+		expect(getFinalReleaseMapEntries().every(entry => entry.browserAvailable && entry.status !== "blocked")).toBe(true);
+		expect(getFinalReleaseMapEntries(true).every(entry => entry.browserAvailable && entry.battleAvailable && entry.status !== "blocked")).toBe(true);
+	});
+
 	test("catalog IDs are unique and every shipped/planned map is registered", () => {
 		const ids = MAP_CATALOG.map(entry => entry.id);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -69,6 +77,24 @@ describe("Section 17.2 map content inventory", () => {
 			expect(entry.spawnRegionCount).toBe(2);
 			expect(entry.drift).toBeGreaterThanOrEqual(0);
 			expect(entry.drift).toBeLessThanOrEqual(1);
+		}
+	});
+
+	test("every shipped map has a four-sided containment boundary and a death route", () => {
+		const template = createDefaultGameSettings(2, 1);
+		for (const mapId of shippedMapIds) {
+			const settings = buildMapSettings(mapId, template);
+			const containment = settings.mapBoundarys.find(boundary => boundary.role === "containment")
+				?? settings.mapBoundarys.find(boundary => "w" in boundary && "h" in boundary && boundary.x === 0 && boundary.y === 0 && boundary.w === settings.worldSize.x && boundary.h === settings.worldSize.y);
+			if (containment) {
+				expect(containment, mapId).toMatchObject({ x: 0, y: 0, w: settings.worldSize.x, h: settings.worldSize.y });
+				continue;
+			}
+			const rectangles = settings.mapBoundarys.filter(boundary => "w" in boundary && "h" in boundary);
+			expect(rectangles.some(boundary => boundary.x <= settings.worldSize.x * 0.15), `${mapId} left`).toBe(true);
+			expect(rectangles.some(boundary => boundary.x + boundary.w >= settings.worldSize.x * 0.85), `${mapId} right`).toBe(true);
+			expect(rectangles.some(boundary => boundary.y <= settings.worldSize.y * 0.15), `${mapId} top`).toBe(true);
+			expect(rectangles.some(boundary => boundary.y + boundary.h >= settings.worldSize.y * 0.85), `${mapId} bottom`).toBe(true);
 		}
 	});
 

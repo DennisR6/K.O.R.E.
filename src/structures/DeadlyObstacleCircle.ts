@@ -10,7 +10,7 @@ export class DeadlyObstacleCirle extends StructureCircle {
 
 	public onCollision({ entity }: { entity: IEntity }): void {
 		if (!(entity instanceof Player)) return
-		entity.addHP(-100);
+		entity.dispatchNumericAdd("hp", -100);
 		return
 	}
 

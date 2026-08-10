@@ -9,7 +9,7 @@ test("central KORE main-menu composition builds validated JSON-safe UI and persi
 	expect(() => validateKoreMainMenuSettings(settings)).not.toThrow();
 	expect(JSON.parse(composition.buildJson())).toEqual(settings);
 	expect(settings.ui.activeScreen).toBe(KoreMenuScreen.Landing);
-	expect(settings.ui.screens.map(screen => screen.id)).toEqual([KoreMenuScreen.Landing, KoreMenuScreen.Main, KoreMenuScreen.MapLocal, KoreMenuScreen.MapOnline, KoreMenuScreen.MapBattle, KoreMenuScreen.Difficulty, KoreMenuScreen.MapAiEasy, KoreMenuScreen.MapAiMedium, KoreMenuScreen.MapAiHard]);
+	expect(settings.ui.screens.map(screen => screen.id)).toEqual([KoreMenuScreen.Landing, KoreMenuScreen.Main, KoreMenuScreen.MapLocal, KoreMenuScreen.MapOnline, KoreMenuScreen.MapBattle, KoreMenuScreen.Difficulty, KoreMenuScreen.MapAiEasy, KoreMenuScreen.MapAiMedium, KoreMenuScreen.MapAiHard, KoreMenuScreen.Mods, KoreMenuScreen.ModImport, KoreMenuScreen.ModResult]);
 	expect(settings.audio.persistentSources).toMatchObject([{ sourceId: KoreMenuId.AudioSource, command: { type: "playMusic", soundId: "kore.music.menu" } }]);
 	expect(settings.metadata.confirmationSoundId).toBe("kore.ui.confirm");
 	expect(settings.metadata.confirmationCommands).toContain(KoreMenuCommand.StartLocal);
@@ -58,7 +58,7 @@ test("SDK menu exposes live hover and focused states to its renderer", () => {
 	});
 	expect(states["main-ai"]?.hovered).toBe(true);
 
-	menu.updateMouse(551, 368);
+	menu.updateMouse(463, 368);
 	menu.handleMousePressed();
 	states = {};
 	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawImage() {}, drawButton(element) { states[element.id] = { hovered: element.hovered, focused: element.focused }; } });
@@ -73,7 +73,8 @@ test("main menu centers its action row at the bottom and wraps long labels", () 
 	const buttons: Array<{ id: string; rect: { x: number; y: number; width: number; height: number } }> = [];
 	menu.getRuntime().draw({ drawText() {}, drawTextInput() {}, drawImage() {}, drawButton(element) { if (element.id.startsWith("main-")) buttons.push({ id: element.id, rect: element.rect }); if (element.id === "main-local") localRect = element.rect; } });
 	expect(localRect).toBeDefined();
-	expect(buttons).toHaveLength(5);
+	expect(buttons).toHaveLength(6);
+	expect(buttons.find(button => button.id === "main-mods")?.rect).toEqual({ x: 660, y: 342, width: 110, height: 58 });
 	const left = Math.min(...buttons.map(button => button.rect.x));
 	const right = Math.max(...buttons.map(button => button.rect.x + button.rect.width));
 	expect(left + (right - left) / 2).toBe(400);

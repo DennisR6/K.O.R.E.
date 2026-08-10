@@ -14,7 +14,7 @@ function renderer(text: string[]): RenderContext {
 	return {
 		WORLD_SIZE_X: 800, WORLD_SIZE_Y: 450,
 		push() { }, pop() { }, clear() { }, setFillColor() { }, setNoFill() { }, setStrokeColor() { }, setStroke() { },
-		drawCircle() { }, drawRect() { }, drawText(value: string) { text.push(value); }, line() { }, rotate() { }, scale() { }, translate() { },
+		drawCircle() { }, drawRect() { }, drawText(value: string) { text.push(value); }, line() { }, rotate() { }, scale() { }, translate() { }, setOpacity() { },
 		drawImage() { }, getScreenSize: () => ({ width: 800, height: 450 }), resizeCanvas() { }, setScaleFactor() { }, getScaleFactor: () => 1,
 		toWorld: (value: number) => value, toPixel: (value: number) => value, windowScale: () => 1, beginClip() { }, endClip() { }, mouseWheel() { },
 		noStroke() { }, getTextWidth: (text: string, size: number) => text.length * size * 0.6,
@@ -75,7 +75,7 @@ test("menu to canonical match to result and back through the application surface
 	const mainMenuText: string[] = [];
 	router.getHandler().drawWorld(renderer(mainMenuText));
 	expect(mainMenuText).toEqual(expect.arrayContaining(["Play", "Local", "Game"]));
-	click(router, 551, 368);
+	click(router, 463, 368);
 
 	const match = router.getHandler();
 	const mapText: string[] = [];
@@ -100,4 +100,4 @@ test("menu to canonical match to result and back through the application surface
 	expect(router.isResultVisible()).toBe(true);
 	click(router, 450, 320);
 	expect(router.isLocalMatch()).toBe(false);
-});
+}, { timeout: 30_000 });

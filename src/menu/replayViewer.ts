@@ -14,6 +14,7 @@ export class ReplayViewer {
 		try {
 			validateReplayDocument(rawReplay);
 			this.player = new ReplayPlayer(rawReplay as ReplayDocument);
+			this.player.setPlaying(true);
 			this.player.getHandler().setLanguage(this.language);
 			this.player.advance();
 			console.log(`[replay] ReplayPlayer ready: actions=${this.player.getActionCount()} state=${this.player.getHandler().getState()}`);
@@ -36,6 +37,22 @@ export class ReplayViewer {
 
 	/** Advances to the next recorded action after the current visible turn settles. */
 	public advance(): void { this.player?.advance(); }
+	public play(): void { this.player?.setPlaying(true); }
+	public pause(): void { this.player?.setPlaying(false); }
+	public seek(actionIndex: number): void {
+		if (!this.player) return;
+		this.player.seek(actionIndex);
+		this.player.setPlaying(false);
+	}
+	public getPlaybackState(): { actionIndex: number; actionCount: number; playing: boolean; complete: boolean } | undefined {
+		if (!this.player) return undefined;
+		return {
+			actionIndex: this.player.getActionIndex(),
+			actionCount: this.player.getActionCount(),
+			playing: this.player.isPlaying(),
+			complete: this.player.isComplete(),
+		};
+	}
 
 	public draw(ctx: RenderContext): void {
 		ctx.push();

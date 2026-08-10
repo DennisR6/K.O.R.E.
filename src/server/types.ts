@@ -1,6 +1,6 @@
 import type { UUID } from "crypto"
 import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
-import type { RuleState } from "../rules/types.js"
+import type { MatchResult, RuleState } from "../rules/types.js"
 import type { ItemTarget } from "../item/target.js"
 
 /**
@@ -20,10 +20,14 @@ export type PersistedMatchLifecycle = {
 };
 
 export type MapUsageMetric = { mapId: string; games: number; percentage: number };
+export type OfflineModeMetric = { mode: "hotseat" | "human-vs-ai" | "ai-battle"; games: number };
 
 /** Aggregate dashboard facts. `now` is a point-in-time registry-cache count. */
 export type MatchMetrics = {
 	allTime: number;
+	/** Completed offline, hotseat, and AI matches reported by the production clients. */
+	offlineMatches: number;
+	offlineModes: OfflineModeMetric[];
 	/** Distinct durable player identities across every stored match. */
 	playersAllTime: number;
 	/** Distinct players whose match lifecycle is anything except sleeping. */
@@ -52,6 +56,8 @@ export const enum NetworkMessageType {
 	REMATCH = "REMATCH",
 	USE_ITEM = "USE_ITEM",
 	ITEM_USED = "ITEM_USED",
+	SKIP_PHASE = "SKIP_PHASE",
+	PHASE_CHANGED = "PHASE_CHANGED",
 	REPORT_MATCH = "REPORT_MATCH",
 	REPORT_SUBMITTED = "REPORT_SUBMITTED",
 	PAUSE_REQUEST = "PAUSE_REQUEST",
@@ -59,6 +65,8 @@ export const enum NetworkMessageType {
 	CREATE_REPLAY_SHARE = "CREATE_REPLAY_SHARE",
 	REPLAY_SHARE_CREATED = "REPLAY_SHARE_CREATED",
 	LEAVE_GAME = "LEAVE_GAME",
+	SURRENDER_GAME = "SURRENDER_GAME",
+	SURRENDERED = "SURRENDERED",
 	GAME_ENDED = "GAME_ENDED",
 }
 
@@ -94,6 +102,8 @@ export type UnTypedNetworkMessage =
 	| NetworkRematch
 	| NetworkUseItem
 	| NetworkItemUsed
+	| NetworkSkipPhase
+	| NetworkPhaseChanged
 	| NetworkReportMatch
 	| NetworkReportSubmitted
 	| NetworkPauseRequest
@@ -101,11 +111,13 @@ export type UnTypedNetworkMessage =
 	| NetworkCreateReplayShare
 	| NetworkReplayShareCreated
 	| NetworkLeaveGame
+	| NetworkSurrenderGame
+	| NetworkSurrendered
 	| NetworkGameEnded
 
 export interface NetworkPing { type: NetworkMessageType.PING }
 export interface NetworkPong { type: NetworkMessageType.PONG }
-export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, mapId?: string, modeId?: string }
+export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSettings, ruleState: RuleState, gameId?: string, mapId?: string, modeId?: string }
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
 }
@@ -126,6 +138,7 @@ export interface NetworkTurn {
 	turnNumber: number,
 	activeTeam: number,
 	ruleState: RuleState,
+	gameOver?: boolean,
 }
 export interface NetworkError {
 	type: NetworkMessageType.ERROR,
@@ -146,6 +159,8 @@ export interface NetworkItemUsed {
 	ruleState: RuleState,
 	players: EngineSettings["players"],
 }
+export interface NetworkSkipPhase { type: NetworkMessageType.SKIP_PHASE }
+export interface NetworkPhaseChanged { type: NetworkMessageType.PHASE_CHANGED, ruleState: RuleState }
 export interface NetworkReportMatch { type: NetworkMessageType.REPORT_MATCH, category: "conduct" | "technical" | "other", text: string }
 export interface NetworkReportSubmitted { type: NetworkMessageType.REPORT_SUBMITTED, reportId: string }
 export interface NetworkPauseRequest { type: NetworkMessageType.PAUSE_REQUEST, action: "pause" | "resume" }
@@ -154,7 +169,9 @@ export interface NetworkCreateReplayShare { type: NetworkMessageType.CREATE_REPL
 export interface NetworkReplayShareCreated { type: NetworkMessageType.REPLAY_SHARE_CREATED, token: string }
 /** Explicitly abandons the current match instead of preserving it for reconnect. */
 export interface NetworkLeaveGame { type: NetworkMessageType.LEAVE_GAME }
+export interface NetworkSurrenderGame { type: NetworkMessageType.SURRENDER_GAME }
+export interface NetworkSurrendered { type: NetworkMessageType.SURRENDERED, result: MatchResult }
 /** Sent to every connected participant when a player abandons a match. */
-export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string }
+export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string, result?: MatchResult }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

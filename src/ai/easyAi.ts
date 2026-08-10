@@ -8,7 +8,7 @@ export class EasyAi implements IAiTurnProducer {
 		const aiActors = handler
 			.getEntityManager()
 			.getEntities()
-			.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+			.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
 
 		if (aiActors.length === 0) return undefined;
 

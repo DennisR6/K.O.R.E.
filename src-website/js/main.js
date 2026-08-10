@@ -9,6 +9,14 @@ import { initAIEditor } from "./editor-ai.js";
 import { restoreEditorDraft, saveEditorDraft } from "./editor-draft.js";
 import { getPreviewUrl, PREVIEW_POPUP_FEATURES, PREVIEW_POPUP_NAME } from "./preview.js";
 
+async function loadDebugMap() {
+	const response = await fetch(new URL("/public/map.json", window.location.origin), { cache: "no-store" });
+	if (!response.ok) throw new Error(`Debug map could not be loaded (${response.status})`);
+	const debugMap = await response.json();
+	Object.keys(mapData).forEach(key => delete mapData[key]);
+	Object.assign(mapData, debugMap);
+}
+
 const previewUrl = getPreviewUrl(window.location.origin);
 document.getElementById("preview-frame").src = previewUrl;
 document.getElementById("btn-preview-popup").addEventListener("click", () => {
@@ -22,7 +30,12 @@ document.getElementById("btn-preview-popup").addEventListener("click", () => {
 });
 
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+	try {
+		await loadDebugMap();
+	} catch (error) {
+		console.warn("Debug map unavailable, using editor defaults", error);
+	}
 	restoreEditorDraft(mapData);
 	initSidebar();
 	initNewMapButton();

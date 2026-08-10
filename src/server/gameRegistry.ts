@@ -2,7 +2,7 @@ import { GameHandler } from "../engine/Handler.js";
 import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
-import { RulePhase, type RuleState } from "../rules/types.js";
+import { MatchEndReason, MatchStatus, RulePhase, type MatchResult, type RuleState } from "../rules/types.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 import { GameDatabase, type StoredGame } from "./db.js";
@@ -43,6 +43,9 @@ export type RematchResult =
 	| { ok: false; error: string };
 
 export type SubmitItemUseResult =
+	| { ok: true; record: GameRecord }
+	| { ok: false; error: string };
+export type SkipPhaseResult =
 	| { ok: true; record: GameRecord }
 	| { ok: false; error: string };
 export type SubmitReportResult = { ok: true; reportId: string } | { ok: false; error: string };
@@ -96,16 +99,19 @@ export class GameRegistry {
 
 	/** Marks a user's active socket and restores their game if it was evicted. */
 	public connectUser(userId: string): GameRecord | undefined {
-		const record = this.getForUser(userId)
+		const gameId = this.database.findActiveGameIdForUser(userId)
+		const record = gameId ? this.get(gameId) : undefined
 		if (!record) return undefined
 		record.connectedUsers.add(userId)
+		this.database.setGamePlayerConnected(record.id, userId, true)
 		return this.touch(record)
 	}
 
 	/** Evicts the cached handler immediately when the final connected user leaves. */
 	public disconnectUser(userId: string): void {
-		const gameId = this.database.findGameIdForUser(userId)
+		const gameId = this.database.findActiveGameIdForUser(userId) ?? this.database.findGameIdForUser(userId)
 		if (!gameId) return
+		this.database.setGamePlayerConnected(gameId, userId, false)
 		const record = this.games.get(gameId)
 		if (!record) return
 		record.connectedUsers.delete(userId)
@@ -124,6 +130,33 @@ export class GameRegistry {
 		record.handler.dispose();
 		this.database.deleteGame(record.id);
 		return record;
+	}
+
+	/** Operator-only emergency completion for a stuck, non-completed match. */
+	public killGame(gameId: string): boolean {
+		const record = this.get(gameId);
+		if (!record || record.lifecycle.status === "completed") return false;
+		record.handler.finishMatch({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: record.turnNumber });
+		this.transition(record, "completed");
+		this.persist(record);
+		this.storeCompletedReplay(record);
+		return true;
+	}
+
+	/** Completes a live match when a player explicitly returns to the menu. */
+	public surrenderGameForUser(userId: string): { record: GameRecord; result: MatchResult } | undefined {
+		const record = this.getForUser(userId);
+		if (!record || record.lifecycle.status === "completed") return undefined;
+		const surrenderingTeam = record.teamByUser.get(userId);
+		const opponentTeam = surrenderingTeam === undefined ? undefined : record.users.map(user => record.teamByUser.get(user)).find(team => team !== undefined && team !== surrenderingTeam);
+		const result: MatchResult = opponentTeam === undefined
+			? { status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Surrendered, turnNumber: record.turnNumber }
+			: { status: MatchStatus.Winner, winnerTeam: opponentTeam, reason: MatchEndReason.Surrendered, turnNumber: record.turnNumber };
+		record.handler.finishMatch(result);
+		this.transition(record, "completed");
+		this.persist(record);
+		this.storeCompletedReplay(record);
+		return { record, result };
 	}
 
 	/** Drops inactive handlers only. Durable SQLite state remains available. */
@@ -189,15 +222,22 @@ export class GameRegistry {
 		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
 		const team = record.teamByUser.get(userId)
 		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
-		if (record.ruleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
+		const shotRuleState = record.ruleState.phase === RulePhase.Item ? record.rules.advancePhase(record.ruleState) : record.ruleState;
+		if (shotRuleState.phase !== RulePhase.Physics) return { ok: false, error: "The game is not in the physics phase" }
 		if (!isValidInput(input)) return { ok: false, error: "Invalid shot input" }
 
 		const actor = record.handler.getEntityManager().getEntityById(input.actorId)
 		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
+		if (!record.handler.isActorEligibleForAction(input.actorId)) return { ok: false, error: "Actor is locked from selection" }
 
+		const previousRuleState = record.ruleState;
 		record.resolving = true
 		try {
+			if (shotRuleState !== previousRuleState) {
+				record.ruleState = shotRuleState;
+				record.handler.setRuleState(shotRuleState);
+			}
 			let completed = false
 			record.recorder.recordShoot(input.actorId, input.angle, input.power)
 			const packet = record.handler.resolveTurn(input)
@@ -216,6 +256,12 @@ export class GameRegistry {
 			// It stays private until an explicit player share or operator lookup.
 			if (completed) this.storeCompletedReplay(record)
 			return { ok: true, record, packet }
+		} catch (error) {
+			if (shotRuleState !== previousRuleState) {
+				record.ruleState = previousRuleState;
+				record.handler.setRuleState(previousRuleState);
+			}
+			throw error;
 		} finally {
 			record.resolving = false
 			this.touch(record)
@@ -239,6 +285,7 @@ export class GameRegistry {
 		const actor = record.handler.getEntityManager().getEntityById(actorId)
 		if (!actor || actor.isDead()) return { ok: false, error: "Actor is not active" }
 		if (!actor.getTeam().includes(team)) return { ok: false, error: "Actor is not controlled by this user" }
+		if (!record.handler.isActorEligibleForAction(actorId)) return { ok: false, error: "Actor is locked from selection" }
 
 		try {
 			record.recorder.recordItemUse(actorId, itemId, target)
@@ -255,12 +302,30 @@ export class GameRegistry {
 		}
 	}
 
+	public skipPhase(userId: string): SkipPhaseResult {
+		const record = this.getForUser(userId)
+		if (!record) return { ok: false, error: "No active game for this user" }
+		if (record.resolving) return { ok: false, error: "A turn is already resolving" }
+		if (record.lifecycle.status === "paused") return { ok: false, error: "The game is paused" }
+		if (record.lifecycle.status === "completed" || record.handler.getState() === GameState.Game_over) return { ok: false, error: "The game is completed" }
+		const team = record.teamByUser.get(userId)
+		if (team === undefined || team !== record.handler.getActiveTeam()) return { ok: false, error: "It is not your turn" }
+		if (record.ruleState.phase !== RulePhase.Item) return { ok: false, error: "The game is not in the item phase" }
+		const nextRuleState = record.rules.advancePhase(record.ruleState)
+		record.ruleState = nextRuleState
+		record.handler.setRuleState(nextRuleState)
+		record.currentTeam = nextRuleState.activeTeam
+		record.turnNumber = nextRuleState.turnNumber
+		this.persist(record)
+		return { ok: true, record }
+	}
+
 	public submitMatchReport(userId: string, category: unknown, text: unknown): SubmitReportResult {
 		const record = this.getForUser(userId);
 		if (!record) return { ok: false, error: "No active game for this user" };
 		if (category !== "conduct" && category !== "technical" && category !== "other") return { ok: false, error: "Invalid report category" };
 		if (typeof text !== "string" || text.trim().length < 1 || text.length > 500) return { ok: false, error: "Invalid report text" };
-		try { return { ok: true, reportId: this.database.createMatchReport(record.id, userId, category, text.trim()) }; }
+		try { return { ok: true, reportId: this.database.createMatchReport(record.id, userId, category, text.trim(), record.turnNumber) }; }
 		catch { return { ok: false, error: "Report already submitted" }; }
 	}
 

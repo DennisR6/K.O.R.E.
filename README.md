@@ -83,7 +83,7 @@ bun run docs
    game. The advertised URL defaults to `https://lupricht.net/kore` and is
    overridable with the `KORE_BASE_URL` environment variable. Manual override
    remains available: `http://localhost:4001/?skipmenu=1&url=ws://localhost:4001`.
-4. **Map Editor:** Open `src-website/index.html` to create and export customized arena maps.
+4. **Map Editor:** Run `bun run build:debug-map` once, then `bun run mapbuilder:dev` and open the printed live-server URL. The editor loads `src/content/debugMap.ts` through `public/map.json`; editing that source rebuilds the JSON and reloads the editor.
 5. **Desktop Native App:** Launch or build the native desktop binary with `bun run desktop:build`.
 
 ## Map SDK

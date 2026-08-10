@@ -2,6 +2,10 @@ import { expect, test } from "bun:test";
 import { EffectType, EffectTrigger } from "../src/effects/types.ts";
 import type { RenderContext } from "../src/engine/RenderContext.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
+import { AuthoritativeGameplayRenderer } from "../src/ui/AuthoritativeGameplayRenderer.ts";
+import { createItemPickup } from "../src/item/types.ts";
+import { mysteryBoxItem } from "../src/item/officialItems.ts";
+import { GameState } from "../src/engine/types.ts";
 
 type DrawCall = { type: string; values: unknown[] };
 
@@ -43,6 +47,8 @@ test("gameplay scene renders only current authoritative state, roles, effects, a
 	handler.drawWorld(createRenderer(calls));
 
 	expect(calls.some(call => call.type === "image" && call.values[1] === 321 - playerSize && call.values[2] === 123 - playerSize)).toBe(true);
+	expect(calls.some(call => call.type === "image" && call.values[0] === "public/items/mystery_box.svg")).toBe(true);
+	expect(calls.some(call => call.type === "text" && call.values[0] === "mystery-box")).toBe(false);
 	expect(calls.some(call => call.type === "text" && call.values[0] === "ModifyMass")).toBe(true);
 	// The explicit containment rectangle is an outline, never a filled obstacle.
 	expect(calls.some(call => call.type === "noFill")).toBe(true);
@@ -70,4 +76,23 @@ test("authoritative hard-sync and rematch are rendered without cached entities",
 	const rematchCalls: DrawCall[] = [];
 	handler.drawWorld(createRenderer(rematchCalls));
 	expect(rematchCalls.some(call => call.type === "image" && call.values[1] === 654 - playerSize && call.values[2] === 210 - playerSize)).toBe(false);
+});
+
+test("map pickups have a visible named circle marker even with an image component", () => {
+	const renderer = new AuthoritativeGameplayRenderer({
+		getAuthoritativeRenderState: () => ({
+			gameState: GameState.Your_turn,
+			ruleState: { phase: "item", activeTeam: 0, turnNumber: 0, itemUses: 0 } as any,
+			matchResult: undefined,
+			structures: [],
+			players: [],
+			items: [mysteryBoxItem],
+			pickups: [createItemPickup({ itemId: mysteryBoxItem.id, spawnRegion: { x: 100, y: 100, w: 40, h: 40 }, activationType: "collision" })],
+			pickupState: { turnNumber: 0, pickups: [{ collected: 0, occupants: [] }] },
+		}),
+	});
+	const calls: DrawCall[] = [];
+	renderer.draw(createRenderer(calls));
+	expect(calls.some(call => call.type === "circle" && call.values[0] === 120 && call.values[1] === 120)).toBe(true);
+	expect(calls.some(call => call.type === "text" && call.values[0] === "Wunderkiste")).toBe(true);
 });

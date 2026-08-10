@@ -37,9 +37,10 @@ function arena(players: { x: number; y: number }[], killCircles: { x: number; y:
 			x: circle.x,
 			y: circle.y,
 			r: circle.r,
-			effects: [
-				{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-			],
+				effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+				] }],
 		})),
 	];
 	settings.players[0]!.position = players[0]!;

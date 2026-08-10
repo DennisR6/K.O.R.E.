@@ -4,6 +4,11 @@ import { SHAPE, type Vector2D } from "../physics/physics.js";
 import type { FullEffectSettings } from "../effects/types.js";
 import type { InventoryItem } from "../item/types.js";
 import type { ItemEffectSettings } from "../effects/types.js";
+import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
+import { validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
+import { validateActionModifier, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
+import { validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
+import { validateActorEligibilityState, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.
@@ -40,9 +45,7 @@ export interface EntitySnapshot {
 	isStatic?: boolean;
 }
 export interface IKillable {
-	setHP(hp: number): void;
 	getHP(): number;
-	addHP(hp: number): void
 	setIsDead(dead: boolean): void
 	isDead(): boolean
 }
@@ -67,10 +70,17 @@ export interface PlayerSettings {
 	shape: SHAPE.CIRCLE
 	hoop: AssetList
 	isPhysicsEnabled: boolean
-	isDead: boolean
+	isDrawingEnabled: boolean
 	effects: FullEffectSettings[]
 	inventory: InventoryItem[]
 	itemEffects?: ItemEffectSettings[]
+	temporalModifiers?: TemporalModifierSettings[]
+	pendingActionModifiers?: ActionModifierSettings[]
+	collisionFilters?: CollisionFilterSettings[]
+	collisionFilterLifetimes?: CollisionFilterLifetimeSettings[]
+	actorEligibilityConstraints?: ActorEligibilityConstraintSettings[]
+	actorEligibilityConstraintLifetimes?: ActorEligibilityConstraintLifetimeSettings[]
+	numericThresholds?: NumericThresholdBinding[]
 }
 
 export function validatePlayerMass(mass: number): void {
@@ -79,6 +89,15 @@ export function validatePlayerMass(mass: number): void {
 
 /** Creates an independent, complete player snapshot with sensible defaults. */
 export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): PlayerSettings {
+	validateNumericThresholdBindings(overrides.numericThresholds ?? [])
+	for (const modifier of overrides.temporalModifiers ?? []) validateTemporalModifier(modifier)
+	for (const modifier of overrides.pendingActionModifiers ?? []) validateActionModifier(modifier)
+	for (const filter of overrides.collisionFilters ?? []) validateCollisionFilter(filter)
+	for (const lifetime of overrides.collisionFilterLifetimes ?? []) validateCollisionFilterLifetime(lifetime)
+	validateCollisionFilterState(overrides.collisionFilters ?? [], overrides.collisionFilterLifetimes ?? [])
+	for (const constraint of overrides.actorEligibilityConstraints ?? []) validateActorEligibilityConstraint(constraint)
+	for (const lifetime of overrides.actorEligibilityConstraintLifetimes ?? []) validateActorEligibilityConstraintLifetime(lifetime)
+	validateActorEligibilityState(overrides.actorEligibilityConstraints ?? [], overrides.actorEligibilityConstraintLifetimes ?? [])
 	const mass = overrides.mass ?? 1;
 	validatePlayerMass(mass);
 	return {
@@ -98,9 +117,34 @@ export function createPlayerSettings(overrides: Partial<PlayerSettings> = {}): P
 		shape: SHAPE.CIRCLE,
 		hoop: overrides.hoop ?? AssetList.pictureReifenPNG,
 		isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
-		isDead: overrides.isDead ?? false,
+		isDrawingEnabled: overrides.isDrawingEnabled ?? true,
 		effects: (overrides.effects ?? []).map(effect => ({ ...effect })),
 		inventory: (overrides.inventory ?? []).map(item => ({ ...item })),
 		...(overrides.itemEffects ? { itemEffects: overrides.itemEffects.map(effect => ({ ...effect, typeValue: structuredClone(effect.typeValue) })) } : {}),
+		...(overrides.temporalModifiers ? { temporalModifiers: structuredClone(overrides.temporalModifiers) } : {}),
+		...(overrides.pendingActionModifiers ? { pendingActionModifiers: structuredClone(overrides.pendingActionModifiers) } : {}),
+		...(overrides.collisionFilters ? { collisionFilters: structuredClone(overrides.collisionFilters) } : {}),
+		...(overrides.collisionFilterLifetimes ? { collisionFilterLifetimes: structuredClone(overrides.collisionFilterLifetimes) } : {}),
+		...(overrides.actorEligibilityConstraints ? { actorEligibilityConstraints: structuredClone(overrides.actorEligibilityConstraints) } : {}),
+		...(overrides.actorEligibilityConstraintLifetimes ? { actorEligibilityConstraintLifetimes: structuredClone(overrides.actorEligibilityConstraintLifetimes) } : {}),
+		numericThresholds: structuredClone(overrides.numericThresholds ?? createDefaultNumericThresholdBindings()),
 	};
+}
+
+/** Canonical KORE HP depletion reaction; order preserves MovementSystem's active-target invariant. */
+export function createDefaultNumericThresholdBindings(): NumericThresholdBinding[] {
+	return [{
+		schemaVersion: 1,
+		id: "hp",
+		thresholds: [{
+			schemaVersion: 1,
+			comparator: "below-or-equal",
+			value: 0,
+			effects: [
+				{ schemaVersion: 1, type: "movement.set-velocity", typeValue: { x: 0, y: 0 } },
+				{ schemaVersion: 1, type: "participation.set-physics", typeValue: { enabled: false } },
+				{ schemaVersion: 1, type: "participation.set-drawing", typeValue: { enabled: false } },
+			],
+		}],
+	}];
 }

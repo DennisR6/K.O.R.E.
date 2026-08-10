@@ -3,7 +3,7 @@ import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { ItemPhaseUI } from "../ui/ItemPhaseUI.js";
 import { createKoreGameHudSurface, type KoreGameHudSurface } from "../kore/ui/KoreGameHudSurface.js";
-import { KoreHudCommand, type KoreHudCommandMessage } from "../kore/ui/hudCommands.js";
+import { KoreHudCommand, type KoreHudCommandMessage, type KoreReportCategory } from "../kore/ui/hudCommands.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import type { ItemTarget } from "../item/target.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
@@ -26,6 +26,7 @@ export type GameplayHudActions = {
 	onReplayShare?: () => boolean | void;
 	onPause?: () => boolean | void;
 	onResume?: () => boolean | void;
+	onReport?: (category: KoreReportCategory, text: string) => boolean | void;
 	language?: LanguageCatalog;
 };
 
@@ -46,7 +47,7 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 	emitter?.setErrorHandler(error => { rejection = hudRejection(error); });
 	const hud = createKoreGameHudSurface({
 		handle: command => handleHudCommand(command, handler, { ...actions, itemUi }),
-	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true }, actions.language ?? createEnglishLanguage());
+	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true, canReport: !!actions.onReport }, actions.language ?? createEnglishLanguage(), (itemId, point) => resolveItemTarget(handler, uiSystem, itemId, point));
 	const feedback = new KoreGameplayFeedbackSurface();
 	let feedbackCursor = 0;
 	handler.setMouseHandler(hud);
@@ -67,7 +68,7 @@ type HudCommandDeps = GameplayHudActions & { itemUi?: ItemPhaseUI };
 function handleHudCommand(command: KoreHudCommandMessage, handler: GameHandler, deps: HudCommandDeps): boolean | void {
 	switch (command.type) {
 		case KoreHudCommand.UseItem: {
-			const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(handler.getActiveTeam()));
+			const actor = selectedActiveActor(handler, handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined);
 			if (!actor || !deps.itemUi) throw new Error("Items are unavailable");
 			if (deps.onUseItem) return deps.onUseItem(actor.getId(), command.payload.itemId, command.payload.target);
 			deps.itemUi.use(actor.getId(), command.payload.itemId, command.payload.target);
@@ -104,7 +105,31 @@ function handleHudCommand(command: KoreHudCommandMessage, handler: GameHandler, 
 			if (deps.onResume) return deps.onResume();
 			handler.setPaused(false);
 			return;
+		case KoreHudCommand.SubmitReport:
+			if (deps.onReport) return deps.onReport(command.payload.category, command.payload.text);
+			throw new Error("Reports are unavailable");
+		case KoreHudCommand.Report: case KoreHudCommand.ReportCategory: case KoreHudCommand.CancelReport:
+			return;
 	}
+}
+
+function selectedActiveActor(handler: GameHandler, uiSystem?: UiSystem) {
+	const selected = uiSystem?.selectedActorId ? handler.getEntityManager().getEntityById(uiSystem.selectedActorId) : undefined;
+	if (selected && !selected.isDead() && selected.isActorEligible() && selected.getTeam().includes(handler.getActiveTeam())) return selected;
+	return handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(handler.getActiveTeam()));
+}
+
+function resolveItemTarget(handler: GameHandler, uiSystem: UiSystem | undefined, itemId: string, point: { x: number; y: number }): ItemTarget | undefined {
+	const item = handler.getSettings()?.items?.find(candidate => candidate.id === itemId);
+	const actor = selectedActiveActor(handler, uiSystem);
+	if (!item || !actor) return undefined;
+	if (item.targetType === "entity") {
+		const target = handler.getEntityManager().getEntityAt(point.x, point.y);
+		return target ? { type: "entity", entityId: target.getId() } : undefined;
+	}
+	if (item.targetType === "position") return { type: "position", position: { ...point } };
+	if (item.targetType === "zone") return undefined;
+	return { type: "self" };
 }
 
 function hudRejection(error: unknown): string {

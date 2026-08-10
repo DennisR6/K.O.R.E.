@@ -40,9 +40,10 @@ function completedMatch(spawnInCircle: boolean) {
 			x: 750,
 			y: 530,
 			r: 80,
-			effects: [
-				{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "dead", value: true } },
-			],
+				effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], type: EffectType.Multi, typeValue: [
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "physicsEnabled", value: false } },
+					{ type: EffectType.ModifySetting, typeValue: { operation: SettingOperation.Set, key: "drawingEnabled", value: false } },
+				] }],
 		},
 	];
 	// Player 2 spawns inside the kill circle, off its exact center, so the

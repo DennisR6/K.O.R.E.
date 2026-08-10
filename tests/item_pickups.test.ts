@@ -22,7 +22,8 @@ test("map pickups collect deterministically for live entities on the active team
 	};
 	settings.players.forEach(player => { player.position = { x: 0, y: 0 }; });
 	settings.players[0].position = { x: 110, y: 110 };
-	settings.players[0].isDead = true;
+	settings.players[0].isPhysicsEnabled = false;
+	settings.players[0].isDrawingEnabled = false;
 	settings.players[1].position = { x: 110, y: 110 };
 	settings.players[2].position = { x: 110, y: 110 };
 
@@ -83,4 +84,39 @@ test("map pickups serialize and honor a round-based respawn countdown", () => {
 	handler.tick();
 	expect(handler.toSettings().itemPickupState?.pickups[0]).toEqual({ collected: 1, occupants: [player.getId()], respawnCountdown: 2 });
 	expect(player.getInventory()).toEqual([{ itemId: item.id, remainingUses: 2, usesThisTurn: 0 }]);
+});
+
+test("relocating pickups move deterministically and restore their active region", () => {
+	const item = createItemDocument({ id: "moving-pickup" });
+	const settings = {
+		...createDefaultGameSettings(2, 1),
+		items: [item],
+		gameMode: {
+			id: "moving-pickup-test",
+			phases: [RulePhase.Physics],
+			maxItemsPerTurn: 0,
+			winCondition: WinCondition.LastTeamStanding,
+			itemEconomy: {
+				fixedLoadouts: [],
+				mapPickups: [{ itemId: item.id, spawnRegion: { x: 100, y: 100, w: 20, h: 20 }, activationType: "collision", respawnConfig: { intervalRounds: 1, relocate: true } }],
+			},
+		},
+	};
+	settings.players[0].position = { x: 110, y: 110 };
+	const handler = new GameHandlerBuilder().fromSettings(settings).build();
+	const player = handler.getEntityManager().getEntities()[0];
+	handler.tick();
+	const initial = handler.toSettings().itemPickupState?.pickups[0];
+	handler.startTurn({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 1, itemUses: 0 });
+	handler.tick();
+	const moved = handler.toSettings().itemPickupState?.pickups[0];
+	expect(moved?.spawnRegion).toBeDefined();
+	expect(moved?.spawnRegion).not.toEqual(initial?.spawnRegion);
+	expect(moved?.spawnRegion?.x).toBeGreaterThanOrEqual(40);
+	expect(moved?.spawnRegion?.y).toBeGreaterThanOrEqual(40);
+	expect(moved?.spawnRegion?.x! + moved?.spawnRegion?.w!).toBeLessThanOrEqual(760);
+	expect(moved?.spawnRegion?.y! + moved?.spawnRegion?.h!).toBeLessThanOrEqual(410);
+	const restored = new GameHandlerBuilder().fromSettings(handler.toSettings()).build();
+	expect(restored.toSettings().itemPickupState?.pickups[0]?.spawnRegion).toEqual(moved?.spawnRegion);
+	expect(player.getInventory()).toHaveLength(1);
 });

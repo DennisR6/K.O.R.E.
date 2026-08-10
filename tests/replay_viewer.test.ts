@@ -47,4 +47,21 @@ describe("Replay Viewer", () => {
 		expect(viewer.getPlayer()!.getHandler().getState()).toBe(GameState.Playing);
 		expect(viewer.getPlayer()!.isComplete()).toBe(false);
 	});
+
+	test("seeks to an action boundary from the pristine replay origin", () => {
+		const settings = createDefaultGameSettings();
+		const viewer = new ReplayViewer();
+		expect(viewer.loadReplay({
+			schemaVersion: DOCUMENT_SCHEMA_VERSION,
+			initialSettings: settings,
+			seed: 123,
+			actions: [{ type: "shoot", actorId: settings.players[0]!.id, input: { angle: 0, power: 1 } }],
+		})).toBe(true);
+
+		viewer.seek(0);
+		expect(viewer.getPlaybackState()).toMatchObject({ actionIndex: 0, actionCount: 1, playing: false, complete: false });
+		viewer.play();
+		viewer.advance();
+		expect(viewer.getPlayer()!.getHandler().getState()).toBe(GameState.Playing);
+	});
 });

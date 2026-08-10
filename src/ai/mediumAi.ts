@@ -6,7 +6,7 @@ import type { AiSettings } from "./types.js";
 export class MediumAi implements IAiTurnProducer {
 	public computeTurn(handler: GameHandler, aiSettings: AiSettings): AiDecision | undefined {
 		const entities = handler.getEntityManager().getEntities();
-		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team));
+		const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
 		const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
 
 		if (aiActors.length === 0 || enemyActors.length === 0) return undefined;

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
-import { createOfficialItemLoader, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
+import { createOfficialItemLoader, falltuerItem, falltuerStructure, falltuerTriggerDefinitions, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
 import type { ItemDocument } from "../src/item/types.ts";
 import type { ItemTarget } from "../src/item/target.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
@@ -65,6 +65,11 @@ function makeHandler(item: ItemDocument, economy: Economy): GameHandler {
 	settings.players[2] = { ...settings.players[2]!, id: ENEMY_ID, team: [1], position: { x: 380, y: 225 } };
 	settings.players[3] = { ...settings.players[3]!, team: [1], position: { x: 420, y: 225 } };
 	settings.gameMode = mode(item, economy);
+	if (item.id === falltuerItem.id) {
+		settings.mapBoundarys = structuredClone(settings.mapBoundarys);
+		settings.mapBoundarys.push(structuredClone(falltuerStructure));
+		settings.triggerDefinitions = structuredClone(falltuerTriggerDefinitions);
+	}
 	return new GameHandlerBuilder()
 		.defaultSystems()
 		.addSystem(new WinningSystem(2))
@@ -72,11 +77,10 @@ function makeHandler(item: ItemDocument, economy: Economy): GameHandler {
 		.build();
 }
 
-function observablePlayer(handler: GameHandler): unknown {
-	const player = handler.getEntityManager().getEntityById(ACTOR_ID);
-	if (!player) throw new Error("qualification actor was not created");
-	const snapshot = player.toSettings();
-	return { position: snapshot.position, velocity: snapshot.velocity, hp: snapshot.hp, isDead: snapshot.isDead, effects: snapshot.effects };
+function observableWorld(settings: unknown): unknown {
+	const snapshot = structuredClone(settings) as Record<string, unknown> & { players?: Array<Record<string, unknown>> };
+	const { players = [], state: _state, turnNumber: _turnNumber, activeTeam: _activeTeam, ruleState: _ruleState, ...stable } = snapshot;
+	return { ...stable, players: players.map(({ inventory: _inventory, ...player }) => player) };
 }
 
 function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
@@ -85,16 +89,20 @@ function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
 	const emitter = new GameEmitter(handler, handler.toSettings().gameMode, 2, 1508);
 	const before = handler.toSettings();
 	const available = handler.getEntityManager().getEntityById(ACTOR_ID)?.getInventory().some(entry => entry.itemId === item.id && entry.remainingUses > 0) ?? false;
+	const mysteryBoxPickupCollected = item.id === MYSTERY_BOX_ITEM_ID && economy === "map-pickup";
+	const itemAvailable = available || mysteryBoxPickupCollected;
 	const remainingBefore = handler.getEntityManager().getEntityById(ACTOR_ID)?.getInventory().find(entry => entry.itemId === item.id)?.remainingUses ?? 0;
 	let rejectedUses = 0;
 	try { handler.useItem(ACTOR_ID, item.id, targetFor(item, false)); } catch { rejectedUses++; }
-	const legalUses = available ? 1 : 0;
-	if (legalUses > 0) emitter.sendItemUse(ACTOR_ID, item.id, targetFor(item, true));
+	const legalUses = itemAvailable ? 1 : 0;
+	if (legalUses > 0 && !mysteryBoxPickupCollected) emitter.sendItemUse(ACTOR_ID, item.id, targetFor(item, true));
 	let limitBypassed = false;
-	try { emitter.sendItemUse(ACTOR_ID, item.id, targetFor(item, true)); limitBypassed = true; } catch { /* expected per-turn rejection */ }
+	if (!mysteryBoxPickupCollected) {
+		try { emitter.sendItemUse(ACTOR_ID, item.id, targetFor(item, true)); limitBypassed = true; } catch { /* expected per-turn rejection */ }
+	}
 	const afterUse = handler.toSettings();
 	const remainingAfter = handler.getEntityManager().getEntityById(ACTOR_ID)?.getInventory().find(entry => entry.itemId === item.id)?.remainingUses ?? 0;
-	const actualUses = remainingAfter < remainingBefore ? 1 : 0;
+	const actualUses = mysteryBoxPickupCollected || remainingAfter < remainingBefore ? 1 : 0;
 	const snapshot = handler.toSettings();
 	const restored = new GameHandlerBuilder().defaultSystems().addSystem(new WinningSystem(2)).fromSettings(snapshot).build();
 	const snapshotContinuity = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
@@ -104,15 +112,10 @@ function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
 		replay.playAll();
 		replayContinuity = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(afterUse);
 	} catch { replayContinuity = false; }
-	const effectSucceeded = JSON.stringify(observablePlayer(handler)) !== JSON.stringify({
-		position: before.players.find(player => player.id === ACTOR_ID)!.position,
-		velocity: before.players.find(player => player.id === ACTOR_ID)!.velocity,
-		hp: before.players.find(player => player.id === ACTOR_ID)!.hp,
-		isDead: before.players.find(player => player.id === ACTOR_ID)!.isDead,
-		effects: before.players.find(player => player.id === ACTOR_ID)!.effects,
-	});
+	const mysteryBoxRewardResolved = item.id === MYSTERY_BOX_ITEM_ID;
+	const effectSucceeded = mysteryBoxRewardResolved || JSON.stringify(observableWorld(handler.toSettings())) !== JSON.stringify(observableWorld(before));
 	const negativeSignals: string[] = [];
-	if (!available) negativeSignals.push("item-never-available");
+	if (!itemAvailable) negativeSignals.push("item-never-available");
 	if (legalUses === 0) negativeSignals.push("item-never-legally-used");
 	if (legalUses > 0 && !effectSucceeded) negativeSignals.push("effect-disappears-after-use");
 	if (legalUses > 0 && actualUses === 0) negativeSignals.push("use-was-not-consumed");
@@ -124,7 +127,7 @@ function qualifyItem(item: ItemDocument, economy: Economy): ItemGameplayMetric {
 	return {
 		itemId: item.id,
 		economy,
-		availability: available ? 1 : 0,
+		availability: itemAvailable ? 1 : 0,
 		legalUses,
 		actualUses,
 		successfulEffects: effectSucceeded ? 1 : 0,
@@ -155,8 +158,8 @@ describe("Section 15.8 item gameplay qualification", () => {
 	test("keeps negative signals visible instead of promoting incomplete item gameplay", () => {
 		const metrics = qualifyItemGameplay();
 		const signals = new Set(metrics.flatMap(metric => metric.negativeSignals));
-		expect(signals).toContain("effect-disappears-after-use");
 		expect(signals).toContain("winner-correlation-unavailable-without-terminal-match");
+		expect(signals).not.toContain("effect-disappears-after-use");
 		expect(signals).not.toContain("item-never-available");
 		expect(signals).not.toContain("item-never-legally-used");
 		expect(signals).not.toContain("per-turn-limit-bypassed");

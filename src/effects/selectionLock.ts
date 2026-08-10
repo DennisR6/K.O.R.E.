@@ -5,7 +5,7 @@ export interface SelectionLockValue {
 	remainingTurns?: number;
 }
 
-/** A serializable selection lock whose lifetime is measured in completed turns. */
+/** Historical compatibility helper; current runtime uses actor eligibility constraints. */
 export class EffectSelectionLock {
 	public readonly durationTurns: number;
 	private remainingTurns: number;

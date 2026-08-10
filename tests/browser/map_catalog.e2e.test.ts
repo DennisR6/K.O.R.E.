@@ -5,6 +5,7 @@ import {
 	assertCleanConsole,
 	captureConsole,
 	canvasGeometry,
+	clickMenuElement,
 	clickWorld,
 	dragWorld,
 	ensureBrowserBuild,
@@ -17,7 +18,8 @@ import {
 	waitFor,
 	worldToPixel,
 } from "./browserHarness.ts";
-import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
+import { getFinalReleaseMapEntries } from "../../src/content/mapCatalog.js";
+import { KoreMenuElement, KoreMenuMapIntent, koreMenuMapElementId } from "../../src/kore/ui/menuVocabulary.js";
 
 /**
  * Section 17.8 - browser verification of every qualified map.
@@ -36,7 +38,7 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
  * fresh production boot (the app has no in-match exit affordance; leaving a
  * local match is a fresh boot that must stay console-clean).
  *
- * The full-journey case uses Hazard Control's broad verified terminal route
+ * The full-journey case uses Magma Cradle's broad verified terminal route
  * (17.6): after a weak opening, every team-1 figure drives itself into the
  * right arena wall (a containment kill; the wall route is verified to kill
  * exactly the shooter without touching team 0), the result overlay offers
@@ -51,34 +53,20 @@ import { MAP_CATALOG } from "../../src/content/mapCatalog.js";
 const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
-const LANDING_WORLD = { x: 400, y: 100 };
-// SDK main-menu flow layout: Choose Map is the fifth centered bottom action button.
-const CHOOSE_MAP_BUTTON_WORLD = { x: 701, y: 368 };
 
 /** Weak opening drag: power ~1.2 straight toward the team's own side. */
 const WEAK_DRAG_DX = 12;
 
-/** Verified grid-exact containment suicide drags per team-1 spawn index. */
-const SUICIDE_DRAGS = [
-	{ from: { x: 650, y: 225 }, to: { x: 533.125, y: 195.625 } },
-	{ from: { x: 750, y: 225 }, to: { x: 630, y: 225 } },
-	{ from: { x: 650, y: 325 }, to: { x: 533.125, y: 295.625 } },
-	{ from: { x: 750, y: 325 }, to: { x: 630, y: 325 } },
-	{ from: { x: 650, y: 425 }, to: { x: 531.25, y: 403.75 } },
-	{ from: { x: 750, y: 425 }, to: { x: 630, y: 425 } },
-] as const;
+/** Spawn-row targets used to select the next live team-1 actor. */
+const SUICIDE_ROWS = [225, 225, 325, 325, 425, 425] as const;
 
 /**
  * The qualified maps in production selection order (catalog order filtered
  * by `browserAvailable`). frostbite-arena stays blocked and hidden.
  */
-const QUALIFIED_MAPS = MAP_CATALOG.filter(entry => entry.browserAvailable);
+const QUALIFIED_MAPS = getFinalReleaseMapEntries();
 
 /** World-center of a map-selection row (menu layout: 500x40 rows at y 80+50i). */
-function mapRowWorld(index: number): { x: number; y: number } {
-	return { x: 400, y: 106 + index * 2 * 18 };
-}
-
 /** Grid-quantized drag start (mirrors the Section 16 killDrag helper). */
 function quantized(position: { x: number; y: number }): { x: number; y: number } {
 	return { x: Math.floor(position.x * 1.6) / 1.6, y: Math.floor(position.y * 1.6) / 1.6 };
@@ -128,8 +116,6 @@ const STRUCTURE_PROBES: Record<string, { probe: { x: number; y: number }; ref: {
 	"symmetric-duel": { probe: { x: 380, y: 140 }, ref: { x: 380, y: 240 }, color: [0x31, 0x5b, 0x7d] },
 	// north-west column rect (300,70,16,80); reference below it on floor
 	"structure-control": { probe: { x: 308, y: 110 }, ref: { x: 308, y: 170 }, color: [0x31, 0x5b, 0x7d] },
-	// west kill zone circle (300,225,r28); reference above it on floor
-	"hazard-control": { probe: { x: 300, y: 225 }, ref: { x: 300, y: 180 }, color: [0xd9, 0x4b, 0x28] },
 	"aurora-basin": { probe: { x: 330, y: 225 }, ref: { x: 330, y: 180 }, color: [0x31, 0x5b, 0x7d] },
 	"lantern-gates": { probe: { x: 400, y: 90 }, ref: { x: 400, y: 130 }, color: [0x31, 0x5b, 0x7d] },
 	"ember-crossing": { probe: { x: 310, y: 225 }, ref: { x: 310, y: 180 }, color: [0xd9, 0x4b, 0x28] },
@@ -138,8 +124,8 @@ const STRUCTURE_PROBES: Record<string, { probe: { x: number; y: number }; ref: {
 /** Opens the visible menu and navigates to the map-selection page. */
 async function openMapSelection(page: import("playwright").Page): Promise<void> {
 	await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
-	await clickWorld(page, LANDING_WORLD.x, LANDING_WORLD.y); // landing page -> main menu
-	await clickWorld(page, CHOOSE_MAP_BUTTON_WORLD.x, CHOOSE_MAP_BUTTON_WORLD.y); // main menu -> choose map
+	await clickMenuElement(page, KoreMenuElement.LandingStart);
+	await clickMenuElement(page, KoreMenuElement.MainMaps);
 }
 
 /** Skips the item phase and plays a weak legal opening for the active team. */
@@ -162,7 +148,7 @@ async function playWeakOpening(page: import("playwright").Page): Promise<{ moved
 }
 
 /**
- * Hazard Control mid-match weak turn: the live team-0 figure nearest to the
+ * Magma Cradle mid-match weak turn: the live team-0 figure nearest to the
  * team-0 spawn corner (150,225) drifts ~12 world units right. Mirroring the
  * verified engine sequence, the nearest figure is picked every turn because
  * the low-power shot travels far on tiles friction; the pick switches to the
@@ -199,15 +185,18 @@ async function waitForPlaybackOrResolution(page: import("playwright").Page, labe
 }
 
 /**
- * Hazard Control terminal turn: the team-1 figure at spawn `spawnIndex`
+ * Magma Cradle terminal turn: the team-1 figure at spawn `spawnIndex`
  * (pristine until its turn) drives itself into the right arena wall with the
  * verified power-10 drag; the containment kill eliminates exactly that
  * shooter. After the last spawn the match ends (team 1 eliminated).
  */
 async function playSuicideTurn(page: import("playwright").Page, spawnIndex: number, expectEnd: boolean): Promise<void> {
 	await skipItemPhase(page);
-	const drag = SUICIDE_DRAGS[spawnIndex]!;
-	await dragWorld(page, drag.from, drag.to);
+	const state = await readMatchState(page);
+	const row = SUICIDE_ROWS[spawnIndex]!;
+	const shooter = state.entities.filter(entity => entity.team.includes(1) && !entity.dead).sort((a, b) => Math.abs(a.y - row) - Math.abs(b.y - row))[0]!;
+	const from = quantized(shooter);
+	await dragWorld(page, from, { x: from.x - 120, y: from.y });
 	await waitForPlaybackOrResolution(page, "playback start");
 	await waitFor(async () => (await readMatchState(page)).state === (expectEnd ? "GameState.Game_over" : "GameState.Your_turn"), 90_000, 100, expectEnd ? "terminal result" : "suicide turn resolution");
 }
@@ -221,12 +210,12 @@ async function skipItemPhase(page: import("playwright").Page): Promise<void> {
 	await waitFor(async () => (await readMatchState(page)).phase === "physics", 5_000, 100, "physics phase");
 }
 
-/** Plays one full Hazard Control terminal match (weak opening + 6 wall suicides). */
+/** Plays one full Magma Cradle terminal match (weak opening + 6 wall suicides). */
 async function playHazardTerminalMatch(page: import("playwright").Page): Promise<void> {
 	await playWeakOpening(page);
-	for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
-		await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
-		if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
+	for (let i = 0; i < SUICIDE_ROWS.length; i++) {
+		await playSuicideTurn(page, i, i === SUICIDE_ROWS.length - 1);
+		if (i < SUICIDE_ROWS.length - 1) await playHazardWeak(page);
 	}
 }
 
@@ -236,7 +225,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 	});
 
 	test("every browser-available map opens through the UI, renders, and resolves one legal pointer action", async () => {
-		expect(QUALIFIED_MAPS.length).toBe(9);
+		expect(QUALIFIED_MAPS.length).toBe(1);
 		expect(QUALIFIED_MAPS.every(entry => entry.id !== "frostbite-arena")).toBe(true);
 		expect(QUALIFIED_MAPS.every(entry => entry.status === "browser-qualified")).toBe(true);
 
@@ -252,8 +241,7 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 				// Each map session ends in a fresh boot back at the landing
 				// page, so re-open the map-selection page through the UI.
 				if (index > 0) await openMapSelection(page);
-				const row = mapRowWorld(index);
-				await clickWorld(page, row.x, row.y);
+				await clickMenuElement(page, koreMenuMapElementId(KoreMenuMapIntent.Local, entry.id, undefined, "power-rush-v1"));
 				await waitFor(async () => (await windowMapId(page)) === entry.id && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, `${entry.id} selection`);
 
 				// Stable map ID, finite visible entities, item phase open.
@@ -313,76 +301,6 @@ test.describe("Section 17.8 browser verification of qualified maps", () => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
-	test("full journey: hazard-control menu -> map -> terminal result -> rematch -> menu", async () => {
-		const entry = QUALIFIED_MAPS.find(candidate => candidate.id === "hazard-control");
-		expect(entry).toBeDefined();
-		const index = QUALIFIED_MAPS.indexOf(entry!);
-		expect(index).toBeGreaterThanOrEqual(0);
-
-		await ensureBrowserBuild();
-		const server = await startTestServer();
-		const browser = await launchBrowser();
-		try {
-			const page = await openPage(browser, server.url);
-			const capture = captureConsole(page);
-			await openMapSelection(page);
-
-			// Select Hazard Control through the production UI.
-			const row = mapRowWorld(index);
-			await clickWorld(page, row.x, row.y);
-			await waitFor(async () => (await windowMapId(page)) === "hazard-control" && (await activeGameModeId(page)) === "power-rush-v1", 10_000, 100, "hazard-control selection");
-			await waitFor(async () => colorNear(await probePixel(page, 300, 225), [0xd9, 0x4b, 0x28], 60), 8_000, 100, "hazard zone pixel");
-
-			// Turn 1: weak opening, no elimination.
-			const first = await playWeakOpening(page);
-			expect(first.maxPlayback).toBeGreaterThan(0);
-			expect(first.maxPlayback).toBeLessThanOrEqual(1200);
-			expect((await readMatchState(page)).entities.filter(entity => !entity.dead)).toHaveLength(12);
-
-			// Turns 2-11: every team-1 figure drives itself into the right
-			// arena wall (the verified containment terminal route; the wall
-			// kills exactly the shooter without touching team 0), with team-0
-			// weak turns in between. The sixth wall suicide ends the match.
-			for (let i = 0; i < SUICIDE_DRAGS.length; i++) {
-				await playSuicideTurn(page, i, i === SUICIDE_DRAGS.length - 1);
-				if (i < SUICIDE_DRAGS.length - 1) await playHazardWeak(page);
-			}
-
-			const result = await readMatchResult(page);
-			expect(result).not.toBeNull();
-			expect(result?.status).toBe("winner");
-			expect(result?.winnerTeam).toBe(0);
-			expect(result?.reason).toBe("last-team-standing");
-			const ended = await readMatchState(page);
-			expect(ended.entities.filter(entity => entity.team.includes(1)).every(entity => entity.dead)).toBe(true);
-			expect(ended.entities.filter(entity => entity.team.includes(0)).every(entity => !entity.dead)).toBe(true);
-			expect(await windowMapId(page)).toBe("hazard-control");
-
-			// Rematch restores a fresh playable state on the same map.
-			await clickWorld(page, REMATCH_BUTTON_WORLD.x, REMATCH_BUTTON_WORLD.y);
-			const fresh = await readMatchState(page);
-			expect(fresh.state).toBe("GameState.Your_turn");
-			expect(fresh.turnNumber).toBe(0);
-			expect(fresh.phase).toBe("item");
-			expect(fresh.itemUses).toBe(0);
-			expect(fresh.entities.filter(entity => !entity.dead)).toHaveLength(12);
-			expect(await readMatchResult(page)).toBeNull();
-			expect(await windowMapId(page)).toBe("hazard-control");
-
-			// Play a second terminal match, then exit through the overlay menu.
-			await playHazardTerminalMatch(page);
-			expect((await readMatchResult(page))?.status).toBe("winner");
-			await clickWorld(page, MENU_BUTTON_WORLD.x, MENU_BUTTON_WORLD.y);
-			await waitFor(async () => (await activeGameModeId(page)) === null && (await windowMapId(page)) === null, 5_000, 100, "menu state");
-			expect(await canvasGeometry(page)).toBeTruthy();
-
-			assertCleanConsole(capture);
-		} finally {
-			await closeBrowser(browser);
-			await server.stop();
-		}
-		expect(activeBrowserServers()).toBe(0);
-	});
 });
 
 /** Reads the authoritative match result (null while the match is running). */

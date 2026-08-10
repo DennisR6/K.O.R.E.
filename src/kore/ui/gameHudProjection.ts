@@ -3,8 +3,10 @@ import type { GameHandler } from "../../engine/Handler.js";
 import { MatchStatus, RulePhase, type MatchResult } from "../../rules/types.js";
 import type { UiSystem } from "../../systems/UiSystem.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
+import type { UiComponentSettings } from "../../engine/ui-sdk/index.js";
+import type { ItemTargetType } from "../../item/types.js";
 
-export interface KoreHudItemProjection { itemId: string; remainingUses: number; enabled: boolean }
+export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
 export interface KoreHudWorldPoint { x: number; y: number }
 export interface KoreHudWorldGuidance {
 	activeMarkers: Array<KoreHudWorldPoint & { radius: number }>;
@@ -15,6 +17,8 @@ export interface KoreHudProjection {
 	turn: { number: number; activeTeam: number; phase: RulePhase; engineState: GameState; selectedActorId: string | null; aimAngle: number | null; power: number };
 	inventory: KoreHudItemProjection[];
 	match: { result?: MatchResult; inputLocked: boolean; waiting: boolean; paused: boolean };
+	aiThinking: boolean;
+	tutorial?: boolean;
 	guidance: KoreHudWorldGuidance;
 	rejection?: string;
 }
@@ -29,6 +33,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	const aimAngle = input?.aimAngle ?? (input?.start && length >= 1 ? ((Math.atan2(dy, dx) * 180 / Math.PI + 180) % 360 + 360) % 360 : null);
 	const power = input?.chargePower ?? (input?.start ? Math.min(length / 10, 10) : 0);
 	const result = handler.getMatchResult();
+	const aiThinking = (state === GameState.Your_turn || state === GameState.Opponents_turn) && handler.getSystems().some(system => typeof (system as { isAiThinking?: unknown }).isAiThinking === "function" && (system as unknown as { isAiThinking: () => boolean }).isAiThinking());
 	const activeMarkers = (state === GameState.Your_turn || state === GameState.Opponents_turn)
 		? handler.getEntityManager().getEntities().filter(entity => !entity.isDead() && entity.getTeam().includes(rule.activeTeam)).map(entity => ({ ...entity.getPos(), radius: entity.getBounds().x }))
 		: [];
@@ -36,8 +41,10 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	return {
 		revision: rule.turnNumber * 10_000 + rule.activeTeam * 100 + (result ? 1 : 0),
 		turn: { number: rule.turnNumber, activeTeam: rule.activeTeam, phase: rule.phase, engineState: state, selectedActorId: selectedActorId ?? null, aimAngle, power },
-		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => ({ itemId: item.itemId, remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn })),
+		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => { const document = handler.getSettings()?.items?.find(candidate => candidate.id === item.itemId); return { itemId: item.itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true }; }),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
+		aiThinking,
+		...(rule.turnNumber === 0 && rule.phase === RulePhase.Physics && state === GameState.Your_turn && !result ? { tutorial: true } : {}),
 		guidance: { activeMarkers, ...(aimPreview ? { aimPreview } : {}) },
 		...(rejection ? { rejection: rejection.replace(/[\r\n]+/g, " ").slice(0, 160) } : {}),
 	};

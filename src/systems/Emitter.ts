@@ -9,6 +9,7 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 		if (em) this.emitter = em
 		else this.emitter = new LogEmitter()
 	}
+	public setEmitter(emitter: IInputEmitter): void { this.emitter = emitter }
 	/** Installs a host feedback hook without making the emitter itself a UI dependency. */
 	public setErrorHandler(onError: ((error: unknown) => void) | undefined): void { this.onError = onError }
 	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: {} }; }
@@ -22,6 +23,7 @@ export class EmitterSystem implements ISerializableSystem<SystemSettings> {
 		try {
 			this.emitter.sendShot(actorId, angle, power)
 		} catch (error) {
+			ctx.log?.("input.rejected", { actionType: "shot", actorId, angle, power, reason: error instanceof Error ? error.message : String(error) });
 			this.onError?.(error)
 			ctx.state = GameState.Your_turn
 			return

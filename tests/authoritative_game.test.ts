@@ -56,7 +56,7 @@ test("Player settings round-trip all mutable state", () => {
 		friction: 0.3,
 		team: [2],
 		isPhysicsEnabled: false,
-		isDead: true,
+		isDrawingEnabled: false,
 		inventory: [{ itemId: "anchor", remainingUses: 1, usesThisTurn: 0 }],
 		effects: [{ trigger: EffectTrigger.Collision, triggerValue: [], ...new EffectModifyMass({ typeValue: { mass: 0.25 } }).toSettings() }],
 	})
@@ -210,6 +210,33 @@ test("explicit leave ends the match and lets the same user enter a fresh lobby",
 	expect(packet(retry).settings.id).not.toBe(oldGameId)
 })
 
+test("surrender completes the persisted match and allows immediate rematch matchmaking", () => {
+	const { runtime, first, second } = connectMatchedRuntime()
+	const oldGameId = runtime.getRegistry().getForUser(userOne)!.id
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.SURRENDER_GAME }))
+	const ended = JSON.parse(first.sent.at(-2)!)
+	const otherEnded = packet(second)
+	const surrendered = packet(first)
+	expect(ended.type).toBe(NetworkMessageType.GAME_ENDED)
+	expect(ended.result).toMatchObject({ status: "winner", winnerTeam: 1, reason: "surrendered" })
+	expect(otherEnded).toMatchObject({ type: NetworkMessageType.GAME_ENDED, result: ended.result })
+	expect(surrendered).toMatchObject({ type: NetworkMessageType.SURRENDERED, result: ended.result })
+	expect(runtime.getRegistry().getForUser(userOne)?.lifecycle.status).toBe("completed")
+	expect(runtime.getRegistry().getDatabase().getLifecycle(oldGameId)?.status).toBe("completed")
+
+	runtime.close(first)
+	const retry = new FakeSocket({ connectionId: "77777777-7777-4777-8777-777777777779" })
+	const replacement = new FakeSocket({ connectionId: "88888888-8888-4888-8888-888888888889" })
+	runtime.open(retry)
+	runtime.open(replacement)
+	runtime.message(retry, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne }))
+	runtime.message(replacement, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: "33333333-3333-4333-8333-333333333333" }))
+	runtime.matchmakeOnce()
+	expect(packet(retry).type).toBe(NetworkMessageType.INIT)
+	expect(packet(retry).gameId).not.toBe(oldGameId)
+	runtime.getRegistry().getDatabase().close()
+})
+
 test("NetworkEmitter sends only shot input and TURN fully reconciles the local entity", () => {
 	const source = createPlayerSettings({ id: "33333333-3333-4333-8333-333333333333", position: { x: 0, y: 0 }, team: [0] })
 	const handler = new GameHandlerBuilder().defaultSystems().setPlayerTeam([0]).addPlayer(new Player(source)).build()
@@ -227,7 +254,7 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 		mass: 0.4,
 		size: 9,
 		team: [1],
-		isDead: true,
+		isDrawingEnabled: false,
 		isPhysicsEnabled: false,
 		inventory: [{ itemId: "item", remainingUses: 1, usesThisTurn: 0 }],
 	})

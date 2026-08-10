@@ -1,8 +1,9 @@
 import { validateAnimationSettings, validatePresentationEvent, type AnimationSettings, type PresentationEvent } from "../engine/presentation-sdk/index.js";
-import { validateMapDocument, type MapDocument } from "../contracts/documents.js";
+import { loadMapDocument, validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { ItemValidator } from "../item/validate.js";
 import { validateItemEconomySettings, type GameModeSettings } from "../rules/types.js";
+import { validateGameSettings, type GameSettings } from "../settings/settings.js";
 
 export const CONTENT_PACKAGE_SCHEMA_VERSION = 1;
 export const CONTENT_PACKAGE_MAX_DEPENDENCIES = 32;
@@ -48,7 +49,7 @@ export interface LoadedContentPackage {
 	readonly hash: string;
 }
 
-const ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"] as const;
+const ITEM_EFFECTS = ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", "transform.swap-position", "ghostMode", "movement.apply-force-to-entity", "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"] as const;
 const EXECUTABLE_KEYS = new Set(["constructor", "prototype", "__proto__", "code", "script", "function", "source", "module", "import", "require", "eval", "execute", "handler", "callback"]);
 const MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 
@@ -66,7 +67,7 @@ export function validateContentPackage(value: unknown): asserts value is Content
 	for (const map of maps) { validateMapDocument(map); assertKeys(map as unknown as Record<string, unknown>, ["schemaVersion", "metadata", "worldSize", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map"); assertKeys(map.metadata as unknown as Record<string, unknown>, ["id", "name", "description"], "map metadata"); unique(ids, map.metadata.id, "map"); }
 	const itemValidator = new ItemValidator();
 	for (const effect of ITEM_EFFECTS) itemValidator.registerEffectType(effect);
-	for (const item of items) { validateItemDocument(item); assertKeys(item as unknown as Record<string, unknown>, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction"], "item"); itemValidator.validate(item); unique(ids, item.id, "item"); }
+	for (const item of items) { validateItemDocument(item); assertKeys(item as unknown as Record<string, unknown>, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction", "ui"], "item"); itemValidator.validate(item); unique(ids, item.id, "item"); }
 	for (const mode of modes) { validateMode(mode); unique(ids, mode.id, "mode"); }
 	if (pkg.ui !== undefined) validateUi(pkg.ui);
 	if (pkg.audio !== undefined) validateAudio(pkg.audio);
@@ -80,6 +81,18 @@ export function loadContentPackage(value: unknown): LoadedContentPackage {
 	validateContentPackage(value);
 	const detached = normalize(value) as ContentPackage;
 	return { package: structuredClone(detached), hash: hashCanonicalJson(canonicalize(detached)) };
+}
+
+/**
+ * Resolves a validated map document into engine settings by overlaying its
+ * world size, physics, geometry, spawn regions, hazards, and environmental
+ * mechanics on a canonical template roster. The template is never mutated;
+ * the returned settings are fully detached.
+ */
+export function resolveMapDocument(map: MapDocument, template: GameSettings): GameSettings {
+	validateMapDocument(map);
+	validateGameSettings(template);
+	return loadMapDocument(map, structuredClone(template));
 }
 
 /** Canonical JSON uses sorted object keys and ID-sorted package collections. */

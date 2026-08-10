@@ -1,9 +1,9 @@
-import { type IInputEmitter } from "../engine/types.js";
+import { GameState, type IInputEmitter } from "../engine/types.js";
 import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
-import type { NetworkItemUsed, NetworkUseItem } from "../server/types.js";
+import type { NetworkGameEnded, NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkSurrenderGame, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /**
@@ -33,7 +33,21 @@ export class NetworkEmitter implements IInputEmitter {
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
 		this.socket.send(wrap<NetworkUseItem>({ type: NetworkMessageType.USE_ITEM, actorId, itemId, target }))
 	}
+
+	skipPhase(): void {
+		this.socket.send(wrap<NetworkSkipPhase>({ type: NetworkMessageType.SKIP_PHASE }))
+	}
 	public requestReplayShare(): void { this.socket.send(wrap<NetworkCreateReplayShare>({ type: NetworkMessageType.CREATE_REPLAY_SHARE })); }
+	public sendReport(category: NetworkReportMatch["category"], text: string): boolean {
+		if (this.socket.readyState !== WebSocket.OPEN) return false;
+		this.socket.send(wrap<NetworkReportMatch>({ type: NetworkMessageType.REPORT_MATCH, category, text }));
+		return true;
+	}
+	public surrender(): boolean {
+		if (this.socket.readyState !== WebSocket.OPEN) return false;
+		this.socket.send(wrap<NetworkSurrenderGame>({ type: NetworkMessageType.SURRENDER_GAME }));
+		return true;
+	}
 }
 
 /** Installs the authoritative TURN receiver for a client-side handler. */
@@ -49,8 +63,9 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		if (message.type === NetworkMessageType.TURN) {
 			const turn = message as NetworkTurn
 			handler.setRuleState(turn.ruleState)
+			handler.log("turnPacket.received", { actorId: turn.sim.actorId, frameCount: turn.sim.durationFrames, playerCount: turn.sim.finalState.length });
 			handler.playTurn(turn.sim, () => {
-				handler.setState(TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
+				handler.setState(turn.gameOver ? GameState.Game_over : TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 		})
 		}
 		if (message.type === NetworkMessageType.ITEM_USED) {
@@ -59,6 +74,20 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 			handler.setRuleState(itemUse.ruleState)
 			handler.setState(TurnSystem.stateForTeam(itemUse.ruleState.activeTeam, handler.getTeam()))
 		}
-		if (message.type === NetworkMessageType.ERROR) console.warn("Server rejected input:", message.message)
+		if (message.type === NetworkMessageType.PHASE_CHANGED) {
+			handler.setRuleState((message as NetworkPhaseChanged).ruleState)
+			handler.setState(TurnSystem.stateForTeam((message as NetworkPhaseChanged).ruleState.activeTeam, handler.getTeam()))
+		}
+		if (message.type === NetworkMessageType.ERROR) {
+			console.warn("Server rejected input:", message.message)
+			// A rejected shot must not leave the client in Waiting_for_server.
+			// Restore the locally controlled turn from the authoritative active team.
+			handler.setState(TurnSystem.stateForTeam(handler.getActiveTeam(), handler.getTeam()))
+		}
+		if (message.type === NetworkMessageType.GAME_ENDED) {
+			const ended = message as NetworkGameEnded;
+			if (ended.result) handler.setMatchResult(ended.result);
+			handler.setState(GameState.Game_over);
+		}
 	})
 }

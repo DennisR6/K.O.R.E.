@@ -10,6 +10,7 @@ import {
 	captureConsole,
 	canvasGeometry,
 	clickWorld,
+	worldToPixel,
 	ensureBrowserBuild,
 	launchBrowser,
 	closeBrowser,
@@ -168,6 +169,9 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 				return {
 					title: document.title,
 					canvasCount: document.querySelectorAll("canvas").length,
+					canvasRole: document.querySelector("canvas")?.getAttribute("role"),
+					canvasLabel: document.querySelector("canvas")?.getAttribute("aria-label"),
+					canvasTabIndex: (document.querySelector("canvas") as HTMLCanvasElement | null)?.tabIndex ?? -1,
 					gameSurface: typeof game,
 					gameKeys: game ? Object.keys(game).sort() : [],
 					handlerCtor: game?.handler?.constructor?.name ?? null,
@@ -177,15 +181,26 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 
 			expect(info.title).toBe("KORE");
 			expect(info.canvasCount).toBeGreaterThan(0);
+			expect(info.canvasRole).toBe("application");
+			expect(info.canvasLabel).toBe("KORE gameplay canvas");
+			expect(info.canvasTabIndex).toBe(0);
 			expect(info.gameSurface).toBe("object");
-			expect(info.gameKeys).toEqual(["audio", "handler", "logs", "mapId"]);
+				expect(info.gameKeys).toEqual(["aiWorkerMetrics", "audio", "handler", "logs", "mapId", "startup"]);
 			expect(info.handlerCtor).toBe("GameHandler");
 			// Menu state: no match settings before the play action.
 			expect(info.settingsMode).toBeNull();
+			await page.keyboard.press("Tab");
+			await page.keyboard.press("Enter");
+			await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.getRuntime?.()?.getActiveScreen?.() === "main"), 5_000, 50, "keyboard menu navigation");
 
 			// The documented debug surface reflects the active handler.
 			const activeHandler = await page.evaluate(() => (window as any).game.handler.constructor.name);
 			expect(activeHandler).toBe("GameHandler");
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.startup.events.some((event: { type: string }) => event.type === "first-frame.rendered"))), 10_000, 100, "first rendered frame telemetry");
+			const startup = await page.evaluate(() => (window as any).game.startup);
+			const startupTypes = startup.events.map((event: { type: string }) => event.type);
+			expect(startupTypes).toEqual(expect.arrayContaining(["startup.begin", "assets.load.started", "assets.load.completed", "first-frame.requested", "first-frame.rendered"]));
+			expect(startup.assets).toBeDefined();
 
 			// Console policy: no uncaught exceptions, no console errors.
 			assertCleanConsole(capture);
@@ -214,10 +229,11 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			// Landing page: any press advances to the main menu page.
 			await clickWorld(page, 400, 100);
 			// Main menu page exposes "Play Local Game" in the centered bottom action row.
-			await clickWorld(page, 551, 368);
+			await clickWorld(page, 463, 368);
 
 			// The local-play action starts exactly one canonical match.
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.startup.events.some((event: { type: string }) => event.type === "first-game-frame.rendered"))), 10_000, 100, "first game frame telemetry");
 			const matchInfo = await page.evaluate(() => {
 				const handler = (window as any).game.handler;
 				return {
@@ -228,6 +244,24 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			expect(matchInfo.settingsMode).toBe("local-ice-duel-v1");
 			// Twelve figures (six per team) exist in the authoritative handler.
 			expect(matchInfo.entities).toBe(12);
+
+			const firstPlayer = await page.evaluate(() => {
+				const player = (window as any).game.handler.getEntityManager().getEntities()[0];
+				return player.getPos();
+			});
+			const geometry = await canvasGeometry(page);
+			const start = worldToPixel(geometry, firstPlayer.x, firstPlayer.y);
+			const end = worldToPixel(geometry, firstPlayer.x - 60, firstPlayer.y);
+			await page.evaluate(({ start, end }) => {
+				const canvas = document.querySelector("canvas")!;
+				const touch = (identifier: number, point: { x: number; y: number }) => new Touch({ identifier, target: canvas, clientX: point.x, clientY: point.y });
+				const down = touch(7, start);
+				canvas.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [down], changedTouches: [down] }));
+				const moved = touch(7, end);
+				canvas.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true, touches: [moved], changedTouches: [moved] }));
+				canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [moved] }));
+			}, { start, end });
+			await waitFor(async () => (await page.evaluate(() => (window as any).game.handler.getState())) !== "Your_turn", 5_000, 50, "touch shot submission");
 
 			assertCleanConsole(capture);
 		} finally {
@@ -281,7 +315,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			await waitFor(async () => (await canvasGeometry(pageA)).width > 0, 10_000, 100, "menu canvas");
 			await clickWorld(pageA, 400, 100); // landing page -> main menu page
 			// "Play Online" is the third button in the centered bottom action row.
-			await clickWorld(pageA, 400, 368);
+			await clickWorld(pageA, 337, 368);
 			// The online map page expresses a non-binding preference before join.
 			await clickWorld(pageA, 400, 100);
 
@@ -316,6 +350,34 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 
 			assertCleanConsole(captureA);
 			assertCleanConsole(captureB);
+		} finally {
+			await closeBrowser(browser);
+			await server.stop();
+		}
+		expect(server.isAlive()).toBe(false);
+		expect(activeBrowserServers()).toBe(0);
+	});
+
+	test("mobile viewport keeps the accessible canvas within the viewport", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			await page.setViewportSize({ width: 390, height: 844 });
+			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "mobile canvas");
+			const geometry = await canvasGeometry(page);
+			expect(geometry.width).toBeLessThanOrEqual(390);
+			expect(geometry.height).toBeLessThanOrEqual(844);
+			expect(await page.evaluate(() => ({ role: document.querySelector("canvas")?.getAttribute("role"), tabIndex: (document.querySelector("canvas") as HTMLCanvasElement | null)?.tabIndex }))).toEqual({ role: "application", tabIndex: 0 });
+			await page.evaluate(() => {
+				const canvas = document.querySelector("canvas")!;
+				const rect = canvas.getBoundingClientRect();
+				const touch = new Touch({ identifier: 11, target: canvas, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 });
+				canvas.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [touch], changedTouches: [touch] }));
+				canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [touch] }));
+			});
+			await waitFor(async () => await page.evaluate(() => (window as any).game.handler.getMouseHandler?.()?.getRuntime?.()?.getActiveScreen?.() === "main"), 5_000, 50, "mobile touch menu navigation");
 		} finally {
 			await closeBrowser(browser);
 			await server.stop();

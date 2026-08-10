@@ -9,8 +9,9 @@ describe("Online Playable Maps Mystery Box Integration", () => {
 		expect(settings.items.some(item => item.id === "mystery-box")).toBe(true);
 
 		const loadouts = settings.gameMode?.itemEconomy.fixedLoadouts ?? [];
-		expect(loadouts[0]?.items.some(i => i.itemId === "mystery-box")).toBe(true);
-		expect(loadouts[1]?.items.some(i => i.itemId === "mystery-box")).toBe(true);
+		expect(loadouts[0]?.items.some(i => i.itemId === "mystery-box")).toBe(false);
+		expect(settings.gameMode?.itemEconomy.mapPickups.some(pickup => pickup.itemId === "mystery-box")).toBe(true);
+		expect(loadouts[1]?.items.some(i => i.itemId === "mystery-box")).toBe(false);
 
 		const pickups = settings.gameMode?.itemEconomy.mapPickups ?? [];
 		expect(pickups.some(p => p.itemId === "mystery-box")).toBe(true);

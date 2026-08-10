@@ -3,7 +3,7 @@ import type { RenderContext } from "../src/engine/RenderContext.js";
 import type { JsonValue } from "../src/engine/contracts/systemSettings.js";
 import type { UiElementSettings, UiMenuSettings } from "../src/engine/ui-sdk/index.js";
 import { createKoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.js";
-import { KORE_UI_THEME, resolveKoreButtonTheme } from "../src/kore/ui/koreUiTheme.js";
+import { KORE_UI_THEME, resolveKoreButtonStyle, resolveKoreButtonTheme } from "../src/kore/ui/koreUiTheme.js";
 import { createMainMenuComposition, koreMenuCommands } from "../src/kore/ui/mainMenu.js";
 import { KoreMenuCommand, KoreMenuDifficulty, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, isKoreMenuCommand, isKoreMenuMapIntent, koreMenuMapScreen, parseKoreMenuCommand } from "../src/kore/ui/menuVocabulary.js";
 
@@ -114,10 +114,26 @@ describe("KORE UI vocabulary regression", () => {
 		expect(() => resolveKoreButtonTheme("kore.menu.not-a-style")).toThrow(/Unknown KORE UI button style/);
 	});
 
+	test("button themes may define only normal and fall back for interaction states", () => {
+		const normal = {
+			background: "#000000",
+			borderColor: "#ffffff",
+			borderWidth: 1,
+			borderRadius: 4,
+			textColor: "#ffffff",
+			fontSize: 16,
+		};
+		const theme = { normal };
+
+		for (const state of ["normal", "hover", "active", "focused", "disabled"] as const) {
+			expect(resolveKoreButtonStyle(theme, state)).toBe(normal);
+		}
+	});
+
 	test("map rows and back buttons render distinct registered theme borders through the full UI path", () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100); // landing -> main menu
-		press(menu, 701, 368); // Choose Map -> map-local
+		press(menu, 589, 368); // Choose Map -> map-local
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.MapLocal);
 		const recorder = new RecordingRenderContext();
 		menu.draw(recorder);

@@ -2,6 +2,7 @@ import type { MapDocument } from "../contracts/documents.js";
 import type { Vector2D } from "../physics/physics.js";
 import { kore } from "../kore/sdk/index.js";
 import { FRICTION_TABLE } from "./settings.js";
+import { addOpenPerimeterWalls } from "../content/maps/perimeterWalls.js";
 
 const blueprint = { x: 800, y: 450 };
 
@@ -22,7 +23,8 @@ export function createSymmetricDuelMap(worldSize: Vector2D): MapDocument {
 	const scaleX = worldSize.x / blueprint.x;
 	const scaleY = worldSize.y / blueprint.y;
 	const map = kore.createDefaultMap({ id: "symmetric-duel", name: "Symmetric Duel", description: "Open mirrored duel ring with one central wall; knock the opponent out of the arena.", worldSize, friction: FRICTION_TABLE.ice });
+	addOpenPerimeterWalls(map, worldSize);
 	map.addPlayerSpawn({ teamNr: 0, x: 138 * scaleX, y: 138 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
 	map.addPlayerSpawn({ teamNr: 1, x: 638 * scaleX, y: 138 * scaleY, w: 200 * scaleX, h: 350 * scaleY, playerCount: 1 });
-	return map.addRectangle({ x: 360 * scaleX, y: 126 * scaleY, w: 80 * scaleX, h: 48 * scaleY }).buildMapDocument();
+	return map.addRectangle({ x: 360 * scaleX, y: 126 * scaleY, w: 80 * scaleX, h: 48 * scaleY }).addKillZone({ id: "symmetric-center-death", x: 400 * scaleX, y: 225 * scaleY, r: 27 * Math.min(scaleX, scaleY), color: "#b9472f" }).buildMapDocument();
 }

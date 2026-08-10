@@ -1,3 +1,4 @@
+import { GAMEPLAY_BALANCE_TARGETS } from "../../src/content/balanceTargets.js";
 import type { MapQualificationOutput } from "./mapQualification.js";
 
 /**
@@ -110,14 +111,14 @@ export function computeSummary(records: MapQualificationOutput[]): MatrixSummary
 	const total = records.length;
 	const warnings: string[] = [];
 	const sideImbalance = total > 0 ? Math.abs(leftWins - rightWins) / Math.max(1, terminalRuns) : 0;
-	if (sideImbalance > 0.25) warnings.push(`side advantage: left ${leftWins} vs right ${rightWins} wins (imbalance ${sideImbalance.toFixed(2)})`);
+	if (sideImbalance > GAMEPLAY_BALANCE_TARGETS.maximumSideImbalance) warnings.push(`side advantage: left ${leftWins} vs right ${rightWins} wins (imbalance ${sideImbalance.toFixed(2)})`);
 	const openingImbalance = terminalRuns > 0 ? Math.abs(openingWins - secondWins) / terminalRuns : 0;
-	if (openingImbalance > 0.25) warnings.push(`first-turn advantage: opening team wins ${openingWins} vs second team ${secondWins} (imbalance ${openingImbalance.toFixed(2)})`);
-	if (ongoingRuns / total > 0.25) warnings.push(`frequent ongoing matches: ${ongoingRuns}/${total} (${(ongoingRuns / total).toFixed(2)})`);
+	if (openingImbalance > GAMEPLAY_BALANCE_TARGETS.maximumFirstTurnWinRate) warnings.push(`first-turn advantage: opening team wins ${openingWins} vs second team ${secondWins} (imbalance ${openingImbalance.toFixed(2)})`);
+	if (ongoingRuns / total > GAMEPLAY_BALANCE_TARGETS.maximumOngoingRate) warnings.push(`frequent ongoing matches: ${ongoingRuns}/${total} (${(ongoingRuns / total).toFixed(2)})`);
 	const medianTurns = median(turns);
-	if (medianTurns > 0 && Math.max(...turns) > 3 * medianTurns + 1) warnings.push(`extreme duration outlier: max ${Math.max(...turns)} turns vs median ${medianTurns}`);
+	if (medianTurns > 0 && Math.max(...turns) > GAMEPLAY_BALANCE_TARGETS.maximumDurationOutlierFactor * medianTurns + GAMEPLAY_BALANCE_TARGETS.maximumDurationOutlierOffset) warnings.push(`extreme duration outlier: max ${Math.max(...turns)} turns vs median ${medianTurns}`);
 	const meanActions = totalAcceptedActions / total;
-	if (meanActions < 1.5) warnings.push(`weak agency: mean ${meanActions.toFixed(2)} accepted actions per run`);
+	if (meanActions < GAMEPLAY_BALANCE_TARGETS.minimumAcceptedActions) warnings.push(`weak agency: mean ${meanActions.toFixed(2)} accepted actions per run`);
 	const easyOngoing = perPolicyOngoing.easy ? perPolicyOngoing.easy.ongoing / perPolicyOngoing.easy.total : 0;
 	const hardOngoing = perPolicyOngoing.hard ? perPolicyOngoing.hard.ongoing / perPolicyOngoing.hard.total : 0;
 	if (Math.abs(easyOngoing - hardOngoing) > 0.3) warnings.push(`policy-dependent termination: ongoing rates easy ${easyOngoing.toFixed(2)} vs hard ${hardOngoing.toFixed(2)}`);

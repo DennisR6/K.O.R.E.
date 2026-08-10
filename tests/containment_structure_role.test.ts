@@ -153,9 +153,9 @@ test("the structure role round-trips through settings serialization", () => {
 	const settings: GameSettings = {
 		...GameSettings,
 		mapBoundarys: [
-			{ type: SHAPE.CIRCLE, x: 10, y: 10, r: 5, effects: [], role: "containment" },
-			{ type: SHAPE.RECTANGLE, x: 0, y: 0, w: 100, h: 100, effects: [], role: "both" },
-			{ type: SHAPE.RECTANGLE, x: 200, y: 200, w: 10, h: 10, effects: [] },
+			{ id: "role-circle", type: SHAPE.CIRCLE, x: 10, y: 10, r: 5, color: undefined, effects: [], role: "containment", physicsEnabled: true, drawingEnabled: true },
+			{ id: "role-both", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 100, h: 100, color: undefined, effects: [], role: "both", physicsEnabled: true, drawingEnabled: true },
+			{ id: "role-plain", type: SHAPE.RECTANGLE, x: 200, y: 200, w: 10, h: 10, color: undefined, effects: [], physicsEnabled: true, drawingEnabled: true },
 		],
 	};
 	expect(() => validateGameSettings(settings)).not.toThrow();

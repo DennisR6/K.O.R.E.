@@ -118,9 +118,9 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: cueClash.spawnRegions.length,
-		structureCount: countArenaGeometry(cueClash), // includes the containment rect (8)
+		structureCount: countArenaGeometry(cueClash), // includes the containment rect and perimeter walls
 		hazardCount: cueClash.hazards.length,
-		hazardTypes: [],
+		hazardTypes: ["kill-zone"],
 		friction: "billiards",
 		drift: 0,
 		teamLayouts: [2],
@@ -130,7 +130,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		status: "browser-qualified",
 		knownLimitations: [
 			"Browser-qualified by the 17.8 E2E evidence; selectable in the production menu",
-			"No declarative hazards; terminal pressure is containment and obstacle elimination",
+			"The center kill zone and continuous perimeter walls create both hazard and rebound routes",
 		],
 	},
 	{
@@ -141,9 +141,9 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: frostbite.spawnRegions.length,
-		structureCount: countArenaGeometry(frostbite), // includes the containment rect (8)
+		structureCount: countArenaGeometry(frostbite), // includes the containment rect and perimeter walls
 		hazardCount: frostbite.hazards.length,
-		hazardTypes: [],
+		hazardTypes: ["kill-zone"],
 		friction: "ice",
 		drift: 1,
 		teamLayouts: [2],
@@ -164,7 +164,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: magma.spawnRegions.length,
-		structureCount: countArenaGeometry(magma), // includes the containment rect (8)
+		structureCount: countArenaGeometry(magma), // includes the containment rect and internal volcanic walls
 		hazardCount: magma.hazards.length,
 		hazardTypes: ["force", "kill-zone"],
 		friction: "tiles",
@@ -188,9 +188,9 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 2,
-		hazardCount: 0,
-		hazardTypes: [],
+		structureCount: 6,
+		hazardCount: 1,
+		hazardTypes: ["kill-zone"],
 		friction: "ice",
 		drift: 0,
 		teamLayouts: [2],
@@ -199,8 +199,8 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 	battleAvailable: false,
 		status: "browser-qualified",
 		knownLimitations: [
-			"One containment rect plus one central wall; the central wall blocks every straight first-turn line, so early elimination is only reachable through banked or flanking shots.",
-			"Not selectable for KI battles: the stock hard AI cannot terminate on this map (no hazards and every direct line is wall-sealed), so the battle map selection hides it.",
+			"A continuous perimeter and central wall block every straight first-turn line; the center kill zone remains the direct terminal route.",
+			"Not selectable for KI battles: the stock hard AI cannot terminate reliably on this map, so the battle map selection hides it.",
 		],
 	},
 	{
@@ -211,9 +211,9 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 6,
-		hazardCount: 0,
-		hazardTypes: [],
+		structureCount: 10,
+		hazardCount: 1,
+		hazardTypes: ["kill-zone"],
 		friction: "billiards",
 		drift: 0,
 		teamLayouts: [2],
@@ -221,7 +221,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		browserAvailable: true,
 	battleAvailable: true,
 		status: "browser-qualified",
-		knownLimitations: ["One containment rect, four mirrored columns, and one central blocker; the blocker seals the direct spawn corridor so first-turn contact is impossible, and the arena walls remain the containment kill boundary."],
+		knownLimitations: ["The continuous perimeter, four mirrored columns, and central blocker seal the direct spawn corridor; the center kill zone provides the terminal route."],
 	},
 	{
 		id: "hazard-control",
@@ -231,8 +231,8 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: 2,
-		structureCount: 1,
-		hazardCount: 2,
+		structureCount: 5,
+		hazardCount: 5,
 		hazardTypes: ["kill-zone"],
 		friction: "tiles",
 		drift: 0,
@@ -243,7 +243,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		status: "browser-qualified",
 		knownLimitations: [
 			"Two mirrored kill zones guard the center corridor: every straight crossing is self-eliminating, and the opponent is protected behind its own zone",
-			"The arena walls remain the containment kill boundary; strong shots into a wall are self-eliminating",
+			"The continuous perimeter rebounds strong shots; lethal edge pockets preserve the verified wall-pressure terminal route",
 			"Stock easy AI plays a random walk and terminates matches via wall contact; hazard terminal-path evidence comes from the deterministic fixtures (17.6)",
 		],
 	},
@@ -257,7 +257,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		spawnRegionCount: aurora.spawnRegions.length,
 		structureCount: aurora.arenaGeometry.length,
 		hazardCount: aurora.hazards.length,
-		hazardTypes: [],
+		hazardTypes: ["kill-zone"],
 		friction: "ice",
 		drift: 0,
 		teamLayouts: [2],
@@ -265,7 +265,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		browserAvailable: true,
 		battleAvailable: true,
 		status: "browser-qualified",
-		knownLimitations: ["Two central islands shape rebounds; broad north and south lanes preserve alternate approaches."],
+		knownLimitations: ["Two central islands flank a lethal center circle; broad north and south lanes preserve alternate approaches."],
 	},
 	{
 		id: "lantern-gates",
@@ -277,7 +277,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		spawnRegionCount: lantern.spawnRegions.length,
 		structureCount: lantern.arenaGeometry.length,
 		hazardCount: lantern.hazards.length,
-		hazardTypes: [],
+		hazardTypes: ["kill-zone"],
 		friction: "billiards",
 		drift: 0,
 		teamLayouts: [2],
@@ -285,7 +285,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		browserAvailable: true,
 		battleAvailable: true,
 		status: "browser-qualified",
-		knownLimitations: ["The center gate blocks a straight shot but leaves three symmetric lanes."],
+		knownLimitations: ["The lethal center circle is enclosed by left, right, and top walls; its only entrance is from the bottom lane."],
 	},
 	{
 		id: "ember-crossing",
@@ -308,6 +308,20 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		knownLimitations: ["Center hazards punish straight crossings; the outer lanes remain safe recovery routes."],
 	},
 ];
+
+/**
+ * Deliberate final-release roster. Source-present maps that are not browser
+ * qualified (currently Frostbite Arena) remain available to qualification and
+ * diagnostics but cannot enter production map selection.
+ */
+// Keep the complete catalog available for qualification and future iteration,
+// but expose only the currently polished map through production "store"
+// surfaces. Adding the next map is an explicit release-roster change.
+export const FINAL_RELEASE_MAP_IDS = ["magma-cradle"] as const;
+
+export function getFinalReleaseMapEntries(forBattle = false): readonly MapCatalogEntry[] {
+	return MAP_CATALOG.filter(entry => FINAL_RELEASE_MAP_IDS.includes(entry.id as typeof FINAL_RELEASE_MAP_IDS[number]) && (!forBattle || entry.battleAvailable));
+}
 
 /** Looks up a catalog entry by stable map ID; unknown IDs are rejected. */
 export function getMapCatalogEntry(mapId: string): MapCatalogEntry {

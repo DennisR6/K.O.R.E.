@@ -45,7 +45,8 @@ describe("Handler Snapshot Isolation", () => {
 		settings.players[2]!.velocity = { x: -2, y: 0.5 };
 		settings.players[3]!.position = { x: 500, y: 520 };
 		settings.players[3]!.velocity = { x: 0, y: 1.2 };
-		settings.players[3]!.isDead = true;
+	settings.players[3]!.isPhysicsEnabled = false;
+	settings.players[3]!.isDrawingEnabled = false;
 		// A fully-structured player effect (its typeValue must survive
 		// serialization verbatim). Remaining-state effects such as shields
 		// belong to the item-effect pipeline and are covered by

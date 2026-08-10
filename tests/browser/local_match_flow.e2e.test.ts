@@ -76,7 +76,7 @@ async function readMatchResult(page: import("playwright").Page): Promise<{
 
 async function enterLocalMatch(page: import("playwright").Page): Promise<void> {
 	await clickWorld(page, 400, 100); // landing page
-	await clickWorld(page, 551, 368); // "Play Local Game"
+	await clickWorld(page, 463, 368); // "Play Local Game"
 	await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 	const state = await readMatchState(page);
 	expect(state.state).toBe("GameState.Your_turn");
@@ -199,7 +199,7 @@ test.describe("Section 16.4 browser gameplay controls and result flow", () => {
 		expect(activeBrowserServers()).toBe(0);
 	});
 
-	test("a drag during the item phase is rejected without mutating the match", async () => {
+	test("a drag during the item phase skips items and starts the shot", async () => {
 		await ensureBrowserBuild();
 		const server = await startTestServer();
 		const browser = await launchBrowser();
@@ -209,18 +209,17 @@ test.describe("Section 16.4 browser gameplay controls and result flow", () => {
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await enterLocalMatch(page);
 
-			// Drag-to-shoot while the item phase is active: the shared action
-			// validation rejects the shot (not in the physics phase), the turn
-			// never starts, and no match state mutates.
+			// Drag-to-shoot while the item phase is active implicitly skips the
+			// optional item phase and resolves as the first physics turn.
 			await dragWorld(page, KILL_DRAGS[0]!.from, KILL_DRAGS[0]!.to);
-			await waitFor(async () => (await readMatchState(page)).state === "GameState.Your_turn", 5_000, 100, "rejected input settles");
-			const rejected = await readMatchState(page);
-			expect(rejected.phase).toBe("item");
-			expect(rejected.turnNumber).toBe(0);
-			expect(rejected.itemUses).toBe(0);
-			expect(rejected.entities.filter(entity => !entity.dead)).toHaveLength(12);
-			const unmovedShooter = rejected.entities.find(entity => entity.team.includes(0))!;
-			expect(Math.hypot(unmovedShooter.x - 132, unmovedShooter.y - 162)).toBeLessThan(0.5);
+			await waitFor(async () => {
+				const state = await readMatchState(page);
+				return state.state === "GameState.Your_turn" && state.turnNumber === 1;
+			}, 10_000, 100, "implicit item-phase skip settles");
+			const advanced = await readMatchState(page);
+			expect(advanced.phase).toBe("item");
+			expect(advanced.turnNumber).toBe(1);
+			expect(advanced.itemUses).toBe(0);
 			expect(await readMatchResult(page)).toBeNull();
 
 			assertCleanConsole(capture);

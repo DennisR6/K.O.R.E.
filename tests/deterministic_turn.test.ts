@@ -12,11 +12,13 @@ test("a real ice-map shot resolves to a deterministic final snapshot", () => {
 		durationFrames: turn.durationFrames,
 		position: finalActor.position,
 		velocity: finalActor.velocity,
-		dead: finalActor.isDead,
+		isPhysicsEnabled: finalActor.isPhysicsEnabled,
+		isDrawingEnabled: finalActor.isDrawingEnabled,
 	}).toEqual({
 		durationFrames: 72,
 		position: { x: 169.77203949870284, y: 162 },
 		velocity: { x: 0, y: 0 },
-		dead: false,
+		isPhysicsEnabled: true,
+		isDrawingEnabled: true,
 	})
 })

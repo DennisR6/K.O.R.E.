@@ -41,6 +41,7 @@ describe("KI vs KI battle handler", () => {
 		// The rule state must have left the per-turn phases (item allowance
 		// reset), i.e. the last turn completed its physics phase.
 		expect(handler.getRuleState().phase).toBe(RulePhase.Physics);
+		expect(handler.getLogs().filter(log => log.type === "turn.simulation.max-ticks" && (log.data as { maxTicks?: number }).maxTicks === 1200)).toHaveLength(0);
 	}, 120_000);
 
 	test("keeps every entity state finite throughout the battle", () => {

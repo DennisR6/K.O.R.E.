@@ -33,6 +33,14 @@ test("generic UI runtime changes state only through explicit ticks and reconstru
 	expect(restored.toSettings()).toEqual(serialized);
 });
 
+test("keyboard navigation focuses and activates visible controls", () => {
+	const runtime = ui.fromSettings(settings());
+	runtime.tick({ keyboard: { pressedKeys: ["Tab"] } });
+	expect(runtime.getFocusedElementId()).toBe("next");
+	runtime.tick({ keyboard: { pressedKeys: ["Enter"] } });
+	expect(runtime.getActiveScreen()).toBe("form");
+});
+
 test("draw is pure, capability systems skip unsupported elements, and semantic commands are explicit", () => {
 	const runtime = ui.fromSettings(settings());
 	const before = runtime.toSettings();
@@ -118,6 +126,20 @@ test("groupHover propagates container hover to visible descendant leaves", () =>
 	runtime.tick({ pointer: { x: 199, y: 119 } });
 	draw();
 	expect(childHovered).toBe(false);
+});
+
+test("button components are authored through the generic UI SDK and can be replaced at runtime", () => {
+	const component = ui.component.image("public/items/mystery_box.svg");
+	const menu = ui.createMenu({ id: "components", size: { width: 200, height: 100 } })
+		.addScreen(ui.screen({ id: "main", elements: [ui.button({ id: "item", text: "", component, rect: { x: 0, y: 0, width: 80, height: 40 } })] }))
+		.build();
+	const runtime = ui.fromSettings(menu);
+	let source: string | undefined;
+	runtime.draw({ drawText() {}, drawTextInput() {}, drawImage(element) { source = element.component?.source ?? element.source; }, drawButton(element) { source = element.component?.source; } });
+	expect(source).toBe("public/items/mystery_box.svg");
+	expect(runtime.setElementComponent("item", ui.component.image("replacement.svg"))).toBe(true);
+	expect(runtime.toSettings().screens[0]!.elements[0]).toMatchObject({ component: { type: "image", source: "replacement.svg" } });
+});
 });
 
 test("generic UI SDK is independent from KORE and uses registry-selected deterministic systems", () => {

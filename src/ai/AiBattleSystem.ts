@@ -5,6 +5,11 @@ import { GameState, type IMouse, type IInputEmitter } from "../engine/types.js";
 import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "../systems/types.js";
 import { koreAi } from "../kore/ai.js";
+import type { HardAiWorkerHost } from "./worker/host.js";
+import { isValidInput } from "../input/validate.js";
+import { GameEmitter } from "../emitter/EngineEmitter.js";
+import type { CombiEmitter } from "../emitter/InputEmitter.js";
+import type { ReplayDocument } from "../replay/types.js";
 
 /**
  * Autonomous KI-vs-KI battle driver.
@@ -27,12 +32,15 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 	private readonly emitter1: AiTurnEmitter;
 	private readonly settings0: AiSettings;
 	private readonly settings1: AiSettings;
+	private startupWaitKey: string | undefined;
+	private initialDecisionKey: string | undefined;
 
 	public constructor(
 		private readonly handler: GameHandler | undefined,
 		private readonly targetEmitter: IInputEmitter | undefined,
 		aiTeam0: AiSettings,
 		aiTeam1: AiSettings,
+		private readonly workerHost?: HardAiWorkerHost,
 	) {
 		this.emitter0 = koreAi.createTurnEmitter(aiTeam0);
 		this.emitter1 = koreAi.createTurnEmitter(aiTeam1);
@@ -55,33 +63,77 @@ export class AiBattleSystem implements ISerializableSystem<SystemSettings>, IMou
 		};
 	}
 
+	/** Exposes the shared local replay recorder without adding an emitter system. */
+	public getReplay(): ReplayDocument | undefined {
+		const emitters = this.targetEmitter as CombiEmitter | undefined;
+		return emitters?.getEmitters().find(emitter => emitter instanceof GameEmitter)?.recorder.getReplay();
+	}
+
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
 		if (!this.handler || !this.targetEmitter) return;
 		if (ctx.state !== GameState.Your_turn) return;
 		const team = this.handler.getActiveTeam();
 		const rule = this.handler.getRuleState();
 		if (rule.phase === RulePhase.Item) {
-			// The stock AI never chooses items; skip the item phase for it.
 			if (!this.targetEmitter.skipPhase) throw new Error("KI vs KI requires an emitter with phase skipping");
 			this.targetEmitter.skipPhase();
 			return;
 		}
 		if (rule.phase !== RulePhase.Physics) return;
+		if (this.workerHost?.getState() === "starting") {
+			this.waitForInitialWorker(team, rule);
+			return;
+		}
+		if (this.workerHost?.isAvailable()) {
+			const prepared = this.workerHost.consumePreparedAction();
+			if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(team)) {
+				this.targetEmitter.sendShot(prepared.actorId, prepared.angle, prepared.power);
+				return;
+			}
+			if (this.workerHost.isThinking()) return;
+			if (rule.turnNumber === 0) {
+				const key = this.initialKey(team, rule.turnNumber);
+				if (this.initialDecisionKey !== key) {
+					this.initialDecisionKey = key;
+					this.workerHost.prepareInitialDecision({ snapshot: this.handler.toSettings(), ruleState: rule, aiSettings: team === 0 ? this.settings0 : this.settings1 });
+					return;
+				}
+			}
+		}
 		const emitter = team === 0 ? this.emitter0 : this.emitter1;
 		const aiSettings = team === 0 ? this.settings0 : this.settings1;
+		const fallbackReason = this.workerHost?.getFallbackReason() ?? "worker-unavailable";
+		const fallbackStart = this.workerHost?.beginSynchronousFallback(fallbackReason, team);
 		const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
+		if (this.workerHost && fallbackStart !== undefined) this.workerHost.completeSynchronousFallback(fallbackReason, team, fallbackStart);
 		if (!submitted) {
 			// Defensive fallback: the hard AI always submits while its team has
 			// living actors and enemies exist; a neutral straight shot keeps a
 			// battle moving if a future producer returns no decision.
 			console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
-			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team));
+			const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(team) && this.handler!.isActorEligibleForAction(entity.getId()));
 			if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
 		}
 	}
 
+	private initialKey(team: number, turnNumber: number): string { return `${this.handler?.getGameId() ?? "disposed"}:${turnNumber}:${team}`; }
+	private waitForInitialWorker(team: number, rule: ReturnType<GameHandler["getRuleState"]>): void {
+		if (!this.workerHost || !this.handler) return;
+		const key = this.initialKey(team, rule.turnNumber);
+		if (this.startupWaitKey === key) return;
+		this.startupWaitKey = key;
+		void this.workerHost.ready().then(() => {
+			if (this.startupWaitKey !== key) return;
+			this.startupWaitKey = undefined;
+			const currentRule = this.handler?.getRuleState();
+			if (!this.handler || this.handler.getState() !== GameState.Your_turn || !currentRule || currentRule.turnNumber !== rule.turnNumber || currentRule.activeTeam !== team || currentRule.phase !== RulePhase.Physics) return;
+			this.initialDecisionKey = undefined;
+		}).catch(() => { if (this.startupWaitKey === key) this.startupWaitKey = undefined; });
+	}
+
 	/** Exposes the authoritative shot emitter for recorder/analysis introspection. */
 	public getEmitter(): IInputEmitter | undefined { return this.targetEmitter; }
+	public isAiThinking(): boolean { return this.workerHost?.isThinking() ?? false; }
 
 	// Passive mouse contract: a battle never accepts pointer input, but the
 	// result overlay wraps this handler as its gameplay pass-through.

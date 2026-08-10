@@ -1,8 +1,9 @@
 import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
-import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
+import { isPhysicsParticipant, SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
+import { isCollisionAllowed } from "../engine/contracts/collisionFilter.js";
 
 /**
  * Das Herzstück der Bewegungs-Logik.
@@ -62,7 +63,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 */
 	ticker(ctx: IGameContext, dt: number = this.DEFAULTFPS, _friction: number): void {
 		this.registerContactIdentities(ctx);
-		const activeEntities = ctx.entities.getEntities().filter(e => !e.isDead() && e.physicsEnabled());
+		const activeEntities = ctx.entities.getEntities().filter(isPhysicsParticipant);
 
 		let maxDisplacement = 0;
 		for (const e of activeEntities) {
@@ -79,8 +80,11 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			: 1;
 
 		const contactedPairsThisTick = new Set<string>();
+		const filterSnapshot = new Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>>(
+			ctx.entities.getEntities().map(entity => [entity, this.getCollisionFilters(entity)]),
+		);
 		if (substeps <= 1) {
-			this.resolveAllCollisions(ctx, contactedPairsThisTick);
+			this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
 		} else {
 			// Substep CCD: rewind entities to start-of-tick position
 			for (const e of activeEntities) {
@@ -104,13 +108,13 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 						y: pos.y + vel.y * subDt,
 					});
 				}
-				this.resolveAllCollisions(ctx, contactedPairsThisTick);
+				this.resolveAllCollisions(ctx, contactedPairsThisTick, filterSnapshot);
 			}
 		}
 
 		let totalMovement = 0;
 		ctx.entities.getEntities().forEach((entity: IEntity) => {
-			if (entity.isDead() || !entity.physicsEnabled()) return;
+			if (!isPhysicsParticipant(entity)) return;
 			const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
 			if (speed < this.STOP_THRESHOLD) {
 				entity.setVel({ x: 0, y: 0 });
@@ -122,7 +126,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 		// Only contacts that remain at the end of this complete tick are carried
 		// forward. A one-call rectangle/line depenetration must not suppress a
 		// later genuine entry merely because it was touched earlier this tick.
-		this.activeContactPairs = this.collectCurrentContactPairs(ctx);
+		this.activeContactPairs = this.collectCurrentContactPairs(ctx, filterSnapshot);
 	}
 
 	/**
@@ -130,9 +134,9 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 * Wendet Kollisionen und Reibung an und stoppt Objekte, die die 
 	 * Mindestgeschwindigkeit unterschreiten.
 	 */
-	private resolveAllCollisions(ctx: IGameContext, contactedPairsThisTick: Set<string> = new Set<string>()) {
+	private resolveAllCollisions(ctx: IGameContext, contactedPairsThisTick: Set<string> = new Set<string>(), filterSnapshot: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>> = new Map()) {
 		const { entities, structures } = ctx;
-		const enitityArr = entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled())
+		const enitityArr = entities.getEntities().filter(isPhysicsParticipant)
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(structures as unknown as IPhysics<SHAPE>[]),
 		);
@@ -144,7 +148,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 
 				for (let j = i + 1; j < enitityArr.length; j++) {
 					const entityB = enitityArr[j];
-					if (this.strategy.checkCollision(entityA, entityB)) {
+					if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot) && this.strategy.checkCollision(entityA, entityB)) {
 						this.handlePairCollision(entityA, entityB, contactedPairsThisTick);
 					}
 				}
@@ -154,7 +158,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 					if (!structureB.physicsEnabled()) continue
 					// Containment-only boundaries must never resolve as filled obstacles.
 					if (this.isContainmentOnly(structureB, containmentBoundaries)) continue
-					if (this.strategy.checkCollision(entityA, structureB)) {
+					if (this.isStructurePairAllowed(entityA, filterSnapshot) && this.strategy.checkCollision(entityA, structureB)) {
 						this.handlePairCollision(entityA, structureB, contactedPairsThisTick);
 					}
 				}
@@ -165,12 +169,12 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 				const entityA = enitityArr[i];
 				for (let j = i + 1; j < enitityArr.length; j++) {
 					const entityB = enitityArr[j];
-					totalOverlap += this.getOverlapDistance(entityA, entityB);
+					if (this.isEntityPairAllowed(entityA, entityB, filterSnapshot)) totalOverlap += this.getOverlapDistance(entityA, entityB);
 				}
 				for (let j = 0; j < structures.length; j++) {
 					const structureB = structures[j] as Structure<SHAPE>;
 					if (!structureB.physicsEnabled() || this.isContainmentOnly(structureB, containmentBoundaries)) continue;
-					totalOverlap += this.getOverlapDistance(entityA, structureB);
+					if (this.isStructurePairAllowed(entityA, filterSnapshot)) totalOverlap += this.getOverlapDistance(entityA, structureB);
 				}
 			}
 
@@ -219,8 +223,8 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			const id = typeof (entity as any).getId === "function" ? entity.getId() : this.nextObjectIdentity++;
 			this.objectIdentities.set(entity, `entity:${id}`);
 		}
-		ctx.structures.forEach((structure, index) => {
-			this.objectIdentities.set(structure, `structure:${index}`);
+		ctx.structures.forEach(structure => {
+			this.objectIdentities.set(structure, `structure:${structure.getId()}`);
 		});
 	}
 
@@ -236,7 +240,7 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	private getPairKey(a: object, b: object): string {
 		const idA = this.getObjectIdentity(a);
 		const idB = this.getObjectIdentity(b);
-		return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+		return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 	}
 
 	private handlePairCollision(
@@ -258,8 +262,11 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			}
 		} else {
 			contactedPairs.add(pairKey);
-			this.onCollision?.(entityA, entityB);
 			this.strategy.handleCollision(entityA, entityB);
+			// Structure collision Effects execute during strategy resolution. The
+			// orchestration callback runs immediately afterward so current Engine
+			// commands preserve the same post-resolution entry point.
+			this.onCollision?.(entityA, entityB);
 		}
 	}
 
@@ -268,9 +275,9 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 	 * separate from the per-tick dispatch set so an entry followed by immediate
 	 * separation does not become a stale persistent contact.
 	 */
-	private collectCurrentContactPairs(ctx: IGameContext): Set<string> {
+	private collectCurrentContactPairs(ctx: IGameContext, filterSnapshot?: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>>): Set<string> {
 		const contacts = new Set<string>();
-		const entities = ctx.entities.getEntities().filter(entity => !entity.isDead() && entity.physicsEnabled());
+		const entities = ctx.entities.getEntities().filter(isPhysicsParticipant);
 		const containmentBoundaries = new Set<IPhysics<SHAPE>>(
 			getOuterContainmentBoundaries(ctx.structures as unknown as IPhysics<SHAPE>[]),
 		);
@@ -279,11 +286,11 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 			const entity = entities[i];
 			for (let j = i + 1; j < entities.length; j++) {
 				const other = entities[j];
-				if (this.strategy.checkCollision(entity, other)) contacts.add(this.getPairKey(entity, other));
+				if (this.isEntityPairAllowed(entity, other, filterSnapshot) && this.strategy.checkCollision(entity, other)) contacts.add(this.getPairKey(entity, other));
 			}
 			for (const structure of ctx.structures as Structure<SHAPE>[]) {
 				if (!structure.physicsEnabled() || this.isContainmentOnly(structure, containmentBoundaries)) continue;
-				if (this.strategy.checkCollision(entity, structure)) contacts.add(this.getPairKey(entity, structure));
+				if (this.isStructurePairAllowed(entity, filterSnapshot) && this.strategy.checkCollision(entity, structure)) contacts.add(this.getPairKey(entity, structure));
 			}
 		}
 		return contacts;
@@ -357,6 +364,19 @@ export class PhysicsSystem implements ISerializableSystem<SystemSettings> {
 		if (role === "both" || role === "solid") return false;
 		if (role === "containment") return true;
 		return containmentBoundaries.has(structureB);
+	}
+
+	private isEntityPairAllowed(first: IEntity, second: IEntity, filterSnapshot?: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>>): boolean {
+		return isCollisionAllowed("entity", filterSnapshot?.get(first) ?? this.getCollisionFilters(first), "entity", filterSnapshot?.get(second) ?? this.getCollisionFilters(second));
+	}
+
+	private isStructurePairAllowed(entity: IEntity, filterSnapshot?: Map<IEntity, ReturnType<IEntity["getCollisionFilters"]>>): boolean {
+		return isCollisionAllowed("entity", filterSnapshot?.get(entity) ?? this.getCollisionFilters(entity), "structure", []);
+	}
+
+	private getCollisionFilters(entity: IPhysics<SHAPE>): ReturnType<IEntity["getCollisionFilters"]> {
+		const candidate = entity as Partial<IEntity>;
+		return typeof candidate.getCollisionFilters === "function" ? candidate.getCollisionFilters() : [];
 	}
 
 	//@ts-ignore

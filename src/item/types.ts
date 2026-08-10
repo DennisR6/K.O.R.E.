@@ -1,3 +1,5 @@
+import type { UiComponentSettings } from "../engine/ui-sdk/index.js";
+
 export type ItemTargetType = "self" | "entity" | "position" | "zone";
 export type DurationType = "instant" | "turns" | "rounds";
 export type ActivationType = "collision" | "proximity";
@@ -28,6 +30,11 @@ export interface ItemInteractionPolicy {
 	order?: number;
 }
 
+export interface ItemUiSettings {
+	component?: UiComponentSettings;
+	showLabel?: boolean;
+}
+
 export interface ItemTargetValidation {
 	allowSelf: boolean;
 	allowAlly: boolean;
@@ -48,6 +55,7 @@ export interface ItemDocument {
 	targetValidation?: ItemTargetValidation;
 	cooldown?: number;
 	interaction?: ItemInteractionPolicy;
+	ui?: ItemUiSettings;
 }
 
 export interface InventoryItem {
@@ -58,6 +66,7 @@ export interface InventoryItem {
 
 export interface RespawnConfig {
 	intervalRounds: number;
+	relocate?: boolean;
 }
 
 export interface ItemPickup {
@@ -72,7 +81,7 @@ export interface ItemPickup {
 /** Serializable progress for configured map pickups in the current turn. */
 export interface ItemPickupState {
 	turnNumber: number;
-	pickups: { collected: number; occupants: string[]; respawnCountdown?: number }[];
+	pickups: { collected: number; occupants: string[]; respawnCountdown?: number; spawnRegion?: { x: number; y: number; w: number; h: number } }[];
 }
 
 export function createItemDocument(overrides: Partial<ItemDocument> = {}): ItemDocument {
@@ -119,6 +128,16 @@ export function validateItemDocument(document: unknown): asserts document is Ite
 	if (typeof doc.id !== "string" || !doc.id) throw new Error("Item document must have a non-empty string id");
 	if (typeof doc.name !== "string" || !doc.name) throw new Error("Item document must have a non-empty string name");
 	if (typeof doc.type !== "string") throw new Error("Item document must have a string type");
+	if (doc.ui !== undefined) {
+		if (typeof doc.ui !== "object" || doc.ui === null || Array.isArray(doc.ui)) throw new Error("Item ui must be an object");
+		const ui = doc.ui as Record<string, unknown>;
+		if (Object.keys(ui).some(key => key !== "component" && key !== "showLabel")) throw new Error("Item ui contains an unknown field");
+		if (ui.component !== undefined) {
+			const component = ui.component as Record<string, unknown>;
+			if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0 || Object.keys(component).some(key => key !== "type" && key !== "source")) throw new Error("Item ui component must be a non-empty image source");
+		}
+		if (ui.showLabel !== undefined && typeof ui.showLabel !== "boolean") throw new Error("Item ui showLabel must be a boolean");
+	}
 	if (!Array.isArray(doc.effects)) throw new Error("Item document must have an effects array");
 	if (!VALID_TARGET_TYPES.includes(doc.targetType as string)) throw new Error("Item document must have a valid target type");
 	if (typeof doc.duration !== "object" || doc.duration === null) throw new Error("Item document must have a duration object");
@@ -180,6 +199,7 @@ export function validateItemPickup(pickup: unknown): asserts pickup is ItemPicku
 		if (typeof p.respawnConfig !== "object" || p.respawnConfig === null) throw new Error("Item pickup respawnConfig must be an object");
 		const config = p.respawnConfig as Record<string, unknown>;
 		if (typeof config.intervalRounds !== "number" || !Number.isSafeInteger(config.intervalRounds) || config.intervalRounds < 1) throw new Error("Item pickup respawnConfig intervalRounds must be a positive integer");
+		if (config.relocate !== undefined && typeof config.relocate !== "boolean") throw new Error("Item pickup respawnConfig relocate must be boolean");
 	}
 }
 
@@ -194,5 +214,13 @@ export function validateItemPickupState(state: unknown, pickupCount: number): as
 		if (typeof entry.collected !== "number" || !Number.isSafeInteger(entry.collected) || entry.collected < 0) throw new Error("Item pickup state must have non-negative collection counts");
 		if (!Array.isArray(entry.occupants) || !entry.occupants.every(id => typeof id === "string") || new Set(entry.occupants).size !== entry.occupants.length) throw new Error("Item pickup state must have unique occupant IDs");
 		if (entry.respawnCountdown !== undefined && (typeof entry.respawnCountdown !== "number" || !Number.isSafeInteger(entry.respawnCountdown) || entry.respawnCountdown < 0)) throw new Error("Item pickup state must have a non-negative respawn countdown");
+		if (entry.spawnRegion !== undefined) validatePickupRegion(entry.spawnRegion);
 	}
+}
+
+function validatePickupRegion(value: unknown): void {
+	if (typeof value !== "object" || value === null) throw new Error("Item pickup state spawn region must be an object");
+	const region = value as Record<string, unknown>;
+	if (!["x", "y", "w", "h"].every(key => typeof region[key] === "number" && Number.isFinite(region[key]))) throw new Error("Item pickup state spawn region must have finite numeric bounds");
+	if ((region.w as number) <= 0 || (region.h as number) <= 0) throw new Error("Item pickup state spawn region dimensions must be positive");
 }

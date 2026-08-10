@@ -20,7 +20,7 @@ test.describe("SDK-authored production main menu", () => {
 			expect(await page.evaluate(() => (window as any).game.handler.getMouseHandler().getRuntime().getActiveScreen())).toBe("map-battle");
 			await clickWorld(page, 210, 385); // generic back action
 			expect(await page.evaluate(() => (window as any).game.handler.getMouseHandler().getRuntime().getActiveScreen())).toBe("main");
-			await clickWorld(page, 551, 368); // semantic local-game action -> router handoff
+			await clickWorld(page, 463, 368); // semantic local-game action -> router handoff
 			await waitFor(async () => (await page.evaluate(() => (window as any).game.handler.getSettings?.()?.gameMode?.id)) === "local-ice-duel-v1", 10_000, 100, "local match handoff");
 			await waitFor(async () => await page.evaluate(() => (window as any).game.audio.getAppliedCommands().some((command: any) => command.soundId === "kore.music.match")), 5_000, 50, "match music request");
 			const commands = await page.evaluate(() => (window as any).game.audio.getAppliedCommands().map((command: any) => command.soundId));

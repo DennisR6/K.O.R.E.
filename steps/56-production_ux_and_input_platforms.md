@@ -1,0 +1,61 @@
+# Milestone 56 — Production UX And Input Platforms
+
+Status: `[-]` in progress
+
+## Delivered in this increment
+
+- Added native touch drag input to the production browser bootstrap.
+- Touch input uses the same world-coordinate path and handler contracts as
+  mouse input, including HUD/result controls and release outside the canvas.
+- Disabled browser touch gestures on the game canvas while a touch action is
+  active.
+- Added a localized first-turn onboarding hint explaining select, drag, aim,
+  and release without changing canonical gameplay state; it appears only after
+  the optional item phase so it does not conflict with item instructions.
+- Made failed online connection controls keyboard accessible: Enter retries and
+  Escape returns to the menu.
+- Added generic UI keyboard focus navigation: Tab/arrows move through visible
+  controls and Enter/Space activates the focused control.
+- Prevented browser scrolling for UI navigation keys while the production game
+  canvas is active, keeping keyboard commands usable on compact screens.
+- Added a visible keyboard-focus outline to HUD controls so focused actions are
+  distinguishable without relying on hover or color alone.
+- Touch cancellation now clears the active drag instead of accidentally
+  submitting a shot; normal touch release keeps the existing submission path.
+- The production canvas is now keyboard-focusable and exposes an application
+  role and accessible label for assistive technology.
+- Mobile canvas scaling no longer applies the desktop 0.5 minimum, preventing
+  400px canvas overflow on narrow 390px viewports; browser coverage verifies
+  the responsive bound and mobile touch menu navigation.
+- Rejected HUD actions now emit a distinct semantic UI rejection cue while
+  preserving the existing actionable text.
+- Browser AI workers are prewarmed while the menu is idle, avoiding worker
+  startup latency when entering an AI match. The menu preview itself now runs
+  a lightweight live Easy-AI battle on Magma Cradle, so hazards, collisions,
+  bouncing, and deaths are real rather than precomputed positions.
+- The spectator KI-vs-KI mode uses deterministic Easy AI on both teams instead
+  of hard speculative search, keeping real AI turns responsive and playable.
+- The complete map catalog remains intact for qualification and future work,
+  while the production map store/selection roster exposes only `magma-cradle`.
+- Added an opt-in gamepad polling path for connected browsers: the left stick
+  aims, the trigger sets power, and the push button releases the shot through
+  the existing mouse/input authority boundary. Gamepad release qualification
+  remains pending; unsupported or permission-denied browser gamepad access is
+  isolated so it cannot interrupt rendering.
+
+## Remaining work
+
+- Add tutorial/onboarding and clearer action rejection/loading states.
+- Complete audio and accessibility review.
+- Finish controller mappings and verify touch, mobile, and Steam Deck layouts
+  with clean production builds.
+
+## Evidence
+
+- `src/main.ts`
+- `tests/touch_input.test.ts`
+- `tests/controller_input.test.ts`
+- `tests/kore_game_hud.test.ts`
+- `tests/status_surface.test.ts`
+- `tests/ui_sdk.test.ts`
+- `tests/browser/browser_startup.e2e.test.ts` (including keyboard menu navigation)

@@ -18,7 +18,7 @@ The candidates are the six maps selectable in the production menu
 | --- | --- | --- | --- |
 | ice-map-v1 | Ice Map | ice | deadly circles at corners and top/bottom center |
 | cue-clash | Cue Clash | billiards | none; elimination only via containment/obstacles |
-| magma-cradle | Magma Cradle | tiles | 2 force-vents, 2 kill-zones |
+| magma-cradle | Magma Cradle | tiles | 2 force-vents, 6 kill-zones including four corner zones |
 | symmetric-duel | Symmetric Duel | ice | none; arena walls are the kill boundary |
 | structure-control | Structure Control | billiards | none; walls are the kill boundary, central blocker |
 | hazard-control | Hazard Control | tiles | 2 mirrored kill-zones guarding the center corridor |

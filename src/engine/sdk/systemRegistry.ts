@@ -1,4 +1,5 @@
 import { assertJsonValue, type JsonValue, type SystemSettings } from "../contracts/systemSettings.js";
+import type { EngineEffectRegistry, EngineEffectSettings } from "./effectRegistry.js";
 
 /** Declarative metadata used by SDK framework selection; it never imports runtime systems. */
 export interface EngineSystemDefinition {
@@ -15,6 +16,8 @@ export interface EngineSystemDefinition {
 	replaces?: readonly string[];
 	optional?: boolean;
 	state?: Record<string, JsonValue>;
+	/** Effect IDs interpreted by this system; this metadata is not serialized. */
+	acceptsEffects?: readonly string[];
 }
 
 export type EngineFrameworkSettings = { schemaVersion: 1; systems: SystemSettings[]; systemOrder: string[] };
@@ -75,6 +78,23 @@ export class EngineSystemRegistry {
 		const expected = this.select(value.systemOrder).systemOrder;
 		if (expected.join("|") !== value.systemOrder.join("|")) throw new Error("Framework system order violates dependencies");
 	}
+
+	/** Validates data Effects against the selected systems' capabilities and contracts. */
+	public validateEffectSupport(settings: unknown, effects: readonly unknown[], catalog: EngineEffectRegistry): void {
+		this.validate(settings);
+		const selected = new Set((settings as EngineFrameworkSettings).systemOrder);
+		const definitions = [...selected].map(id => this.definitions.get(id)!);
+		for (const effect of effects) {
+			catalog.validate(effect);
+			const typed = effect as EngineEffectSettings;
+			const definition = catalog.get(typed.type)!;
+			const accepted = definitions.some(candidate => candidate.acceptsEffects?.includes(typed.type) === true);
+			if (!accepted) throw new Error(`No selected system accepts effect '${typed.type}'`);
+			for (const capability of definition.requiresCapability ?? []) {
+				if (!definitions.some(candidate => provides(candidate, capability))) throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
+			}
+		}
+	}
 }
 
 function validateDefinition(definition: EngineSystemDefinition): void {
@@ -83,6 +103,7 @@ function validateDefinition(definition: EngineSystemDefinition): void {
 	for (const list of [definition.provides, definition.requires, definition.before, definition.after, definition.replaces]) {
 		if (list !== undefined && (!Array.isArray(list) || list.some(value => typeof value !== "string" || value.length === 0))) throw new Error(`Invalid system definition '${definition.id}'`);
 	}
+	if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some(value => typeof value !== "string" || value.length === 0))) throw new Error(`Invalid accepted Effects for '${definition.id}'`);
 	assertJsonValue(definition.state ?? {});
 }
 

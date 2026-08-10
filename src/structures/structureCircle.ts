@@ -1,10 +1,13 @@
-import { MetaEffect } from "../effects/effects.js";
-import { EffectTrigger, type Effect, type FullEffectSettings } from "../effects/types.js";
+import { createRuntimeEffect } from "../effects/runtimeFactory.js";
+import { createCollisionEnterEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
+import { EffectTrigger, type Effect, type FullEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import type { RenderContext } from "../engine/RenderContext.js"
 import type { ISettingsSerialize } from "../engine/types.js";
 import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import { type MapBoundarySettingsCircle } from "../settings/settings.js";
 import { type Structure } from "./types.js";
+import { deriveStructureId } from "./identity.js";
+import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).
@@ -31,6 +34,9 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	private bounce: number
 	private vel: Vector2D
 	private isPhysicsEnabled: boolean = true
+	private isDrawingEnabled: boolean = true
+	private readonly id: string
+	private serializeState: boolean
 
 	// @ts-ignore
 	// aktuell brauchen wir diese noch nicht.
@@ -40,8 +46,9 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	private alwaysEffects: Effect[] = []
 	private roundEffects: Effect[] = []
 	private collisionRole: StructureCollisionRole | undefined
+	private readonly collisionCommands: CollisionCommandBinding[]
 
-	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole) {
+	constructor(x: number, y: number, r: number, color: string | undefined, effects: FullEffectSettings[], role?: StructureCollisionRole, id?: string, physicsEnabled?: boolean, drawingEnabled?: boolean, collisionCommands: CollisionCommandBinding[] = []) {
 		this.position = { x, y }
 		this.r = r
 		this.shape = SHAPE.CIRCLE
@@ -49,11 +56,16 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 		this.bounce = Infinity
 		this.vel = { x: 0, y: 0 }
 		this.collisionRole = role
+		this.id = id ?? deriveStructureId({ type: SHAPE.CIRCLE, x, y, r, color, effects, role });
+		this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
+		this.isPhysicsEnabled = physicsEnabled ?? true;
+		this.isDrawingEnabled = drawingEnabled ?? true;
+		this.collisionCommands = structuredClone(collisionCommands);
 		for (const eff of effects) {
 			switch (eff.trigger) {
-				case EffectTrigger.Collision: this.collisionEffects.push(new MetaEffect(eff)); continue
-				case EffectTrigger.Round: this.roundEffects.push(new MetaEffect(eff)); continue
-				case EffectTrigger.Always: this.alwaysEffects.push(new MetaEffect(eff)); continue
+				case EffectTrigger.Collision: this.collisionEffects.push(createRuntimeEffect(eff)); continue
+				case EffectTrigger.Round: this.roundEffects.push(createRuntimeEffect(eff)); continue
+				case EffectTrigger.Always: this.alwaysEffects.push(createRuntimeEffect(eff)); continue
 				default: console.trace("this is not implemted yet"); continue
 			}
 		}
@@ -64,7 +76,7 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	 * Beachte: Hier wird erst die Farbe gesetzt und dann ein Bild darübergelegt.
 	*/
 	public draw(ctx: RenderContext) {
-		if (!this.color) return
+		if (!this.color || !this.isDrawingEnabled) return
 		ctx.push()
 		ctx.setFillColor(this.color)
 		const { x, y } = this.getPos()
@@ -76,11 +88,6 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 
 
 	public setPos(pos: Vector2D): void {
-		if (
-			(this.position.x > pos.x * 1.1 || this.position.x < pos.x * 0.9) ||
-			(this.position.y > pos.y * 1.1 || this.position.y < pos.y * 0.9)
-		) { console.error("STRUCTURE: Position weicht massiv ab!"); }
-
 		this.position.x = pos.x
 		this.position.y = pos.y
 	}
@@ -102,11 +109,18 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 	public getBounceFactor(): number { return this.bounce }
 
 	public onCollision({ entity }: { entity: IPhysics<SHAPE> }): void {
-		this.collisionEffects.forEach(effect => effect.apply(entity))
+		dispatchTriggeredEffects({ effects: this.collisionEffects, event: createCollisionEnterEvent("structure.circle", "entity", "structure.circle", "structure.circle:collision"), apply: effect => effect.apply(entity) })
 	}
 	public getColor(): string | undefined { return this.color }
 	public physicsEnabled(): boolean { return this.isPhysicsEnabled }
-	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled }
+	public setPhysicsEnabled(physicsEnabled: boolean): void { this.isPhysicsEnabled = physicsEnabled; this.serializeState = true }
+	public drawingEnabled(): boolean { return this.isDrawingEnabled }
+	public setDrawingEnabled(drawingEnabled: boolean): void { this.isDrawingEnabled = drawingEnabled; this.serializeState = true }
+	public getId(): string { return this.id }
+	public setSetting(key: SettingKey, value: SettingValue): void { if (typeof value !== "boolean") return; if (key === "physicsEnabled") this.setPhysicsEnabled(value); else if (key === "drawingEnabled") this.setDrawingEnabled(value); }
+	public addSetting(key: SettingKey, value: SettingValue): void { this.setSetting(key, value); }
+	public removeSetting(key: SettingKey, value: SettingValue): void { if (typeof value === "boolean") this.setSetting(key, !value); }
+	public getCollisionCommands(): readonly CollisionCommandBinding[] { return this.collisionCommands; }
 	public setColor(color: string | undefined) { this.color = color }
 	public getCollisionRole(): StructureCollisionRole | undefined { return this.collisionRole }
 	public setCollisionRole(role: StructureCollisionRole | undefined): void { this.collisionRole = role }
@@ -124,6 +138,8 @@ export class StructureCircle implements Structure<SHAPE.CIRCLE>, IPhysics<SHAPE.
 			effects,
 		}
 		if (this.collisionRole !== undefined) out.role = this.collisionRole
+		if (this.serializeState) { out.id = this.id; out.physicsEnabled = this.isPhysicsEnabled; out.drawingEnabled = this.isDrawingEnabled; }
+		if (this.collisionCommands.length > 0) out.collisionCommands = structuredClone(this.collisionCommands);
 		return out
 	}
 	public getType(): SHAPE.CIRCLE { return this.shape }

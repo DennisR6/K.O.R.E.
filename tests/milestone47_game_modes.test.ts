@@ -80,5 +80,11 @@ test.serial("online initialization negotiates the same catalog mode and persists
 	expect(init.settings.gameMode.id).toBe("power-rush-v1");
 	expect(init.modeId).toBe("power-rush-v1");
 	expect(init.ruleState.phase).toBe(RulePhase.Item);
+	runtime.message(one, JSON.stringify({ type: NetworkMessageType.SKIP_PHASE }));
+	const phaseChange = JSON.parse(one.sent.at(-1)!);
+	const otherPhaseChange = JSON.parse(two.sent.at(-1)!);
+	expect(phaseChange.type).toBe(NetworkMessageType.PHASE_CHANGED);
+	expect(phaseChange.ruleState.phase).toBe(RulePhase.Physics);
+	expect(otherPhaseChange).toEqual(phaseChange);
 	database.close();
 });

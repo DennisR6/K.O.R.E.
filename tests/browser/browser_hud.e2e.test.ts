@@ -8,7 +8,7 @@ test.describe("SDK-authored gameplay HUD", () => {
 		try {
 			const page = await openPage(browser, server.url); const capture = captureConsole(page);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "canvas");
-			await clickWorld(page, 400, 100); await clickWorld(page, 551, 368);
+			await clickWorld(page, 400, 100); await clickWorld(page, 463, 368);
 			await waitFor(async () => (await page.evaluate(() => (window as any).game.handler.getMouseHandler().constructor.name)) === "KoreGameHudSurface", 10_000, 100, "HUD surface");
 			const hud = await page.evaluate(() => {
 				const value = (window as any).game.handler.getMouseHandler();

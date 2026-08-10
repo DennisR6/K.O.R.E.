@@ -1,6 +1,9 @@
 import { createItemDocument, type ItemDocument } from "./types.js";
 import { ItemValidator } from "./validate.js";
 
+const TRANSFORM_SWAP_POSITION_EFFECT_ID = "transform.swap-position";
+const MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID = "movement.apply-force-to-entity";
+
 function clone<T>(value: T): T { return structuredClone(value); }
 
 export interface KoreItemInput {
@@ -15,10 +18,11 @@ export interface KoreItemInput {
 	description?: string;
 	cooldown?: number;
 	interaction?: ItemDocument["interaction"];
+	ui?: ItemDocument["ui"];
 }
 
 export function sdkItemEffectTypes(): readonly string[] {
-	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "delayedEffect", "shield", "freeze", "swapPosition", "temporaryWall", "ghostMode", "magnet", "selectionLock", "aimVariance"];
+	return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", TRANSFORM_SWAP_POSITION_EFFECT_ID, "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 
 /** Creates a validated declarative item document without constructing runtime effects. */
