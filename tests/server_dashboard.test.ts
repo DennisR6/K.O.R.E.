@@ -57,6 +57,8 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
 	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
+	const jsonWithFeedback = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
+	expect(await jsonWithFeedback.json()).toMatchObject({ feedback: [{ text: "Newest feedback" }, { text: "Older feedback" }] });
 	database.close();
 });
 
