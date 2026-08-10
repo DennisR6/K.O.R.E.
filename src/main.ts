@@ -91,7 +91,7 @@ if (isUiDebugSandboxUrl(uri)) {
 	}, activeLanguage!, usersettings.autoRestart, () => {
 		const role = window.confirm("Create a friend room? OK = Create, Cancel = Join") ? "create" : "join";
 		const code = role === "join" ? window.prompt("Enter the 6-digit friend code")?.trim() : undefined;
-		if (role === "join" && (!code || !/^\\d{6}$/.test(code))) return;
+		if (role === "join" && (!code || !/^\d{6}$/.test(code))) return;
 		void buildOnlineJoinUrl(window.location.href, { friendRole: role, ...(code ? { friendCode: code } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Friend room failed", error));
 	})
 	 handler = router.getHandler()
