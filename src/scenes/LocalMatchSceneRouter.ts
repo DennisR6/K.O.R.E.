@@ -11,6 +11,7 @@ import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import { installGameplayHud } from "./gameplayHud.js";
 import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { flushOfflineMatchReports, installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
+import { buildFeedbackEndpoint, installFeedbackPrompt } from "../net/feedback.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 import type { RenderContext } from "../engine/RenderContext.js";
 import { readClipboardText } from "../mods/browserClipboard.js";
@@ -158,6 +159,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
 				if (this.aiBattle && this.handler === next) this.restartAiBattle();
 			} : undefined);
+			if (this.mode === "hotseat" || this.mode === "human-vs-ai") installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "ice-map-v1" }, buildFeedbackEndpoint(window.location.href));
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
 			startupMark("game.ready", { mode: this.mode, mapId });

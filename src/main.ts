@@ -33,6 +33,7 @@ import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/p
 import { buildMatchReportEndpoint, reportMatchHttp } from "./net/matchReport.js";
 import { flushOfflineMatchReports } from "./net/offlineMatchReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
+import { buildFeedbackEndpoint, installFeedbackPrompt } from "./net/feedback.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -99,6 +100,7 @@ if (isUiDebugSandboxUrl(uri)) {
 	handler.addSystem(ems)
 	em.addEmitter(new GameEmitter(handler))
 	installGameplayHud(handler, { language: activeLanguage!, onReturnToMenu: () => window.location.assign(window.location.pathname) })
+	installFeedbackPrompt(handler, { mode: "hotseat", mapId: "ice-map-v1" }, buildFeedbackEndpoint(window.location.href))
 	startGame(handler)
 }
 
@@ -182,6 +184,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		handler.setRuleState(init.ruleState)
 		const performanceUserId = getUserUUUID();
 		if (init.gameId && performanceUserId) installMatchPerformanceReport(handler, init.gameId, performanceUserId, undefined, buildPerformanceEndpoint(serverUrl, init.gameId))
+		if (init.gameId) installFeedbackPrompt(handler, { gameId: init.gameId, userId: performanceUserId ?? undefined, mode: "online", mapId: init.mapId }, buildFeedbackEndpoint(serverUrl))
 		// The online branch installs the same gameplay HUD as every offline mode;
 		// only the semantic actions and capability limits differ.
 		installGameplayHud(handler, {
