@@ -526,6 +526,11 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.mouseHandler?.handleMouseReleased()
 	}
 
+	public handleMouseCancelled(): void {
+		if (this.disposed) return;
+		(this.mouseHandler as (IMouse & { handleMouseCancelled?: () => void }) | undefined)?.handleMouseCancelled?.();
+	}
+
 	public handleMouseWheel(event: WheelEvent): void {
 		if (this.disposed) return
 		this.mouseHandler?.handleMouseWheel(event);

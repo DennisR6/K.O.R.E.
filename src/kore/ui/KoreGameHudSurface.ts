@@ -79,6 +79,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		if (!hit && !this.paused && !this.projection?.match.result) this.gameplayInput?.handleMousePressed();
 	}
 	public handleMouseReleased(): void { this.runtime.tick({ pointer: { ...this.mouse, justReleased: true } }); this.route(this.runtime.drainCommands()); if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseReleased(); }
+	public handleMouseCancelled(): void { (this.gameplayInput as (IMouse & { cancelInput?: () => void }) | undefined)?.cancelInput?.(); }
 	public handleMouseWheel(event: WheelEvent): void { if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseWheel(event); }
 	public reset(): void { this.gameplayInput?.reset?.(); }
 	private route(commands: UiCommand[]): void {

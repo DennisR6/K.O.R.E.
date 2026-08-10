@@ -144,6 +144,11 @@ export class UiSystem implements IUiSystem {
 		this.currentMouse = { ...pos }
 	}
 
+	public cancelInput(): void {
+		this.clearInput();
+		this.clearAimAndCharge();
+	}
+
 	private clearInput(): void {
 		this.start = null
 		this.end = null

@@ -500,7 +500,13 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			latestTouch = undefined;
 		};
 		window.addEventListener("touchend", releaseTouch, { passive: false });
-		window.addEventListener("touchcancel", releaseTouch, { passive: false });
+		window.addEventListener("touchcancel", (event) => {
+			if (activeTouchId === undefined) return;
+			event.preventDefault();
+			getActiveHandler().handleMouseCancelled();
+			activeTouchId = undefined;
+			latestTouch = undefined;
+		}, { passive: false });
 		window.addEventListener("keydown", (e) => {
 			const active = getActiveHandler() as GameHandler & { handleKeyPressed?: (event: KeyboardEvent) => void };
 			if (["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "].includes(e.key)) e.preventDefault();

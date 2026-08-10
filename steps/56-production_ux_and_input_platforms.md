@@ -20,6 +20,8 @@ Status: `[-]` in progress
   canvas is active, keeping keyboard commands usable on compact screens.
 - Added a visible keyboard-focus outline to HUD controls so focused actions are
   distinguishable without relying on hover or color alone.
+- Touch cancellation now clears the active drag instead of accidentally
+  submitting a shot; normal touch release keeps the existing submission path.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
