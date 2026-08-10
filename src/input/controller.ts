@@ -19,9 +19,15 @@ export class ControllerInput {
 		this.getGamepads = options.getGamepads ?? (() => (typeof navigator !== "undefined" && navigator.getGamepads ? navigator.getGamepads() : []));
 	}
 
-	public getActiveGamepad(): (Gamepad | null) {
-		const gamepads = this.getGamepads();
-		return gamepads[this.gamepadIndex] ?? null;
+	public getActiveGamepad(): Gamepad | null {
+		try {
+			const gamepads = this.getGamepads();
+			return gamepads[this.gamepadIndex] ?? null;
+		} catch {
+			// Browser permissions and unsupported contexts may reject gamepad access;
+			// controller input must never interrupt the render/gameplay loop.
+			return null;
+		}
 	}
 
 	public isActionPressed(action: GameAction): boolean {

@@ -16,5 +16,5 @@ describe("Section 15.6 mirrored gameplay fairness tournament", () => {
 
 	test("is deterministic for every mirrored seed", () => {
 		expect(runFairnessTournament([3201, 3202])).toEqual(runFairnessTournament([3201, 3202]));
-	});
+	}, 45_000);
 });

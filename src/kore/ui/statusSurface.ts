@@ -45,6 +45,11 @@ export class KoreStatusSurface implements IMouse, IDrawer {
 		}
 	}
 	public handleMouseReleased(): void { }
+	public handleKeyPressed(event: KeyboardEvent): void {
+		if (!this.failed) return;
+		if (event.key === "Enter") this.onRetry();
+		else if (event.key === "Escape") this.onBack();
+	}
 	public handleMouseWheel(_event: WheelEvent): void { }
 	public tick(): void { this.runtime.tick({ pointer: { ...this.mouse } }); }
 	public draw(renderer: RenderContext): void { this.runtime.draw(new StatusRenderer(renderer)); }

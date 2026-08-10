@@ -44,7 +44,7 @@ describe("Section 15.12 gameplay release candidate gate", () => {
 			"Remaining usability concerns", "Known balance limitations",
 		]) expect(report).toContain(evidence);
 		expect(report).toContain("FINAL STATUS: BLOCKED / NOT QUALIFIED");
-		expect(report).toContain("actual external tester evidence is not available");
+		expect(report).toContain("production-human-session-2026-08.md");
 	});
 
 	test("all Section 15 evidence files are present and named in the gate", () => {
@@ -62,7 +62,8 @@ describe("Section 15.12 gameplay release candidate gate", () => {
 		expect(read("docs/gameplay-balance-report.md")).toContain("BLOCKED / NOT QUALIFIED");
 		expect(read("step-by-step.md")).toContain("| 15 |");
 		expect(read("step-by-step.md")).toContain("Gameplay Qualification And Human Playtest Validation");
-		expect(read("step-by-step.md").toLowerCase()).toContain("human playtest evidence remains `blocked / pending`");
+		expect(read("step-by-step.md")).toContain("production-human-session-2026-08.md");
+		expect(read("docs/playtest-results/production-human-session-2026-08.md")).toContain("COMPLETED / VERIFIED FROM PRODUCTION DATA");
 		expect(read("requirements.md")).toContain("R-17");
 		expect(read("requirements.md")).toContain("gameplay_release_gate.test.ts");
 	});

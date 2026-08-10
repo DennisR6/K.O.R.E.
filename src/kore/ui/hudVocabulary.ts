@@ -19,6 +19,7 @@ export enum KoreHudElement {
 	Turn = "hud-turn",
 	State = "hud-state",
 	Aim = "hud-aim",
+	Tutorial = "hud-tutorial",
 	Rejection = "hud-rejection",
 	Pause = "hud-pause",
 	ItemsTitle = "hud-items-title",
@@ -87,6 +88,7 @@ export const KoreHudText = {
 	ReportCancel: LANGUAGE_KEYS.HudReportCancel,
 	None: LANGUAGE_KEYS.HudNone,
 	Waiting: LANGUAGE_KEYS.HudWaiting,
+	Tutorial: LANGUAGE_KEYS.HudTutorial,
 } as const;
 
 export enum KoreHudItemSlot {

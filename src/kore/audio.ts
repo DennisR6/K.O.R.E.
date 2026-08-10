@@ -7,6 +7,7 @@ export const KORE_AUDIO_ASSETS = {
 	// The current prototype ships only the optional music pack. These short-cue
 	// IDs deliberately resolve through that pack until dedicated SFX are added.
 	"kore.ui.confirm": "./public/audio/CM_03_Ritualis.mp3",
+	"kore.ui.reject": "./public/audio/CM_04_Sacrifice.mp3",
 	"kore.game.shot": "./public/audio/CM_04_Sacrifice.mp3",
 	"kore.game.collision": "./public/audio/CM_04_Sacrifice.mp3",
 	"kore.game.damage": "./public/audio/CM_04_Sacrifice.mp3",
@@ -33,10 +34,11 @@ export const koreAudio = {
 	assets: KORE_AUDIO_ASSETS,
 	buses: KORE_AUDIO_BUSES,
 	createSettings: createKoreAudioSettings,
-	sounds: { uiConfirm: "kore.ui.confirm", shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield", item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result" },
+	sounds: { uiConfirm: "kore.ui.confirm", uiReject: "kore.ui.reject", shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield", item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result" },
 	music: { menu: "kore.music.menu", match: "kore.music.match" },
 	command: {
 		uiConfirm(sourceId: string, soundId: string = "kore.ui.confirm"): PlaySoundCommand { return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" }); },
+		uiReject(sourceId: string): PlaySoundCommand { return audio.command.play({ sourceId, soundId: "kore.ui.reject", bus: "ui", priority: 40, dedupeKey: "reject" }); },
 		shot(sourceId: string): PlaySoundCommand { return audio.command.play({ sourceId, soundId: "kore.game.shot", bus: "effects", priority: 20, dedupeKey: "shot" }); },
 		// Menu creation is an application-mode handoff, so it deliberately claims
 		// the slot again when returning from a higher-priority match.

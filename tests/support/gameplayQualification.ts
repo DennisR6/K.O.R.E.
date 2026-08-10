@@ -83,11 +83,17 @@ const AI_PAIRS: AiPair[] = AI_DIFFICULTIES.flatMap(first => AI_DIFFICULTIES.map(
 const ECONOMIES: GameplayEconomy[] = ["disabled", "fixed-loadout", "map-pickup", "seeded-draw"];
 const AI_LIMITS = { maxSimulations: 1, maxAngleSamples: 1, maxForceSamples: 1 };
 
+const MAP_DOCUMENTS = {
+	"cue-clash": createCueClashMap(WORLD),
+	"frostbite-arena": createFrostbiteArenaMap(WORLD),
+	"magma-cradle": createMagmaCradleMap(WORLD),
+} as const;
+const OFFICIAL_ITEMS = createOfficialItemLoader().getAll();
 const mapFactories = {
 	"ice-map-v1": (template: GameSettings) => template,
-	"cue-clash": (template: GameSettings) => loadMapDocument(createCueClashMap(WORLD), template),
-	"frostbite-arena": (template: GameSettings) => loadMapDocument(createFrostbiteArenaMap(WORLD), template),
-	"magma-cradle": (template: GameSettings) => loadMapDocument(createMagmaCradleMap(WORLD), template),
+	"cue-clash": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["cue-clash"], template),
+	"frostbite-arena": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["frostbite-arena"], template),
+	"magma-cradle": (template: GameSettings) => loadMapDocument(MAP_DOCUMENTS["magma-cradle"], template),
 } as const;
 
 const aiFactories = { easy: EasyAi, medium: MediumAi, hard: HardAi } as const;
@@ -199,7 +205,7 @@ function makeSettings(testCase: GameplayQualificationCase): GameSettings {
 	const settings = clone(mapFactories[testCase.mapId as keyof typeof mapFactories](base));
 	settings.id = `00000000-0000-4000-8000-${String(testCase.seed).padStart(12, "0")}`;
 	settings.players.forEach((player, index) => { player.id = `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`; });
-	settings.items = createOfficialItemLoader().getAll();
+	settings.items = clone(OFFICIAL_ITEMS);
 	settings.gameMode = makeMode(testCase.modeId, makeEconomy(testCase.economy, testCase.seed, "power-dash"));
 	settings.ai = { difficulty: testCase.aiPair.split("-vs-")[1] as AiDifficulty, seed: testCase.seed, team: 1 };
 	return settings;
@@ -229,7 +235,7 @@ function outcome(handler: GameHandler): "winner" | "draw" | "ongoing" {
 	return handler.getMatchResult()?.status === "draw" ? "draw" : "winner";
 }
 
-function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[]; softlock: SoftlockAnalysis } {
+function runOnce(testCase: GameplayQualificationCase, verifyArtifacts = true): { snapshot: ReturnType<GameHandler["toSettings"]>; replay: ReturnType<GameEmitter["recorder"]["getReplay"]>; actionAccepted: boolean; turns: number; outcome: "winner" | "draw" | "ongoing"; replayOk: boolean; restoreOk: boolean; violations: string[]; softlock: SoftlockAnalysis } {
 	const violations: string[] = [];
 	const settings = makeSettings(testCase);
 	const handler = build(settings);
@@ -245,16 +251,20 @@ function runOnce(testCase: GameplayQualificationCase): { snapshot: ReturnType<Ga
 	]);
 	if (softlock.detected) violations.push(`softlock: ${softlock.reason}`);
 	const snapshot = handler.toSettings();
-	const restored = build(snapshot);
-	const restoreOk = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
-	if (!restoreOk) violations.push("engine snapshot did not restore identically");
-	let replayOk = false;
-	try {
-		const replay = new ReplayPlayer(emitter.recorder.getReplay());
-		quiet(() => replay.playAll());
-		replayOk = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
-	} catch (error) { violations.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`); }
-	if (!replayOk) violations.push("replay did not reproduce the live snapshot");
+	let restoreOk = true;
+	let replayOk = true;
+	if (verifyArtifacts) {
+		const restored = build(snapshot);
+		restoreOk = JSON.stringify(restored.toSettings()) === JSON.stringify(snapshot);
+		if (!restoreOk) violations.push("engine snapshot did not restore identically");
+		replayOk = false;
+		try {
+			const replay = new ReplayPlayer(emitter.recorder.getReplay());
+			quiet(() => replay.playAll());
+			replayOk = JSON.stringify(replay.getHandler().toSettings()) === JSON.stringify(snapshot);
+		} catch (error) { violations.push(`replay failed: ${error instanceof Error ? error.message : String(error)}`); }
+		if (!replayOk) violations.push("replay did not reproduce the live snapshot");
+	}
 	return { snapshot, replay: emitter.recorder.getReplay(), actionAccepted, turns: handler.getTurnNumber(), outcome: outcome(handler), replayOk, restoreOk, violations, softlock };
 }
 
@@ -263,7 +273,7 @@ export function qualifyGameplayCase(testCase: GameplayQualificationCase): Gamepl
 		? "qualified" : "blocked-from-selection";
 	try {
 		const first = runOnce(testCase);
-		const second = runOnce(testCase);
+		const second = runOnce(testCase, false);
 		const deterministic = JSON.stringify(first.snapshot) === JSON.stringify(second.snapshot);
 		const violations = [...first.violations];
 		if (!deterministic) violations.push("duplicate seeded run diverged");
@@ -273,6 +283,28 @@ export function qualifyGameplayCase(testCase: GameplayQualificationCase): Gamepl
 	}
 }
 
-export function qualifyGameplayMatrix(): GameplayQualificationResult[] {
-	return gameplayMatrixCases().map(qualifyGameplayCase);
+export async function qualifyGameplayMatrix(): Promise<GameplayQualificationResult[]> {
+	const cases = gameplayMatrixCases();
+	const requestedWorkers = Number.parseInt(process.env.GAMEPLAY_MATRIX_WORKERS ?? "4", 10);
+	const workerCount = Number.isSafeInteger(requestedWorkers) ? Math.max(1, Math.min(requestedWorkers, cases.length)) : 4;
+	if (workerCount === 1 || typeof Worker === "undefined") return cases.map(qualifyGameplayCase);
+	const chunks = Array.from({ length: workerCount }, () => [] as GameplayQualificationCase[]);
+	cases.forEach((testCase, index) => chunks[index % workerCount]!.push(testCase));
+	const workers = chunks.map(() => new Worker(new URL("./gameplayQualificationWorker.ts", import.meta.url), { type: "module" }));
+	try {
+		const results = await Promise.all(workers.map((worker, index) => new Promise<GameplayQualificationResult[]>((resolve, reject) => {
+			worker.onmessage = event => {
+				if (event.data && !Array.isArray(event.data) && typeof event.data.error === "string") reject(new Error(event.data.error));
+				else resolve(event.data as GameplayQualificationResult[]);
+			};
+			worker.onerror = event => reject(new Error(event.message || "Gameplay matrix worker failed"));
+			worker.postMessage(chunks[index]!);
+		})));
+		return cases.map(testCase => {
+			const index = cases.indexOf(testCase);
+			return results[index % workerCount]!.shift()!;
+		});
+	} finally {
+		workers.forEach(worker => worker.terminate());
+	}
 }

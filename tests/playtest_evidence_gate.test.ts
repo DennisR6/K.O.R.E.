@@ -6,6 +6,8 @@ const ROOT = process.cwd();
 const RESULTS = resolve(ROOT, "docs/playtest-results");
 const read = (file: string) => readFileSync(resolve(ROOT, file), "utf8");
 
+const completedRecord = "docs/playtest-results/production-human-session-2026-08.md";
+
 const requiredEvidence = [
 	"Build commit:",
 	"Platform:",
@@ -34,25 +36,27 @@ describe("Section 15.10 human playtest evidence", () => {
 		}
 	});
 
-	test("pending evidence is explicit and cannot be mistaken for a completed session", () => {
+	test("completed production evidence is explicit and the historical pending record is superseded", () => {
+		const completed = read(completedRecord);
+		expect(completed).toContain("Record status: **COMPLETED / VERIFIED FROM PRODUCTION DATA**");
+		expect(completed).toContain("data/kore.db");
+		expect(completed).toContain("Human-controlled matches completed: 7 unique replay records.");
+		expect(completed).toContain("Human qualitative ratings: not available");
 		const pending = read("docs/playtest-results/pending-external-session.md");
-		expect(pending).toContain("Record status: **BLOCKED / PENDING**");
-		expect(pending).toContain("no external tester session exists");
-		expect(pending).toContain("Completed matches: `0`");
-		expect(pending).toContain("Willingness to replay: `N/A`");
-		expect(pending).toContain("This is an evidence-status record, not a completed playtest result");
+		expect(pending).toContain("Record status: **SUPERSEDED / PENDING AT RECORD CREATION**");
+		expect(pending).toContain("superseded by `production-human-session-2026-08.md`");
 	});
 
-	test("delivery and release records report the pending human-evidence status", () => {
+	test("delivery and release records report recovered human evidence", () => {
 		const checklist = read("step-by-step.md");
 		expect(checklist).toContain("| 15 |");
 		expect(checklist).toContain("playtest_evidence_gate.test.ts");
-		expect(checklist).toContain("BLOCKED / PENDING");
-		expect(checklist.toLowerCase()).toContain("no external tester session");
+		expect(checklist).toContain("production-human-session-2026-08.md");
 
 		const release = read("docs/release-verification.md");
 		expect(release).toContain("Section 15.10 Human Playtest Evidence");
-		expect(release).toContain("BLOCKED / PENDING");
-		expect(release).toContain("actual external tester evidence is not available");
+		expect(release).toContain("COMPLETED / VERIFIED FROM PRODUCTION DATA");
+		expect(release).toContain("data/kore.db");
+		expect(release).not.toContain("actual external tester evidence is not available");
 	});
 });

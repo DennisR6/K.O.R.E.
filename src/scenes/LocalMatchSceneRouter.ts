@@ -146,7 +146,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			startupMark("game.build.started", { mode: this.mode, mapId });
 			const next = factory();
 			startupMark("game.build.completed", { mode: this.mode, mapId });
-			void new AssetPreloader().warm(next.toSettings());
+			// Asset warmup is a browser rendering concern. Headless/server hosts do
+			// not have the public asset URL space and should not emit false load
+			// failures while constructing a valid local match.
+			if (typeof window !== "undefined") void new AssetPreloader().warm(next.toSettings());
 			startupMark("game.scene.init.started", { scene: this.mode ?? "game" });
 			next.setLanguage(this.language);
 			this.captureSoundCommands(this.handler.getMouseHandler());
@@ -160,7 +163,13 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "ice-map-v1", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
 				if (this.aiBattle && this.handler === next) this.restartAiBattle();
 			} : undefined);
-			if (this.mode === "hotseat" || this.mode === "human-vs-ai") installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "ice-map-v1" }, buildFeedbackEndpoint(window.location.href));
+			if (this.mode === "hotseat" || this.mode === "human-vs-ai") {
+				// Scene construction is also used by headless tests and desktop hosts;
+				// do not require the browser `window` global just to install the
+				// optional post-match feedback prompt.
+				const feedbackBaseUrl = typeof window !== "undefined" ? window.location.href : "http://localhost/";
+				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "ice-map-v1" }, buildFeedbackEndpoint(feedbackBaseUrl));
+			}
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });
 			startupMark("game.ready", { mode: this.mode, mapId });

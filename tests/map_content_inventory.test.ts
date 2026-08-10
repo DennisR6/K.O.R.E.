@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { MAP_CATALOG, buildMapSettings, getMapCatalogEntry } from "../src/content/mapCatalog.js";
+import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, getFinalReleaseMapEntries, getMapCatalogEntry } from "../src/content/mapCatalog.js";
 import { createDefaultGameSettings, validateGameSettings } from "../src/settings/settings.js";
 
 /**
@@ -23,6 +23,12 @@ const plannedMapIds: string[] = [];
 const allMapIds = [...shippedMapIds, ...plannedMapIds];
 
 describe("Section 17.2 map content inventory", () => {
+	test("final release roster excludes blocked maps from production selection", () => {
+		expect(FINAL_RELEASE_MAP_IDS).not.toContain("frostbite-arena");
+		expect(getFinalReleaseMapEntries().every(entry => entry.browserAvailable && entry.status !== "blocked")).toBe(true);
+		expect(getFinalReleaseMapEntries(true).every(entry => entry.browserAvailable && entry.battleAvailable && entry.status !== "blocked")).toBe(true);
+	});
+
 	test("catalog IDs are unique and every shipped/planned map is registered", () => {
 		const ids = MAP_CATALOG.map(entry => entry.id);
 		expect(new Set(ids).size).toBe(ids.length);

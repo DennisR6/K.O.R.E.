@@ -36,6 +36,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.setText(KoreHudElement.Turn, formatLanguage(this.language, LANGUAGE_KEYS.HudTurn, { team: turn.activeTeam + 1, phase: turn.phase, turn: turn.number + 1 }));
 		this.setText(KoreHudElement.State, projection.aiThinking ? this.language.strings[LANGUAGE_KEYS.HudAiThinking] : projection.match.waiting ? this.language.strings[LANGUAGE_KEYS.HudWaiting] : hudStateText(turn.engineState, this.language));
 		this.setText(KoreHudElement.Aim, `${formatLanguage(this.language, LANGUAGE_KEYS.HudActor, { actor: turn.selectedActorId ?? this.language.strings[LANGUAGE_KEYS.HudNone] })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudAim, { aim: turn.aimAngle === null ? this.language.strings[LANGUAGE_KEYS.HudNone] : `${turn.aimAngle.toFixed(1)}°` })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudPower, { power: Math.round(turn.power * 10) / 10 })}`);
+		this.runtime.setElementVisible(KoreHudElement.Tutorial, projection.tutorial === true);
 		const itemsVisible = turn.phase === RulePhase.Item && !projection.match.result;
 		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible); this.setText(KoreHudElement.ItemsTitle, this.selectedItemId ? `Select a target for ${this.itemName(this.selectedItemId)}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: choose one or drag to skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
@@ -51,11 +52,17 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		for (const id of [KoreHudElement.ResultPanel, KoreHudElement.Result, KoreHudElement.Rematch, KoreHudElement.ReplayShare]) this.runtime.setElementVisible(id, resultVisible);
 		this.runtime.setElementVisible(KoreHudElement.Menu, resultVisible || this.paused);
 		this.setText(KoreHudElement.Result, hudResultText(projection.match.result, this.language));
-		this.rejection = projection.rejection; this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? formatLanguage(this.language, LANGUAGE_KEYS.HudActionRejected, { reason: this.rejection }) : "");
+		const previousRejection = this.rejection;
+		this.rejection = projection.rejection;
+		if (this.rejection && this.rejection !== previousRejection) this.sounds.emit(koreAudio.command.uiReject(this.soundSourceId));
+		this.runtime.setElementVisible(KoreHudElement.Rejection, !!this.rejection); this.setText(KoreHudElement.Rejection, this.rejection ? formatLanguage(this.language, LANGUAGE_KEYS.HudActionRejected, { reason: this.rejection }) : "");
 		this.setPauseControls(this.paused, resultVisible);
 	}
 	public tick(deltaTime: number = 1, _friction: number = 0): void { this.runtime.tick({}, deltaTime); this.route(this.runtime.drainCommands()); }
-	public handleKeyPressed(event: KeyboardEvent): void { if (!this.reportOpen) return; this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: event.key.length === 1 ? event.key : undefined } }); this.route(this.runtime.drainCommands()); }
+	public handleKeyPressed(event: KeyboardEvent): void {
+		this.runtime.tick({ keyboard: { pressedKeys: [event.key], textInput: this.reportOpen && event.key.length === 1 ? event.key : undefined } });
+		this.route(this.runtime.drainCommands());
+	}
 	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
 	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; this.gameplayInput?.updateMouse(x, y); }
 	public handleMousePressed(): void {
@@ -75,6 +82,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		if (!hit && !this.paused && !this.projection?.match.result) this.gameplayInput?.handleMousePressed();
 	}
 	public handleMouseReleased(): void { this.runtime.tick({ pointer: { ...this.mouse, justReleased: true } }); this.route(this.runtime.drainCommands()); if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseReleased(); }
+	public handleMouseCancelled(): void { (this.gameplayInput as (IMouse & { cancelInput?: () => void }) | undefined)?.cancelInput?.(); }
 	public handleMouseWheel(event: WheelEvent): void { if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseWheel(event); }
 	public reset(): void { this.gameplayInput?.reset?.(); }
 	private route(commands: UiCommand[]): void {
@@ -137,7 +145,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 class KoreHudRenderer implements UiRenderer {
 	public constructor(private readonly renderer: RenderContext) { }
 	public drawText(element: Parameters<UiRenderer["drawText"]>[0]): void { if (!element.text) return; this.renderer.setFillColor(element.style === KoreHudStyle.Rejection ? KoreHudColor.Danger : KoreHudColor.Ink); this.renderer.drawText(element.text, element.rect.x, element.rect.y + (element.style === KoreHudStyle.ResultTitle ? 32 : 16), element.style === KoreHudStyle.Status ? 16 : element.style === KoreHudStyle.ResultTitle ? 28 : 14); }
-	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; const imageSize = Math.min(30, element.rect.height); if (element.component) { this.renderer.drawImage(element.component.source, element.rect.x, element.rect.y, imageSize, imageSize); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + imageSize + 8, element.rect.y + Math.min(23, element.rect.height - 8), 14); } return; } this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
+	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; const imageSize = Math.min(30, element.rect.height); if (element.component) { this.renderer.drawImage(element.component.source, element.rect.x, element.rect.y, imageSize, imageSize); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + imageSize + 8, element.rect.y + Math.min(23, element.rect.height - 8), 14); } return; } this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.focused) { this.renderer.setNoFill(); this.renderer.setStrokeColor("#fbbf24"); this.renderer.setStroke(3); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); this.renderer.setStroke(0); } if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
   public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
   public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void { if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); }
 }

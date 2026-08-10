@@ -113,24 +113,26 @@ snapshot continuity. The repeated run is byte-for-byte identical.
 | Snapshot continuity | 100% |
 | Winner correlation | unavailable; no terminal match in the item trace |
 
-**Status: TECHNICALLY PASSING, HUMAN QUALIFICATION PENDING.** Invalid targets are
-rejected, the one-use-per-turn allowance is enforced, and the qualification
-probe observes persistent target, structure, schedule, and Mystery Box reward
-state across all official items and three economies. Winner dominance cannot be
-qualified until item actions are exercised in terminal matches; item-picker
-clarity and visible human usefulness remain separate playtest evidence
-requirements.
+**Status: TECHNICALLY PASSING; PRODUCTION HUMAN MATCH EVIDENCE RECOVERED.** Invalid
+targets are rejected, the one-use-per-turn allowance is enforced, and the
+qualification probe observes persistent target, structure, schedule, and
+Mystery Box reward state across all official items and three economies.
+Production records also show item-use actions in completed human-vs-AI matches.
+Questionnaire ratings and observer notes were not persisted, so subjective item
+clarity and balance remain explicitly unscored.
 
 ## Section 15.12 Final Gameplay Release Decision
 
 The automated evidence is recorded without promoting warnings or incomplete
-features to qualification claims. The final gameplay release candidate is
-**BLOCKED / NOT QUALIFIED** because the required external human playtest has
-not occurred. This is an evidence blocker, not a fabricated human result.
+features to qualification claims. Completed human-controlled production matches
+are documented in `docs/playtest-results/production-human-session-2026-08.md`.
+The final gameplay release candidate remains **BLOCKED / NOT QUALIFIED** because
+AI termination/agency, item qualification, and persisted qualitative
+questionnaire evidence remain incomplete.
 
 | Gate area | Evidence and result |
 | --- | --- |
-| Matrix qualification | 1,152 deterministic configurations executed; the canonical selectable Ice Duel is qualified, while source-present maps, blocked mode/AI/economy combinations remain blocked from selection. |
+| Matrix qualification | 2,880 deterministic configurations executed with four matrix workers; the canonical selectable Ice Duel is qualified, while source-present maps, blocked mode/AI/economy combinations remain blocked from selection. |
 | Softlock detection | Focused deterministic fixtures pass; fairness samples still produce ongoing safety-limit warnings and are not promoted to completed-match evidence. |
 | Pacing | 10 deterministic hazard-seeking matches pass: 3 / 7 / 11 / 11 / 11 turns, 0% draws, 0% instant deaths, 0% turn-limit matches. |
 | Spawn-side fairness | 24 mirrored tournament matches are deterministic with no invariant violations; all 24 are ongoing at the current hard-AI safety limit, so no winner imbalance is inferred. |
@@ -138,8 +140,8 @@ not occurred. This is an evidence blocker, not a fabricated human result.
 | Item usefulness/economy | 33 cases pass availability, legal use, consumption, replay, and snapshot continuity; all 11 items report `effect-disappears-after-use`, with winner correlation unavailable. |
 | Vertical-slice E2E | Local menu-to-result lifecycle coverage passes in `tests/local_match_lifecycle.integration.test.ts`; browser/packaged human completion is not claimed without a human session. |
 | Packaged build | Linux x86_64 Tauri executable and Debian bundle are covered by Section 14.12 evidence and `tests/playtest_build_gate.test.ts`. Windows, macOS, and mobile remain unsupported or unverified. |
-| Human sessions completed | 0 external sessions. `docs/playtest-results/pending-external-session.md` is explicitly `BLOCKED / PENDING`. |
-| Human blockers reported | Missing external tester session and therefore missing clarity, controls, pacing, fairness, feedback, and replay evidence. |
+| Human sessions completed | 7 unique completed human-vs-AI production records documented in `docs/playtest-results/production-human-session-2026-08.md`; qualitative questionnaire data was not persisted. |
+| Human blockers reported | None represented in the recovered production match records; qualitative observations were not persisted. |
 | Human blockers fixed | 0; no human defect was fabricated or classified as fixed. |
 | Remaining usability concerns | Unassessed until the two-match protocol is completed; only mouse-drag Linux/browser and Linux Tauri paths are in the qualified release surface. |
 | Known balance limitations | Hard AI may fail to seek lethal hazards; item effects do not currently persist into gameplay; blocked configurations have no release qualification. |
