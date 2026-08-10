@@ -155,13 +155,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-online",
-                                        source: "/public/picture/menuicons/users.svg",
+                                        source: "./public/picture/menuicons/users.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
 									ui.image({
                                         id: "trenn-online",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
@@ -191,13 +191,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-local",
-                                        source: "/public/picture/menuicons/gamepad-2.svg",
+                                        source: "./public/picture/menuicons/gamepad-2.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
 									ui.image({
                                         id: "trenn-local",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
@@ -227,13 +227,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-settings",
-                                        source: "/public/picture/menuicons/settings.svg",
+                                        source: "./public/picture/menuicons/settings.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.SettingsButton
                                     }),
 									ui.image({
                                         id: "trenn-settings",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.SettingsButton
                                     }),
@@ -263,13 +263,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-credits",
-                                        source: "/public/picture/menuicons/circle-star.svg",
+                                        source: "./public/picture/menuicons/circle-star.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.CreditsButton
                                     }),
 									ui.image({
                                         id: "trenn-credits",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.CreditsButton
                                     }),
@@ -347,13 +347,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-matchmaking",
-                                        source: "/public/picture/menuicons/hand-fist.svg",
+                                        source: "./public/picture/menuicons/hand-fist.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
                                     ui.image({
                                         id: "trenn-matchmaking",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
@@ -383,13 +383,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-friends",
-                                        source: "/public/picture/menuicons/users.svg",
+                                        source: "./public/picture/menuicons/users.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
                                     ui.image({
                                         id: "trenn-friends",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.OnlineButton
                                     }),
@@ -419,13 +419,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-back",
-                                        source: "/public/picture/menuicons/log-out.svg", // Pfad für das Pfeil-Icon ggf. anpassen
+                                        source: "./public/picture/menuicons/log-out.svg", // Pfad für das Pfeil-Icon ggf. anpassen
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.Back
                                     }),
                                     ui.image({
                                         id: "trenn-back",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.Back
                                     }),
@@ -501,13 +501,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-vsplayer",
-                                        source: "/public/picture/menuicons/users-round.svg", // Pfad ggf. anpassen
+                                        source: "./public/picture/menuicons/users-round.svg", // Pfad ggf. anpassen
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
                                     ui.image({
                                         id: "trenn-vsplayer",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
@@ -537,13 +537,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-vski",
-                                        source: "/public/picture/menuicons/bot.svg", // Pfad ggf. anpassen
+                                        source: "./public/picture/menuicons/bot.svg", // Pfad ggf. anpassen
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
                                     ui.image({
                                         id: "trenn-vski",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
@@ -573,13 +573,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-kivski",
-                                        source: "/public/picture/menuicons/bot-message-square.svg", // Pfad ggf. anpassen
+                                        source: "./public/picture/menuicons/bot-message-square.svg", // Pfad ggf. anpassen
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
                                     ui.image({
                                         id: "trenn-kivski",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.LocalButton
                                     }),
@@ -609,13 +609,13 @@ builder.addScreen(
                                     }),
                                     ui.image({
                                         id: "icon-local-back",
-                                        source: "/public/picture/menuicons/log-out.svg",
+                                        source: "./public/picture/menuicons/log-out.svg",
                                         rect: { x: 12, y: 10, width: 40, height: 30 },
                                         style: KoreMenuStyle.Back
                                     }),
                                     ui.image({
                                         id: "trenn-local-back",
-                                        source: "/public/picture/menuicons/tally-1.svg",
+                                        source: "./public/picture/menuicons/tally-1.svg",
                                         rect: { x: 55, y: 15, width: 24, height: 24 },
                                         style: KoreMenuStyle.Back
                                     }),

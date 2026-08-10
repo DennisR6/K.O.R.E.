@@ -52,7 +52,8 @@ export class EngineAssetManager {
 
 		const startedAt = performance.now();
 		try {
-			const fetchUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
+			const rawUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
+			const fetchUrl = (typeof key === "string" && key.startsWith("/public/")) ? `.${key}` : rawUrl;
 			const response = await this.fetchImpl(fetchUrl);
 			if (!response.ok) throw new Error("Netzwerkfehler");
 
