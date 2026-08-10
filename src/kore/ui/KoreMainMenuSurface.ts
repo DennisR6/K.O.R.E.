@@ -186,7 +186,7 @@ class KoreMenuRenderer implements UiRenderer {
 		}
 
 		const theme = findKoreButtonTheme(element.style);
-		const textColor = theme?.[element.hovered ? "hover" : "normal"].textColor ?? (element.hovered ? KoreMenuColor.HoverText : KoreMenuColor.Text);
+		const textColor = theme?.[element.hovered ? "hover" : "normal"]?.textColor ?? (element.hovered ? KoreMenuColor.HoverText : KoreMenuColor.Text);
 		this.ctx.setFillColor(textColor);
 		const fontSize = element.style === KoreMenuStyle.MapTitle ? 34
 			: element.style === KoreMenuStyle.DifficultyTitle ? 28
@@ -220,7 +220,7 @@ class KoreMenuRenderer implements UiRenderer {
 		if (!element.source) return;
 		const theme = findKoreButtonTheme(element.style);
 		const state = element.hovered ? "hover" : "normal";
-		const color = theme?.[state].textColor;
+		const color = theme?.[state]?.textColor;
 		this.ctx.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height, undefined, undefined, undefined, undefined, color);
 	}
 
