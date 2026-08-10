@@ -30,7 +30,9 @@ Status: `[-]` in progress
 - Rejected HUD actions now emit a distinct semantic UI rejection cue while
   preserving the existing actionable text.
 - Browser AI workers are prewarmed while the menu is idle, avoiding worker
-  startup latency when entering an AI match.
+  startup latency when entering an AI match. The menu preview itself now runs
+  a lightweight live Easy-AI battle on Magma Cradle, so hazards, collisions,
+  bouncing, and deaths are real rather than precomputed positions.
 - The spectator KI-vs-KI mode uses deterministic Easy AI on both teams instead
   of hard speculative search, keeping real AI turns responsive and playable.
 - Added an opt-in gamepad polling path for connected browsers: the left stick

@@ -24,8 +24,6 @@ import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
-type MenuPreviewFrame = { players: Array<{ x: number; y: number; rotation: number; dead?: boolean }> };
-type MenuPreviewAsset = { schemaVersion: 1; frameIntervalMs: number; frames: MenuPreviewFrame[] };
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
 export class LocalMatchSceneRouter implements ISoundEmitter {
@@ -55,7 +53,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
-		this.handler.addPreTicker({ tick: (dt) => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing", dt * 16.666) });
+		this.handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
 		this.handler.addPreTickAndDraw(menu);
 		// Start the browser worker while the menu is idle so the first AI turn
 		// does not expose worker startup as a gameplay loading pause.
@@ -262,7 +260,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		handler.setMouseHandler(menu);
-		handler.addPreTicker({ tick: (dt) => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing", dt * 16.666) });
+		handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
 		handler.addPreTickAndDraw(menu);
 		return handler;
 	}
@@ -309,68 +307,23 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 }
 
-/** Renders precomputed spectator snapshots behind the menu without simulation. */
+/** Runs a lightweight real AI battle behind the main menu. */
 class MenuBattlePreview {
-	private handler = createLocalGameplayHandler("magma-cradle");
-	private frames: MenuPreviewFrame[] = [];
-	private frameIndex = 0;
-	private elapsedMs = 0;
-	private visible = false;
-	private loaded = false;
+	private readonly handler = createAiBattleHandler("magma-cradle", 202608);
 
-	public constructor() { void this.load(); }
-
-	public tick(visible: boolean, deltaMs = 16.666): void {
-		this.visible = visible;
-		if (!visible || !this.loaded || this.frames.length === 0) return;
-		this.elapsedMs += deltaMs;
-		const interval = this.asset?.frameIntervalMs ?? 80;
-		while (this.elapsedMs >= interval) {
-			this.elapsedMs -= interval;
-			this.frameIndex = (this.frameIndex + 1) % this.frames.length;
-		}
-		this.applyFrame(this.frames[this.frameIndex]!);
+	public tick(visible: boolean): void {
+		if (!visible) return;
+		if (this.handler.getState() === GameState.Game_over) this.handler.rematch();
+		this.handler.tick();
 	}
 
 	public draw(renderer: RenderContext): boolean {
-		if (!this.visible) return false;
+		if (!this.handler) return false;
 		this.handler.drawWorld(renderer);
 		return true;
 	}
 
 	public dispose(): void { this.handler.dispose(); }
-
-	private asset: MenuPreviewAsset | undefined;
-	private async load(): Promise<void> {
-		if (typeof window === "undefined" || typeof fetch !== "function") return;
-		try {
-			const response = await fetch(new URL("./public/menu-preview.json", window.location.href), { cache: "force-cache" });
-			if (!response.ok) return;
-			const value = await response.json() as Partial<MenuPreviewAsset>;
-			if (value.schemaVersion !== 1 || typeof value.frameIntervalMs !== "number" || !Number.isFinite(value.frameIntervalMs) || value.frameIntervalMs <= 0 || !Array.isArray(value.frames) || value.frames.length === 0) return;
-			const frames = value.frames.filter(frame => Array.isArray(frame.players) && frame.players.every(player => Number.isFinite(player.x) && Number.isFinite(player.y) && Number.isFinite(player.rotation) && (player.dead === undefined || typeof player.dead === "boolean")));
-			if (frames.length === 0) return;
-			const frameIntervalMs = value.frameIntervalMs;
-			if (typeof frameIntervalMs !== "number") return;
-			this.asset = { schemaVersion: 1, frameIntervalMs, frames };
-			this.frames = frames;
-			this.loaded = true;
-			this.applyFrame(this.frames[0]!);
-		} catch {
-			// The menu remains usable if the optional preview asset is unavailable.
-		}
-	}
-
-	private applyFrame(frame: MenuPreviewFrame): void {
-		const entities = this.handler.getEntityManager().getEntities();
-		for (let index = 0; index < Math.min(entities.length, frame.players.length); index++) {
-			const entity = entities[index];
-			const player = frame.players[index]!;
-			entity.setPos({ x: player.x, y: player.y });
-			entity.setRotation(player.rotation);
-			if (typeof player.dead === "boolean" && "setIsDead" in entity) (entity as { setIsDead(dead: boolean): void }).setIsDead(player.dead);
-		}
-	}
 }
 
 /** Builds a local hotseat match handler on any browser-available catalog map. */
