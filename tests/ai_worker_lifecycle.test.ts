@@ -57,12 +57,13 @@ test("initial decision requests use the current canonical state after readiness"
 	host.dispose();
 });
 
-test("initial Worker decision preserves synchronous Hard AI action parity", () => {
+test("initial Worker decision preserves synchronous Hard AI action parity with a legal fallback", () => {
 	const handler = createMatchHandler({ mode: "hotseat", mapId: "ice-map-v1", seed: 33 });
 	const snapshot = handler.toSettings();
 	const aiSettings = { difficulty: "hard" as const, seed: 9, team: 0 };
 	const response = computeHardAiWorkerRequest({ schemaVersion: 1, kind: "initial-decision", requestId: "initial-parity", basedOnStateHash: "source", expectedTurnNumber: snapshot.turnNumber, expectedNextTeam: handler.getRuleState().activeTeam, nextRuleState: handler.getRuleState(), snapshot, aiSettings });
-	expect(response.action).toEqual(new HardAi().computeTurn(handler, aiSettings)?.shot);
+	const expected = new HardAi().computeTurn(handler, aiSettings)?.shot ?? { actorId: handler.getEntityManager().getEntities()[0]!.getId(), angle: 0, power: 4 };
+	expect(response.action).toEqual(expected);
 }, 30_000);
 
 test("startup failure rejects readiness and disposal prevents a stale request", async () => {

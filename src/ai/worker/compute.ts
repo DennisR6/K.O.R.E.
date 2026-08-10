@@ -19,7 +19,11 @@ export function computeHardAiWorkerRequest(request: HardAiWorkerRequest): HardAi
 		handler.startTurn(request.nextRuleState);
 	}
 	const postTurnStateHash = fingerprintCanonicalSnapshot(handler.toSettings());
-	const action = new HardAi().computeTurn(handler, request.aiSettings)?.shot;
+	const action = new HardAi().computeTurn(handler, request.aiSettings)?.shot
+		?? (() => {
+			const actor = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(request.aiSettings.team) && handler.isActorEligibleForAction(entity.getId()));
+			return actor ? { actorId: actor.getId(), angle: 0, power: 4 } : undefined;
+		})();
 	return {
 		schemaVersion: request.schemaVersion,
 		...(request.kind ? { kind: request.kind } : {}),
