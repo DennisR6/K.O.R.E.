@@ -18,6 +18,8 @@ Status: `[-]` in progress
   controls and Enter/Space activates the focused control.
 - Prevented browser scrolling for UI navigation keys while the production game
   canvas is active, keeping keyboard commands usable on compact screens.
+- Added a visible keyboard-focus outline to HUD controls so focused actions are
+  distinguishable without relying on hover or color alone.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
   aims, the trigger sets power, and the push button releases the shot through
   the existing mouse/input authority boundary. Gamepad release qualification
