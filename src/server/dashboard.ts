@@ -13,7 +13,7 @@ const DASHBOARD_COOKIE = "kore_operator_session";
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 const FRESHNESS = "allTime, offlineMatches, playersAllTime, and map usage include durable online and production-reported offline/KI matches; playersOnline, paused, and sleeping describe authoritative online matches; now is scoped to this server process's resident registry cache.";
 
-export type DashboardConfig = { operatorSecret: string | undefined };
+export type DashboardConfig = { operatorSecret: string | undefined; apiToken?: string };
 
 export type DashboardMetricsResponse = {
 	schemaVersion: 1;
@@ -31,7 +31,11 @@ export type DashboardReplayIndexResponse = { schemaVersion: 1; replays: Operator
 /** Reads a deployment-only secret; unset or weak values deliberately disable routes. */
 export function readDashboardConfig(env: Record<string, string | undefined> = process.env): DashboardConfig {
 	const secret = env.KORE_DASHBOARD_OPERATOR_SECRET;
-	return { operatorSecret: typeof secret === "string" && Buffer.byteLength(secret) >= 32 ? secret : undefined };
+	const apiToken = env.KORE_DASHBOARD_API_TOKEN;
+	return {
+		operatorSecret: typeof secret === "string" && Buffer.byteLength(secret) >= 32 ? secret : undefined,
+		...(typeof apiToken === "string" && Buffer.byteLength(apiToken) >= 32 ? { apiToken } : {}),
+	};
 }
 
 export function isDashboardPath(pathname: string): boolean {
@@ -50,7 +54,7 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
-	if (!isAuthorized(request, config.operatorSecret)) return notFound();
+	if (!isAuthorized(request, config.operatorSecret, pathname === DASHBOARD_METRICS_PATH ? config.apiToken : undefined)) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
 	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, registry, database, pathname, url.searchParams.get("id"), publicBaseUrl);
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
@@ -145,9 +149,10 @@ function emptyPerformanceMetrics(): DashboardPerformanceMetrics {
 	return { today: empty, yesterday: empty, week: empty };
 }
 
-function isAuthorized(request: Request, secret: string | undefined): boolean {
-	if (!secret) return false;
+function isAuthorized(request: Request, secret: string | undefined, apiToken?: string): boolean {
 	const authorization = request.headers.get("authorization");
+	if (apiToken && authorization?.startsWith("Bearer ") && equalSecret(authorization.slice("Bearer ".length), apiToken)) return true;
+	if (!secret) return false;
 	if (authorization?.startsWith("Bearer ") && equalSecret(authorization.slice("Bearer ".length), secret)) return true;
 	return isSessionToken(readCookie(request.headers.get("cookie"), DASHBOARD_COOKIE), secret);
 }
