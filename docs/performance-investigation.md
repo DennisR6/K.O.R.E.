@@ -40,8 +40,10 @@ true or the hard limit of `1,200` frames is reached. Static means every entity
 velocity component is below `0.1`; the check does not provide a sleep state.
 
 The browser calls `active.tick()` synchronously from `p.draw()`. The AI search
-therefore runs inside one browser task; no `requestAnimationFrame`, promise,
-timer, or other host yield occurs inside the search.
+therefore runs inside one browser task for live AI battles; no
+`requestAnimationFrame`, promise, timer, or other host yield occurs inside the
+search. The main-menu background is now a precomputed snapshot asset and does
+not use this live AI path.
 
 ## 3. Baseline Measurements
 
@@ -179,9 +181,9 @@ the old handler, but that work is negligible relative to candidate search.
 In the browser, the result overlay waits for an explicit rematch/menu action.
 The browser harness additionally polls with `100ms` to `250ms` intervals. Those
 polls can make observed transitions look delayed, but they do not explain the
-multi-second battle stalls. The menu preview also runs an autonomous battle
-from its normal draw loop, so its reset/setup path is cheap while the preview
-simulation itself is expensive.
+multi-second battle stalls. The main-menu preview now uses precomputed player
+snapshots from `public/menu-preview.json`; live autonomous simulation remains
+limited to the explicit KI-vs-KI battle scene.
 
 ## 9. Hotspots
 

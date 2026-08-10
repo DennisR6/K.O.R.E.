@@ -410,8 +410,10 @@ After every change, check whether this guide still reflects the implementation a
   battle reaches `Game_over`.
 - `src/scenes/LocalMatchSceneRouter.ts`: menu -> local-match scene boundary
   without retaining stale handlers. The menu switches from its landing artwork
-  to a passive autonomous KI-vs-KI preview rendered behind the SDK menu once
-  the main menu is active. `createLocalGameplayHandler`,
+  to a precomputed snapshot preview rendered behind the SDK menu once the main
+  menu is active; `scripts/createMenuPreviewAsset.ts` generates the served
+  `public/menu-preview.json` frames, so the menu does not run AI or physics.
+  `createLocalGameplayHandler`,
   `createHumanVsAiHandler`, and `createAiBattleHandler` delegate to
   `createMatchHandler`; `startScene` installs `installGameplayHud` for player
   matches and leaves the KI-vs-KI engine HUD-free, while installing the

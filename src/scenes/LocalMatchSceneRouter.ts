@@ -24,6 +24,8 @@ import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
+type MenuPreviewFrame = { players: Array<{ x: number; y: number; rotation: number }> };
+type MenuPreviewAsset = { schemaVersion: 1; frameIntervalMs: number; frames: MenuPreviewFrame[] };
 
 /** Owns the menu/local-match scene boundary without retaining stale handlers. */
 export class LocalMatchSceneRouter implements ISoundEmitter {
@@ -50,11 +52,10 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly autoRestartAiBattle = false,
 	) {
 		this.handler = new GameHandler();
-		if (typeof window !== "undefined" && typeof Worker !== "undefined") this.prewarmedWorkerHost = new HardAiWorkerHost();
 		this.handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		this.handler.setMouseHandler(menu);
-		this.handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
+		this.handler.addPreTicker({ tick: (dt) => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing", dt * 16.666) });
 		this.handler.addPreTickAndDraw(menu);
 	}
 
@@ -242,7 +243,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		handler.setLanguage(this.language);
 		const menu = this.createMenuSurface();
 		handler.setMouseHandler(menu);
-		handler.addPreTicker({ tick: () => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing") });
+		handler.addPreTicker({ tick: (dt) => this.menuPreview?.tick(menu.getRuntime().getActiveScreen() !== "landing", dt * 16.666) });
 		handler.addPreTickAndDraw(menu);
 		return handler;
 	}
@@ -289,26 +290,27 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 }
 
-/** Runs a spectator battle behind the menu without exposing its input surface. */
+/** Renders precomputed spectator snapshots behind the menu without simulation. */
 class MenuBattlePreview {
-	private workerHost = new HardAiWorkerHost();
-	private handler = createAiBattleHandler("ice-map-v1", undefined, undefined, this.workerHost);
+	private handler = createLocalGameplayHandler("ice-map-v1");
+	private frames: MenuPreviewFrame[] = [];
+	private frameIndex = 0;
+	private elapsedMs = 0;
 	private visible = false;
-	private tickCounter = 0;
+	private loaded = false;
 
-	public tick(visible: boolean): void {
+	public constructor() { void this.load(); }
+
+	public tick(visible: boolean, deltaMs = 16.666): void {
 		this.visible = visible;
-		if (!visible) return;
-		// The preview is decorative. Keep its authoritative simulation below the
-		// browser render rate so a long AI turn cannot freeze menu interaction.
-		if (++this.tickCounter % 4 !== 0) return;
-		if (this.handler.getState() === GameState.Game_over) {
-			this.handler.dispose();
-			this.workerHost.dispose();
-			this.workerHost = new HardAiWorkerHost();
-			this.handler = createAiBattleHandler("ice-map-v1", undefined, undefined, this.workerHost);
+		if (!visible || !this.loaded || this.frames.length === 0) return;
+		this.elapsedMs += deltaMs;
+		const interval = this.asset?.frameIntervalMs ?? 80;
+		while (this.elapsedMs >= interval) {
+			this.elapsedMs -= interval;
+			this.frameIndex = (this.frameIndex + 1) % this.frames.length;
 		}
-		this.handler.tick();
+		this.applyFrame(this.frames[this.frameIndex]!);
 	}
 
 	public draw(renderer: RenderContext): boolean {
@@ -319,7 +321,37 @@ class MenuBattlePreview {
 
 	public dispose(): void {
 		this.handler.dispose();
-		this.workerHost.dispose();
+	}
+
+	private asset: MenuPreviewAsset | undefined;
+	private async load(): Promise<void> {
+		if (typeof window === "undefined" || typeof fetch !== "function") return;
+		try {
+			const response = await fetch(new URL("./public/menu-preview.json", window.location.href), { cache: "force-cache" });
+			if (!response.ok) return;
+			const value = await response.json() as Partial<MenuPreviewAsset>;
+			if (value.schemaVersion !== 1 || typeof value.frameIntervalMs !== "number" || !Number.isFinite(value.frameIntervalMs) || value.frameIntervalMs <= 0 || !Array.isArray(value.frames) || value.frames.length === 0) return;
+			const frames = value.frames.filter(frame => Array.isArray(frame.players) && frame.players.every(player => Number.isFinite(player.x) && Number.isFinite(player.y) && Number.isFinite(player.rotation)));
+			if (frames.length === 0) return;
+			const frameIntervalMs = value.frameIntervalMs;
+			if (typeof frameIntervalMs !== "number") return;
+			this.asset = { schemaVersion: 1, frameIntervalMs, frames };
+			this.frames = frames;
+			this.loaded = true;
+			this.applyFrame(this.frames[0]!);
+		} catch {
+			// The menu remains usable if the optional preview asset is unavailable.
+		}
+	}
+
+	private applyFrame(frame: MenuPreviewFrame): void {
+		const entities = this.handler.getEntityManager().getEntities();
+		for (let index = 0; index < Math.min(entities.length, frame.players.length); index++) {
+			const entity = entities[index];
+			const player = frame.players[index]!;
+			entity.setPos({ x: player.x, y: player.y });
+			entity.setRotation(player.rotation);
+		}
 	}
 }
 
