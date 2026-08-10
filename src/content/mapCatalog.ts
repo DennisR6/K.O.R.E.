@@ -164,7 +164,7 @@ export const MAP_CATALOG: readonly MapCatalogEntry[] = [
 		worldSize: "scalable",
 		symmetry: "symmetric",
 		spawnRegionCount: magma.spawnRegions.length,
-		structureCount: countArenaGeometry(magma), // includes the containment rect and perimeter walls
+		structureCount: countArenaGeometry(magma), // includes the containment rect and internal volcanic walls
 		hazardCount: magma.hazards.length,
 		hazardTypes: ["force", "kill-zone"],
 		friction: "tiles",
