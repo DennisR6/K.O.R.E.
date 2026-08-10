@@ -155,6 +155,7 @@ export class GameDatabase {
 				user_id TEXT,
 				mode TEXT,
 				map_id TEXT,
+				topic TEXT,
 				rating INTEGER,
 				text TEXT NOT NULL,
 				created_at INTEGER NOT NULL,
@@ -162,6 +163,7 @@ export class GameDatabase {
 			)
 		`);
 		const feedbackColumns = this.db.query("PRAGMA table_info(user_feedback)").all() as Array<{ name: string }>;
+		if (!feedbackColumns.some(column => column.name === "topic")) this.db.run("ALTER TABLE user_feedback ADD COLUMN topic TEXT");
 		if (!feedbackColumns.some(column => column.name === "rating")) this.db.run("ALTER TABLE user_feedback ADD COLUMN rating INTEGER");
 		const reportColumns = this.db.query("PRAGMA table_info(match_reports)").all() as Array<{ name: string }>;
 		if (!reportColumns.some(column => column.name === "turn_number")) this.db.run("ALTER TABLE match_reports ADD COLUMN turn_number INTEGER NOT NULL DEFAULT 0");
@@ -517,15 +519,15 @@ export class GameDatabase {
 
 	public storeFeedback(feedback: FeedbackSubmission, now: number = Date.now()): StoredFeedback {
 		const id = crypto.randomUUID();
-		this.db.query("INSERT INTO user_feedback (id, game_id, user_id, mode, map_id, rating, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")
-			.run(id, feedback.gameId ?? null, feedback.userId ?? null, feedback.mode ?? null, feedback.mapId ?? null, feedback.rating ?? null, feedback.text.trim(), now);
+		this.db.query("INSERT INTO user_feedback (id, game_id, user_id, mode, map_id, topic, rating, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)")
+			.run(id, feedback.gameId ?? null, feedback.userId ?? null, feedback.mode ?? null, feedback.mapId ?? null, feedback.topic ?? null, feedback.rating ?? null, feedback.text.trim(), now);
 		return { ...structuredClone(feedback), id, createdAt: now };
 	}
 
 	public listFeedback(limit = 100): StoredFeedback[] {
 		const bounded = Math.max(1, Math.min(1_000, Math.trunc(limit)));
-		const rows = this.db.query("SELECT id, game_id, user_id, mode, map_id, rating, text, created_at FROM user_feedback ORDER BY created_at DESC, id ASC LIMIT ?1").all(bounded) as Array<{ id: string; game_id: string | null; user_id: string | null; mode: FeedbackSubmission["mode"] | null; map_id: string | null; rating: number | null; text: string; created_at: number }>;
-		return rows.map(row => ({ id: row.id, ...(row.game_id ? { gameId: row.game_id } : {}), ...(row.user_id ? { userId: row.user_id } : {}), ...(row.mode ? { mode: row.mode } : {}), ...(row.map_id ? { mapId: row.map_id } : {}), ...(row.rating === null ? {} : { rating: row.rating }), text: row.text, createdAt: row.created_at }));
+		const rows = this.db.query("SELECT id, game_id, user_id, mode, map_id, topic, rating, text, created_at FROM user_feedback ORDER BY created_at DESC, id ASC LIMIT ?1").all(bounded) as Array<{ id: string; game_id: string | null; user_id: string | null; mode: FeedbackSubmission["mode"] | null; map_id: string | null; topic: FeedbackSubmission["topic"] | null; rating: number | null; text: string; created_at: number }>;
+		return rows.map(row => ({ id: row.id, ...(row.game_id ? { gameId: row.game_id } : {}), ...(row.user_id ? { userId: row.user_id } : {}), ...(row.mode ? { mode: row.mode } : {}), ...(row.map_id ? { mapId: row.map_id } : {}), ...(row.topic ? { topic: row.topic } : {}), ...(row.rating === null ? {} : { rating: row.rating }), text: row.text, createdAt: row.created_at }));
 	}
 
 	/** Persists one completed offline/KI match for later data analysis. */
