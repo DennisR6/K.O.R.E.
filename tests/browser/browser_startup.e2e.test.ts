@@ -357,4 +357,24 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 		expect(server.isAlive()).toBe(false);
 		expect(activeBrowserServers()).toBe(0);
 	});
+
+	test("mobile viewport keeps the accessible canvas within the viewport", async () => {
+		await ensureBrowserBuild();
+		const server = await startTestServer();
+		const browser = await launchBrowser();
+		try {
+			const page = await openPage(browser, server.url);
+			await page.setViewportSize({ width: 390, height: 844 });
+			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "mobile canvas");
+			const geometry = await canvasGeometry(page);
+			expect(geometry.width).toBeLessThanOrEqual(390);
+			expect(geometry.height).toBeLessThanOrEqual(844);
+			expect(await page.evaluate(() => ({ role: document.querySelector("canvas")?.getAttribute("role"), tabIndex: (document.querySelector("canvas") as HTMLCanvasElement | null)?.tabIndex }))).toEqual({ role: "application", tabIndex: 0 });
+		} finally {
+			await closeBrowser(browser);
+			await server.stop();
+		}
+		expect(server.isAlive()).toBe(false);
+		expect(activeBrowserServers()).toBe(0);
+	});
 });

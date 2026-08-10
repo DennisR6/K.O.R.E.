@@ -28,7 +28,9 @@ export function calculateDesktopLayout(screenWidth: number, screenHeight: number
 		baseScale = Math.min(baseScale, 2.5);
 	}
 
-	const scaleFactor = Math.max(baseScale, 0.5);
+	// Mobile must fit the canvas width exactly; the desktop minimum scale of
+	// 0.5 would overflow narrow phones (800 * 0.5 = 400px).
+	const scaleFactor = isMobile ? Math.max(baseScale, 0.25) : Math.max(baseScale, 0.5);
 	const touchTargetPadding = isMobile ? 16 : (steamDeck ? 12 : 8);
 	const uiFontSize = isMobile ? 18 : (steamDeck || screenWidth >= 2560 ? 16 : 14);
 

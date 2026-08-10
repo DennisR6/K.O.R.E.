@@ -24,6 +24,9 @@ Status: `[-]` in progress
   submitting a shot; normal touch release keeps the existing submission path.
 - The production canvas is now keyboard-focusable and exposes an application
   role and accessible label for assistive technology.
+- Mobile canvas scaling no longer applies the desktop 0.5 minimum, preventing
+  400px canvas overflow on narrow 390px viewports; browser coverage verifies
+  the responsive bound.
 - Rejected HUD actions now emit a distinct semantic UI rejection cue while
   preserving the existing actionable text.
 - Added an opt-in gamepad polling path for connected browsers: the left stick
