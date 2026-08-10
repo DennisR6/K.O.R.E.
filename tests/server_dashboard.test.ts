@@ -16,6 +16,8 @@ const request = (path: string, authorization?: string, method = "GET") => new Re
 test.serial("dashboard returns only versioned aggregate metrics and matching visible labels", async () => {
 	const database = new GameDatabase(":memory:");
 	const registry = new GameRegistry(database);
+	database.storeFeedback({ mode: "hotseat", mapId: "ice-map-v1", text: "Older feedback" }, 100);
+	database.storeFeedback({ mode: "online", mapId: "cue-clash", text: "Newest feedback" }, 200);
 	const response = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(response.status).toBe(200);
 	expect(response.headers.get("cache-control")).toBe("no-store");
@@ -25,7 +27,7 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 		freshness: metricsResponse(registry.getMetrics()).freshness,
 	});
 
-	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }))!.text();
+	const page = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!.text();
 	expect(page).toContain('data-metric="allTime">0');
 	expect(page).toContain("All-time matches");
 	expect(page).toContain("All-time players");
@@ -43,6 +45,10 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain('data-period="week"');
 	expect(page).toContain('id="latency-median"');
 	expect(page).toContain("No data");
+	expect(page).toContain("Recent feedback");
+	expect(page).toContain("Newest feedback");
+	expect(page).toContain("Older feedback");
+	expect(page.indexOf("Newest feedback")).toBeLessThan(page.indexOf("Older feedback"));
 	expect(page).not.toContain("snapshot");
 	expect(page).not.toContain(users[0]);
 	const mountedPage = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!.text();
