@@ -9,7 +9,7 @@
  */
 export const DEFAULT_KORE_BASE_URL = "https://lupricht.net/kore/";
 /** Deployment marker used to verify that the staging hook has published the expected build. */
-export const DEPLOYMENT_HASH = "630c978b14d17bc1eaf59f35d777a459a81c0c6e33e6f63e2a085133ed4dd84b";
+export const DEPLOYMENT_HASH = "9950c40a1ab04c3a07c2af5d026d85513b21b18d17dddf864ed51f1e56328618";
 
 export interface ServerConfig {
 	baseUrl: string;

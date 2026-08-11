@@ -1,9 +1,16 @@
 import { expect, test } from "bun:test";
-import { buildFeedbackEndpoint, reportFeedback } from "../src/net/feedback.ts";
+import { buildDesyncFeedbackText, buildFeedbackEndpoint, reportFeedback } from "../src/net/feedback.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { serveFeedback } from "../src/server/feedbackRoute.ts";
 import { GameSettings } from "../src/settings/settings.ts";
+
+test("automatic desync feedback includes the diagnostic event and turn", () => {
+	const text = buildDesyncFeedbackText({ type: "turnPacket.hash-mismatch", turnNumber: 7, data: { expectedStateHash: "aaaa", actualStateHash: "bbbb" } });
+	expect(text).toContain("Automatic network desync detected");
+	expect(text).toContain("turn=7");
+	expect(text).toContain("expectedStateHash");
+});
 
 test("feedback endpoint preserves deployment paths and posts feedback", async () => {
 	expect(buildFeedbackEndpoint("https://example.test/kore/?lang=en_en")).toBe("https://example.test/kore/api/feedback");

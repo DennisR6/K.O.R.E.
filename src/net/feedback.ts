@@ -6,6 +6,11 @@ export type FeedbackContext = { gameId?: string; userId?: string; mode: Feedback
 export type FeedbackPrompt = (message?: string, defaultValue?: string) => string | null;
 export type FeedbackTopic = "bug" | "balance" | "controls" | "other";
 
+export function buildDesyncFeedbackText(log: { type: string; turnNumber: number; data: unknown }): string {
+	const details = JSON.stringify(log.data);
+	return `Automatic network desync detected. turn=${log.turnNumber}; event=${log.type}; details=${details}`.slice(0, 2_000);
+}
+
 export function buildFeedbackEndpoint(baseUrl: string): string {
 	if (!baseUrl) return "";
 	const url = new URL(baseUrl);
@@ -36,6 +41,21 @@ export function installFeedbackPrompt(handler: GameHandler, context: FeedbackCon
 			const parsedRating = rawRating === undefined || rawRating === "" ? undefined : Number(rawRating);
 			const rating = parsedRating !== undefined && Number.isSafeInteger(parsedRating) && parsedRating >= 1 && parsedRating <= 5 ? parsedRating : undefined;
 			void reportFeedback(context, text, endpoint, globalThis.fetch, rating, topic);
+		},
+	});
+}
+
+export function installDesyncFeedbackReporter(handler: GameHandler, context: FeedbackContext, endpoint: string): void {
+	const reported = new Set<string>();
+	handler.addPostDrawer({
+		draw: () => {
+			for (const log of handler.getLogs()) {
+				if (log.type !== "turnPacket.hash-mismatch" && log.type !== "turnPacket.stale") continue;
+				const key = `${log.type}:${log.turnNumber}:${JSON.stringify(log.data)}`;
+				if (reported.has(key)) continue;
+				reported.add(key);
+				void reportFeedback(context, buildDesyncFeedbackText(log), endpoint, globalThis.fetch, undefined, "bug");
+			}
 		},
 	});
 }

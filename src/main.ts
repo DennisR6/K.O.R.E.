@@ -33,7 +33,7 @@ import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/p
 import { buildMatchReportEndpoint, reportMatchHttp } from "./net/matchReport.js";
 import { flushOfflineMatchReports } from "./net/offlineMatchReport.js";
 import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./engine/startupTelemetry.js";
-import { buildFeedbackEndpoint, installFeedbackPrompt } from "./net/feedback.js";
+import { buildFeedbackEndpoint, installDesyncFeedbackReporter, installFeedbackPrompt } from "./net/feedback.js";
 import { ActionManager, GameAction } from "./input/actions.js";
 import { ControllerInput } from "./input/controller.js";
 
@@ -200,7 +200,12 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		handler.setRuleState(init.ruleState)
 		const performanceUserId = getUserUUUID();
 		if (init.gameId && performanceUserId) installMatchPerformanceReport(handler, init.gameId, performanceUserId, undefined, buildPerformanceEndpoint(serverUrl, init.gameId))
-		if (init.gameId) installFeedbackPrompt(handler, { gameId: init.gameId, userId: performanceUserId ?? undefined, mode: "online", mapId: init.mapId }, buildFeedbackEndpoint(serverUrl))
+		if (init.gameId) {
+			const feedbackEndpoint = buildFeedbackEndpoint(serverUrl);
+			const feedbackContext = { gameId: init.gameId, userId: performanceUserId ?? undefined, mode: "online" as const, mapId: init.mapId };
+			installFeedbackPrompt(handler, feedbackContext, feedbackEndpoint);
+			installDesyncFeedbackReporter(handler, feedbackContext, feedbackEndpoint);
+		}
 		// The online branch installs the same gameplay HUD as every offline mode;
 		// only the semantic actions and capability limits differ.
 		installGameplayHud(handler, {

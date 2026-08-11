@@ -558,7 +558,10 @@ After every change, check whether this guide still reflects the implementation a
   idempotent match and per-turn performance summaries without replay state.
 - `src/server/feedbackRoute.ts` and `src/net/feedback.ts`: validated native
   prompt feedback submission for completed online and local player matches;
-  `GameDatabase` accumulates the entries in `user_feedback` for later review.
+  online matches also automatically submit one `topic: bug` feedback entry per
+  stale or hash-mismatched network packet with the game context, turn, hashes,
+  and diagnostic data; `GameDatabase` accumulates the entries in
+  `user_feedback` for later review.
 - `src/server/mapRepository.ts`: server-only approved-map lookup and canonical
   `MapDocument` -> `GameSettings` conversion boundary. It rejects draft and
   retired revisions for new matches while preserving them in storage. Its
