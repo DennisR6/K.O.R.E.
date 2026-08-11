@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { EngineSettings } from "../engine/types.js";
@@ -276,10 +276,18 @@ export class GameDatabase {
 
 	/** Creates a consistent SQLite image for an authenticated operator backup. */
 	exportSnapshot(): Uint8Array {
-		// Bun's serialize() does not include unapplied WAL pages. Checkpoint the
-		// live database first so backups contain the complete schema and blobs.
-		this.db.run("PRAGMA wal_checkpoint(FULL)");
-		return this.db.serialize();
+		// Bun's serialize() can produce an incomplete image for a live WAL-backed
+		// file database. VACUUM INTO creates a consistent SQLite backup including
+		// all committed schema pages and blobs.
+		const directory = mkdtempSync("/tmp/kore-backup-");
+		const backupPath = `${directory}/backup.sqlite`;
+		try {
+			const escapedPath = backupPath.replaceAll("'", "''");
+			this.db.run(`VACUUM INTO '${escapedPath}'`);
+			return new Uint8Array(readFileSync(backupPath));
+		} finally {
+			rmSync(directory, { recursive: true, force: true });
+		}
 	}
 
 	public createGame(game: StoredGame): void {
