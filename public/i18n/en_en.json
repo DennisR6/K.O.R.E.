@@ -78,6 +78,7 @@
     "kore.ui.loading.connecting": "Connecting to the match server…",
     "kore.ui.loading.findingOpponent": "Finding an opponent…",
     "kore.ui.loading.waitingOpponent": "Waiting for an opponent…",
+    "kore.ui.loading.waitingTime": "Waiting time: {elapsed}",
     "kore.ui.loading.connectFailed": "Could not connect to the match server.",
     "kore.ui.loading.connectionClosed": "The match connection closed before setup completed.",
     "kore.ui.loading.timedOut": "Matchmaking timed out. Please retry.",

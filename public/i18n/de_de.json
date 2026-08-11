@@ -78,6 +78,7 @@
     "kore.ui.loading.connecting": "Verbindung zum Spielserver wird hergestellt…",
     "kore.ui.loading.findingOpponent": "Gegner wird gesucht…",
     "kore.ui.loading.waitingOpponent": "Warten auf einen Gegner…",
+    "kore.ui.loading.waitingTime": "Wartezeit: {elapsed}",
     "kore.ui.loading.connectFailed": "Verbindung zum Spielserver fehlgeschlagen.",
     "kore.ui.loading.connectionClosed": "Die Spielverbindung wurde vor der Einrichtung geschlossen.",
     "kore.ui.loading.timedOut": "Die Gegnersuche ist abgelaufen. Bitte erneut versuchen.",
