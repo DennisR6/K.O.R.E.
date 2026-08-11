@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
-import { DASHBOARD_DATABASE_PATH, DASHBOARD_FEEDBACK_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
+import { DASHBOARD_API_KEYS_PATH, DASHBOARD_DATABASE_PATH, DASHBOARD_FEEDBACK_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 import { servePublicReplayShare } from "../src/server/replayShares.ts";
 import { ReplayViewer } from "../src/menu/replayViewer.ts";
 import { ReplayRecorder } from "../src/replay/recorder.ts";
@@ -236,12 +236,18 @@ test("dashboard routes fail closed and never expose errors", async () => {
 
 test("read-only API tokens authenticate metrics but not operator routes", async () => {
 	const database = new GameDatabase(":memory:");
-	const token = database.createDashboardApiToken("test-bot").token;
+	const created = database.createDashboardApiToken("test-bot");
+	const token = created.token;
 	const config = readDashboardConfig({ KORE_DASHBOARD_OPERATOR_SECRET: secret });
 	const registry = { getMetrics: () => ({ allTime: 0, offlineMatches: 0, offlineModes: [], playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0, mapUsage: [], mostPlayedMap: null, measuredAt: 1, consistency: "now is scoped to this server process's resident registry cache" }) } as unknown as GameRegistry;
 	const metrics = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${token}`), registry, config, database))!;
 	expect(metrics.status).toBe(200);
 	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config, database))!.status).toBe(404);
+	const listed = (await serveDashboard(request(DASHBOARD_API_KEYS_PATH, `Bearer ${secret}`), registry, config, database))!;
+	expect(await listed.json()).toMatchObject({ tokens: [{ id: created.record.id, label: "test-bot" }] });
+	const deleted = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_API_KEYS_PATH}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}`, "content-type": "application/x-www-form-urlencoded" }, body: `id=${encodeURIComponent(created.record.id)}` }), registry, config, database))!;
+	expect(deleted.status).toBe(200);
+	expect(database.listDashboardApiTokens()).toHaveLength(0);
 	database.close();
 });
 
