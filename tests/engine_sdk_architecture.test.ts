@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { engine, EngineSystemRegistry } from "../src/engine/sdk/index.ts";
 import { kore } from "../src/kore/sdk/index.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
@@ -19,6 +20,22 @@ test("generic Engine SDK authors JSON worlds without importing KORE", () => {
 		const source = readFileSync(file, "utf8");
 		expect(source).not.toMatch(/from\s+["'].*(?:kore|settings|rules|item|ai|content|server|ui|menu|scenes)[/"']/);
 	}
+});
+
+test("generic engine source has no reverse imports into KORE or game domains", () => {
+	const forbidden = /^(?:\.\.\/|\.\/)+(?:kore|ai|item|rules|settings|content|server|scenes|menu|assetManager|i18n)(?:\/|$)/;
+	const files = (directory: string): string[] => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+		const path = join(directory, entry.name).replaceAll("\\", "/");
+		return entry.isDirectory() ? files(path) : entry.isFile() && path.endsWith(".ts") ? [path] : [];
+	});
+	const violations: string[] = [];
+	for (const file of files("src/engine")) {
+		for (const line of readFileSync(file, "utf8").split("\n")) {
+			const match = /from\s+["']([^"']+)["']/.exec(line);
+			if (match?.[1] && forbidden.test(match[1])) violations.push(`${file}: ${match[1]}`);
+		}
+	}
+	expect(violations).toEqual([]);
 });
 
 test("generic system registry resolves deterministic capabilities, optional systems, and replacements", () => {
