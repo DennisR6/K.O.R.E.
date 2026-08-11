@@ -27,7 +27,7 @@ test("priority, cancellation, interruption and runtime restoration are explicit"
 });
 
 test("presentation is a visual projection outside canonical engine settings and stays renderer-neutral", () => {
-	const engineSource = readFileSync("node_modules/@coffeemakerstudio/roast/src/sdk/index.ts", "utf8"); const presentationSource = readFileSync("node_modules/@coffeemakerstudio/roast/src/presentation-sdk/index.ts", "utf8");
+	const engineSource = readFileSync("node_modules/@coffeemakerstudio/roast/dist/sdk/index.js", "utf8"); const presentationSource = readFileSync("node_modules/@coffeemakerstudio/roast/dist/presentation-sdk/index.js", "utf8");
 	expect(engineSource).not.toContain("presentation-sdk"); expect(presentationSource).not.toMatch(/p5|DOM|AudioManager|requestAnimationFrame|addEventListener/);
 	const runtime = presentation.createRuntime("r", { animations: [animation("pulse")] }); runtime.emit(presentation.play("e", "pulse")); const frame = runtime.tick();
 	expect(frame.animations).toHaveLength(1); expect(runtime.toSettings()).not.toHaveProperty("players"); expect(JSON.parse(JSON.stringify(runtime.toSettings()))).toEqual(runtime.toSettings());

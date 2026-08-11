@@ -44,9 +44,9 @@ const SCHEMA_VERSION = 1;
 // of the resolved map settings, so touching one map only invalidates that
 // map's cells instead of the whole matrix.
 const CORE_SOURCE_PATHS = [
-	"node_modules/@coffeemakerstudio/roast/src",
-	"node_modules/@coffeemakerstudio/bean/src",
-	"node_modules/@coffeemakerstudio/drip/src",
+	"node_modules/@coffeemakerstudio/roast/dist",
+	"node_modules/@coffeemakerstudio/bean/dist",
+	"node_modules/@coffeemakerstudio/drip/dist",
 	"src/physics",
 	"src/rules",
 	"src/ai",
