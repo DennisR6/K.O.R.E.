@@ -203,11 +203,15 @@ function isSettingMutable(entity) {
   return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
 }
 
+// ../engine-repo/packages/bean/dist/index.js
 var PHYSICS_CONTACT_SLOP = 0.05;
 var PHYSICS_CONTACT_PERCENT = 0.2;
 var MAX_CONTACT_SOLVER_ITERATIONS = 16;
 var CCD_MAX_STEP_SIZE = 4;
 var MAX_CCD_SUBSTEPS = 16;
+function isPhysicsParticipant(entity) {
+  return !entity.isDead() && entity.physicsEnabled();
+}
 function forwardVectorFromRotation(rotation) {
   const radians = rotation * Math.PI / 180;
   return { x: Math.cos(radians), y: Math.sin(radians) };
@@ -215,13 +219,19 @@ function forwardVectorFromRotation(rotation) {
 function isStructureCollisionRole(value) {
   return value === "solid" || value === "containment" || value === "both";
 }
+var SHAPE;
+((SHAPE2) => {
+  SHAPE2[SHAPE2["CIRCLE"] = 0] = "CIRCLE";
+  SHAPE2[SHAPE2["LINE"] = 1] = "LINE";
+  SHAPE2[SHAPE2["RECTANGLE"] = 2] = "RECTANGLE";
+})(SHAPE ||= {});
 function getShapeName(input) {
   switch (input) {
-    case 0 /* CIRCLE */:
+    case 0:
       return "circle";
-    case 2 /* RECTANGLE */:
+    case 2:
       return "rectangle";
-    case 1 /* LINE */:
+    case 1:
       return "line";
     default:
       return "TODO";
@@ -334,15 +344,15 @@ class defaultPhysics {
   }
   checkCollision(entityA, entityB) {
     switch (true) {
-      case (entityA.getShape() == 0 /* CIRCLE */ && entityB.getShape() == 0 /* CIRCLE */):
+      case (entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.CIRCLE):
         return this.checkCollisionCircles(entityA, entityB);
-      case (entityA.getShape() == 2 /* RECTANGLE */ && entityB.getShape() == 2 /* RECTANGLE */):
+      case (entityA.getShape() == SHAPE.RECTANGLE && entityB.getShape() == SHAPE.RECTANGLE):
         return this.checkCollisionRects(entityA, entityB);
-      case (entityA.getShape() == 0 /* CIRCLE */ && entityB.getShape() == 2 /* RECTANGLE */):
+      case (entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.RECTANGLE):
         return this.checkCollisionCircleRect(entityA, entityB);
-      case (entityA.getShape() == 0 /* CIRCLE */ && entityB.getShape() == 1 /* LINE */):
+      case (entityA.getShape() == SHAPE.CIRCLE && entityB.getShape() == SHAPE.LINE):
         return this.checkCollisionCircleLine(entityA, entityB);
-      case (entityA.getShape() == 1 /* LINE */ && entityB.getShape() == 0 /* CIRCLE */):
+      case (entityA.getShape() == SHAPE.LINE && entityB.getShape() == SHAPE.CIRCLE):
         return this.checkCollisionCircleLine(entityB, entityA);
       default:
         console.log(`Collision not implemented for ${getShapeName(entityA.getShape())} ${getShapeName(entityB.getShape())}`);
@@ -380,7 +390,7 @@ class defaultPhysics {
     }
     const dist = this.dist(posA, posB);
     switch (true) {
-      case (entityA.getShape() === 0 /* CIRCLE */ && entityB.getShape() === 0 /* CIRCLE */): {
+      case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.CIRCLE): {
         const radiusA = entityA.getBounds().x;
         const radiusB = entityB.getBounds().x;
         const combinedRadius = radiusA + radiusB;
@@ -431,10 +441,10 @@ class defaultPhysics {
         entityB.onCollision({ entity: entityA });
         break;
       }
-      case (entityA.getShape() === 0 /* CIRCLE */ && entityB.getShape() === 1 /* LINE */):
-      case (entityA.getShape() === 1 /* LINE */ && entityB.getShape() === 0 /* CIRCLE */): {
-        const circle = entityA.getShape() === 0 /* CIRCLE */ ? entityA : entityB;
-        const line = entityA.getShape() === 1 /* LINE */ ? entityA : entityB;
+      case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.LINE):
+      case (entityA.getShape() === SHAPE.LINE && entityB.getShape() === SHAPE.CIRCLE): {
+        const circle = entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB;
+        const line = entityA.getShape() === SHAPE.LINE ? entityA : entityB;
         const closest = this.closestPointOnLine(circle, line);
         const position = circle.getPos();
         const normal = this.sub(position, closest);
@@ -464,14 +474,14 @@ class defaultPhysics {
         line.onCollision({ entity: circle });
         break;
       }
-      case (entityA.getShape() === 2 /* RECTANGLE */ && entityB.getShape() === 2 /* RECTANGLE */): {
+      case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.RECTANGLE): {
         console.error("TODO! /phyics/defaultPhysics.ts", entityA.getShape(), entityB.getShape());
         break;
       }
-      case (entityA.getShape() === 0 /* CIRCLE */ && entityB.getShape() === 2 /* RECTANGLE */):
-      case (entityA.getShape() === 2 /* RECTANGLE */ && entityB.getShape() === 0 /* CIRCLE */): {
-        const circle = entityA.getShape() === 0 /* CIRCLE */ ? entityA : entityB;
-        const rectangle = entityA.getShape() === 2 /* RECTANGLE */ ? entityA : entityB;
+      case (entityA.getShape() === SHAPE.CIRCLE && entityB.getShape() === SHAPE.RECTANGLE):
+      case (entityA.getShape() === SHAPE.RECTANGLE && entityB.getShape() === SHAPE.CIRCLE): {
+        const circle = entityA.getShape() === SHAPE.CIRCLE ? entityA : entityB;
+        const rectangle = entityA.getShape() === SHAPE.RECTANGLE ? entityA : entityB;
         const cPos = circle.getPos();
         const rPos = rectangle.getPos();
         const rBounds = rectangle.getBounds();
@@ -639,7 +649,7 @@ class defaultPhysics {
   }
   isStatic(entities) {
     const epsilon = 0.1;
-    return entities.getEntities().every((e) => {
+    return entities.getEntities().filter(isPhysicsParticipant).every((e) => {
       const vel = e.getVel();
       return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
     });
@@ -1157,6 +1167,7 @@ class MetaEffect {
   }
 }
 
+// ../engine-repo/packages/roast/dist/index.js
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -1324,7 +1335,6 @@ function topologicalOrder(definitions) {
 function clone(value) {
   return structuredClone(value);
 }
-
 var COUNTER_SCHEMA_VERSION = 1;
 function createCounterState(input) {
   const state = {
@@ -1470,7 +1480,6 @@ function validateDefinition2(definition) {
   if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
     throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
-
 function createTransformState(input) {
   const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
   validateTransformState(state);
@@ -1523,7 +1532,6 @@ function finite3(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
-
 var MOVEMENT_CAPABILITY = "movement.state";
 var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
 var MOVEMENT_ADD_VELOCITY_EFFECT_ID = "movement.add-velocity";
@@ -1738,7 +1746,6 @@ function finiteNonNegative2(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
     throw new Error(`${label} must be a finite non-negative number`);
 }
-
 var COUNTER_SET_EFFECT_ID = "counter.set";
 var COUNTER_ADD_EFFECT_ID = "counter.add";
 var COUNTER_RESET_EFFECT_ID = "counter.reset";
@@ -1999,7 +2006,6 @@ function validateLifetime(value) {
   if (!Number.isSafeInteger(lifetime.remaining) || lifetime.remaining < 1 || lifetime.remaining > lifetime.duration)
     throw new Error("Lifetime remaining duration is invalid");
 }
-
 var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
 function createTemporalModifierTemplate(input) {
   const template = structuredClone(input);
@@ -2196,6 +2202,7 @@ function validateEngineEffect(value) {
 function lifetimeOf3(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
+
 class SeededRandom {
   state;
   constructor(seed) {
@@ -2228,7 +2235,6 @@ class SeededRandom {
     return random;
   }
 }
-
 var ACTION_MODIFIER_SCHEMA_VERSION = 1;
 function createActionModifierTemplate(input) {
   const template = structuredClone(input);
@@ -2543,7 +2549,6 @@ function compareConstraintOrder(first, second) {
 function compareLifetimeOrder2(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
-
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -2578,6 +2583,1909 @@ var engine = {
     return JSON.stringify(settings, null, space);
   }
 };
+var DEFAULT_BUSES = [
+  { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
+  { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
+  { id: "ambience", volume: 1, muted: false, maxVoices: 8, defaultPriority: 20, paused: false },
+  { id: "effects", volume: 1, muted: false, maxVoices: 32, defaultPriority: 10, paused: false },
+  { id: "ui", volume: 1, muted: false, maxVoices: 8, defaultPriority: 30, paused: false },
+  { id: "voice", volume: 1, muted: false, maxVoices: 8, defaultPriority: 40, paused: false }
+];
+
+class AudioEmitter {
+  soundSourceId;
+  pending = [];
+  constructor(soundSourceId) {
+    this.soundSourceId = soundSourceId;
+    validateId(soundSourceId, "sound source ID");
+  }
+  emit(command) {
+    validateAudioCommand(command);
+    if (command.sourceId !== this.soundSourceId)
+      throw new Error(`Audio command source '${command.sourceId}' does not match emitter '${this.soundSourceId}'`);
+    this.pending.push(clone3(command));
+  }
+  drainSoundCommands() {
+    const commands = this.pending.map(clone3);
+    this.pending = [];
+    return commands;
+  }
+}
+
+class SoundSystem {
+  runtimeId;
+  buses = new Map;
+  persistent = new Map;
+  pending = [];
+  output;
+  sequence;
+  constructor(runtimeId, settings = { buses: clone3(DEFAULT_BUSES), persistentSources: [] }) {
+    this.runtimeId = runtimeId;
+    validateId(runtimeId, "runtime ID");
+    for (const bus of settings.buses) {
+      validateBus(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone3(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone3(DEFAULT_BUSES[0]));
+    for (const source of settings.persistentSources) {
+      validatePersistentSource(source, this.buses);
+      if (this.persistent.has(source.sourceId))
+        throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+      this.persistent.set(source.sourceId, clone3(source));
+    }
+    this.sequence = settings.sequence ?? 0;
+    this.output = emptyBatch(runtimeId, this.sequence, this.diagnostics());
+  }
+  submit(command) {
+    validateAudioCommand(command);
+    this.pending.push(clone3(command));
+  }
+  tick(candidates) {
+    const collected = [];
+    let ordinal = 0;
+    for (const candidate of candidates.filter(isSoundEmitter).sort((a, b) => a.soundSourceId.localeCompare(b.soundSourceId))) {
+      for (const command of candidate.drainSoundCommands())
+        collected.push({ command, ordinal: ordinal++ });
+    }
+    for (const command of this.pending.splice(0))
+      collected.push({ command, ordinal: ordinal++ });
+    const result = this.aggregate(collected);
+    this.output = { schemaVersion: 1, runtimeId: this.runtimeId, sequence: ++this.sequence, commands: result.commands, diagnostics: { ...this.diagnostics(), ...result.diagnostics, sequence: this.sequence } };
+  }
+  drainOutput() {
+    const value = clone3(this.output);
+    this.output = emptyBatch(this.runtimeId, this.sequence, this.diagnostics());
+    return value;
+  }
+  restorePersistentIntent() {
+    for (const source of [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)))
+      this.pending.push(clone3(source.command));
+  }
+  toSettings(framework = createDefaultAudioFramework()) {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, buses: [...this.buses.values()].sort(byBus).map(clone3), persistentSources: [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)).map(clone3), framework: clone3(framework), sequence: this.sequence };
+    validateAudioSettings(settings);
+    return settings;
+  }
+  getDiagnostics() {
+    return clone3(this.diagnostics());
+  }
+  aggregate(collected) {
+    let rejected = 0;
+    let deduplicated = 0;
+    let droppedByPriority = 0;
+    const valid = [];
+    for (const entry of collected) {
+      try {
+        validateAudioCommand(entry.command);
+        validateBusReference(entry.command, this.buses);
+        valid.push(entry);
+      } catch {
+        rejected++;
+      }
+    }
+    const dedupe = new Map;
+    const retained = [];
+    for (const entry of valid) {
+      const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
+      if (!key) {
+        retained.push(entry);
+        continue;
+      }
+      const prior = dedupe.get(key);
+      if (!prior || compareCommand(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) {
+        if (prior)
+          deduplicated++;
+        dedupe.set(key, entry);
+      } else
+        deduplicated++;
+    }
+    retained.push(...dedupe.values());
+    const admitted = [];
+    for (const [busId, entries] of groupBy(retained.filter((entry) => isVoiceCommand(entry.command)), (entry) => commandBus(entry.command)).entries()) {
+      const bus = this.buses.get(busId);
+      const ordered = entries.sort((a, b) => compareCommand(a.command, b.command, a.ordinal, b.ordinal, this.buses));
+      admitted.push(...ordered.slice(0, bus.maxVoices));
+      droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
+    }
+    admitted.push(...retained.filter((entry) => !isVoiceCommand(entry.command)));
+    for (const entry of admitted)
+      this.applyPersistent(entry.command);
+    const commands = admitted.sort((a, b) => comparePipeline(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map((entry) => this.resolve(entry.command));
+    return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
+  }
+  resolve(command) {
+    return { ...clone3(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 };
+  }
+  applyPersistent(command) {
+    if (command.type === "startLoop" || command.type === "playMusic")
+      this.persistent.set(command.sourceId, { sourceId: command.sourceId, command: clone3(command) });
+    if (command.type === "stopSource")
+      this.persistent.delete(command.sourceId);
+    if (command.type === "stopMusic") {
+      for (const [id, source] of this.persistent)
+        if (source.command.type === "playMusic" && (!command.sourceId || command.sourceId === id))
+          this.persistent.delete(id);
+    }
+    if (command.type === "stopAll")
+      this.persistent.clear();
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      bus.volume = command.volume;
+      if (command.muted !== undefined)
+        bus.muted = command.muted;
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus")
+      this.buses.get(command.bus).paused = command.type === "pauseBus";
+  }
+  diagnostics() {
+    return { collected: 0, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [...this.persistent.keys()].sort(), outputStatus: "ready", sequence: this.sequence };
+  }
+}
+
+class AudioRuntime {
+  system;
+  framework;
+  constructor(settings) {
+    validateAudioSettings(settings);
+    this.framework = clone3(settings.framework);
+    this.system = new SoundSystem(settings.runtimeId, settings);
+  }
+  tick(emitters) {
+    this.system.tick(emitters);
+  }
+  submit(command) {
+    this.system.submit(command);
+  }
+  drainOutput() {
+    return this.system.drainOutput();
+  }
+  restorePersistentIntent() {
+    this.system.restorePersistentIntent();
+  }
+  toSettings() {
+    return this.system.toSettings(this.framework);
+  }
+  getDiagnostics() {
+    return this.system.getDiagnostics();
+  }
+}
+
+class ApplicationAudioMixer {
+  applicationId;
+  buses = new Map;
+  pending = [];
+  activeMusic;
+  sequence;
+  constructor(applicationId, settings = { buses: clone3(DEFAULT_BUSES) }) {
+    this.applicationId = applicationId;
+    validateId(applicationId, "application ID");
+    for (const bus of settings.buses) {
+      validateBus(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone3(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone3(DEFAULT_BUSES[0]));
+    if (settings.activeMusic) {
+      validateResolvedCommand(settings.activeMusic);
+      this.activeMusic = clone3(settings.activeMusic);
+    }
+    this.sequence = settings.sequence ?? 0;
+  }
+  submit(batch) {
+    validateAudioBatch(batch);
+    this.pending.push(clone3(batch));
+  }
+  flush() {
+    const submitted = this.pending.splice(0).flatMap((batch) => batch.commands);
+    const rejected = submitted.filter((command) => ("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus)).length;
+    const incoming = submitted.filter((command) => !(("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved(a, b, this.buses));
+    const controls = incoming.filter((command) => !isVoiceCommand(command));
+    for (const command of controls)
+      this.applyControl(command);
+    const voices = incoming.filter(isVoiceCommand);
+    const music = voices.filter((command) => command.type === "playMusic");
+    const nonMusic = this.limitVoices(voices.filter((command) => command.type !== "playMusic"));
+    const previousMusic = this.activeMusic;
+    const selectedMusic = this.selectMusic(music);
+    const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId ? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 }] : [];
+    const commands = [...controls, ...replacedMusic, ...nonMusic, ...selectedMusic ? [selectedMusic] : []].sort((a, b) => compareResolved(a, b, this.buses));
+    const diagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter((command) => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
+    return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map((command) => ({ ...command, sequence: this.sequence })), diagnostics };
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus).map(clone3), ...this.activeMusic ? { activeMusic: clone3(this.activeMusic) } : {}, sequence: this.sequence };
+    validateApplicationAudioSettings(settings);
+    return settings;
+  }
+  limitVoices(commands) {
+    const result = [];
+    for (const [busId, entries] of groupBy(commands, (command) => commandBus(command)).entries())
+      result.push(...entries.sort((a, b) => compareResolved(a, b, this.buses)).slice(0, this.buses.get(busId).maxVoices));
+    return result;
+  }
+  selectMusic(candidates) {
+    const ordered = candidates.sort((a, b) => compareResolved(a, b, this.buses));
+    for (const candidate of ordered) {
+      const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
+      const currentPriority = this.activeMusic ? resolvedPriority(this.activeMusic, this.buses) : -Infinity;
+      const priority = resolvedPriority(candidate, this.buses);
+      if (!this.activeMusic || policy === "replace-current" || policy === "replace-lower-or-equal" && priority >= currentPriority || policy === "keep-current" && !this.activeMusic) {
+        this.activeMusic = clone3(candidate);
+        return candidate;
+      }
+    }
+    return;
+  }
+  applyControl(command) {
+    if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`))
+      this.activeMusic = undefined;
+    if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)
+      this.activeMusic = undefined;
+    if (command.type === "stopAll")
+      this.activeMusic = undefined;
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      if (bus) {
+        bus.volume = command.volume;
+        if (command.muted !== undefined)
+          bus.muted = command.muted;
+      }
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus") {
+      const bus = this.buses.get(command.bus);
+      if (bus)
+        bus.paused = command.type === "pauseBus";
+    }
+  }
+}
+function createDefaultAudioFramework() {
+  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  return registry.select(["audio.collect", "audio.mix"]);
+}
+function createAudioRuntime(settings) {
+  return new AudioRuntime(settings);
+}
+function createAudioSettings(options) {
+  return { schemaVersion: 1, runtimeId: options.runtimeId, buses: clone3(options.buses ?? DEFAULT_BUSES), persistentSources: clone3(options.persistentSources ?? []), framework: createDefaultAudioFramework(), sequence: 0 };
+}
+function validateAudioSettings(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.runtimeId !== "string" || !Array.isArray(settings.buses) || !Array.isArray(settings.persistentSources) || !settings.framework || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed audio settings");
+  const sequence = settings.sequence;
+  validateId(settings.runtimeId, "runtime ID");
+  const buses = new Map;
+  for (const bus of settings.buses) {
+    validateBus(bus);
+    if (buses.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    buses.set(bus.id, bus);
+  }
+  if (!buses.has("master"))
+    throw new Error("Audio settings require a master bus");
+  const sources = new Set;
+  for (const source of settings.persistentSources) {
+    validatePersistentSource(source, buses);
+    if (sources.has(source.sourceId))
+      throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+    sources.add(source.sourceId);
+  }
+  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  registry.validate(settings.framework);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(settings);
+}
+function validateApplicationAudioSettings(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed application audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.applicationId !== "string" || !Array.isArray(settings.buses) || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed application audio settings");
+  const sequence = settings.sequence;
+  validateId(settings.applicationId, "application ID");
+  const ids = new Set;
+  for (const bus of settings.buses) {
+    validateBus(bus);
+    if (ids.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    ids.add(bus.id);
+  }
+  if (!ids.has("master"))
+    throw new Error("Application audio settings require a master bus");
+  if (settings.activeMusic)
+    validateResolvedCommand(settings.activeMusic);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(settings);
+}
+function validateAudioCommand(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio command");
+  const command = value;
+  if (typeof command.type !== "string" || !COMMAND_TYPES.has(command.type))
+    throw new Error("Unknown audio command");
+  if (command.type !== "stopMusic")
+    validateId(command.sourceId, "audio source ID");
+  else if (command.sourceId !== undefined)
+    validateId(command.sourceId, "audio source ID");
+  if ("soundId" in command)
+    validateId(command.soundId, "sound ID");
+  if ("bus" in command && command.bus !== undefined)
+    validateId(command.bus, "audio bus ID");
+  if ("instanceId" in command && command.instanceId !== undefined)
+    validateId(command.instanceId, "audio instance ID");
+  if ("dedupeKey" in command && command.dedupeKey !== undefined)
+    validateId(command.dedupeKey, "audio dedupe key");
+  for (const name of ["volume", "pitch", "pan", "fadeInMs", "fadeOutMs", "priority"]) {
+    const numeric = command[name];
+    if (numeric !== undefined && (typeof numeric !== "number" || !Number.isFinite(numeric) || name === "volume" && (numeric < 0 || numeric > 1) || name === "pitch" && numeric <= 0 || name === "pan" && (numeric < -1 || numeric > 1) || (name === "fadeInMs" || name === "fadeOutMs") && numeric < 0 || name === "priority" && !Number.isInteger(numeric)))
+      throw new Error(`Invalid audio ${name}`);
+  }
+  if (command.type === "playMusic" && command.replacementPolicy !== undefined && !["replace-current", "replace-lower-or-equal", "keep-current"].includes(command.replacementPolicy))
+    throw new Error("Invalid music replacement policy");
+  assertJsonValue(command);
+}
+function validateAudioBatch(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio batch");
+  const batch = value;
+  if (batch.schemaVersion !== 1 || typeof batch.runtimeId !== "string" || typeof batch.sequence !== "number" || !Number.isSafeInteger(batch.sequence) || batch.sequence < 0 || !Array.isArray(batch.commands) || !batch.diagnostics)
+    throw new Error("Malformed audio batch");
+  const sequence = batch.sequence;
+  validateId(batch.runtimeId, "runtime ID");
+  for (const command of batch.commands)
+    validateResolvedCommand(command);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(batch);
+}
+var audio = {
+  engine: { createSystemRegistry: engine.createSystemRegistry },
+  createSettings: createAudioSettings,
+  createRuntime: createAudioRuntime,
+  createApplicationMixer(applicationId, settings) {
+    return new ApplicationAudioMixer(applicationId, settings);
+  },
+  createDefaultFramework: createDefaultAudioFramework,
+  emitter(sourceId) {
+    return new AudioEmitter(sourceId);
+  },
+  bus(settings) {
+    validateBus(settings);
+    return clone3(settings);
+  },
+  command: {
+    play(settings) {
+      return { type: "playSound", ...clone3(settings) };
+    },
+    loop(settings) {
+      return { type: "startLoop", ...clone3(settings) };
+    },
+    music(settings) {
+      return { type: "playMusic", ...clone3(settings) };
+    },
+    stopSource(settings) {
+      return { type: "stopSource", ...clone3(settings) };
+    },
+    stopInstance(settings) {
+      return { type: "stopInstance", ...clone3(settings) };
+    },
+    stopMusic(settings = {}) {
+      return { type: "stopMusic", ...clone3(settings) };
+    },
+    setBusVolume(settings) {
+      return { type: "setBusVolume", ...clone3(settings) };
+    },
+    pauseBus(settings) {
+      return { type: "pauseBus", ...clone3(settings) };
+    },
+    resumeBus(settings) {
+      return { type: "resumeBus", ...clone3(settings) };
+    },
+    stopAll(settings) {
+      return { type: "stopAll", ...clone3(settings) };
+    }
+  },
+  validate: validateAudioSettings,
+  validateCommand: validateAudioCommand,
+  validateBatch: validateAudioBatch
+};
+var COMMAND_TYPES = new Set(["playSound", "startLoop", "playMusic", "stopSource", "stopInstance", "stopMusic", "pauseBus", "resumeBus", "setBusVolume", "stopAll"]);
+function isSoundEmitter(value) {
+  return !!value && typeof value === "object" && typeof value.soundSourceId === "string" && typeof value.drainSoundCommands === "function";
+}
+function validateId(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function validateBus(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio bus");
+  const bus = value;
+  validateId(bus.id, "audio bus ID");
+  const volume = bus.volume;
+  const maxVoices = bus.maxVoices;
+  if (typeof volume !== "number" || !Number.isFinite(volume) || volume < 0 || volume > 1 || typeof bus.muted !== "boolean" || typeof maxVoices !== "number" || !Number.isSafeInteger(maxVoices) || maxVoices < 1 || !Number.isSafeInteger(bus.defaultPriority) || typeof bus.paused !== "boolean")
+    throw new Error(`Invalid audio bus '${bus.id}'`);
+  assertJsonValue(bus);
+}
+function validatePersistentSource(value, buses) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed persistent audio source");
+  const source = value;
+  validateId(source.sourceId, "persistent source ID");
+  validateAudioCommand(source.command);
+  if (source.command.type !== "startLoop" && source.command.type !== "playMusic")
+    throw new Error("Persistent audio source must be a loop or music command");
+  if (source.command.sourceId !== source.sourceId)
+    throw new Error("Persistent audio source ID mismatch");
+  validateBusReference(source.command, buses);
+}
+function validateBusReference(command, buses) {
+  if ("bus" in command && command.bus !== undefined && !buses.has(command.bus))
+    throw new Error(`Unknown audio bus '${command.bus}'`);
+}
+function validateResolvedCommand(value) {
+  validateAudioCommand(value);
+  const command = value;
+  validateId(command.runtimeId, "runtime ID");
+  validateId(command.globalSourceId, "global audio source ID");
+  const sequence = command.sequence;
+  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0)
+    throw new Error("Invalid audio sequence");
+}
+function commandBus(command) {
+  return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects";
+}
+function isVoiceCommand(command) {
+  return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic";
+}
+function resolvedPriority(command, buses) {
+  return command.priority ?? buses.get(commandBus(command))?.defaultPriority ?? 0;
+}
+function compareCommand(a, b, aOrdinal, bOrdinal, buses) {
+  return resolvedPriority(b, buses) - resolvedPriority(a, buses) || commandBus(a).localeCompare(commandBus(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal;
+}
+function pipelineOrder(command) {
+  if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume")
+    return 0;
+  if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic")
+    return 1;
+  if (command.type === "playMusic")
+    return 2;
+  if (command.type === "startLoop")
+    return 3;
+  return 4;
+}
+function comparePipeline(a, b, aOrdinal, bOrdinal, buses) {
+  return pipelineOrder(a) - pipelineOrder(b) || compareCommand(a, b, aOrdinal, bOrdinal, buses);
+}
+function compareResolved(a, b, buses) {
+  return pipelineOrder(a) - pipelineOrder(b) || resolvedPriority(b, buses) - resolvedPriority(a, buses) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence;
+}
+function byBus(a, b) {
+  return a.id.localeCompare(b.id);
+}
+function emptyBatch(runtimeId, sequence, diagnostics) {
+  return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } };
+}
+function groupBy(items, key) {
+  const grouped = new Map;
+  for (const item of items) {
+    const id = key(item);
+    const values = grouped.get(id) ?? [];
+    values.push(item);
+    grouped.set(id, values);
+  }
+  return grouped;
+}
+function clone3(value) {
+  return structuredClone(value);
+}
+function validateAnimationSettings(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
+    throw new Error("Malformed animation settings");
+  assertKeys(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
+  validateId2(value.id, "animation ID");
+  validateId2(value.channel, "animation channel");
+  const ids = new Set;
+  for (const track of value.tracks) {
+    if (!isRecord2(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
+      throw new Error("Malformed animation track");
+    assertKeys(track, ["id", "keyframes"], "animation track");
+    validateId2(track.id, "animation track ID");
+    if (ids.has(track.id))
+      throw new Error(`Duplicate animation track '${track.id}'`);
+    ids.add(track.id);
+    let previous = -1;
+    for (const keyframe of track.keyframes) {
+      if (!isRecord2(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
+        throw new Error("Invalid animation keyframe");
+      assertKeys(keyframe, ["tick", "value"], "animation keyframe");
+      assertJsonValue(keyframe.value);
+      previous = keyframe.tick;
+    }
+    if (track.keyframes.length === 0)
+      throw new Error("Animation tracks require keyframes");
+  }
+  assertJsonValue(value);
+}
+function validatePresentationEvent(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
+    throw new Error("Malformed presentation event");
+  assertKeys(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
+  validateId2(value.eventId, "presentation event ID");
+  if (value.channel !== undefined)
+    validateId2(value.channel, "presentation channel");
+  if (value.animationId !== undefined)
+    validateId2(value.animationId, "animation ID");
+  if (value.instanceId !== undefined)
+    validateId2(value.instanceId, "presentation instance ID");
+  if (value.priority !== undefined && !integer(value.priority))
+    throw new Error("Invalid presentation priority");
+  if (value.type === "play" && value.animationId === undefined)
+    throw new Error("Play events require an animation ID");
+  if (value.type === "cancel" && value.instanceId === undefined && value.channel === undefined)
+    throw new Error("Cancel events require an instance or channel");
+  if (value.payload !== undefined)
+    assertJsonValue(value.payload);
+  assertJsonValue(value);
+}
+function validatePresentationRuntimeSettings(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
+    throw new Error("Malformed presentation runtime settings");
+  assertKeys(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
+  validateId2(value.runtimeId, "presentation runtime ID");
+  for (const active of value.active) {
+    if (!isRecord2(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
+      throw new Error("Malformed active animation");
+    assertKeys(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
+    validateId2(active.instanceId, "presentation instance ID");
+    validateId2(active.animationId, "animation ID");
+    validateId2(active.channel, "presentation channel");
+  }
+  for (const event of value.pending)
+    validatePresentationEvent(event);
+  assertJsonValue(value);
+}
+
+class PresentationRuntime {
+  runtimeId;
+  animations = new Map;
+  active = new Map;
+  pending = [];
+  tickNumber;
+  sequence;
+  lastFrame;
+  constructor(runtimeId, settings) {
+    this.runtimeId = runtimeId;
+    validateId2(runtimeId, "presentation runtime ID");
+    for (const animation of settings.animations) {
+      validateAnimationSettings(animation);
+      if (this.animations.has(animation.id))
+        throw new Error(`Duplicate animation '${animation.id}'`);
+      this.animations.set(animation.id, clone4(animation));
+    }
+    this.tickNumber = settings.tick ?? 0;
+    this.sequence = settings.sequence ?? 0;
+    for (const item of settings.active ?? [])
+      this.restoreActive(item);
+    for (const event of settings.pending ?? []) {
+      validatePresentationEvent(event);
+      this.pending.push(clone4(event));
+    }
+    this.lastFrame = this.frame([]);
+  }
+  emit(event) {
+    validatePresentationEvent(event);
+    this.pending.push(clone4(event));
+  }
+  tick(ticks = 1) {
+    if (!nonNegativeInteger(ticks))
+      throw new Error("Presentation tick count must be a non-negative integer");
+    const records = [];
+    for (let step = 0;step < ticks; step++) {
+      this.tickNumber++;
+      this.processPending(records);
+      this.expire(records);
+    }
+    this.lastFrame = this.frame(records);
+    return clone4(this.lastFrame);
+  }
+  project() {
+    return clone4(this.frame([]));
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [...this.active.values()].sort(byInstance).map(clone4), pending: this.pending.map(clone4) };
+    validatePresentationRuntimeSettings(settings);
+    return settings;
+  }
+  processPending(records) {
+    const pending = this.pending.splice(0).map((event, ordinal) => ({ event, ordinal })).sort((a, b) => this.eventPriority(b.event) - this.eventPriority(a.event) || a.ordinal - b.ordinal || a.event.eventId.localeCompare(b.event.eventId));
+    for (const { event } of pending) {
+      if (event.type === "cancel") {
+        for (const item2 of [...this.active.values()])
+          if (event.instanceId && item2.instanceId === event.instanceId || event.channel && item2.channel === event.channel)
+            this.cancel(item2, records, event.eventId);
+        continue;
+      }
+      const animation = this.animations.get(event.animationId);
+      if (!animation)
+        throw new Error(`Unknown animation '${event.animationId}'`);
+      const current = this.active.get(animation.channel);
+      if (current && (animation.interruption === "ignore" || animation.interruption === "higher-priority" && animation.priority <= current.priority))
+        continue;
+      if (current)
+        this.cancel(current, records, event.eventId);
+      const item = { instanceId: event.instanceId ?? `${this.runtimeId}:${event.eventId}`, animationId: animation.id, channel: animation.channel, startTick: this.tickNumber, priority: animation.priority };
+      this.active.set(animation.channel, item);
+      records.push(this.record({ ...event, type: "play", animationId: animation.id, instanceId: item.instanceId }, this.sequence++));
+    }
+  }
+  eventPriority(event) {
+    return event.priority ?? (event.type === "play" ? this.animations.get(event.animationId)?.priority ?? 0 : 0);
+  }
+  cancel(item, records, eventId) {
+    this.active.delete(item.channel);
+    records.push(this.record({ schemaVersion: 1, type: "cancel", eventId, instanceId: item.instanceId, channel: item.channel }, this.sequence++));
+  }
+  expire(records) {
+    for (const item of [...this.active.values()]) {
+      const animation = this.animations.get(item.animationId);
+      if (this.tickNumber - item.startTick >= animation.durationTicks)
+        this.cancel(item, records, `${item.instanceId}:complete`);
+    }
+  }
+  record(event, sequence) {
+    return { ...clone4(event), sequence, tick: this.tickNumber };
+  }
+  frame(events) {
+    return { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, events: events.map(clone4), animations: [...this.active.values()].sort(byInstance).map((item) => this.projectAnimation(item)) };
+  }
+  projectAnimation(item) {
+    const animation = this.animations.get(item.animationId);
+    const localTick = Math.max(0, this.tickNumber - item.startTick);
+    const values = {};
+    for (const track of animation.tracks)
+      values[track.id] = sample(track.keyframes, localTick);
+    return { instanceId: item.instanceId, animationId: item.animationId, channel: item.channel, priority: item.priority, localTick, progress: Math.min(1, localTick / animation.durationTicks), values };
+  }
+  restoreActive(item) {
+    validatePresentationRuntimeSettings({ schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [item], pending: [] });
+    if (this.active.has(item.channel))
+      throw new Error(`Duplicate active animation channel '${item.channel}'`);
+    if (!this.animations.has(item.animationId))
+      throw new Error(`Unknown animation '${item.animationId}'`);
+    this.active.set(item.channel, clone4(item));
+  }
+}
+function sample(keyframes, tick) {
+  let result = keyframes[0].value;
+  for (const keyframe of keyframes) {
+    if (keyframe.tick > tick)
+      break;
+    result = keyframe.value;
+  }
+  return clone4(result);
+}
+function validateId2(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function assertKeys(value, allowed, name) {
+  const keys = new Set(allowed);
+  for (const key of Object.keys(value))
+    if (!keys.has(key))
+      throw new Error(`Unknown ${name} field '${key}'`);
+}
+function isRecord2(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function integer(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function nonNegativeInteger(value) {
+  return integer(value) && value >= 0;
+}
+function positiveInteger(value) {
+  return integer(value) && value > 0;
+}
+function clone4(value) {
+  return structuredClone(value);
+}
+function byInstance(a, b) {
+  return a.channel.localeCompare(b.channel) || a.instanceId.localeCompare(b.instanceId);
+}
+var INTERRUPTIONS = new Set(["replace", "higher-priority", "ignore"]);
+var presentation = {
+  createAnimation(settings) {
+    const result = { schemaVersion: 1, ...clone4(settings) };
+    validateAnimationSettings(result);
+    return result;
+  },
+  createRuntime(runtimeId, settings) {
+    return new PresentationRuntime(runtimeId, settings);
+  },
+  play(eventId, animationId, options = {}) {
+    return { schemaVersion: 1, type: "play", eventId, animationId, ...clone4(options) };
+  },
+  cancel(eventId, options) {
+    return { schemaVersion: 1, type: "cancel", eventId, ...clone4(options) };
+  },
+  validateAnimation: validateAnimationSettings,
+  validateEvent: validatePresentationEvent,
+  validateRuntime: validatePresentationRuntimeSettings
+};
+
+// ../engine-repo/packages/drip/dist/index.js
+function assertJsonValue2(value) {
+  if (value === null || typeof value === "string" || typeof value === "boolean")
+    return;
+  if (typeof value === "number") {
+    if (Number.isFinite(value))
+      return;
+    throw new Error("System settings must contain finite JSON numbers");
+  }
+  if (Array.isArray(value)) {
+    value.forEach(assertJsonValue2);
+    return;
+  }
+  if (typeof value === "object") {
+    for (const child of Object.values(value))
+      assertJsonValue2(child);
+    return;
+  }
+  throw new Error("System settings must contain JSON data only");
+}
+
+class EngineSystemRegistry2 {
+  definitions = new Map;
+  register(definition) {
+    validateDefinition3(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate system definition '${definition.id}'`);
+    this.definitions.set(definition.id, clone5(definition));
+    return this;
+  }
+  select(ids) {
+    const selected = new Set;
+    const add = (id) => {
+      if (selected.has(id))
+        return;
+      const definition = this.definitions.get(id);
+      if (!definition)
+        throw new Error(`Unknown system '${id}'`);
+      selected.add(id);
+      for (const capability of definition.requires ?? []) {
+        const providers = [...this.definitions.values()].filter((candidate) => provides2(candidate, capability));
+        const active = providers.filter((candidate) => selected.has(candidate.id));
+        if (active.length === 1)
+          continue;
+        if (active.length > 1 || providers.length !== 1)
+          throw new Error(`System '${id}' requires exactly one provider for '${capability}'`);
+        add(providers[0].id);
+      }
+    };
+    ids.forEach(add);
+    validateReplacements2([...selected].map((id) => this.definitions.get(id)));
+    const order = topologicalOrder2([...selected].map((id) => this.definitions.get(id)));
+    return {
+      schemaVersion: 1,
+      systems: order.map((definition) => ({ systemId: definition.id, schemaVersion: definition.schemaVersion ?? 1, state: clone5(definition.state ?? {}) })).sort((a, b) => a.systemId.localeCompare(b.systemId)),
+      systemOrder: order.map((definition) => definition.id)
+    };
+  }
+  validate(settings) {
+    if (!settings || typeof settings !== "object" || Array.isArray(settings))
+      throw new Error("Malformed framework settings");
+    const value = settings;
+    if (value.schemaVersion !== 1 || !Array.isArray(value.systems) || !Array.isArray(value.systemOrder))
+      throw new Error("Malformed framework settings");
+    const ids = new Set;
+    for (const system of value.systems) {
+      if (!system || typeof system.systemId !== "string" || system.schemaVersion !== 1 || !system.state || typeof system.state !== "object" || Array.isArray(system.state))
+        throw new Error("Malformed system settings");
+      if (!this.definitions.has(system.systemId) || ids.has(system.systemId))
+        throw new Error(`Unknown or duplicate system '${system.systemId}'`);
+      assertJsonValue2(system.state);
+      ids.add(system.systemId);
+    }
+    if (value.systemOrder.length !== ids.size || new Set(value.systemOrder).size !== ids.size || value.systemOrder.some((id) => !ids.has(id)))
+      throw new Error("Invalid framework system order");
+    const expected = this.select(value.systemOrder).systemOrder;
+    if (expected.join("|") !== value.systemOrder.join("|"))
+      throw new Error("Framework system order violates dependencies");
+  }
+  validateEffectSupport(settings, effects, catalog) {
+    this.validate(settings);
+    const selected = new Set(settings.systemOrder);
+    const definitions = [...selected].map((id) => this.definitions.get(id));
+    for (const effect of effects) {
+      catalog.validate(effect);
+      const typed = effect;
+      const definition = catalog.get(typed.type);
+      const accepted = definitions.some((candidate) => candidate.acceptsEffects?.includes(typed.type) === true);
+      if (!accepted)
+        throw new Error(`No selected system accepts effect '${typed.type}'`);
+      for (const capability of definition.requiresCapability ?? []) {
+        if (!definitions.some((candidate) => provides2(candidate, capability)))
+          throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
+      }
+    }
+  }
+}
+function validateDefinition3(definition) {
+  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid system definition ID");
+  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
+    throw new Error("Unsupported system definition version");
+  for (const list of [definition.provides, definition.requires, definition.before, definition.after, definition.replaces]) {
+    if (list !== undefined && (!Array.isArray(list) || list.some((value) => typeof value !== "string" || value.length === 0)))
+      throw new Error(`Invalid system definition '${definition.id}'`);
+  }
+  if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid accepted Effects for '${definition.id}'`);
+  assertJsonValue2(definition.state ?? {});
+}
+function provides2(definition, capability) {
+  return definition.id === capability || definition.provides?.includes(capability) === true;
+}
+function validateReplacements2(definitions) {
+  for (const definition of definitions) {
+    for (const capability of definition.replaces ?? []) {
+      const conflicts = definitions.filter((candidate) => candidate.id !== definition.id && provides2(candidate, capability) && !definition.replaces?.includes(capability) && !(definition.replaces?.includes(candidate.id) || candidate.replaces?.includes(definition.id)));
+      if (conflicts.length > 0)
+        throw new Error(`System '${definition.id}' conflicts with '${conflicts[0].id}' for '${capability}'`);
+    }
+  }
+  const capabilities = new Set(definitions.flatMap((definition) => [definition.id, ...definition.provides ?? []]));
+  for (const capability of capabilities) {
+    const providers = definitions.filter((definition) => provides2(definition, capability));
+    if (providers.length > 1 && !providers.some((definition) => definition.replaces?.includes(capability)))
+      throw new Error(`Multiple selected providers for '${capability}'`);
+  }
+}
+function topologicalOrder2(definitions) {
+  const byId = new Map(definitions.map((definition) => [definition.id, definition]));
+  const edges = new Map(definitions.map((definition) => [definition.id, new Set]));
+  for (const definition of definitions) {
+    for (const dependency of definition.after ?? [])
+      if (byId.has(dependency))
+        edges.get(dependency).add(definition.id);
+    for (const dependency of definition.before ?? [])
+      if (byId.has(dependency))
+        edges.get(definition.id).add(dependency);
+    for (const capability of definition.requires ?? []) {
+      const provider = definitions.find((candidate) => candidate.id !== definition.id && provides2(candidate, capability));
+      if (provider)
+        edges.get(provider.id).add(definition.id);
+    }
+  }
+  const incoming = new Map(definitions.map((definition) => [definition.id, 0]));
+  for (const targets of edges.values())
+    for (const target of targets)
+      incoming.set(target, incoming.get(target) + 1);
+  const available = definitions.filter((definition) => incoming.get(definition.id) === 0).map((definition) => definition.id).sort();
+  const result = [];
+  while (available.length) {
+    const id = available.shift();
+    result.push(byId.get(id));
+    for (const target of edges.get(id)) {
+      incoming.set(target, incoming.get(target) - 1);
+      if (incoming.get(target) === 0) {
+        available.push(target);
+        available.sort();
+      }
+    }
+  }
+  if (result.length !== definitions.length)
+    throw new Error("System dependencies contain a cycle");
+  return result;
+}
+function clone5(value) {
+  return structuredClone(value);
+}
+var COUNTER_SCHEMA_VERSION2 = 1;
+function createCounterState2(input) {
+  const state = {
+    schemaVersion: COUNTER_SCHEMA_VERSION2,
+    id: input.id,
+    value: input.value ?? 0
+  };
+  validateCounterState2(state);
+  return state;
+}
+function validateCounterState2(value) {
+  if (!isRecord3(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
+    throw new Error("Malformed counter state");
+  }
+  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION2)
+    throw new Error("Unsupported counter state schema version");
+  if (typeof value.id !== "string" || value.id.length === 0)
+    throw new Error("Counter state requires a non-empty id");
+  if (typeof value.value !== "number" || !Number.isFinite(value.value))
+    throw new Error("Counter state value must be finite");
+}
+function canonicalizeCounterStates2(value) {
+  if (!Array.isArray(value))
+    throw new Error("Counter states must be an array");
+  const counters = value.map((counter) => {
+    validateCounterState2(counter);
+    return { ...counter };
+  });
+  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
+    throw new Error("Counter state IDs must be unique");
+  return counters.sort((a, b) => a.id.localeCompare(b.id));
+}
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+class EngineWorldBuilder2 {
+  id;
+  worldSize;
+  entities = [];
+  structures = [];
+  effects = [];
+  counters = [];
+  background;
+  framework;
+  constructor(id, worldSize) {
+    this.id = id;
+    this.worldSize = worldSize;
+    if (!id || !isPositiveVector2(worldSize))
+      throw new Error("A world requires an ID and positive finite worldSize");
+  }
+  setBackground(background) {
+    assertJsonValue2(background);
+    this.background = clone22(background);
+    return this;
+  }
+  addEntity(entity) {
+    assertJsonValue2(entity);
+    this.entities.push(clone22(entity));
+    return this;
+  }
+  addStructure(structure) {
+    assertJsonValue2(structure);
+    this.structures.push(clone22(structure));
+    return this;
+  }
+  addEffect(effect) {
+    assertJsonValue2(effect);
+    this.effects.push(clone22(effect));
+    return this;
+  }
+  addCounter(counter) {
+    this.counters.push(...canonicalizeCounterStates2([counter]));
+    return this;
+  }
+  useFramework(framework) {
+    this.framework = clone22(framework);
+    return this;
+  }
+  build() {
+    return { schemaVersion: 1, id: this.id, worldSize: clone22(this.worldSize), ...this.background === undefined ? {} : { background: clone22(this.background) }, entities: clone22(this.entities), structures: clone22(this.structures), effects: clone22(this.effects), counters: canonicalizeCounterStates2(this.counters), ...this.framework ? { framework: clone22(this.framework) } : {} };
+  }
+  buildJson(space = 2) {
+    return JSON.stringify(this.build(), null, space);
+  }
+}
+function isPositiveVector2(value) {
+  return Number.isFinite(value.x) && value.x > 0 && Number.isFinite(value.y) && value.y > 0;
+}
+function clone22(value) {
+  return structuredClone(value);
+}
+
+class EngineEffectRegistry2 {
+  definitions = new Map;
+  register(definition) {
+    validateDefinition22(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate effect definition '${definition.id}'`);
+    this.definitions.set(definition.id, { ...definition, ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {} });
+    return this;
+  }
+  get(id) {
+    return this.definitions.get(id);
+  }
+  validate(effect) {
+    if (!effect || typeof effect !== "object" || Array.isArray(effect))
+      throw new Error("Malformed effect settings");
+    const value = effect;
+    if (typeof value.type !== "string" || !this.definitions.has(value.type))
+      throw new Error(`Unknown effect '${String(value.type)}'`);
+    if (value.schemaVersion !== undefined && value.schemaVersion !== 1)
+      throw new Error(`Unsupported effect schema version for '${value.type}'`);
+    assertJsonValue2(value.typeValue);
+    this.definitions.get(value.type).validatePayload?.(value.typeValue);
+    if (value.target !== undefined)
+      assertJsonValue2(value.target);
+    if (value.target !== undefined)
+      this.definitions.get(value.type).validateTarget?.(value.target);
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
+      id: definition.id,
+      schemaVersion: definition.schemaVersion ?? 1,
+      ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {},
+      ...definition.targetType ? { targetType: definition.targetType } : {},
+      ...definition.lifecycleCategory ? { lifecycleCategory: definition.lifecycleCategory } : {}
+    }));
+  }
+}
+function validateDefinition22(definition) {
+  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid effect definition ID");
+  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
+    throw new Error("Unsupported effect definition version");
+  for (const value of [definition.targetType, definition.lifecycleCategory])
+    if (value !== undefined && (typeof value !== "string" || value.length === 0))
+      throw new Error(`Invalid effect definition '${definition.id}'`);
+  if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some((value) => typeof value !== "string" || value.length === 0)))
+    throw new Error(`Invalid effect capabilities for '${definition.id}'`);
+  if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
+    throw new Error(`Invalid effect validator for '${definition.id}'`);
+  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
+    throw new Error(`Invalid effect target validator for '${definition.id}'`);
+}
+function createTransformState2(input) {
+  const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
+  validateTransformState2(state);
+  return structuredClone(state);
+}
+function createMovementState2(input) {
+  const state = { schemaVersion: 1, velocity: { ...input.velocity }, angularVelocity: input.angularVelocity ?? 0, enabled: input.enabled ?? true };
+  validateMovementState2(state);
+  return structuredClone(state);
+}
+function validateTransformState2(value) {
+  const state = record8(value, "Transform state");
+  exactKeys8(state, ["schemaVersion", "position", "rotation"], "Transform state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Transform state schema version");
+  validateVector3(state.position, "Transform position");
+  finite4(state.rotation, "Transform rotation");
+}
+function validateMovementState2(value) {
+  const state = record8(value, "Movement state");
+  exactKeys8(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
+  if (state.schemaVersion !== 1)
+    throw new Error("Unsupported Movement state schema version");
+  validateVector3(state.velocity, "Movement velocity");
+  finite4(state.angularVelocity, "Movement angularVelocity");
+  if (typeof state.enabled !== "boolean")
+    throw new Error("Movement enabled must be boolean");
+}
+function validateVector3(value, label) {
+  const vector = record8(value, label);
+  exactKeys8(vector, ["x", "y"], label);
+  finite4(vector.x, `${label} x`);
+  finite4(vector.y, `${label} y`);
+}
+function record8(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys8(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+function finite4(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    throw new Error(`${label} must be finite`);
+}
+var engine2 = {
+  createWorld(options) {
+    return new EngineWorldBuilder2(options.id, options.worldSize);
+  },
+  createSystemRegistry() {
+    return new EngineSystemRegistry2;
+  },
+  createEffectRegistry() {
+    return new EngineEffectRegistry2;
+  },
+  createTransformState: createTransformState2,
+  createMovementState: createMovementState2,
+  createCounterState: createCounterState2,
+  canonicalizeCounterStates: canonicalizeCounterStates2,
+  validateCounterState: validateCounterState2,
+  createEntity(settings) {
+    assertJsonValue2(settings);
+    return structuredClone(settings);
+  },
+  createStructure(settings) {
+    assertJsonValue2(settings);
+    return structuredClone(settings);
+  },
+  createEffect(settings) {
+    assertJsonValue2(settings);
+    return structuredClone(settings);
+  },
+  validate(value) {
+    assertJsonValue2(value);
+  },
+  buildJson(settings, space = 2) {
+    return JSON.stringify(settings, null, space);
+  }
+};
+var DEFAULT_BUSES2 = [
+  { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
+  { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
+  { id: "ambience", volume: 1, muted: false, maxVoices: 8, defaultPriority: 20, paused: false },
+  { id: "effects", volume: 1, muted: false, maxVoices: 32, defaultPriority: 10, paused: false },
+  { id: "ui", volume: 1, muted: false, maxVoices: 8, defaultPriority: 30, paused: false },
+  { id: "voice", volume: 1, muted: false, maxVoices: 8, defaultPriority: 40, paused: false }
+];
+
+class AudioEmitter2 {
+  soundSourceId;
+  pending = [];
+  constructor(soundSourceId) {
+    this.soundSourceId = soundSourceId;
+    validateId3(soundSourceId, "sound source ID");
+  }
+  emit(command) {
+    validateAudioCommand2(command);
+    if (command.sourceId !== this.soundSourceId)
+      throw new Error(`Audio command source '${command.sourceId}' does not match emitter '${this.soundSourceId}'`);
+    this.pending.push(clone32(command));
+  }
+  drainSoundCommands() {
+    const commands = this.pending.map(clone32);
+    this.pending = [];
+    return commands;
+  }
+}
+
+class SoundSystem2 {
+  runtimeId;
+  buses = new Map;
+  persistent = new Map;
+  pending = [];
+  output;
+  sequence;
+  constructor(runtimeId, settings = { buses: clone32(DEFAULT_BUSES2), persistentSources: [] }) {
+    this.runtimeId = runtimeId;
+    validateId3(runtimeId, "runtime ID");
+    for (const bus of settings.buses) {
+      validateBus2(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone32(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone32(DEFAULT_BUSES2[0]));
+    for (const source of settings.persistentSources) {
+      validatePersistentSource2(source, this.buses);
+      if (this.persistent.has(source.sourceId))
+        throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+      this.persistent.set(source.sourceId, clone32(source));
+    }
+    this.sequence = settings.sequence ?? 0;
+    this.output = emptyBatch2(runtimeId, this.sequence, this.diagnostics());
+  }
+  submit(command) {
+    validateAudioCommand2(command);
+    this.pending.push(clone32(command));
+  }
+  tick(candidates) {
+    const collected = [];
+    let ordinal = 0;
+    for (const candidate of candidates.filter(isSoundEmitter2).sort((a, b) => a.soundSourceId.localeCompare(b.soundSourceId))) {
+      for (const command of candidate.drainSoundCommands())
+        collected.push({ command, ordinal: ordinal++ });
+    }
+    for (const command of this.pending.splice(0))
+      collected.push({ command, ordinal: ordinal++ });
+    const result = this.aggregate(collected);
+    this.output = { schemaVersion: 1, runtimeId: this.runtimeId, sequence: ++this.sequence, commands: result.commands, diagnostics: { ...this.diagnostics(), ...result.diagnostics, sequence: this.sequence } };
+  }
+  drainOutput() {
+    const value = clone32(this.output);
+    this.output = emptyBatch2(this.runtimeId, this.sequence, this.diagnostics());
+    return value;
+  }
+  restorePersistentIntent() {
+    for (const source of [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)))
+      this.pending.push(clone32(source.command));
+  }
+  toSettings(framework = createDefaultAudioFramework2()) {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, buses: [...this.buses.values()].sort(byBus2).map(clone32), persistentSources: [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)).map(clone32), framework: clone32(framework), sequence: this.sequence };
+    validateAudioSettings2(settings);
+    return settings;
+  }
+  getDiagnostics() {
+    return clone32(this.diagnostics());
+  }
+  aggregate(collected) {
+    let rejected = 0;
+    let deduplicated = 0;
+    let droppedByPriority = 0;
+    const valid = [];
+    for (const entry of collected) {
+      try {
+        validateAudioCommand2(entry.command);
+        validateBusReference2(entry.command, this.buses);
+        valid.push(entry);
+      } catch {
+        rejected++;
+      }
+    }
+    const dedupe = new Map;
+    const retained = [];
+    for (const entry of valid) {
+      const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
+      if (!key) {
+        retained.push(entry);
+        continue;
+      }
+      const prior = dedupe.get(key);
+      if (!prior || compareCommand2(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) {
+        if (prior)
+          deduplicated++;
+        dedupe.set(key, entry);
+      } else
+        deduplicated++;
+    }
+    retained.push(...dedupe.values());
+    const admitted = [];
+    for (const [busId, entries] of groupBy2(retained.filter((entry) => isVoiceCommand2(entry.command)), (entry) => commandBus2(entry.command)).entries()) {
+      const bus = this.buses.get(busId);
+      const ordered = entries.sort((a, b) => compareCommand2(a.command, b.command, a.ordinal, b.ordinal, this.buses));
+      admitted.push(...ordered.slice(0, bus.maxVoices));
+      droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
+    }
+    admitted.push(...retained.filter((entry) => !isVoiceCommand2(entry.command)));
+    for (const entry of admitted)
+      this.applyPersistent(entry.command);
+    const commands = admitted.sort((a, b) => comparePipeline2(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map((entry) => this.resolve(entry.command));
+    return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
+  }
+  resolve(command) {
+    return { ...clone32(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 };
+  }
+  applyPersistent(command) {
+    if (command.type === "startLoop" || command.type === "playMusic")
+      this.persistent.set(command.sourceId, { sourceId: command.sourceId, command: clone32(command) });
+    if (command.type === "stopSource")
+      this.persistent.delete(command.sourceId);
+    if (command.type === "stopMusic") {
+      for (const [id, source] of this.persistent)
+        if (source.command.type === "playMusic" && (!command.sourceId || command.sourceId === id))
+          this.persistent.delete(id);
+    }
+    if (command.type === "stopAll")
+      this.persistent.clear();
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      bus.volume = command.volume;
+      if (command.muted !== undefined)
+        bus.muted = command.muted;
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus")
+      this.buses.get(command.bus).paused = command.type === "pauseBus";
+  }
+  diagnostics() {
+    return { collected: 0, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [...this.persistent.keys()].sort(), outputStatus: "ready", sequence: this.sequence };
+  }
+}
+
+class AudioRuntime2 {
+  system;
+  framework;
+  constructor(settings) {
+    validateAudioSettings2(settings);
+    this.framework = clone32(settings.framework);
+    this.system = new SoundSystem2(settings.runtimeId, settings);
+  }
+  tick(emitters) {
+    this.system.tick(emitters);
+  }
+  submit(command) {
+    this.system.submit(command);
+  }
+  drainOutput() {
+    return this.system.drainOutput();
+  }
+  restorePersistentIntent() {
+    this.system.restorePersistentIntent();
+  }
+  toSettings() {
+    return this.system.toSettings(this.framework);
+  }
+  getDiagnostics() {
+    return this.system.getDiagnostics();
+  }
+}
+
+class ApplicationAudioMixer2 {
+  applicationId;
+  buses = new Map;
+  pending = [];
+  activeMusic;
+  sequence;
+  constructor(applicationId, settings = { buses: clone32(DEFAULT_BUSES2) }) {
+    this.applicationId = applicationId;
+    validateId3(applicationId, "application ID");
+    for (const bus of settings.buses) {
+      validateBus2(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone32(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone32(DEFAULT_BUSES2[0]));
+    if (settings.activeMusic) {
+      validateResolvedCommand2(settings.activeMusic);
+      this.activeMusic = clone32(settings.activeMusic);
+    }
+    this.sequence = settings.sequence ?? 0;
+  }
+  submit(batch) {
+    validateAudioBatch2(batch);
+    this.pending.push(clone32(batch));
+  }
+  flush() {
+    const submitted = this.pending.splice(0).flatMap((batch) => batch.commands);
+    const rejected = submitted.filter((command) => ("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus)).length;
+    const incoming = submitted.filter((command) => !(("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved2(a, b, this.buses));
+    const controls = incoming.filter((command) => !isVoiceCommand2(command));
+    for (const command of controls)
+      this.applyControl(command);
+    const voices = incoming.filter(isVoiceCommand2);
+    const music = voices.filter((command) => command.type === "playMusic");
+    const nonMusic = this.limitVoices(voices.filter((command) => command.type !== "playMusic"));
+    const previousMusic = this.activeMusic;
+    const selectedMusic = this.selectMusic(music);
+    const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId ? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 }] : [];
+    const commands = [...controls, ...replacedMusic, ...nonMusic, ...selectedMusic ? [selectedMusic] : []].sort((a, b) => compareResolved2(a, b, this.buses));
+    const diagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter((command) => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
+    return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map((command) => ({ ...command, sequence: this.sequence })), diagnostics };
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus2).map(clone32), ...this.activeMusic ? { activeMusic: clone32(this.activeMusic) } : {}, sequence: this.sequence };
+    validateApplicationAudioSettings2(settings);
+    return settings;
+  }
+  limitVoices(commands) {
+    const result = [];
+    for (const [busId, entries] of groupBy2(commands, (command) => commandBus2(command)).entries())
+      result.push(...entries.sort((a, b) => compareResolved2(a, b, this.buses)).slice(0, this.buses.get(busId).maxVoices));
+    return result;
+  }
+  selectMusic(candidates) {
+    const ordered = candidates.sort((a, b) => compareResolved2(a, b, this.buses));
+    for (const candidate of ordered) {
+      const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
+      const currentPriority = this.activeMusic ? resolvedPriority2(this.activeMusic, this.buses) : -Infinity;
+      const priority = resolvedPriority2(candidate, this.buses);
+      if (!this.activeMusic || policy === "replace-current" || policy === "replace-lower-or-equal" && priority >= currentPriority || policy === "keep-current" && !this.activeMusic) {
+        this.activeMusic = clone32(candidate);
+        return candidate;
+      }
+    }
+    return;
+  }
+  applyControl(command) {
+    if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`))
+      this.activeMusic = undefined;
+    if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)
+      this.activeMusic = undefined;
+    if (command.type === "stopAll")
+      this.activeMusic = undefined;
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      if (bus) {
+        bus.volume = command.volume;
+        if (command.muted !== undefined)
+          bus.muted = command.muted;
+      }
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus") {
+      const bus = this.buses.get(command.bus);
+      if (bus)
+        bus.paused = command.type === "pauseBus";
+    }
+  }
+}
+function createDefaultAudioFramework2() {
+  const registry = new EngineSystemRegistry2().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  return registry.select(["audio.collect", "audio.mix"]);
+}
+function createAudioRuntime2(settings) {
+  return new AudioRuntime2(settings);
+}
+function createAudioSettings2(options) {
+  return { schemaVersion: 1, runtimeId: options.runtimeId, buses: clone32(options.buses ?? DEFAULT_BUSES2), persistentSources: clone32(options.persistentSources ?? []), framework: createDefaultAudioFramework2(), sequence: 0 };
+}
+function validateAudioSettings2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.runtimeId !== "string" || !Array.isArray(settings.buses) || !Array.isArray(settings.persistentSources) || !settings.framework || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed audio settings");
+  const sequence = settings.sequence;
+  validateId3(settings.runtimeId, "runtime ID");
+  const buses = new Map;
+  for (const bus of settings.buses) {
+    validateBus2(bus);
+    if (buses.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    buses.set(bus.id, bus);
+  }
+  if (!buses.has("master"))
+    throw new Error("Audio settings require a master bus");
+  const sources = new Set;
+  for (const source of settings.persistentSources) {
+    validatePersistentSource2(source, buses);
+    if (sources.has(source.sourceId))
+      throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+    sources.add(source.sourceId);
+  }
+  const registry = new EngineSystemRegistry2().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  registry.validate(settings.framework);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue2(settings);
+}
+function validateApplicationAudioSettings2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed application audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.applicationId !== "string" || !Array.isArray(settings.buses) || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed application audio settings");
+  const sequence = settings.sequence;
+  validateId3(settings.applicationId, "application ID");
+  const ids = new Set;
+  for (const bus of settings.buses) {
+    validateBus2(bus);
+    if (ids.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    ids.add(bus.id);
+  }
+  if (!ids.has("master"))
+    throw new Error("Application audio settings require a master bus");
+  if (settings.activeMusic)
+    validateResolvedCommand2(settings.activeMusic);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue2(settings);
+}
+function validateAudioCommand2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio command");
+  const command = value;
+  if (typeof command.type !== "string" || !COMMAND_TYPES2.has(command.type))
+    throw new Error("Unknown audio command");
+  if (command.type !== "stopMusic")
+    validateId3(command.sourceId, "audio source ID");
+  else if (command.sourceId !== undefined)
+    validateId3(command.sourceId, "audio source ID");
+  if ("soundId" in command)
+    validateId3(command.soundId, "sound ID");
+  if ("bus" in command && command.bus !== undefined)
+    validateId3(command.bus, "audio bus ID");
+  if ("instanceId" in command && command.instanceId !== undefined)
+    validateId3(command.instanceId, "audio instance ID");
+  if ("dedupeKey" in command && command.dedupeKey !== undefined)
+    validateId3(command.dedupeKey, "audio dedupe key");
+  for (const name of ["volume", "pitch", "pan", "fadeInMs", "fadeOutMs", "priority"]) {
+    const numeric = command[name];
+    if (numeric !== undefined && (typeof numeric !== "number" || !Number.isFinite(numeric) || name === "volume" && (numeric < 0 || numeric > 1) || name === "pitch" && numeric <= 0 || name === "pan" && (numeric < -1 || numeric > 1) || (name === "fadeInMs" || name === "fadeOutMs") && numeric < 0 || name === "priority" && !Number.isInteger(numeric)))
+      throw new Error(`Invalid audio ${name}`);
+  }
+  if (command.type === "playMusic" && command.replacementPolicy !== undefined && !["replace-current", "replace-lower-or-equal", "keep-current"].includes(command.replacementPolicy))
+    throw new Error("Invalid music replacement policy");
+  assertJsonValue2(command);
+}
+function validateAudioBatch2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio batch");
+  const batch = value;
+  if (batch.schemaVersion !== 1 || typeof batch.runtimeId !== "string" || typeof batch.sequence !== "number" || !Number.isSafeInteger(batch.sequence) || batch.sequence < 0 || !Array.isArray(batch.commands) || !batch.diagnostics)
+    throw new Error("Malformed audio batch");
+  const sequence = batch.sequence;
+  validateId3(batch.runtimeId, "runtime ID");
+  for (const command of batch.commands)
+    validateResolvedCommand2(command);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue2(batch);
+}
+var audio2 = {
+  engine: { createSystemRegistry: engine2.createSystemRegistry },
+  createSettings: createAudioSettings2,
+  createRuntime: createAudioRuntime2,
+  createApplicationMixer(applicationId, settings) {
+    return new ApplicationAudioMixer2(applicationId, settings);
+  },
+  createDefaultFramework: createDefaultAudioFramework2,
+  emitter(sourceId) {
+    return new AudioEmitter2(sourceId);
+  },
+  bus(settings) {
+    validateBus2(settings);
+    return clone32(settings);
+  },
+  command: {
+    play(settings) {
+      return { type: "playSound", ...clone32(settings) };
+    },
+    loop(settings) {
+      return { type: "startLoop", ...clone32(settings) };
+    },
+    music(settings) {
+      return { type: "playMusic", ...clone32(settings) };
+    },
+    stopSource(settings) {
+      return { type: "stopSource", ...clone32(settings) };
+    },
+    stopInstance(settings) {
+      return { type: "stopInstance", ...clone32(settings) };
+    },
+    stopMusic(settings = {}) {
+      return { type: "stopMusic", ...clone32(settings) };
+    },
+    setBusVolume(settings) {
+      return { type: "setBusVolume", ...clone32(settings) };
+    },
+    pauseBus(settings) {
+      return { type: "pauseBus", ...clone32(settings) };
+    },
+    resumeBus(settings) {
+      return { type: "resumeBus", ...clone32(settings) };
+    },
+    stopAll(settings) {
+      return { type: "stopAll", ...clone32(settings) };
+    }
+  },
+  validate: validateAudioSettings2,
+  validateCommand: validateAudioCommand2,
+  validateBatch: validateAudioBatch2
+};
+var COMMAND_TYPES2 = new Set(["playSound", "startLoop", "playMusic", "stopSource", "stopInstance", "stopMusic", "pauseBus", "resumeBus", "setBusVolume", "stopAll"]);
+function isSoundEmitter2(value) {
+  return !!value && typeof value === "object" && typeof value.soundSourceId === "string" && typeof value.drainSoundCommands === "function";
+}
+function validateId3(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function validateBus2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio bus");
+  const bus = value;
+  validateId3(bus.id, "audio bus ID");
+  const volume = bus.volume;
+  const maxVoices = bus.maxVoices;
+  if (typeof volume !== "number" || !Number.isFinite(volume) || volume < 0 || volume > 1 || typeof bus.muted !== "boolean" || typeof maxVoices !== "number" || !Number.isSafeInteger(maxVoices) || maxVoices < 1 || !Number.isSafeInteger(bus.defaultPriority) || typeof bus.paused !== "boolean")
+    throw new Error(`Invalid audio bus '${bus.id}'`);
+  assertJsonValue2(bus);
+}
+function validatePersistentSource2(value, buses) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed persistent audio source");
+  const source = value;
+  validateId3(source.sourceId, "persistent source ID");
+  validateAudioCommand2(source.command);
+  if (source.command.type !== "startLoop" && source.command.type !== "playMusic")
+    throw new Error("Persistent audio source must be a loop or music command");
+  if (source.command.sourceId !== source.sourceId)
+    throw new Error("Persistent audio source ID mismatch");
+  validateBusReference2(source.command, buses);
+}
+function validateBusReference2(command, buses) {
+  if ("bus" in command && command.bus !== undefined && !buses.has(command.bus))
+    throw new Error(`Unknown audio bus '${command.bus}'`);
+}
+function validateResolvedCommand2(value) {
+  validateAudioCommand2(value);
+  const command = value;
+  validateId3(command.runtimeId, "runtime ID");
+  validateId3(command.globalSourceId, "global audio source ID");
+  const sequence = command.sequence;
+  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0)
+    throw new Error("Invalid audio sequence");
+}
+function commandBus2(command) {
+  return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects";
+}
+function isVoiceCommand2(command) {
+  return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic";
+}
+function resolvedPriority2(command, buses) {
+  return command.priority ?? buses.get(commandBus2(command))?.defaultPriority ?? 0;
+}
+function compareCommand2(a, b, aOrdinal, bOrdinal, buses) {
+  return resolvedPriority2(b, buses) - resolvedPriority2(a, buses) || commandBus2(a).localeCompare(commandBus2(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal;
+}
+function pipelineOrder2(command) {
+  if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume")
+    return 0;
+  if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic")
+    return 1;
+  if (command.type === "playMusic")
+    return 2;
+  if (command.type === "startLoop")
+    return 3;
+  return 4;
+}
+function comparePipeline2(a, b, aOrdinal, bOrdinal, buses) {
+  return pipelineOrder2(a) - pipelineOrder2(b) || compareCommand2(a, b, aOrdinal, bOrdinal, buses);
+}
+function compareResolved2(a, b, buses) {
+  return pipelineOrder2(a) - pipelineOrder2(b) || resolvedPriority2(b, buses) - resolvedPriority2(a, buses) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence;
+}
+function byBus2(a, b) {
+  return a.id.localeCompare(b.id);
+}
+function emptyBatch2(runtimeId, sequence, diagnostics) {
+  return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } };
+}
+function groupBy2(items, key) {
+  const grouped = new Map;
+  for (const item of items) {
+    const id = key(item);
+    const values = grouped.get(id) ?? [];
+    values.push(item);
+    grouped.set(id, values);
+  }
+  return grouped;
+}
+function clone32(value) {
+  return structuredClone(value);
+}
+function validateAnimationSettings2(value) {
+  if (!isRecord22(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer2(value.priority) || !INTERRUPTIONS2.has(value.interruption) || !Array.isArray(value.tracks))
+    throw new Error("Malformed animation settings");
+  assertKeys2(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
+  validateId22(value.id, "animation ID");
+  validateId22(value.channel, "animation channel");
+  const ids = new Set;
+  for (const track of value.tracks) {
+    if (!isRecord22(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
+      throw new Error("Malformed animation track");
+    assertKeys2(track, ["id", "keyframes"], "animation track");
+    validateId22(track.id, "animation track ID");
+    if (ids.has(track.id))
+      throw new Error(`Duplicate animation track '${track.id}'`);
+    ids.add(track.id);
+    let previous = -1;
+    for (const keyframe of track.keyframes) {
+      if (!isRecord22(keyframe) || !nonNegativeInteger2(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
+        throw new Error("Invalid animation keyframe");
+      assertKeys2(keyframe, ["tick", "value"], "animation keyframe");
+      assertJsonValue2(keyframe.value);
+      previous = keyframe.tick;
+    }
+    if (track.keyframes.length === 0)
+      throw new Error("Animation tracks require keyframes");
+  }
+  assertJsonValue2(value);
+}
+function validatePresentationEvent2(value) {
+  if (!isRecord22(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
+    throw new Error("Malformed presentation event");
+  assertKeys2(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
+  validateId22(value.eventId, "presentation event ID");
+  if (value.channel !== undefined)
+    validateId22(value.channel, "presentation channel");
+  if (value.animationId !== undefined)
+    validateId22(value.animationId, "animation ID");
+  if (value.instanceId !== undefined)
+    validateId22(value.instanceId, "presentation instance ID");
+  if (value.priority !== undefined && !integer2(value.priority))
+    throw new Error("Invalid presentation priority");
+  if (value.type === "play" && value.animationId === undefined)
+    throw new Error("Play events require an animation ID");
+  if (value.type === "cancel" && value.instanceId === undefined && value.channel === undefined)
+    throw new Error("Cancel events require an instance or channel");
+  if (value.payload !== undefined)
+    assertJsonValue2(value.payload);
+  assertJsonValue2(value);
+}
+function validatePresentationRuntimeSettings2(value) {
+  if (!isRecord22(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger2(value.tick) || !nonNegativeInteger2(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
+    throw new Error("Malformed presentation runtime settings");
+  assertKeys2(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
+  validateId22(value.runtimeId, "presentation runtime ID");
+  for (const active of value.active) {
+    if (!isRecord22(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger2(active.startTick) || !integer2(active.priority))
+      throw new Error("Malformed active animation");
+    assertKeys2(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
+    validateId22(active.instanceId, "presentation instance ID");
+    validateId22(active.animationId, "animation ID");
+    validateId22(active.channel, "presentation channel");
+  }
+  for (const event of value.pending)
+    validatePresentationEvent2(event);
+  assertJsonValue2(value);
+}
+
+class PresentationRuntime2 {
+  runtimeId;
+  animations = new Map;
+  active = new Map;
+  pending = [];
+  tickNumber;
+  sequence;
+  lastFrame;
+  constructor(runtimeId, settings) {
+    this.runtimeId = runtimeId;
+    validateId22(runtimeId, "presentation runtime ID");
+    for (const animation of settings.animations) {
+      validateAnimationSettings2(animation);
+      if (this.animations.has(animation.id))
+        throw new Error(`Duplicate animation '${animation.id}'`);
+      this.animations.set(animation.id, clone42(animation));
+    }
+    this.tickNumber = settings.tick ?? 0;
+    this.sequence = settings.sequence ?? 0;
+    for (const item of settings.active ?? [])
+      this.restoreActive(item);
+    for (const event of settings.pending ?? []) {
+      validatePresentationEvent2(event);
+      this.pending.push(clone42(event));
+    }
+    this.lastFrame = this.frame([]);
+  }
+  emit(event) {
+    validatePresentationEvent2(event);
+    this.pending.push(clone42(event));
+  }
+  tick(ticks = 1) {
+    if (!nonNegativeInteger2(ticks))
+      throw new Error("Presentation tick count must be a non-negative integer");
+    const records = [];
+    for (let step = 0;step < ticks; step++) {
+      this.tickNumber++;
+      this.processPending(records);
+      this.expire(records);
+    }
+    this.lastFrame = this.frame(records);
+    return clone42(this.lastFrame);
+  }
+  project() {
+    return clone42(this.frame([]));
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [...this.active.values()].sort(byInstance2).map(clone42), pending: this.pending.map(clone42) };
+    validatePresentationRuntimeSettings2(settings);
+    return settings;
+  }
+  processPending(records) {
+    const pending = this.pending.splice(0).map((event, ordinal) => ({ event, ordinal })).sort((a, b) => this.eventPriority(b.event) - this.eventPriority(a.event) || a.ordinal - b.ordinal || a.event.eventId.localeCompare(b.event.eventId));
+    for (const { event } of pending) {
+      if (event.type === "cancel") {
+        for (const item2 of [...this.active.values()])
+          if (event.instanceId && item2.instanceId === event.instanceId || event.channel && item2.channel === event.channel)
+            this.cancel(item2, records, event.eventId);
+        continue;
+      }
+      const animation = this.animations.get(event.animationId);
+      if (!animation)
+        throw new Error(`Unknown animation '${event.animationId}'`);
+      const current = this.active.get(animation.channel);
+      if (current && (animation.interruption === "ignore" || animation.interruption === "higher-priority" && animation.priority <= current.priority))
+        continue;
+      if (current)
+        this.cancel(current, records, event.eventId);
+      const item = { instanceId: event.instanceId ?? `${this.runtimeId}:${event.eventId}`, animationId: animation.id, channel: animation.channel, startTick: this.tickNumber, priority: animation.priority };
+      this.active.set(animation.channel, item);
+      records.push(this.record({ ...event, type: "play", animationId: animation.id, instanceId: item.instanceId }, this.sequence++));
+    }
+  }
+  eventPriority(event) {
+    return event.priority ?? (event.type === "play" ? this.animations.get(event.animationId)?.priority ?? 0 : 0);
+  }
+  cancel(item, records, eventId) {
+    this.active.delete(item.channel);
+    records.push(this.record({ schemaVersion: 1, type: "cancel", eventId, instanceId: item.instanceId, channel: item.channel }, this.sequence++));
+  }
+  expire(records) {
+    for (const item of [...this.active.values()]) {
+      const animation = this.animations.get(item.animationId);
+      if (this.tickNumber - item.startTick >= animation.durationTicks)
+        this.cancel(item, records, `${item.instanceId}:complete`);
+    }
+  }
+  record(event, sequence) {
+    return { ...clone42(event), sequence, tick: this.tickNumber };
+  }
+  frame(events) {
+    return { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, events: events.map(clone42), animations: [...this.active.values()].sort(byInstance2).map((item) => this.projectAnimation(item)) };
+  }
+  projectAnimation(item) {
+    const animation = this.animations.get(item.animationId);
+    const localTick = Math.max(0, this.tickNumber - item.startTick);
+    const values = {};
+    for (const track of animation.tracks)
+      values[track.id] = sample2(track.keyframes, localTick);
+    return { instanceId: item.instanceId, animationId: item.animationId, channel: item.channel, priority: item.priority, localTick, progress: Math.min(1, localTick / animation.durationTicks), values };
+  }
+  restoreActive(item) {
+    validatePresentationRuntimeSettings2({ schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [item], pending: [] });
+    if (this.active.has(item.channel))
+      throw new Error(`Duplicate active animation channel '${item.channel}'`);
+    if (!this.animations.has(item.animationId))
+      throw new Error(`Unknown animation '${item.animationId}'`);
+    this.active.set(item.channel, clone42(item));
+  }
+}
+function sample2(keyframes, tick) {
+  let result = keyframes[0].value;
+  for (const keyframe of keyframes) {
+    if (keyframe.tick > tick)
+      break;
+    result = keyframe.value;
+  }
+  return clone42(result);
+}
+function validateId22(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function assertKeys2(value, allowed, name) {
+  const keys = new Set(allowed);
+  for (const key of Object.keys(value))
+    if (!keys.has(key))
+      throw new Error(`Unknown ${name} field '${key}'`);
+}
+function isRecord22(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function integer2(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function nonNegativeInteger2(value) {
+  return integer2(value) && value >= 0;
+}
+function positiveInteger2(value) {
+  return integer2(value) && value > 0;
+}
+function clone42(value) {
+  return structuredClone(value);
+}
+function byInstance2(a, b) {
+  return a.channel.localeCompare(b.channel) || a.instanceId.localeCompare(b.instanceId);
+}
+var INTERRUPTIONS2 = new Set(["replace", "higher-priority", "ignore"]);
 
 class UiRuntime {
   settings;
@@ -2596,7 +4504,7 @@ class UiRuntime {
     this.activeScreen = settings.activeScreen;
     this.history = [...settings.history];
     for (const screen of settings.screens)
-      this.screens.set(screen.id, { settings: clone3(screen), elements: screen.elements.map(createNode) });
+      this.screens.set(screen.id, { settings: clone52(screen), elements: screen.elements.map((element) => createNode(element)) });
     this.systems = settings.framework.systemOrder.map(createUiSystem);
     this.layout();
   }
@@ -2612,8 +4520,8 @@ class UiRuntime {
       system.draw?.(this, renderer);
   }
   toSettings() {
-    const screens = [...this.screens.values()].map((screen) => ({ ...clone3(screen.settings), elements: screen.elements.map((node) => node.toSettings()) }));
-    return { ...clone3(this.settings), activeScreen: this.activeScreen, history: [...this.history], screens };
+    const screens = [...this.screens.values()].map((screen) => ({ ...clone52(screen.settings), elements: screen.elements.map((node) => node.toSettings()) }));
+    return { ...clone52(this.settings), activeScreen: this.activeScreen, history: [...this.history], screens };
   }
   getActiveElements() {
     return this.screens.get(this.activeScreen).elements;
@@ -2624,6 +4532,10 @@ class UiRuntime {
   getFocusedElementId() {
     return this.activeLeaves().find(hasFocusable)?.id;
   }
+  getElementValue(id) {
+    const element = this.findElementAnywhere(id);
+    return element?.kind === "textInput" ? element.value : undefined;
+  }
   getHoveredElementId() {
     return this.hovered;
   }
@@ -2632,7 +4544,7 @@ class UiRuntime {
   }
   dispatch(action) {
     validateAction(action, new Set(this.screens.keys()), "action", true);
-    this.applyAction(clone3(action));
+    this.applyAction(clone52(action));
   }
   setElementVisible(id, visible) {
     const node = this.findNodeAnywhere(id);
@@ -2648,7 +4560,7 @@ class UiRuntime {
     const element = this.findElementAnywhere(id);
     if (!element)
       return false;
-    element.action = action ? clone3(action) : undefined;
+    element.action = action ? clone52(action) : undefined;
     return true;
   }
   setElementEnabled(id, enabled) {
@@ -2665,8 +4577,17 @@ class UiRuntime {
     element.text = text;
     return true;
   }
+  setElementComponent(id, component) {
+    if (component)
+      validateUiComponent(component, `element "${id}" component`);
+    const element = this.findElementAnywhere(id);
+    if (!element || element.kind !== "button")
+      return false;
+    element.component = component ? clone52(component) : undefined;
+    return true;
+  }
   drainCommands() {
-    const commands = this.emitted.map(clone3);
+    const commands = this.emitted.map(clone52);
     this.emitted = [];
     return commands;
   }
@@ -2696,10 +4617,24 @@ class UiRuntime {
     this.hovered = target?.id;
     if (target && "hovered" in target)
       target.hovered = true;
+    this.applyGroupHover(point, this.activeScreenNodes(), true, false);
     if (target && input.pressed && "pressed" in target)
       target.pressed = true;
     if (input.justPressed)
       this.pendingPress = target?.id;
+  }
+  applyGroupHover(point, nodes, parentVisible, parentGroupHovered) {
+    for (const node of nodes) {
+      const visible = node.visible && parentVisible;
+      if (!visible)
+        continue;
+      if (isContainerNode(node)) {
+        const groupHovered = parentGroupHovered || node.groupHover === true && node.containsPoint(point);
+        this.applyGroupHover(point, node.elements, visible, groupHovered);
+      } else if (parentGroupHovered) {
+        node.hovered = true;
+      }
+    }
   }
   focus() {
     if (!this.pendingPress)
@@ -2710,6 +4645,23 @@ class UiRuntime {
   }
   keyboard(input) {
     this.pendingKeyboard = input;
+    const keys = input?.pressedKeys ?? [];
+    const focusable = this.activeLeaves().filter((element) => hasFocusable(element) && element.visible && element.enabled);
+    if (focusable.length === 0)
+      return;
+    const current = focusable.findIndex((element) => element.focused);
+    const forward = keys.includes("Tab") || keys.includes("ArrowRight") || keys.includes("ArrowDown");
+    const backward = keys.includes("ArrowLeft") || keys.includes("ArrowUp") || keys.includes("Tab") && keys.includes("Shift");
+    if (forward || backward) {
+      const next = current < 0 ? 0 : (current + (backward ? -1 : 1) + focusable.length) % focusable.length;
+      for (const element of focusable)
+        element.focused = element === focusable[next];
+    }
+    if (keys.includes("Enter") || keys.includes(" ")) {
+      const focused = focusable.find((element) => element.focused);
+      if (focused && focused.kind !== "textInput")
+        this.pendingPress = focused.id;
+    }
   }
   textInput() {
     const focused = this.activeLeaves().find(hasTextInput);
@@ -2726,9 +4678,10 @@ class UiRuntime {
   press() {
     if (!this.pendingPress)
       return;
-    const found = this.findLeaf(this.pendingPress);
-    if (found && hasPressable(found.element) && found.enabled && found.visible && found.element.action)
-      this.pendingActions.push(clone3(found.element.action));
+    const found = this.findNode(this.pendingPress);
+    if (!found || !found.enabled || !found.visible || !found.action)
+      return;
+    this.pendingActions.push(clone52(found.action));
   }
   navigate() {
     for (const action of this.pendingActions.splice(0))
@@ -2792,7 +4745,7 @@ class UiRuntime {
       return;
     }
     if (action.type === "emit")
-      this.emitted.push({ command: action.command, ...action.payload === undefined ? {} : { payload: clone3(action.payload) } });
+      this.emitted.push({ command: action.command, ...action.payload === undefined ? {} : { payload: clone52(action.payload) } });
   }
   resolveLayout(parent, layout, nodes, parentVisible, parentEnabled) {
     const padding = normalizePadding(layout.padding);
@@ -2867,32 +4820,20 @@ class UiRuntime {
     return leaves;
   }
   findPointerTarget(point, nodes = this.activeScreenNodes(), parentVisible = true, parentEnabled = true) {
-    for (const node of nodes) {
+    for (let i = nodes.length - 1;i >= 0; i--) {
+      const node = nodes[i];
       const visible = node.visible && parentVisible;
       const enabled = node.enabled && parentEnabled;
       if (isContainerNode(node)) {
         const hit = this.findPointerTarget(point, node.elements, visible, enabled);
         if (hit)
           return hit;
+        if (visible && enabled && node.action && node.containsPoint(point))
+          return node;
         continue;
       }
-      if (visible && enabled && node.containsPoint(point))
+      if (visible && enabled && (node.action || hasFocusable(node)) && node.containsPoint(point))
         return node;
-    }
-    return;
-  }
-  findLeaf(id, nodes = this.activeScreenNodes(), parentVisible = true, parentEnabled = true) {
-    for (const node of nodes) {
-      const visible = node.visible && parentVisible;
-      const enabled = node.enabled && parentEnabled;
-      if (isContainerNode(node)) {
-        const found = this.findLeaf(id, node.elements, visible, enabled);
-        if (found)
-          return found;
-        continue;
-      }
-      if (node.id === id)
-        return { element: node, visible, enabled };
     }
     return;
   }
@@ -2967,15 +4908,17 @@ class UiElement {
   pressed;
   value;
   localRect;
-  constructor(settings) {
+  resolvedStyle;
+  constructor(settings, parentStyle) {
     this.settings = settings;
-    this.localRect = clone3(settings.rect);
+    this.localRect = clone52(settings.rect);
     this.visible = settings.visible ?? true;
     this.enabled = settings.enabled ?? true;
     this.focused = false;
     this.hovered = false;
     this.pressed = false;
     this.value = "value" in settings ? settings.value ?? settings.text : ("text" in settings) ? settings.text : "";
+    this.resolvedStyle = settings.style ?? (settings.inheritStyle ? parentStyle : undefined);
   }
   get id() {
     return this.settings.id;
@@ -2999,11 +4942,18 @@ class UiElement {
   get icon() {
     return this.settings.kind === "button" ? this.settings.icon : undefined;
   }
+  get component() {
+    return this.settings.kind === "button" ? this.settings.component : undefined;
+  }
+  set component(value) {
+    if (this.settings.kind === "button")
+      this.settings.component = value;
+  }
   get source() {
     return this.settings.kind === "image" ? this.settings.source : undefined;
   }
   get style() {
-    return this.settings.style;
+    return this.resolvedStyle;
   }
   get action() {
     return this.settings.kind === "text" ? undefined : this.settings.action;
@@ -3024,7 +4974,9 @@ class UiElement {
     this.text = this.value;
   }
   toSettings() {
-    const base = { ...clone3(this.settings), rect: clone3(this.localRect), text: this.text, visible: this.visible, enabled: this.enabled };
+    const base = { ...clone52(this.settings), rect: clone52(this.localRect), visible: this.visible, enabled: this.enabled };
+    if (this.kind !== "image")
+      base.text = this.text;
     return this.kind === "textInput" ? { ...base, value: this.value } : base;
   }
 }
@@ -3036,13 +4988,15 @@ class UiContainer {
   localRect;
   layout;
   elements;
-  constructor(settings) {
+  resolvedStyle;
+  constructor(settings, parentStyle) {
     this.settings = settings;
-    this.localRect = clone3(settings.rect);
+    this.localRect = clone52(settings.rect);
     this.visible = settings.visible ?? true;
     this.enabled = settings.enabled ?? true;
-    this.layout = clone3(settings.layout);
-    this.elements = settings.elements.map(createNode);
+    this.layout = clone52(settings.layout);
+    this.resolvedStyle = settings.style ?? (settings.inheritStyle ? parentStyle : undefined);
+    this.elements = settings.elements.map((child) => createNode(child, this.resolvedStyle));
   }
   get id() {
     return this.settings.id;
@@ -3057,13 +5011,19 @@ class UiContainer {
     this.settings.rect = value;
   }
   get style() {
-    return this.settings.style;
+    return this.resolvedStyle;
+  }
+  get groupHover() {
+    return this.settings.groupHover;
+  }
+  get action() {
+    return this.settings.action ? clone52(this.settings.action) : undefined;
   }
   containsPoint(point) {
     return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height;
   }
   toSettings() {
-    return { ...clone3(this.settings), rect: clone3(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map((node) => node.toSettings()) };
+    return { ...clone52(this.settings), rect: clone52(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map((node) => node.toSettings()) };
   }
 }
 var UI_SYSTEMS = {
@@ -3084,7 +5044,7 @@ function createUiSystem(id) {
   return system;
 }
 function createDefaultUiFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "ui.visibility", provides: ["ui.visibility"] }).register({ id: "ui.layout", provides: ["ui.layout"], after: ["ui.visibility"] }).register({ id: "ui.input.pointer", provides: ["ui.pointer"], after: ["ui.layout"] }).register({ id: "ui.focus", requires: ["ui.pointer"], provides: ["ui.focus"], after: ["ui.input.pointer"] }).register({ id: "ui.input.keyboard", provides: ["ui.keyboard"], after: ["ui.focus"] }).register({ id: "ui.text-input", requires: ["ui.focus", "ui.keyboard"], after: ["ui.input.keyboard"] }).register({ id: "ui.button", requires: ["ui.pointer"], after: ["ui.focus", "ui.text-input"] }).register({ id: "ui.navigation", after: ["ui.button", "ui.text-input"] }).register({ id: "ui.render", requires: ["ui.layout"], after: ["ui.navigation"] });
+  const registry = new EngineSystemRegistry2().register({ id: "ui.visibility", provides: ["ui.visibility"] }).register({ id: "ui.layout", provides: ["ui.layout"], after: ["ui.visibility"] }).register({ id: "ui.input.pointer", provides: ["ui.pointer"], after: ["ui.layout"] }).register({ id: "ui.focus", requires: ["ui.pointer"], provides: ["ui.focus"], after: ["ui.input.pointer"] }).register({ id: "ui.input.keyboard", provides: ["ui.keyboard"], after: ["ui.focus"] }).register({ id: "ui.text-input", requires: ["ui.focus", "ui.keyboard"], after: ["ui.input.keyboard"] }).register({ id: "ui.button", requires: ["ui.pointer"], after: ["ui.focus", "ui.text-input"] }).register({ id: "ui.navigation", after: ["ui.button", "ui.text-input"] }).register({ id: "ui.render", requires: ["ui.layout"], after: ["ui.navigation"] });
   return registry.select(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
 }
 
@@ -3100,15 +5060,15 @@ class UiMenuBuilder {
       throw new Error("A UI menu requires an ID and positive size");
   }
   addScreen(screen) {
-    this.screens.push(clone3(screen));
+    this.screens.push(clone52(screen));
     return this;
   }
   useFramework(framework) {
-    this.framework = clone3(framework);
+    this.framework = clone52(framework);
     return this;
   }
   build() {
-    const settings = { schemaVersion: 1, id: this.id, size: clone3(this.size), activeScreen: this.screens[0]?.id ?? "", history: [], screens: clone3(this.screens), framework: clone3(this.framework) };
+    const settings = { schemaVersion: 1, id: this.id, size: clone52(this.size), activeScreen: this.screens[0]?.id ?? "", history: [], screens: clone52(this.screens), framework: clone52(this.framework) };
     validateUiSettings(settings);
     return settings;
   }
@@ -3119,18 +5079,15 @@ class UiMenuBuilder {
     return "Builds a JSON-safe explicit-tick UI menu with screens, semantic actions, and registry-selected systems.";
   }
 }
-function createNode(settings) {
-  const cloned = clone3(settings);
-  return cloned.kind === "container" ? new UiContainer(cloned) : new UiElement(cloned);
+function createNode(settings, parentStyle) {
+  const cloned = clone52(settings);
+  return cloned.kind === "container" ? new UiContainer(cloned, parentStyle) : new UiElement(cloned, parentStyle);
 }
 function isContainerNode(node) {
   return node.kind === "container";
 }
 function hasFocusable(value) {
-  return "focused" in value && value.kind !== "text";
-}
-function hasPressable(value) {
-  return value.kind === "button";
+  return value.kind === "button" || value.kind === "textInput";
 }
 function hasTextInput(value) {
   return value.kind === "textInput" && value.focused === true;
@@ -3141,10 +5098,10 @@ function isTextInputElement(value) {
 function positive(value) {
   return Number.isFinite(value) && value > 0;
 }
-function isRecord2(value) {
+function isRecord32(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function clone3(value) {
+function clone52(value) {
   return structuredClone(value);
 }
 function range(count, compute) {
@@ -3199,11 +5156,11 @@ function mainAxisOffsets(count, gap, remaining, justify) {
   }
 }
 var ELEMENT_KEYS = {
-  text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style"]),
-  button: new Set(["kind", "id", "rect", "text", "icon", "visible", "enabled", "focusable", "style", "action"]),
-  textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "action", "value"]),
-  image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style"]),
-  container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style"])
+  text: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle"]),
+  button: new Set(["kind", "id", "rect", "text", "icon", "component", "visible", "enabled", "focusable", "style", "inheritStyle", "action"]),
+  textInput: new Set(["kind", "id", "rect", "text", "visible", "enabled", "focusable", "style", "inheritStyle", "action", "value"]),
+  image: new Set(["kind", "id", "rect", "source", "visible", "enabled", "style", "inheritStyle"]),
+  container: new Set(["kind", "id", "rect", "layout", "elements", "visible", "enabled", "style", "inheritStyle", "groupHover", "text", "action"])
 };
 var LAYOUT_KEYS = new Set(["type", "gap", "padding", "justify", "align"]);
 var PADDING_KEYS = new Set(["top", "right", "bottom", "left"]);
@@ -3215,12 +5172,12 @@ function validateUiSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     throw new Error("Invalid UI settings");
   const value = settings;
-  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord2(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
+  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord32(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
     throw new Error("Invalid UI settings");
   const screenIds = new Set;
   const seenScreens = new WeakSet;
   for (const screen of value.screens) {
-    if (!isRecord2(screen))
+    if (!isRecord32(screen))
       throw new Error("Invalid UI screen");
     if (typeof screen.id !== "string" || screen.id.length === 0 || screenIds.has(screen.id))
       throw new Error("Invalid UI screen");
@@ -3249,15 +5206,15 @@ function validateUiSettings(settings) {
   if (value.history.some((id) => typeof id !== "string" || !screenIds.has(id)))
     throw new Error("UI navigation history references an unknown screen");
   if (value.theme !== undefined)
-    assertJsonValue(value.theme);
-  if (!value.framework || !isRecord2(value.framework))
+    assertJsonValue2(value.theme);
+  if (!value.framework || !isRecord32(value.framework))
     throw new Error("UI framework is required");
   const expected = createDefaultUiFramework().systemOrder;
   if (!Array.isArray(value.framework.systemOrder) || value.framework.systemOrder.join("|") !== expected.join("|"))
     throw new Error("Unsupported UI framework order");
 }
 function validateElement(value, ids, screenIds, path, ancestors, requireScreenTargets) {
-  if (!isRecord2(value))
+  if (!isRecord32(value))
     throw invalidElement(path, "malformed element");
   if (ancestors.has(value))
     throw invalidElement(path, "cyclic element tree");
@@ -3284,6 +5241,14 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
       throw invalidElement(childPath, "invalid enabled state");
     if (value.style !== undefined && typeof value.style !== "string")
       throw invalidElement(childPath, "invalid style");
+    if (value.inheritStyle !== undefined && typeof value.inheritStyle !== "boolean")
+      throw invalidElement(childPath, "invalid inheritStyle");
+    if (value.groupHover !== undefined && typeof value.groupHover !== "boolean")
+      throw invalidElement(childPath, "invalid groupHover");
+    if (value.text !== undefined && typeof value.text !== "string")
+      throw invalidElement(childPath, "invalid text");
+    if (kind === "container" && value.action !== undefined)
+      validateAction(value.action, screenIds, childPath, requireScreenTargets);
     if (kind === "container") {
       if (value.layout === undefined)
         throw invalidElement(childPath, "missing layout");
@@ -3300,6 +5265,8 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
         throw invalidElement(childPath, "invalid text");
       if (value.icon !== undefined && (typeof value.icon !== "string" || value.icon.length === 0))
         throw invalidElement(childPath, "invalid icon");
+      if (value.component !== undefined)
+        validateUiComponent(value.component, `${childPath}.component`);
       if (value.focusable !== undefined && typeof value.focusable !== "boolean")
         throw invalidElement(childPath, "invalid focusable state");
       if (kind === "textInput" && value.value !== undefined && typeof value.value !== "string")
@@ -3311,8 +5278,12 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
     ancestors.delete(value);
   }
 }
+function validateUiComponent(value, path = "component") {
+  if (!isRecord32(value) || value.type !== "image" || typeof value.source !== "string" || value.source.length === 0 || Object.keys(value).some((key) => key !== "type" && key !== "source"))
+    throw new Error(`Invalid ${path}`);
+}
 function validateLayout(value, path) {
-  if (!isRecord2(value))
+  if (!isRecord32(value))
     throw invalidElement(path, "invalid layout");
   if (typeof value.type !== "string" || !LAYOUT_TYPES.has(value.type))
     throw invalidElement(path, "invalid layout type");
@@ -3336,7 +5307,7 @@ function validatePadding(value, path) {
       return;
     throw invalidElement(path, "invalid padding");
   }
-  if (!isRecord2(value))
+  if (!isRecord32(value))
     throw invalidElement(path, "invalid padding");
   for (const key of Object.keys(value))
     if (!PADDING_KEYS.has(key))
@@ -3346,7 +5317,7 @@ function validatePadding(value, path) {
       throw invalidElement(path, "invalid padding");
 }
 function validateRect(value, path) {
-  if (!isRecord2(value))
+  if (!isRecord32(value))
     throw invalidElement(path, "invalid rect");
   for (const key of Object.keys(value))
     if (!RECT_KEYS.has(key))
@@ -3368,7 +5339,7 @@ function validateAction(action, screenIds, path, requireScreenTargets) {
     throw invalidElement(path, "Invalid UI enabled action");
   if (action.type === "setText" && (typeof action.target !== "string" || typeof action.text !== "string"))
     throw invalidElement(path, "Invalid UI text action");
-  assertJsonValue(action);
+  assertJsonValue2(action);
 }
 function invalidElement(path, reason) {
   return new Error(`Invalid UI element in ${path}: ${reason}`);
@@ -3383,8 +5354,8 @@ var ui = {
   createDefaultFramework: createDefaultUiFramework,
   validate: validateUiSettings,
   screen(settings) {
-    const input = clone3(settings);
-    const result = { id: input.id, elements: input.elements.map((element) => clone3(element)) };
+    const input = clone52(settings);
+    const result = { id: input.id, elements: input.elements.map((element) => clone52(element)) };
     if (input.layout !== undefined)
       result.layout = normalizeLayout(input.layout);
     if (input.visible !== undefined)
@@ -3392,30 +5363,42 @@ var ui = {
     return result;
   },
   button(settings) {
-    return { ...clone3(settings), kind: "button", focusable: settings.focusable ?? true };
+    if (settings.component)
+      validateUiComponent(settings.component);
+    return { ...clone52(settings), kind: "button", focusable: settings.focusable ?? true };
   },
   text(settings) {
-    return { ...clone3(settings), kind: "text", focusable: false };
+    return { ...clone52(settings), kind: "text", focusable: false };
   },
   textInput(settings) {
-    return { ...clone3(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text };
+    return { ...clone52(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text };
   },
   image(settings) {
-    return { ...clone3(settings), kind: "image" };
+    return { ...clone52(settings), kind: "image" };
+  },
+  component: {
+    image(source) {
+      const component = { type: "image", source };
+      validateUiComponent(component);
+      return component;
+    }
   },
   container(settings) {
     let input;
     try {
-      input = clone3(settings);
+      input = clone52(settings);
     } catch (error) {
       throw new Error(`UI container input must be acyclic JSON data: ${error instanceof Error ? error.message : String(error)}`);
     }
     const result = {
       kind: "container",
       id: input.id,
-      rect: clone3(input.rect),
+      rect: clone52(input.rect),
       layout: normalizeLayout(input.layout ?? { type: "absolute" }),
-      elements: input.elements.map((element) => clone3(element))
+      elements: [
+        ...input.text === undefined ? [] : [{ kind: "text", id: `${input.id}__text`, text: input.text, rect: { x: 0, y: 0, width: input.rect.width, height: input.rect.height }, focusable: false }],
+        ...input.elements.map((element) => clone52(element))
+      ]
     };
     if (input.visible !== undefined)
       result.visible = input.visible;
@@ -3423,6 +5406,14 @@ var ui = {
       result.enabled = input.enabled;
     if (input.style !== undefined)
       result.style = input.style;
+    if (input.inheritStyle !== undefined)
+      result.inheritStyle = input.inheritStyle;
+    if (input.groupHover !== undefined)
+      result.groupHover = input.groupHover;
+    if (input.text !== undefined)
+      result.text = input.text;
+    if (input.action !== undefined)
+      result.action = clone52(input.action);
     const ids = new Set;
     validateElement(result, ids, new Set, `container "${input.id}"`, new WeakSet, false);
     return result;
@@ -3551,7 +5542,7 @@ function createPlayerSettings(overrides = {}) {
     team: [...overrides.team ?? []],
     color: overrides.color ?? "red",
     playericon: overrides.playericon ?? 27 /* picturePenguinPenguinIdleFrame1PNG */,
-    shape: 0 /* CIRCLE */,
+    shape: SHAPE.CIRCLE,
     hoop: overrides.hoop ?? 17 /* pictureReifenPNG */,
     isPhysicsEnabled: overrides.isPhysicsEnabled ?? true,
     isDrawingEnabled: overrides.isDrawingEnabled ?? true,
@@ -3692,6 +5683,39 @@ class EffectSpawnTrigger {
   }
 }
 
+class SeededRandom2 {
+  state;
+  constructor(seed) {
+    if (!Number.isSafeInteger(seed))
+      throw new RangeError("Seed must be a safe integer");
+    this.state = seed >>> 0;
+  }
+  next() {
+    this.state = this.state + 1831565813 >>> 0;
+    let value = this.state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  }
+  nextInt(maxExclusive) {
+    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
+      throw new RangeError("Maximum must be a positive safe integer");
+    }
+    return Math.floor(this.next() * maxExclusive);
+  }
+  getState() {
+    return this.state;
+  }
+  static fromState(state) {
+    if (!Number.isSafeInteger(state) || state < 0 || state > 4294967295) {
+      throw new RangeError("Random state must be an unsigned 32-bit integer");
+    }
+    const random = new SeededRandom2(0);
+    random.state = state;
+    return random;
+  }
+}
+
 function createRuntimeItemEffect(settings) {
   validateRuntimeItemEffectSettings(settings);
   const value = settings.typeValue;
@@ -3711,7 +5735,7 @@ function createRuntimeItemEffect(settings) {
         action: "aim",
         operation: "random-offset",
         maxVarianceDegrees: numberValue(value, "maxVarianceDegrees"),
-        randomState: value.randomState === undefined ? new SeededRandom(value.seed === undefined ? 1337 : safeIntegerValue(value, "seed")).getState() : safeIntegerValue(value, "randomState")
+        randomState: value.randomState === undefined ? new SeededRandom2(value.seed === undefined ? 1337 : safeIntegerValue(value, "seed")).getState() : safeIntegerValue(value, "randomState")
       });
     case "temporalModifier" /* TemporalModifier */:
       return createTemporalModifierTemplate({ durationUnit: value.durationUnit, duration: integerValue(value, "duration"), effect: value.effect });
@@ -3869,6 +5893,20 @@ function validateItemDocument(document) {
     throw new Error("Item document must have a non-empty string name");
   if (typeof doc.type !== "string")
     throw new Error("Item document must have a string type");
+  if (doc.ui !== undefined) {
+    if (typeof doc.ui !== "object" || doc.ui === null || Array.isArray(doc.ui))
+      throw new Error("Item ui must be an object");
+    const ui2 = doc.ui;
+    if (Object.keys(ui2).some((key) => key !== "component" && key !== "showLabel"))
+      throw new Error("Item ui contains an unknown field");
+    if (ui2.component !== undefined) {
+      const component = ui2.component;
+      if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0 || Object.keys(component).some((key) => key !== "type" && key !== "source"))
+        throw new Error("Item ui component must be a non-empty image source");
+    }
+    if (ui2.showLabel !== undefined && typeof ui2.showLabel !== "boolean")
+      throw new Error("Item ui showLabel must be a boolean");
+  }
   if (!Array.isArray(doc.effects))
     throw new Error("Item document must have an effects array");
   if (!VALID_TARGET_TYPES.includes(doc.targetType))
@@ -3952,6 +5990,8 @@ function validateItemPickup(pickup) {
     const config = p.respawnConfig;
     if (typeof config.intervalRounds !== "number" || !Number.isSafeInteger(config.intervalRounds) || config.intervalRounds < 1)
       throw new Error("Item pickup respawnConfig intervalRounds must be a positive integer");
+    if (config.relocate !== undefined && typeof config.relocate !== "boolean")
+      throw new Error("Item pickup respawnConfig relocate must be boolean");
   }
 }
 function validateItemPickupState(state, pickupCount) {
@@ -3972,7 +6012,18 @@ function validateItemPickupState(state, pickupCount) {
       throw new Error("Item pickup state must have unique occupant IDs");
     if (entry.respawnCountdown !== undefined && (typeof entry.respawnCountdown !== "number" || !Number.isSafeInteger(entry.respawnCountdown) || entry.respawnCountdown < 0))
       throw new Error("Item pickup state must have a non-negative respawn countdown");
+    if (entry.spawnRegion !== undefined)
+      validatePickupRegion(entry.spawnRegion);
   }
+}
+function validatePickupRegion(value) {
+  if (typeof value !== "object" || value === null)
+    throw new Error("Item pickup state spawn region must be an object");
+  const region = value;
+  if (!["x", "y", "w", "h"].every((key) => typeof region[key] === "number" && Number.isFinite(region[key])))
+    throw new Error("Item pickup state spawn region must have finite numeric bounds");
+  if (region.w <= 0 || region.h <= 0)
+    throw new Error("Item pickup state spawn region dimensions must be positive");
 }
 
 function createFixedLoadoutInventory(loadout, documents) {
@@ -4026,7 +6077,7 @@ class Player {
   team = [];
   color;
   playericon;
-  shape = 0 /* CIRCLE */;
+  shape = SHAPE.CIRCLE;
   hoop;
   isPhysicsEnabled = true;
   isDrawingEnabled = true;
@@ -4661,13 +6712,17 @@ class EntityManager {
 
 class PlaybackSystem {
   systemId = "core.playback";
+  turnStartState;
+  lastPositionDrift = [];
   remainingFrames = 0;
   syncPending = false;
   completionPending = false;
   finalState;
   cb;
-  start(frames, finalState, cb) {
+  start(frames, finalState, cb, turnStartState) {
     this.finalState = finalState;
+    this.turnStartState = turnStartState ? JSON.parse(JSON.stringify(turnStartState)) : undefined;
+    this.lastPositionDrift = [];
     this.remainingFrames = frames;
     this.syncPending = frames === 0;
     this.cb = cb;
@@ -4702,11 +6757,29 @@ class PlaybackSystem {
   applyHardSync(entities) {
     if (!this.finalState)
       return;
+    const before = entities.serialize();
+    const beforeById = new Map(before.map((player) => [player.id, player]));
+    const turnStartById = new Map((this.turnStartState ?? []).map((player) => [player.id, player]));
+    this.lastPositionDrift = this.finalState.flatMap((expected) => {
+      const actual = beforeById.get(expected.id);
+      if (!actual)
+        return [];
+      const delta = { x: actual.position.x - expected.position.x, y: actual.position.y - expected.position.y };
+      const turnStart = turnStartById.get(expected.id)?.position;
+      return [{ id: expected.id, ...turnStart ? { turnStart: { ...turnStart } } : {}, before: { ...actual.position }, expected: { ...expected.position }, delta, distance: Math.hypot(delta.x, delta.y) }];
+    });
     entities.applySettings(this.finalState);
     this.finalState = undefined;
+    this.syncPending = false;
   }
   getRemainingFrames() {
     return this.remainingFrames;
+  }
+  getLastPositionDrift() {
+    return this.lastPositionDrift.map((entry) => ({ ...entry, ...entry.turnStart ? { turnStart: { ...entry.turnStart } } : {}, before: { ...entry.before }, expected: { ...entry.expected }, delta: { ...entry.delta } }));
+  }
+  getTurnStartState() {
+    return this.turnStartState ? JSON.parse(JSON.stringify(this.turnStartState)) : undefined;
   }
 }
 
@@ -4715,12 +6788,12 @@ var DEFAULT_ITEM_ECONOMY = {
   mapPickups: []
 };
 function validateItemEconomySettings(settings) {
-  if (!isRecord3(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
+  if (!isRecord5(settings) || !Array.isArray(settings.fixedLoadouts) || !Array.isArray(settings.mapPickups)) {
     throw new Error("Item economy requires fixed loadouts and map pickups arrays");
   }
   const teams = new Set;
   for (const loadout of settings.fixedLoadouts) {
-    if (!isRecord3(loadout))
+    if (!isRecord5(loadout))
       throw new Error("Item loadouts require a non-negative team and items array");
     const team = loadout.team;
     const items = loadout.items;
@@ -4731,7 +6804,7 @@ function validateItemEconomySettings(settings) {
       throw new Error("Item economy allows only one loadout per team");
     teams.add(team);
     for (const item of items) {
-      if (!isRecord3(item))
+      if (!isRecord5(item))
         throw new Error("Fixed loadout items require an id and positive use count");
       const itemId = item.itemId;
       const uses = item.uses;
@@ -4744,7 +6817,7 @@ function validateItemEconomySettings(settings) {
     validateItemPickup(pickup);
   if (settings.randomDraw !== undefined) {
     const draw = settings.randomDraw;
-    if (!isRecord3(draw))
+    if (!isRecord5(draw))
       throw new Error("Seeded item draws require a safe seed, non-empty item pool, and positive draws per turn");
     const seed = draw.seed;
     const itemIds = draw.itemIds;
@@ -4755,7 +6828,7 @@ function validateItemEconomySettings(settings) {
   }
   if (settings.mysteryBox !== undefined) {
     const box = settings.mysteryBox;
-    if (!isRecord3(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
+    if (!isRecord5(box) || !Array.isArray(box.candidatePool) || box.candidatePool.length === 0 || !box.candidatePool.every((itemId) => typeof itemId === "string" && itemId)) {
       throw new Error("Mystery box rewards require a non-empty candidate pool");
     }
     if (box.allowMysteryBoxReward !== undefined && typeof box.allowMysteryBoxReward !== "boolean") {
@@ -4763,7 +6836,7 @@ function validateItemEconomySettings(settings) {
     }
   }
 }
-function isRecord3(value) {
+function isRecord5(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -4774,20 +6847,46 @@ function isValidInput(input) {
   return typeof candidate.actorId === "string" && candidate.actorId.length > 0 && typeof candidate.angle === "number" && Number.isFinite(candidate.angle) && candidate.angle >= 0 && candidate.angle < 360 && typeof candidate.power === "number" && Number.isFinite(candidate.power) && candidate.power > 0 && candidate.power <= 10;
 }
 
+var LoggerType;
+((LoggerType2) => {
+  LoggerType2["Performance"] = "performance";
+  LoggerType2["Input"] = "input";
+  LoggerType2["Turn"] = "turn";
+  LoggerType2["Worker"] = "worker";
+  LoggerType2["Diagnostic"] = "diagnostic";
+})(LoggerType ||= {});
+function isRuntimeLogCategory(type, category) {
+  if (category === "turn" /* Turn */)
+    return type.startsWith("turn.") || type.startsWith("turnPacket.");
+  if (category === "worker" /* Worker */)
+    return type.startsWith("worker.") || type.includes(".worker.");
+  if (category === "performance" /* Performance */)
+    return type.startsWith("performance.") || type.startsWith("turn.") || type.startsWith("ai.");
+  return type.startsWith(`${category}.`);
+}
+function runtimeNow() {
+  return performance.now();
+}
+
 class AiTurnEmitter {
   producer;
   constructor(producer) {
     this.producer = producer;
   }
   executeTurn(handler, aiSettings, targetEmitter) {
+    const started = runtimeNow();
+    handler.log("ai.decision.started", { team: aiSettings.team, difficulty: aiSettings.difficulty });
     const decision = this.producer.computeTurn(handler, aiSettings);
-    if (!decision)
+    if (!decision) {
+      handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: false, executionMode: "synchronous" });
       return false;
+    }
     let actionSubmitted = false;
     if (decision.itemUse) {
       const { actorId, itemId, target } = decision.itemUse;
       const actor = handler.getEntityManager().getEntityById(actorId);
       if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId)) {
+        handler.log("input.accepted", { actionType: "item", actorId, team: aiSettings.team });
         targetEmitter.sendItemUse?.(actorId, itemId, target);
         actionSubmitted = true;
       }
@@ -4796,10 +6895,12 @@ class AiTurnEmitter {
       const { actorId, angle, power } = decision.shot;
       const actor = handler.getEntityManager().getEntityById(actorId);
       if (actor && !actor.isDead() && actor.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(actorId) && isValidInput({ actorId, angle, power })) {
+        handler.log("input.accepted", { actionType: "shot", actorId, angle, power, team: aiSettings.team });
         targetEmitter.sendShot(actorId, angle, power);
         actionSubmitted = true;
       }
     }
+    handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: actionSubmitted, executionMode: "synchronous" });
     return actionSubmitted;
   }
 }
@@ -4809,7 +6910,7 @@ class EasyAi {
     const aiActors = handler.getEntityManager().getEntities().filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     if (aiActors.length === 0)
       return;
-    const random = new SeededRandom(aiSettings.seed + handler.getTurnNumber() * 31);
+    const random = new SeededRandom2(aiSettings.seed + handler.getTurnNumber() * 31);
     const actorIndex = random.nextInt(aiActors.length);
     const actor = aiActors[actorIndex];
     const angle = random.nextInt(360);
@@ -4824,14 +6925,116 @@ class EasyAi {
   }
 }
 
+var ALLOW_ALL_TARGETS = {
+  allowSelf: true,
+  allowAlly: true,
+  allowEnemy: true
+};
+function validateItemTarget(item, target, context) {
+  const validation = item.targetValidation ?? ALLOW_ALL_TARGETS;
+  if (!isRecord6(target) || typeof target.type !== "string") {
+    throw new Error("Item target must be an object with a valid type");
+  }
+  if (target.type !== item.targetType) {
+    throw new Error(`Item requires a ${item.targetType} target`);
+  }
+  switch (target.type) {
+    case "self":
+      if (!validation.allowSelf)
+        throw new Error("Item does not allow self targets");
+      return;
+    case "entity":
+      validateEntityTarget(target, validation, context);
+      return;
+    case "position":
+      validatePositionTarget(target.position, validation.maxRange, context);
+      return;
+    case "zone":
+      validateZoneTarget(target, validation.maxRange, context);
+      return;
+    default:
+      throw new Error("Item target has an unsupported type");
+  }
+}
+function resolveEffectTarget(target, context) {
+  switch (target.type) {
+    case "self":
+      return createEntityResolvedTarget(String(context.actor.getId()));
+    case "entity":
+      return createEntityResolvedTarget(target.entityId);
+    case "position":
+      return createPositionResolvedTarget(target.position);
+    case "zone":
+      throw new Error("Delayed Effects do not support zone targets without a stable zone contract");
+  }
+}
+function validateEntityTarget(target, validation, context) {
+  if (typeof target.entityId !== "string" || target.entityId.length === 0) {
+    throw new Error("Entity targets require a non-empty entityId");
+  }
+  const entity = context.entities.find((candidate) => candidate.getId() === target.entityId);
+  if (!entity || entity.isDead())
+    throw new Error("Entity target must be an active entity");
+  if (entity === context.actor || entity.getId() === context.actor.getId()) {
+    if (!validation.allowSelf)
+      throw new Error("Item does not allow self targets");
+  } else if (sharesTeam(context.actor, entity)) {
+    if (!validation.allowAlly)
+      throw new Error("Item does not allow ally targets");
+  } else if (!validation.allowEnemy) {
+    throw new Error("Item does not allow enemy targets");
+  }
+  validateRange(context.actor.getPos(), entity.getPos(), validation.maxRange);
+}
+function validatePositionTarget(position, maxRange, context) {
+  if (!isVector2(position))
+    throw new Error("Position targets require finite x and y coordinates");
+  validateWorldPosition(position, context.worldSize);
+  validateRange(context.actor.getPos(), position, maxRange);
+}
+function validateZoneTarget(target, maxRange, context) {
+  if (!isVector2(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
+    throw new Error("Zone targets require a finite center and positive radius");
+  }
+  validateWorldPosition(target.center, context.worldSize);
+  if (target.center.x - target.radius < 0 || target.center.y - target.radius < 0 || target.center.x + target.radius > context.worldSize.x || target.center.y + target.radius > context.worldSize.y) {
+    throw new Error("Zone target must be contained within the world");
+  }
+  validateRange(context.actor.getPos(), target.center, maxRange);
+}
+function validateRange(origin, target, maxRange) {
+  if (maxRange !== undefined && Math.hypot(origin.x - target.x, origin.y - target.y) > maxRange) {
+    throw new Error("Item target is outside the maximum range");
+  }
+}
+function validateWorldPosition(position, worldSize) {
+  if (position.x < 0 || position.y < 0 || position.x > worldSize.x || position.y > worldSize.y) {
+    throw new Error("Item target must be inside the world");
+  }
+}
+function sharesTeam(first, second) {
+  return first.getTeam().some((team) => second.getTeam().includes(team));
+}
+function isRecord6(value) {
+  return typeof value === "object" && value !== null;
+}
+function isVector2(value) {
+  return isRecord6(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
+}
+
+var HARD_AI_SPECULATIVE_MAX_TICKS = 300;
+
 class HardAi {
   computeTurn(handler, aiSettings) {
-    const random = new SeededRandom(aiSettings.seed);
+    const random = new SeededRandom2(aiSettings.seed);
+    const rule = handler.getRuleState();
     const entities = handler.getEntityManager().getEntities();
     const aiActors = entities.filter((e) => !e.isDead() && e.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(e.getId()));
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
+    if (rule.phase === "item" /* Item */)
+      return this.chooseItem(handler, aiActors, enemyActors, random);
     const maxSimulations = aiSettings.decisionLimits?.maxSimulations ?? 36;
     const maxAngleSamples = aiSettings.decisionLimits?.maxAngleSamples ?? 12;
     const maxForceSamples = aiSettings.decisionLimits?.maxForceSamples ?? 3;
@@ -4840,6 +7043,7 @@ class HardAi {
     let simCount = 0;
     let bestScore = -Infinity;
     const bestChoices = [];
+    const simulatedScores = new Map;
     for (const aiActor of aiActors) {
       if (simCount >= maxSimulations)
         break;
@@ -4865,20 +7069,25 @@ class HardAi {
           if (simCount >= maxSimulations)
             break;
           simCount++;
-          let score = 0;
-          try {
-            const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power);
-            for (const pSnapshot of sim.finalState) {
-              if (pSnapshot.team.includes(aiSettings.team)) {
-                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
-                  score -= 1e4;
-              } else {
-                if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
-                  score += 5000;
+          const simulationKey = `${aiActor.getId()}:${candidate.angle}:${power}`;
+          let score = simulatedScores.get(simulationKey);
+          if (score === undefined) {
+            score = 0;
+            try {
+              const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
+              for (const pSnapshot of sim.finalState) {
+                if (pSnapshot.team.includes(aiSettings.team)) {
+                  if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
+                    score -= 1e4;
+                } else {
+                  if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled)
+                    score += 5000;
+                }
               }
+            } catch {
+              score = -20000;
             }
-          } catch {
-            score = -20000;
+            simulatedScores.set(simulationKey, score);
           }
           if (score > bestScore) {
             bestScore = score;
@@ -4908,6 +7117,73 @@ class HardAi {
       shot: { actorId: choice.actorId, angle: choice.angle, power: choice.power }
     };
   }
+  chooseItem(handler, aiActors, enemyActors, random) {
+    const items = handler.getSettings()?.items ?? [];
+    const choices = [];
+    for (const actor of aiActors) {
+      for (const inventory of actor.getInventory().filter((entry) => entry.remainingUses > 0)) {
+        const item = items.find((candidate) => candidate.id === inventory.itemId);
+        if (!item)
+          continue;
+        for (const target of itemTargets(item, actor, enemyActors, handler.getEntityManager().getEntities())) {
+          try {
+            validateItemTarget(item, target, { actor, entities: handler.getEntityManager().getEntities(), worldSize: handler.getContext().worldSize });
+          } catch {
+            continue;
+          }
+          choices.push({ actorId: actor.getId(), itemId: item.id, target, score: scoreItem(item, target, actor, enemyActors) });
+        }
+      }
+    }
+    if (choices.length === 0)
+      return;
+    const bestScore = Math.max(...choices.map((choice2) => choice2.score));
+    if (bestScore < 2 || random.nextInt(100) >= 65)
+      return;
+    const best = choices.filter((choice2) => choice2.score === bestScore);
+    const choice = best[random.nextInt(best.length)];
+    return { itemUse: { actorId: choice.actorId, itemId: choice.itemId, target: choice.target } };
+  }
+}
+function itemTargets(item, actor, enemies, entities) {
+  if (item.targetType === "self")
+    return [{ type: "self" }];
+  if (item.targetType === "entity") {
+    return [...entities].sort((left, right) => distance(actor, left) - distance(actor, right)).map((entity) => ({ type: "entity", entityId: entity.getId() }));
+  }
+  if (item.targetType === "position") {
+    const target = enemies.slice().sort((left, right) => distance(actor, left) - distance(actor, right))[0];
+    return target ? [{ type: "position", position: target.getPos() }] : [];
+  }
+  return [];
+}
+function scoreItem(item, target, actor, enemies) {
+  const baseScores = {
+    anker: 2,
+    durchlaessigkeit: 2,
+    magnet: 4,
+    falltuer: 3,
+    "power-dash": 3,
+    "verzoegerte-mine": 3,
+    "mini-wall": 2,
+    "freeze-shot": 4,
+    switch: 2,
+    "jaegermeister-elixier": 3,
+    "vodka-zero": 2
+  };
+  let score = baseScores[item.id] ?? 1;
+  if (target.type === "entity" && enemies.some((enemy) => enemy.getId() === target.entityId))
+    score += 1;
+  if (target.type === "position")
+    score += 1;
+  if (item.targetType === "self" && enemies.length > 0)
+    score += Math.max(0, 1 - distance(actor, enemies[0]) / 800);
+  return score;
+}
+function distance(first, second) {
+  const a = first.getPos();
+  const b = second.getPos();
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 class MediumAi {
@@ -4917,7 +7193,7 @@ class MediumAi {
     const enemyActors = entities.filter((e) => !e.isDead() && !e.getTeam().includes(aiSettings.team));
     if (aiActors.length === 0 || enemyActors.length === 0)
       return;
-    const random = new SeededRandom(aiSettings.seed + handler.getTurnNumber() * 37);
+    const random = new SeededRandom2(aiSettings.seed + handler.getTurnNumber() * 37);
     const worldSize = handler.getContext().worldSize;
     let bestScore = -Infinity;
     let bestChoice;
@@ -4966,11 +7242,11 @@ class MediumAi {
   }
 }
 
-function isRecord4(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function validateAiSettings(settings) {
-  if (!isRecord4(settings)) {
+  if (!isRecord7(settings)) {
     throw new Error("AI settings must be an object");
   }
   if (settings.difficulty !== "easy" && settings.difficulty !== "medium" && settings.difficulty !== "hard") {
@@ -4983,7 +7259,7 @@ function validateAiSettings(settings) {
     throw new Error("AI team must be a non-negative integer");
   }
   if (settings.decisionLimits !== undefined) {
-    if (!isRecord4(settings.decisionLimits)) {
+    if (!isRecord7(settings.decisionLimits)) {
       throw new Error("AI decision limits must be an object");
     }
     const { maxSimulations, maxAngleSamples, maxForceSamples } = settings.decisionLimits;
@@ -5029,17 +7305,879 @@ var koreAi = {
   createTurnEmitter: createAiTurnEmitter
 };
 
+var currentTurnMode = {
+  id: "current-turn",
+  phases: ["physics" /* Physics */],
+  maxItemsPerTurn: 0,
+  winCondition: "last-team-standing" /* LastTeamStanding */,
+  itemEconomy: DEFAULT_ITEM_ECONOMY
+};
+
+class RuleInterpreter {
+  phases;
+  maxItemsPerTurn;
+  constructor(mode) {
+    if (mode.phases.length === 0)
+      throw new Error("A game mode requires at least one rule phase");
+    if (mode.phases.includes("complete" /* Complete */))
+      throw new Error("Complete cannot be a configured rule phase");
+    if (!Number.isSafeInteger(mode.maxItemsPerTurn) || mode.maxItemsPerTurn < 0)
+      throw new Error("Item allowance must be a non-negative integer");
+    const hasItemPhase = mode.phases.includes("item" /* Item */);
+    if (mode.phases.filter((phase) => phase === "item" /* Item */).length > 1)
+      throw new Error("Item phase may occur only once");
+    if (hasItemPhase && mode.phases[0] !== "item" /* Item */)
+      throw new Error("Item phase must start a turn");
+    if (hasItemPhase && mode.maxItemsPerTurn === 0)
+      throw new Error("Item phase requires a positive item allowance");
+    if (!hasItemPhase && mode.maxItemsPerTurn !== 0)
+      throw new Error("Item allowance requires an item phase");
+    validateItemEconomySettings(mode.itemEconomy);
+    const shotPhases = mode.phases.filter((phase) => phase !== "item" /* Item */);
+    const requiredShotPhases = ["aim" /* Aim */, "charge" /* Charge */, "push" /* Push */, "physics" /* Physics */];
+    const isLegacyPhysicsOnly = shotPhases.length === 1 && shotPhases[0] === "physics" /* Physics */;
+    if (!isLegacyPhysicsOnly && (shotPhases.length !== requiredShotPhases.length || !requiredShotPhases.every((phase, index) => shotPhases[index] === phase))) {
+      throw new Error("Staged shots must use aim, charge, push, then physics phases");
+    }
+    this.phases = [...mode.phases];
+    this.maxItemsPerTurn = mode.maxItemsPerTurn;
+  }
+  initialState(activeTeam = 0, turnNumber = 0) {
+    return { phase: this.phases[0], activeTeam, turnNumber, itemUses: 0 };
+  }
+  getMaxItemsPerTurn() {
+    return this.maxItemsPerTurn;
+  }
+  advancePhase(state) {
+    if (state.phase === "complete" /* Complete */)
+      return state;
+    const phaseIndex = this.phases.indexOf(state.phase);
+    if (phaseIndex < 0)
+      throw new Error(`Phase ${state.phase} is not configured for this game mode`);
+    return { ...state, phase: this.phases[phaseIndex + 1] ?? "complete" /* Complete */ };
+  }
+  useItem(state) {
+    if (state.phase !== "item" /* Item */)
+      throw new Error("Items may only be used during the item phase");
+    if (state.itemUses >= this.maxItemsPerTurn)
+      throw new Error("Item allowance has been exhausted");
+    return { ...state, itemUses: state.itemUses + 1 };
+  }
+  nextActiveTeam(activeTeam, teamCount) {
+    if (!Number.isInteger(activeTeam) || !Number.isInteger(teamCount) || teamCount < 1) {
+      throw new Error("RuleInterpreter requires at least one team");
+    }
+    return (activeTeam + 1) % teamCount;
+  }
+  startNextTurn(state, teamCount) {
+    if (state.phase !== "complete" /* Complete */)
+      throw new Error("A turn must complete before the next turn starts");
+    return {
+      phase: this.phases[0],
+      activeTeam: this.nextActiveTeam(state.activeTeam, teamCount),
+      turnNumber: state.turnNumber + 1,
+      itemUses: 0
+    };
+  }
+}
+
+class TurnSystem {
+  static stateForTeam(activeTeam, controlledTeams) {
+    return controlledTeams.includes(activeTeam) ? "GameState.Your_turn" /* Your_turn */ : "GameState.Opponents_turn" /* Opponents_turn */;
+  }
+}
+
+function arrangeInGrid(players, rect, padding = 0) {
+  if (players.length === 0)
+    return;
+  const size = players[0].size * 2;
+  const cellSize = size + padding + 1;
+  const cols = Math.max(1, Math.floor(rect.w / cellSize));
+  const rows = Math.max(1, Math.floor(rect.h / cellSize));
+  if (cols * rows < players.length)
+    throw new Error("Nicht genug Platz für alle Spieler!");
+  players.forEach((player, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    player.position.x = rect.x + col * cellSize + size / 2;
+    player.position.y = rect.y + row * cellSize + size / 2;
+  });
+}
+
+var debug = true;
+var [x, y] = [800, 450];
+var debugColorStruct = debug ? "blue" : undefined;
+function createPlayerStartPoints(team, players) {
+  players.forEach((player) => player.size = 12);
+  const teamNr = [{ x: 120, y: 150, w: 200, h: 450 - 150 }, { x: 800 - 120 * 2, y: 120, w: 200, h: 450 - 100 }];
+  arrangeInGrid(players, teamNr[team], 46);
+}
+var friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
+var defaultEffects = [{ trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }];
+var deadly = createCollisionCommandBinding(createEngineEffectComposition([
+  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+]));
+var IceMap = {
+  schemaVersion: 1,
+  screenResolution: { x, y },
+  worldSize: { x, y },
+  background: { type: "image", url: 2 /* slipStirkeMapIceJPG */ },
+  drift: 0,
+  mapBoundarys: [
+    { id: "ice.wall.left", type: SHAPE.RECTANGLE, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-left", type: SHAPE.RECTANGLE, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.top-right", type: SHAPE.RECTANGLE, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-left", type: SHAPE.RECTANGLE, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.bottom-right", type: SHAPE.RECTANGLE, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.right", type: SHAPE.RECTANGLE, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.wall.center", type: SHAPE.RECTANGLE, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
+    { id: "ice.hazard.top-left", type: SHAPE.CIRCLE, x: 60, y: 45, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.top-right", type: SHAPE.CIRCLE, x: 720, y: 50, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-right", type: SHAPE.CIRCLE, x: 720, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.bottom-left", type: SHAPE.CIRCLE, x: 60, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-top", type: SHAPE.CIRCLE, x: 390, y: 35, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
+    { id: "ice.hazard.center-bottom", type: SHAPE.CIRCLE, x: 390, y: 400, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] }
+  ]
+};
+var iceMap_default = { createPlayerStartPoints, IceMap };
+
+var ENVIRONMENT_SCHEMA_VERSION = 1;
+function validateEnvironmentalMechanics(value) {
+  if (!Array.isArray(value))
+    throw new Error("Invalid environmental mechanics");
+  const ids = new Set;
+  for (const mechanic of value) {
+    if (!isRecord8(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
+      throw new Error("Invalid environmental mechanic identity");
+    ids.add(mechanic.id);
+    if (!isBoundary(mechanic.structure) || !Array.isArray(mechanic.effects ?? []))
+      throw new Error(`Invalid environmental structure '${mechanic.id}'`);
+    if (mechanic.ownerTeam !== undefined && (!Number.isSafeInteger(mechanic.ownerTeam) || mechanic.ownerTeam < 0))
+      throw new Error("Invalid environmental ownership");
+    switch (mechanic.type) {
+      case "force-field":
+        break;
+      case "timed-hazard":
+        if (!positiveInteger3(mechanic.startTick) || !positiveInteger3(mechanic.intervalTicks) || !positiveInteger3(mechanic.durationTicks))
+          throw new Error("Invalid timed hazard timing");
+        break;
+      case "triggered-zone":
+        if (!isZone(mechanic.triggerZone) || !positiveInteger3(mechanic.durationTicks) || mechanic.cooldownTicks !== undefined && !positiveInteger3(mechanic.cooldownTicks))
+          throw new Error("Invalid triggered zone timing");
+        break;
+      case "moving-structure":
+        if (!isVector3(mechanic.to) || !positiveInteger3(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
+          throw new Error("Invalid moving structure path");
+        break;
+      case "environmental-cycle":
+        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord8(phase) || !positiveInteger3(phase.durationTicks) || typeof phase.enabled !== "boolean"))
+          throw new Error("Invalid environmental cycle");
+        break;
+      default:
+        throw new Error(`Unsupported environmental mechanic '${String(mechanic.type)}'`);
+    }
+  }
+}
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function finite5(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+function positiveInteger3(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+function isVector3(value) {
+  return isRecord8(value) && finite5(value.x) && finite5(value.y);
+}
+function isZone(value) {
+  return isRecord8(value) && finite5(value.x) && finite5(value.y) && finite5(value.r) && value.r > 0;
+}
+function isBoundary(value) {
+  if (!isRecord8(value) || !finite5(value.x) || !finite5(value.y) || !Array.isArray(value.effects))
+    return false;
+  if (value.type === SHAPE.CIRCLE)
+    return finite5(value.r) && value.r > 0;
+  if (value.type === SHAPE.RECTANGLE)
+    return finite5(value.w) && finite5(value.h) && value.w > 0 && value.h > 0;
+  return value.type === SHAPE.LINE && finite5(value.x2) && finite5(value.y2);
+}
+
+class TriggerDefinitionCatalog {
+  definitions = new Map;
+  register(definition) {
+    validateTriggerDefinition(definition);
+    if (this.definitions.has(definition.id))
+      throw new Error(`Duplicate trigger definition '${definition.id}'`);
+    this.definitions.set(definition.id, structuredClone(definition));
+    return this;
+  }
+  get(id) {
+    const definition = this.definitions.get(id);
+    return definition === undefined ? undefined : structuredClone(definition);
+  }
+  require(id) {
+    const definition = this.get(id);
+    if (!definition)
+      throw new Error(`Unknown trigger definition '${id}'`);
+    return definition;
+  }
+  describe() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
+  }
+  toSettings() {
+    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => structuredClone(definition));
+  }
+}
+function validateTriggerDefinition(value) {
+  const definition = record10(value, "Trigger definition");
+  exactKeys10(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  if (definition.schemaVersion !== 1)
+    throw new Error("Unsupported trigger definition schema version");
+  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
+    throw new Error("Invalid trigger definition ID");
+  if (isEngineComposition(definition.effect))
+    validateEngineEffectComposition(definition.effect);
+  else
+    validateEffectSettings(definition.effect);
+}
+function isEngineComposition(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
+}
+function record10(value, label) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+function exactKeys10(value, keys, label) {
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value))
+    if (!allowed.has(key))
+      throw new Error(`${label} contains unknown field '${key}'`);
+  for (const key of keys)
+    if (!(key in value))
+      throw new Error(`${label} is missing '${key}'`);
+}
+var DEFAULT_DRIFT = 0;
+function validateDrift(drift) {
+  if (!Number.isFinite(drift) || drift < 0 || drift > 1)
+    throw new Error("Map drift must be a finite number between 0 and 1");
+}
+function validateFigureCounts(playerCount, figuresPerPlayer) {
+  if (!Number.isSafeInteger(playerCount) || playerCount < 1 || !Number.isSafeInteger(figuresPerPlayer) || figuresPerPlayer < 1) {
+    throw new Error("Player count and figures per player must be positive integers");
+  }
+}
+function validateGameSettings(settings) {
+  if (!isRecord9(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
+    throw new Error("Invalid game settings document");
+  if (!isVector4(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
+    throw new Error("Invalid screen resolution");
+  if (!isRecord9(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
+    throw new Error("Invalid friction settings");
+  validateDrift(settings.drift);
+  validateFigureCounts(settings.playerCount, settings.figuresPerPlayer);
+  if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam))
+    throw new Error("Invalid team settings");
+  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord9(player) && isVector4(player.position) && isVector4(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
+    throw new Error("Invalid player settings");
+  if (!isBackground(settings.background))
+    throw new Error("Invalid background settings");
+  if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary2))
+    throw new Error("Invalid map boundary settings");
+  const structureIds = settings.mapBoundarys.flatMap((boundary) => boundary.id === undefined ? [] : [boundary.id]);
+  if (new Set(structureIds).size !== structureIds.length)
+    throw new Error("Structure IDs must be unique");
+  if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect))
+    throw new Error("Invalid effect settings");
+  if (!Array.isArray(settings.items))
+    throw new Error("Invalid item settings");
+  try {
+    settings.items.forEach(validateItemDocument);
+  } catch {
+    throw new Error("Invalid item settings");
+  }
+  if (settings.gameMode !== undefined) {
+    if (settings.gameMode.schemaVersion !== undefined && settings.gameMode.schemaVersion !== 1)
+      throw new Error("Unsupported game mode schema version");
+    validateItemEconomySettings(settings.gameMode.itemEconomy);
+    const draw = settings.gameMode.itemEconomy.randomDraw;
+    if (draw && !draw.itemIds.every((itemId) => settings.items.some((item) => item.id === itemId))) {
+      throw new Error("Seeded item draw references an unknown item");
+    }
+    const mysteryBox = settings.gameMode.itemEconomy.mysteryBox;
+    if (mysteryBox && !mysteryBox.candidatePool.every((itemId) => settings.items.some((item) => item.id === itemId))) {
+      throw new Error("Mystery Box pool references an unknown item");
+    }
+  }
+  if (settings.ai !== undefined)
+    validateAiSettings(settings.ai);
+  if (settings.environmentalMechanics !== undefined)
+    validateEnvironmentalMechanics(settings.environmentalMechanics);
+  if (settings.triggerDefinitions !== undefined)
+    settings.triggerDefinitions.forEach(validateTriggerDefinition);
+  if (settings.counters !== undefined)
+    canonicalizeCounterStates(settings.counters);
+}
+function isRecord9(value) {
+  return typeof value === "object" && value !== null;
+}
+function isVector4(value) {
+  return isRecord9(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
+}
+function isBackground(value) {
+  if (!isRecord9(value))
+    return false;
+  if (value.type === "color")
+    return typeof value.color === "string";
+  if (value.type !== "image" || typeof value.url !== "number" && typeof value.url !== "string")
+    return false;
+  if (typeof value.url !== "string")
+    return true;
+  try {
+    const url = new URL(value.url, "https://kore.invalid");
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+function isTeam(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+function isEffect(value) {
+  try {
+    validateFullEffectSettings(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function isBoundary2(value) {
+  if (!isRecord9(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
+    return false;
+  if (value.collisionCommands !== undefined) {
+    if (!Array.isArray(value.collisionCommands))
+      return false;
+    try {
+      value.collisionCommands.forEach(validateCollisionCommandBinding);
+    } catch {
+      return false;
+    }
+  }
+  if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))
+    return false;
+  if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
+    return false;
+  if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean")
+    return false;
+  if (value.role !== undefined && !isStructureCollisionRole(value.role))
+    return false;
+  if (value.type === SHAPE.CIRCLE)
+    return Number.isFinite(value.r) && value.r > 0;
+  if (value.type === SHAPE.RECTANGLE)
+    return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0;
+  return value.type === SHAPE.LINE && Number.isFinite(value.x2) && Number.isFinite(value.y2);
+}
+var FRICTION_TABLE = {
+  ice: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
+  tiles: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 },
+  wood: { friction: 0.96, linearDrag: 0.1, stopThreshold: 0.2 },
+  billiards: { friction: 0.94, linearDrag: 0.15, stopThreshold: 0.2 },
+  carpet_office: { friction: 0.91, linearDrag: 0.25, stopThreshold: 0.3 },
+  gym: { friction: 0.88, linearDrag: 0.4, stopThreshold: 0.4 },
+  turf: { friction: 0.82, linearDrag: 0.8, stopThreshold: 0.5 },
+  asphalt: { friction: 0.75, linearDrag: 1.2, stopThreshold: 0.6 },
+  grass: { friction: 0.6, linearDrag: 2.5, stopThreshold: 1 },
+  sand: { friction: 0.4, linearDrag: 5, stopThreshold: 2 }
+};
+var playerSize = 14;
+var defaultHoop = 18 /* pictureReifenWEBP */;
+var defaultEffects2 = [
+  {
+    trigger: "EffectTrigger.Always" /* Always */,
+    triggerValue: [],
+    ...new EffectMove({ typeValue: { deltaTime: 0, x: 0, y: 0 } }).toSettings()
+  },
+  {
+    trigger: "EffectTrigger.Always" /* Always */,
+    triggerValue: [],
+    ...new EffectPhysics({ typeValue: { ...FRICTION_TABLE.ice } }).toSettings()
+  }
+];
+function createDefaultPlayers(playerCount, figuresPerPlayer) {
+  validateFigureCounts(playerCount, figuresPerPlayer);
+  if (playerCount > 2)
+    throw new Error("The ice map supports at most two players");
+  const icons = [22 /* picturePenguinPenguinIdleFrame1WEBP */, 46 /* picturePolarBearPolarBearIdleFrame1WEBP */];
+  return Array.from({ length: playerCount }, (_, team) => {
+    const players = Array.from({ length: figuresPerPlayer }, () => createPlayerSettings({
+      position: { x: 0, y: 0 },
+      playericon: icons[team],
+      team: [team],
+      size: playerSize,
+      hoop: defaultHoop,
+      effects: defaultEffects2
+    }));
+    iceMap_default.createPlayerStartPoints(team, players);
+    return players;
+  }).flat();
+}
+function createDefaultGameSettings(playerCount = 2, figuresPerPlayer = 6) {
+  return {
+    id: "8a67d1b0-5c76-4348-bc7a-012d8c9746cc",
+    players: createDefaultPlayers(playerCount, figuresPerPlayer),
+    friction: FRICTION_TABLE.ice,
+    items: [],
+    effects: [],
+    minPlayers: 2,
+    maxPlayers: 2,
+    allTeams: ["1bafa3d2-b0e3-4e66-8c4f-e8da14278123", "5935f4b2-b3bd-4792-a356-fdf74f20ca2e"],
+    allTeamSize: 2,
+    playerCount,
+    figuresPerPlayer,
+    gameMode: currentTurnMode,
+    myTeam: [],
+    ...iceMap_default.IceMap
+  };
+}
+var GameSettings = createDefaultGameSettings();
+
+function deriveStructureId(settings) {
+  if (settings.id !== undefined)
+    return settings.id;
+  const canonical = settings.type === 0 ? [settings.type, settings.x, settings.y, settings.r, settings.role ?? ""].join("|") : settings.type === 2 ? [settings.type, settings.x, settings.y, settings.w, settings.h, settings.role ?? ""].join("|") : [settings.type, settings.x, settings.y, settings.x2, settings.y2].join("|");
+  let hash = 2166136261;
+  for (let index = 0;index < canonical.length; index++)
+    hash = Math.imul(hash ^ canonical.charCodeAt(index), 16777619) >>> 0;
+  return `structure-${hash.toString(16).padStart(8, "0")}`;
+}
+
+var DOCUMENT_SCHEMA_VERSION = 1;
+function validateMapDocument(document) {
+  if (!isRecord10(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
+    throw new Error("Invalid map schema version");
+  if (!isRecord10(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
+    throw new Error("Invalid map metadata");
+  if (!isVector5(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
+    throw new Error("Invalid map world size");
+  if (document.background !== undefined && !isMapBackground(document.background))
+    throw new Error("Invalid map background");
+  if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1)
+    throw new Error("Invalid map physics");
+  if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards))
+    throw new Error("Invalid map collections");
+  if (!document.spawnRegions.every(isSpawnRegion))
+    throw new Error("Invalid map spawn region");
+  if (!document.hazards.every(isMapHazard))
+    throw new Error("Invalid map hazard");
+  if (document.environmentalMechanics !== undefined)
+    validateEnvironmentalMechanics(document.environmentalMechanics);
+}
+function isRecord10(value) {
+  return typeof value === "object" && value !== null;
+}
+function isVector5(value) {
+  return isRecord10(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
+}
+function isMapBackground(value) {
+  if (!isRecord10(value))
+    return false;
+  if (value.type === "color")
+    return typeof value.color === "string";
+  if (value.type !== "image" || typeof value.url !== "number" && typeof value.url !== "string")
+    return false;
+  if (typeof value.url !== "string")
+    return Number.isSafeInteger(value.url) && value.url >= 0;
+  try {
+    const url = new URL(value.url, "https://kore.invalid");
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+function isFriction(value) {
+  return isRecord10(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
+}
+function isSpawnRegion(value) {
+  return isRecord10(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
+}
+function isArenaGeometry(value) {
+  if (!isRecord10(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
+    return false;
+  if (value.type === SHAPE.CIRCLE)
+    return typeof value.r === "number" && value.r > 0;
+  if (value.type === SHAPE.RECTANGLE)
+    return typeof value.w === "number" && typeof value.h === "number" && value.w > 0 && value.h > 0;
+  return value.type === SHAPE.LINE && typeof value.x2 === "number" && typeof value.y2 === "number" && Number.isFinite(value.x2) && Number.isFinite(value.y2);
+}
+function arrangeTeamStartGrid(players, region) {
+  if (players.length === 6) {
+    const size = players[0].size * 2;
+    const cellSize = Math.min(region.w / 2, region.h / 3);
+    if (!(cellSize > size))
+      throw new Error("Map spawn region is too small for the 2x3 team formation");
+    const offsetX = (region.w - cellSize * 2) / 2;
+    const offsetY = 0;
+    players.forEach((player, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      player.position.x = region.x + offsetX + col * cellSize + size / 2;
+      player.position.y = region.y + offsetY + row * cellSize + size / 2;
+    });
+    return;
+  }
+  arrangeInGrid(players, region);
+}
+function loadMapDocument(map, template) {
+  validateMapDocument(map);
+  const players = template.players.map((player) => createPlayerSettings(player));
+  const playersByTeam = new Map;
+  for (const player of players) {
+    const team = player.team[0];
+    if (team === undefined)
+      throw new Error("Map loading requires each player to have a team");
+    const teamPlayers = playersByTeam.get(team) ?? [];
+    teamPlayers.push(player);
+    playersByTeam.set(team, teamPlayers);
+  }
+  for (const [team, teamPlayers] of playersByTeam) {
+    const region = map.spawnRegions.find((spawn) => spawn.team === team);
+    if (!region)
+      throw new Error(`Map has no spawn region for team ${team}`);
+    arrangeTeamStartGrid(teamPlayers, region);
+  }
+  return {
+    ...template,
+    players,
+    worldSize: { ...map.worldSize },
+    background: map.background === undefined ? template.background : structuredClone(map.background),
+    friction: { ...map.friction },
+    drift: map.drift,
+    mapBoundarys: assignStableStructureIds([
+      ...map.arenaGeometry.map((boundary) => ({
+        ...boundary,
+        color: boundary.color ?? (boundary.role === "containment" ? undefined : DEFAULT_MAP_STRUCTURE_COLOR),
+        effects: boundary.effects.map((effect) => ({ ...effect }))
+      })),
+      ...map.hazards.map(hazardToBoundary),
+      ...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary)
+    ]),
+    environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined
+  };
+}
+var DEFAULT_MAP_STRUCTURE_COLOR = "#315b7d";
+function assignStableStructureIds(boundaries) {
+  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+}
+function isMapHazard(value) {
+  if (!isRecord10(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord10(value.trigger) || value.trigger.type !== "collision" || !isRecord10(value.config))
+    return false;
+  if (!isHazardZone(value.config))
+    return false;
+  if (value.type === "kill-zone")
+    return true;
+  return value.type === "force" && typeof value.config.angle === "number" && Number.isFinite(value.config.angle) && value.config.angle >= 0 && value.config.angle < 360 && typeof value.config.power === "number" && Number.isFinite(value.config.power) && value.config.power > 0;
+}
+function isHazardZone(value) {
+  const { x: x2, y: y2, r } = value;
+  return [x2, y2, r].every((item) => typeof item === "number" && Number.isFinite(item)) && typeof r === "number" && r > 0 && (value.color === undefined || typeof value.color === "string");
+}
+function hazardToBoundary(hazard) {
+  const zone = hazard.config;
+  return {
+    type: SHAPE.CIRCLE,
+    x: zone.x,
+    y: zone.y,
+    r: zone.r,
+    color: typeof zone.color === "string" ? zone.color : hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
+    effects: [],
+    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }
+  };
+}
+function lethalCollisionCommand() {
+  return createCollisionCommandBinding(createEngineEffectComposition([
+    { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
+    { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
+  ]));
+}
+function forceHazardCommand(hazard) {
+  const config = hazard.config;
+  const radians = config.angle * Math.PI / 180;
+  return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } });
+}
+function environmentalMechanicToBoundary(mechanic) {
+  return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
+}
+
+var SHOOT_ACTION_KEYS = ["type", "actorId", "input"];
+var ITEM_USE_ACTION_KEYS = ["type", "actorId", "itemId", "target"];
+var COUNTER_ACTION_KEYS = ["type", "effect"];
+var SHOOT_INPUT_KEYS = ["angle", "power"];
+function validateReplayDocument(document) {
+  if (!isRecord11(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION) {
+    throw new Error("Invalid replay schema version");
+  }
+  if (!isRecord11(document.initialSettings) || typeof document.seed !== "number" || !Number.isFinite(document.seed) || !Array.isArray(document.actions)) {
+    throw new Error("Invalid replay document structure");
+  }
+  for (const action of document.actions)
+    validateReplayAction(action);
+}
+function validateReplayAction(action) {
+  if (!isRecord11(action))
+    throw new Error("Replay actions must be objects");
+  if (action.type !== "shoot" && action.type !== "itemUse") {
+    if (action.type !== "counter")
+      throw new Error(`Unknown replay action type '${String(action.type)}'`);
+    for (const key of Object.keys(action))
+      if (!COUNTER_ACTION_KEYS.includes(key))
+        throw new Error(`Unknown replay counter action field '${key}'`);
+    validateCounterEffectSettings(action.effect);
+    return;
+  }
+  if (typeof action.actorId !== "string" || action.actorId.length === 0) {
+    throw new Error("Replay actions require a non-empty actorId");
+  }
+  if (action.type === "shoot") {
+    for (const key of Object.keys(action)) {
+      if (!SHOOT_ACTION_KEYS.includes(key)) {
+        throw new Error(`Unknown replay shoot action field '${key}'`);
+      }
+    }
+    if (!isRecord11(action.input))
+      throw new Error("Replay shoot actions require an input object");
+    for (const key of Object.keys(action.input)) {
+      if (!SHOOT_INPUT_KEYS.includes(key)) {
+        throw new Error(`Unknown replay shoot input field '${key}'`);
+      }
+    }
+    const { angle, power } = action.input;
+    if (typeof angle !== "number" || !Number.isFinite(angle))
+      throw new Error("Replay shoot angle must be a finite number");
+    if (typeof power !== "number" || !Number.isFinite(power))
+      throw new Error("Replay shoot power must be a finite number");
+    return;
+  }
+  for (const key of Object.keys(action)) {
+    if (!ITEM_USE_ACTION_KEYS.includes(key)) {
+      throw new Error(`Unknown replay item use action field '${key}'`);
+    }
+  }
+  if (typeof action.itemId !== "string" || action.itemId.length === 0) {
+    throw new Error("Replay item use actions require a non-empty itemId");
+  }
+  if (!isRecord11(action.target))
+    throw new Error("Replay item use actions require a target object");
+}
+function isRecord11(value) {
+  return typeof value === "object" && value !== null;
+}
+
+class ReplayRecorder {
+  document;
+  constructor(initialSettings, seed = 12345, actions = []) {
+    this.document = {
+      schemaVersion: DOCUMENT_SCHEMA_VERSION,
+      initialSettings: JSON.parse(JSON.stringify(initialSettings)),
+      seed,
+      actions: JSON.parse(JSON.stringify(actions))
+    };
+    validateReplayDocument(this.document);
+  }
+  recordShoot(actorId, angle, power) {
+    this.document.actions.push({
+      type: "shoot",
+      actorId,
+      input: { angle, power }
+    });
+  }
+  recordItemUse(actorId, itemId, target) {
+    this.document.actions.push({
+      type: "itemUse",
+      actorId,
+      itemId,
+      target: JSON.parse(JSON.stringify(target))
+    });
+  }
+  getReplay() {
+    validateReplayDocument(this.document);
+    return JSON.parse(JSON.stringify(this.document));
+  }
+}
+
+var KORE_AUDIO_ASSETS = {
+  "kore.music.menu": "./public/audio/CM_01_Ascension.mp3",
+  "kore.music.match": "./public/audio/CM_02_Moon_Shadows.mp3",
+  "kore.ui.confirm": "./public/audio/CM_03_Ritualis.mp3",
+  "kore.ui.reject": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.shot": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.collision": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.damage": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.shield": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.item": "./public/audio/CM_03_Ritualis.mp3",
+  "kore.game.hazard": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.elimination": "./public/audio/CM_04_Sacrifice.mp3",
+  "kore.game.turn": "./public/audio/CM_03_Ritualis.mp3",
+  "kore.game.result": "./public/audio/CM_03_Ritualis.mp3"
+};
+var KORE_AUDIO_BUSES = [
+  audio.bus({ id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false }),
+  audio.bus({ id: "music", volume: 0.1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false }),
+  audio.bus({ id: "ambience", volume: 0.6, muted: false, maxVoices: 8, defaultPriority: 20, paused: false }),
+  audio.bus({ id: "effects", volume: 0.6, muted: false, maxVoices: 32, defaultPriority: 10, paused: false }),
+  audio.bus({ id: "ui", volume: 0.45, muted: false, maxVoices: 8, defaultPriority: 30, paused: false }),
+  audio.bus({ id: "voice", volume: 0.8, muted: false, maxVoices: 8, defaultPriority: 40, paused: false })
+];
+function createKoreAudioSettings(runtimeId) {
+  return audio.createSettings({ runtimeId, buses: KORE_AUDIO_BUSES });
+}
+var koreAudio = {
+  assets: KORE_AUDIO_ASSETS,
+  buses: KORE_AUDIO_BUSES,
+  createSettings: createKoreAudioSettings,
+  sounds: { uiConfirm: "kore.ui.confirm", uiReject: "kore.ui.reject", shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield", item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result" },
+  music: { menu: "kore.music.menu", match: "kore.music.match" },
+  command: {
+    uiConfirm(sourceId, soundId = "kore.ui.confirm") {
+      return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" });
+    },
+    uiReject(sourceId) {
+      return audio.command.play({ sourceId, soundId: "kore.ui.reject", bus: "ui", priority: 40, dedupeKey: "reject" });
+    },
+    shot(sourceId) {
+      return audio.command.play({ sourceId, soundId: "kore.game.shot", bus: "effects", priority: 20, dedupeKey: "shot" });
+    },
+    menuMusic(sourceId = "menu.music") {
+      return audio.command.music({ sourceId, soundId: "kore.music.menu", bus: "music", priority: 10, replacementPolicy: "replace-current", fadeInMs: 250 });
+    },
+    matchMusic(sourceId = "match.music") {
+      return audio.command.music({ sourceId, soundId: "kore.music.match", bus: "music", priority: 20, replacementPolicy: "replace-lower-or-equal", fadeInMs: 500 });
+    }
+  }
+};
+
+class GameEmitter {
+  handler;
+  sounds = new AudioEmitter("kore.game.local");
+  soundSourceId = this.sounds.soundSourceId;
+  rules;
+  ruleState;
+  teamCount;
+  aiWorkerSettings = new Map;
+  aiWorkerHost;
+  recorder;
+  constructor(handler, mode = currentTurnMode, teamCount = handler.getTeam().length, seed = 12345, aiWorkerHost) {
+    if (teamCount < 1)
+      throw new Error("Local game requires at least one team");
+    this.handler = handler;
+    this.rules = new RuleInterpreter(mode);
+    this.ruleState = handler.getRuleState();
+    this.teamCount = teamCount;
+    this.aiWorkerHost = aiWorkerHost;
+    const settings = typeof handler.toSettings === "function" ? handler.toSettings() : handler.settings ?? { schemaVersion: 1, id: crypto.randomUUID(), screenResolution: { x: 16, y: 9 }, worldSize: { x: 16, y: 9 }, players: [], mapBoundarys: [], background: { type: "color", color: "#000" }, friction: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }, drift: 0, effects: [], items: [], myTeam: [], allTeamSize: 2, playerCount: 2, figuresPerPlayer: 6, minPlayers: 2, maxPlayers: 2 };
+    this.recorder = new ReplayRecorder(settings, seed);
+    this.sounds.emit(koreAudio.command.matchMusic(this.soundSourceId));
+  }
+  drainSoundCommands() {
+    return this.sounds.drainSoundCommands();
+  }
+  setAiWorkerSettings(settings) {
+    this.aiWorkerSettings = new Map(settings.map((setting) => [setting.team, structuredClone(setting)]));
+  }
+  isAiThinking() {
+    return this.aiWorkerHost?.isThinking() ?? false;
+  }
+  sendShot(actorId, angle, power) {
+    this.handler.log?.("input.received", { actionType: "shot", actorId, angle, power });
+    this.ruleState = this.handler.getRuleState();
+    if (this.ruleState.phase === "item" /* Item */)
+      this.ruleState = this.handler.skipCurrentPhase();
+    if (this.ruleState.phase !== "physics" /* Physics */)
+      throw new Error("Local shot is not in the physics phase");
+    if (!isValidInput({ actorId, angle, power }))
+      throw new Error("Invalid shot input");
+    const actor = this.handler.getEntityManager().getEntityById(actorId);
+    if (!actor)
+      throw new Error(`Actor ${actorId} not found`);
+    if (actor.isDead())
+      throw new Error(`Actor ${actorId} is not active`);
+    this.handler.log?.("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+    this.handler.log?.("turn.started", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+    const validateActor = this.handler.validateActorForAction;
+    if (validateActor)
+      validateActor.call(this.handler, actorId);
+    const acceptedAction = { actorId, angle, power };
+    this.handler.beginTurnTiming?.();
+    const nextRuleState = this.rules.startNextTurn(this.rules.advancePhase(this.ruleState), this.teamCount);
+    const nextAiSettings = this.aiWorkerSettings.get(nextRuleState.activeTeam);
+    if (this.aiWorkerHost && nextAiSettings)
+      this.aiWorkerHost.prepareTurn({ snapshot: this.handler.toSettings(), acceptedAction, nextRuleState, aiSettings: nextAiSettings });
+    this.recorder.recordShoot(actorId, angle, power);
+    const sim = this.handler.simulateTurn(actorId, angle, power);
+    this.handler.playTurn(sim, () => {
+      if (this.handler.getState?.() === "GameState.Game_over" /* Game_over */) {
+        this.aiWorkerHost?.invalidate();
+        return;
+      }
+      this.ruleState = this.rules.advancePhase(this.ruleState);
+      this.ruleState = this.rules.startNextTurn(this.ruleState, this.teamCount);
+      const startTurn = this.handler.startTurn;
+      if (startTurn)
+        startTurn.call(this.handler, this.ruleState);
+      else {
+        this.handler.setActiveTeam(this.ruleState.activeTeam);
+        this.handler.setTurnNumber(this.ruleState.turnNumber);
+        this.handler.setRuleState(this.ruleState);
+      }
+      this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()));
+      this.aiWorkerHost?.completeAuthoritativeTurn(this.handler);
+    });
+    this.sounds.emit(koreAudio.command.shot(this.soundSourceId));
+  }
+  sendItemUse(actorId, itemId, target) {
+    this.ruleState = this.handler.getRuleState();
+    if (this.ruleState.phase !== "item" /* Item */)
+      throw new Error("Local item use is not in the item phase");
+    if (this.ruleState.itemUses >= this.rules.getMaxItemsPerTurn())
+      throw new Error("Item allowance has been exhausted");
+    const actor = this.handler.getEntityManager().getEntityById(actorId);
+    if (!actor || actor.isDead())
+      throw new Error("Actor is not active");
+    const validateActor = this.handler.validateActorForAction;
+    if (validateActor)
+      validateActor.call(this.handler, actorId);
+    this.recorder.recordItemUse(actorId, itemId, target);
+    this.handler.useItem(actorId, itemId, target);
+    this.ruleState = this.rules.useItem(this.ruleState);
+    this.handler.setRuleState(this.ruleState);
+    this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()));
+  }
+  skipPhase() {
+    this.ruleState = this.handler.getRuleState();
+    if (this.ruleState.phase === "physics" /* Physics */ || this.ruleState.phase === "complete" /* Complete */)
+      throw new Error("The current phase cannot be skipped");
+    this.ruleState = this.rules.advancePhase(this.ruleState);
+    this.handler.setRuleState(this.ruleState);
+    this.handler.setState(TurnSystem.stateForTeam(this.ruleState.activeTeam, this.handler.getTeam()));
+  }
+}
+
 class AiBattleSystem {
   handler;
   targetEmitter;
+  workerHost;
   systemId = "ai.battle";
   emitter0;
   emitter1;
   settings0;
   settings1;
-  constructor(handler, targetEmitter, aiTeam0, aiTeam1) {
+  startupWaitKey;
+  initialDecisionKey;
+  constructor(handler, targetEmitter, aiTeam0, aiTeam1, workerHost) {
     this.handler = handler;
     this.targetEmitter = targetEmitter;
+    this.workerHost = workerHost;
     this.emitter0 = koreAi.createTurnEmitter(aiTeam0);
     this.emitter1 = koreAi.createTurnEmitter(aiTeam1);
     this.settings0 = aiTeam0;
@@ -5059,6 +8197,10 @@ class AiBattleSystem {
       state: { team0: { ...this.settings0 }, team1: { ...this.settings1 } }
     };
   }
+  getReplay() {
+    const emitters = this.targetEmitter;
+    return emitters?.getEmitters().find((emitter) => emitter instanceof GameEmitter)?.recorder.getReplay();
+  }
   ticker(ctx, _dt, _friction) {
     if (!this.handler || !this.targetEmitter)
       return;
@@ -5074,9 +8216,34 @@ class AiBattleSystem {
     }
     if (rule.phase !== "physics" /* Physics */)
       return;
+    if (this.workerHost?.getState() === "starting") {
+      this.waitForInitialWorker(team, rule);
+      return;
+    }
+    if (this.workerHost?.isAvailable()) {
+      const prepared = this.workerHost.consumePreparedAction();
+      if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(team)) {
+        this.targetEmitter.sendShot(prepared.actorId, prepared.angle, prepared.power);
+        return;
+      }
+      if (this.workerHost.isThinking())
+        return;
+      if (rule.turnNumber === 0) {
+        const key = this.initialKey(team, rule.turnNumber);
+        if (this.initialDecisionKey !== key) {
+          this.initialDecisionKey = key;
+          this.workerHost.prepareInitialDecision({ snapshot: this.handler.toSettings(), ruleState: rule, aiSettings: team === 0 ? this.settings0 : this.settings1 });
+          return;
+        }
+      }
+    }
     const emitter = team === 0 ? this.emitter0 : this.emitter1;
     const aiSettings = team === 0 ? this.settings0 : this.settings1;
+    const fallbackReason = this.workerHost?.getFallbackReason() ?? "worker-unavailable";
+    const fallbackStart = this.workerHost?.beginSynchronousFallback(fallbackReason, team);
     const submitted = emitter.executeTurn(this.handler, aiSettings, this.targetEmitter);
+    if (this.workerHost && fallbackStart !== undefined)
+      this.workerHost.completeSynchronousFallback(fallbackReason, team, fallbackStart);
     if (!submitted) {
       console.warn(`KI vs KI: team ${team} produced no action in the physics phase; submitting a neutral shot`);
       const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(team) && this.handler.isActorEligibleForAction(entity.getId()));
@@ -5084,8 +8251,34 @@ class AiBattleSystem {
         this.targetEmitter.sendShot(actor.getId(), 0, 4);
     }
   }
+  initialKey(team, turnNumber) {
+    return `${this.handler?.getGameId() ?? "disposed"}:${turnNumber}:${team}`;
+  }
+  waitForInitialWorker(team, rule) {
+    if (!this.workerHost || !this.handler)
+      return;
+    const key = this.initialKey(team, rule.turnNumber);
+    if (this.startupWaitKey === key)
+      return;
+    this.startupWaitKey = key;
+    this.workerHost.ready().then(() => {
+      if (this.startupWaitKey !== key)
+        return;
+      this.startupWaitKey = undefined;
+      const currentRule = this.handler?.getRuleState();
+      if (!this.handler || this.handler.getState() !== "GameState.Your_turn" /* Your_turn */ || !currentRule || currentRule.turnNumber !== rule.turnNumber || currentRule.activeTeam !== team || currentRule.phase !== "physics" /* Physics */)
+        return;
+      this.initialDecisionKey = undefined;
+    }).catch(() => {
+      if (this.startupWaitKey === key)
+        this.startupWaitKey = undefined;
+    });
+  }
   getEmitter() {
     return this.targetEmitter;
+  }
+  isAiThinking() {
+    return this.workerHost?.isThinking() ?? false;
   }
   handleMousePressed() {}
   handleMouseReleased() {}
@@ -5098,12 +8291,14 @@ class AiOpponentSystem {
   handler;
   targetEmitter;
   settings;
+  workerHost;
   systemId = "ai.opponent";
   emitter;
-  constructor(handler, targetEmitter, settings) {
+  constructor(handler, targetEmitter, settings, workerHost) {
     this.handler = handler;
     this.targetEmitter = targetEmitter;
     this.settings = settings;
+    this.workerHost = workerHost;
     this.emitter = koreAi.createTurnEmitter(settings);
   }
   static fromSettings(state) {
@@ -5120,16 +8315,42 @@ class AiOpponentSystem {
       return;
     const rule = this.handler.getRuleState();
     if (rule.phase === "item" /* Item */) {
+      const maxItems = this.handler.getSettings()?.gameMode?.maxItemsPerTurn ?? 0;
+      if (rule.itemUses < maxItems && this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
+        return;
       this.targetEmitter.skipPhase?.();
       return;
     }
     if (rule.phase !== "physics" /* Physics */)
       return;
-    if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
+    if (this.workerHost?.getState() === "starting")
+      return;
+    if (this.workerHost?.isAvailable()) {
+      const prepared = this.workerHost.consumePreparedAction();
+      if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(this.settings.team)) {
+        this.targetEmitter.sendShot(prepared.actorId, prepared.angle, prepared.power);
+        return;
+      }
+      if (this.workerHost.isThinking())
+        return;
+    }
+    if (this.workerHost) {
+      const reason = this.workerHost.getFallbackReason();
+      const start = this.workerHost.beginSynchronousFallback(reason, this.settings.team);
+      try {
+        if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
+          return;
+      } finally {
+        this.workerHost.completeSynchronousFallback(reason, this.settings.team, start);
+      }
+    } else if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter))
       return;
     const actor = this.handler.getEntityManager().getEntities().find((entity) => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler.isActorEligibleForAction(entity.getId()));
     if (actor)
       this.targetEmitter.sendShot(actor.getId(), 0, 4);
+  }
+  isAiThinking() {
+    return this.workerHost?.isThinking() ?? false;
   }
 }
 
@@ -5138,18 +8359,18 @@ function getCollisionRole(structure) {
 }
 function getOuterContainmentBoundaries(structures) {
   const explicit = structures.filter((structure) => {
-    if (structure.getShape() === 1 /* LINE */)
+    if (structure.getShape() === SHAPE.LINE)
       return false;
     const role = getCollisionRole(structure);
     return role === "containment" || role === "both";
   });
   const inferred = structures.filter((candidate) => {
-    if (candidate.getShape() === 1 /* LINE */)
+    if (candidate.getShape() === SHAPE.LINE)
       return false;
     if (getCollisionRole(candidate) === "solid")
       return false;
     const boundary = candidate;
-    const enclosedStructures = structures.filter((structure) => structure !== candidate && structure.getShape() !== 1 /* LINE */);
+    const enclosedStructures = structures.filter((structure) => structure !== candidate && structure.getShape() !== SHAPE.LINE);
     return enclosedStructures.length > 0 && enclosedStructures.every((structure) => containsPoint(boundary, structure.getPos()));
   });
   const seen = new Set;
@@ -5160,7 +8381,7 @@ function getOuterContainmentBoundaries(structures) {
 function containsCircle(boundary, circle) {
   const center = circle.getPos();
   const radius = circle.getBounds().x;
-  if (boundary.getShape() === 0 /* CIRCLE */) {
+  if (boundary.getShape() === SHAPE.CIRCLE) {
     const outerRadius = boundary.getBounds().x - radius;
     const outerCenter = boundary.getPos();
     return outerRadius >= 0 && (center.x - outerCenter.x) ** 2 + (center.y - outerCenter.y) ** 2 <= outerRadius ** 2;
@@ -5170,7 +8391,7 @@ function containsCircle(boundary, circle) {
   return center.x - radius >= position.x && center.x + radius <= position.x + bounds.x && center.y - radius >= position.y && center.y + radius <= position.y + bounds.y;
 }
 function containsPoint(boundary, point) {
-  if (boundary.getShape() === 0 /* CIRCLE */) {
+  if (boundary.getShape() === SHAPE.CIRCLE) {
     const center = boundary.getPos();
     return (point.x - center.x) ** 2 + (point.y - center.y) ** 2 <= boundary.getBounds().x ** 2;
   }
@@ -5215,6 +8436,9 @@ class EmitterSystem {
     else
       this.emitter = new LogEmitter;
   }
+  setEmitter(emitter) {
+    this.emitter = emitter;
+  }
   setErrorHandler(onError) {
     this.onError = onError;
   }
@@ -5231,6 +8455,7 @@ class EmitterSystem {
     try {
       this.emitter.sendShot(actorId, angle, power);
     } catch (error) {
+      ctx.log?.("input.rejected", { actionType: "shot", actorId, angle, power, reason: error instanceof Error ? error.message : String(error) });
       this.onError?.(error);
       ctx.state = "GameState.Your_turn" /* Your_turn */;
       return;
@@ -5354,10 +8579,10 @@ class MatchStateIndicator {
       `Force: ${Math.round(force * 10) / 10}`,
       `Item: ${item}`
     ];
-    let y = 36;
+    let y2 = 36;
     for (const line of lines) {
-      renderer.drawText(line, 20, y, 16);
-      y += 22;
+      renderer.drawText(line, 20, y2, 16);
+      y2 += 22;
     }
     renderer.pop();
   }
@@ -5381,7 +8606,7 @@ class PhysicsSystem {
   }
   ticker(ctx, dt = this.DEFAULTFPS, _friction) {
     this.registerContactIdentities(ctx);
-    const activeEntities = ctx.entities.getEntities().filter((e) => !e.isDead() && e.physicsEnabled());
+    const activeEntities = ctx.entities.getEntities().filter(isPhysicsParticipant);
     let maxDisplacement = 0;
     for (const e of activeEntities) {
       const vel = e.getVel();
@@ -5422,7 +8647,7 @@ class PhysicsSystem {
     }
     let totalMovement = 0;
     ctx.entities.getEntities().forEach((entity) => {
-      if (entity.isDead() || !entity.physicsEnabled())
+      if (!isPhysicsParticipant(entity))
         return;
       const speed = Math.sqrt(entity.getVel().x ** 2 + entity.getVel().y ** 2);
       if (speed < this.STOP_THRESHOLD) {
@@ -5435,7 +8660,7 @@ class PhysicsSystem {
   }
   resolveAllCollisions(ctx, contactedPairsThisTick = new Set, filterSnapshot = new Map) {
     const { entities, structures } = ctx;
-    const enitityArr = entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
+    const enitityArr = entities.getEntities().filter(isPhysicsParticipant);
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(structures));
     let prevTotalOverlap = Infinity;
     for (let iter = 0;iter < MAX_CONTACT_SOLVER_ITERATIONS; iter++) {
@@ -5512,8 +8737,8 @@ class PhysicsSystem {
       const id = typeof entity.getId === "function" ? entity.getId() : this.nextObjectIdentity++;
       this.objectIdentities.set(entity, `entity:${id}`);
     }
-    ctx.structures.forEach((structure, index) => {
-      this.objectIdentities.set(structure, `structure:${index}`);
+    ctx.structures.forEach((structure) => {
+      this.objectIdentities.set(structure, `structure:${structure.getId()}`);
     });
   }
   getObjectIdentity(obj) {
@@ -5527,7 +8752,7 @@ class PhysicsSystem {
   getPairKey(a, b) {
     const idA = this.getObjectIdentity(a);
     const idB = this.getObjectIdentity(b);
-    return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+    return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
   }
   handlePairCollision(entityA, entityB, contactedPairs) {
     const pairKey = this.getPairKey(entityA, entityB);
@@ -5550,7 +8775,7 @@ class PhysicsSystem {
   }
   collectCurrentContactPairs(ctx, filterSnapshot) {
     const contacts = new Set;
-    const entities = ctx.entities.getEntities().filter((entity) => !entity.isDead() && entity.physicsEnabled());
+    const entities = ctx.entities.getEntities().filter(isPhysicsParticipant);
     const containmentBoundaries = new Set(getOuterContainmentBoundaries(ctx.structures));
     for (let i = 0;i < entities.length; i++) {
       const entity = entities[i];
@@ -5571,7 +8796,7 @@ class PhysicsSystem {
   getOverlapDistance(entityA, entityB) {
     const shapeA = entityA.getShape();
     const shapeB = entityB.getShape();
-    if (shapeA === 0 /* CIRCLE */ && shapeB === 0 /* CIRCLE */) {
+    if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.CIRCLE) {
       const cA = entityA;
       const cB = entityB;
       const dx = cB.getPos().x - cA.getPos().x;
@@ -5581,7 +8806,7 @@ class PhysicsSystem {
       const overlap = rSum - dist;
       return Math.max(overlap - PHYSICS_CONTACT_SLOP, 0);
     }
-    if (shapeA === 0 /* CIRCLE */ && shapeB === 2 /* RECTANGLE */) {
+    if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.RECTANGLE) {
       const c = entityA;
       const r = entityB;
       const cPos = c.getPos();
@@ -5592,14 +8817,14 @@ class PhysicsSystem {
       const closestY = Math.max(rPos.y, Math.min(cPos.y, rPos.y + rBounds.y));
       const dx = cPos.x - closestX;
       const dy = cPos.y - closestY;
-      const distance = Math.hypot(dx, dy);
-      const overlap = radius - distance;
+      const distance2 = Math.hypot(dx, dy);
+      const overlap = radius - distance2;
       return Math.max(overlap - 0.01, 0);
     }
-    if (shapeA === 2 /* RECTANGLE */ && shapeB === 0 /* CIRCLE */) {
+    if (shapeA === SHAPE.RECTANGLE && shapeB === SHAPE.CIRCLE) {
       return this.getOverlapDistance(entityB, entityA);
     }
-    if (shapeA === 0 /* CIRCLE */ && shapeB === 1 /* LINE */) {
+    if (shapeA === SHAPE.CIRCLE && shapeB === SHAPE.LINE) {
       const c = entityA;
       const l = entityB;
       const start = l.getPos();
@@ -5613,12 +8838,12 @@ class PhysicsSystem {
       const closestY = start.y + segmentY * factor;
       const dx = cPos.x - closestX;
       const dy = cPos.y - closestY;
-      const distance = Math.hypot(dx, dy);
+      const distance2 = Math.hypot(dx, dy);
       const radius = c.getBounds().x;
-      const overlap = radius - distance;
+      const overlap = radius - distance2;
       return Math.max(overlap - 0.01, 0);
     }
-    if (shapeA === 1 /* LINE */ && shapeB === 0 /* CIRCLE */) {
+    if (shapeA === SHAPE.LINE && shapeB === SHAPE.CIRCLE) {
       return this.getOverlapDistance(entityB, entityA);
     }
     return 0;
@@ -5666,7 +8891,7 @@ class MovementSystem {
   systemId = "core.movement";
   preTick(ctx, dt) {
     for (const entity of ctx.entities.getEntities()) {
-      if (entity.isDead() || !entity.physicsEnabled())
+      if (!isPhysicsParticipant(entity))
         continue;
       const settings = entity.toSettings();
       let movement = createMovementState({ velocity: entity.getVel(), angularVelocity: settings.angularVelocity, enabled: entity.physicsEnabled() });
@@ -5691,7 +8916,7 @@ class MovementSystem {
       if (payload2.mode !== "attract" && payload2.mode !== "repel" || typeof payload2.force !== "number" || !Number.isFinite(payload2.force) || payload2.force < 0 || typeof payload2.range !== "number" || !Number.isFinite(payload2.range) || payload2.range <= 0)
         throw new Error("Movement force field payload is invalid");
       for (const entity of _ctx.entities.getEntities()) {
-        if (entity.isDead() || !entity.physicsEnabled())
+        if (!isPhysicsParticipant(entity))
           continue;
         entity.setVel(applyRadialVelocityDelta(entity.getVel(), target.position, entity.getPos(), { mode: payload2.mode, force: payload2.force, range: payload2.range }));
       }
@@ -5744,88 +8969,6 @@ class MovementSystem {
   }
 }
 
-var currentTurnMode = {
-  id: "current-turn",
-  phases: ["physics" /* Physics */],
-  maxItemsPerTurn: 0,
-  winCondition: "last-team-standing" /* LastTeamStanding */,
-  itemEconomy: DEFAULT_ITEM_ECONOMY
-};
-
-class RuleInterpreter {
-  phases;
-  maxItemsPerTurn;
-  constructor(mode) {
-    if (mode.phases.length === 0)
-      throw new Error("A game mode requires at least one rule phase");
-    if (mode.phases.includes("complete" /* Complete */))
-      throw new Error("Complete cannot be a configured rule phase");
-    if (!Number.isSafeInteger(mode.maxItemsPerTurn) || mode.maxItemsPerTurn < 0)
-      throw new Error("Item allowance must be a non-negative integer");
-    const hasItemPhase = mode.phases.includes("item" /* Item */);
-    if (mode.phases.filter((phase) => phase === "item" /* Item */).length > 1)
-      throw new Error("Item phase may occur only once");
-    if (hasItemPhase && mode.phases[0] !== "item" /* Item */)
-      throw new Error("Item phase must start a turn");
-    if (hasItemPhase && mode.maxItemsPerTurn === 0)
-      throw new Error("Item phase requires a positive item allowance");
-    if (!hasItemPhase && mode.maxItemsPerTurn !== 0)
-      throw new Error("Item allowance requires an item phase");
-    validateItemEconomySettings(mode.itemEconomy);
-    const shotPhases = mode.phases.filter((phase) => phase !== "item" /* Item */);
-    const requiredShotPhases = ["aim" /* Aim */, "charge" /* Charge */, "push" /* Push */, "physics" /* Physics */];
-    const isLegacyPhysicsOnly = shotPhases.length === 1 && shotPhases[0] === "physics" /* Physics */;
-    if (!isLegacyPhysicsOnly && (shotPhases.length !== requiredShotPhases.length || !requiredShotPhases.every((phase, index) => shotPhases[index] === phase))) {
-      throw new Error("Staged shots must use aim, charge, push, then physics phases");
-    }
-    this.phases = [...mode.phases];
-    this.maxItemsPerTurn = mode.maxItemsPerTurn;
-  }
-  initialState(activeTeam = 0, turnNumber = 0) {
-    return { phase: this.phases[0], activeTeam, turnNumber, itemUses: 0 };
-  }
-  getMaxItemsPerTurn() {
-    return this.maxItemsPerTurn;
-  }
-  advancePhase(state) {
-    if (state.phase === "complete" /* Complete */)
-      return state;
-    const phaseIndex = this.phases.indexOf(state.phase);
-    if (phaseIndex < 0)
-      throw new Error(`Phase ${state.phase} is not configured for this game mode`);
-    return { ...state, phase: this.phases[phaseIndex + 1] ?? "complete" /* Complete */ };
-  }
-  useItem(state) {
-    if (state.phase !== "item" /* Item */)
-      throw new Error("Items may only be used during the item phase");
-    if (state.itemUses >= this.maxItemsPerTurn)
-      throw new Error("Item allowance has been exhausted");
-    return { ...state, itemUses: state.itemUses + 1 };
-  }
-  nextActiveTeam(activeTeam, teamCount) {
-    if (!Number.isInteger(activeTeam) || !Number.isInteger(teamCount) || teamCount < 1) {
-      throw new Error("RuleInterpreter requires at least one team");
-    }
-    return (activeTeam + 1) % teamCount;
-  }
-  startNextTurn(state, teamCount) {
-    if (state.phase !== "complete" /* Complete */)
-      throw new Error("A turn must complete before the next turn starts");
-    return {
-      phase: this.phases[0],
-      activeTeam: this.nextActiveTeam(state.activeTeam, teamCount),
-      turnNumber: state.turnNumber + 1,
-      itemUses: 0
-    };
-  }
-}
-
-class TurnSystem {
-  static stateForTeam(activeTeam, controlledTeams) {
-    return controlledTeams.includes(activeTeam) ? "GameState.Your_turn" /* Your_turn */ : "GameState.Opponents_turn" /* Opponents_turn */;
-  }
-}
-
 class RoundPlayerSystem {
   systemId = "core.round-player";
   teams;
@@ -5857,15 +9000,15 @@ class Simulator {
   }
   isStatic(entities) {
     const epsilon = 0.1;
-    return entities.getEntities().every((e) => {
+    return entities.getEntities().filter(isPhysicsParticipant).every((e) => {
       const vel = e.getVel();
       return Math.abs(vel.x) < epsilon && Math.abs(vel.y) < epsilon;
     });
   }
-  ticker(ctx, dt, friction) {
+  ticker(ctx, dt, friction2) {
     if (ctx.state != "GameState.Simulating" /* Simulating */)
       return;
-    this.physics.ticker(ctx, dt, friction);
+    this.physics.ticker(ctx, dt, friction2);
   }
 }
 
@@ -5946,7 +9089,7 @@ var KoreInputAction;
   KoreInputAction2["ItemUse"] = "itemUse";
 })(KoreInputAction ||= {});
 function validateKoreInputMessage(value) {
-  if (!isRecord5(value) || typeof value.command !== "string" || !isRecord5(value.payload))
+  if (!isRecord12(value) || typeof value.command !== "string" || !isRecord12(value.payload))
     throw new Error("Invalid KORE input command");
   const payload = value.payload;
   if (value.command === "kore.input.action-pressed" /* ActionPressed */) {
@@ -5971,7 +9114,7 @@ function validateKoreInputMessage(value) {
   }
   throw new Error(`Unknown KORE input command '${value.command}'`);
 }
-function isRecord5(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isJsonValue(value) {
@@ -5981,7 +9124,7 @@ function isJsonValue(value) {
     return Number.isFinite(value);
   if (Array.isArray(value))
     return value.every(isJsonValue);
-  return isRecord5(value) && Object.values(value).every(isJsonValue);
+  return isRecord12(value) && Object.values(value).every(isJsonValue);
 }
 
 class UiSystem {
@@ -6103,11 +9246,15 @@ class UiSystem {
       return;
     this.end = { ...this.currentMouse };
   }
-  updateMouse(x, y) {
-    if (!Number.isFinite(x) || !Number.isFinite(y))
+  updateMouse(x2, y2) {
+    if (!Number.isFinite(x2) || !Number.isFinite(y2))
       return;
-    const pos = { x, y };
+    const pos = { x: x2, y: y2 };
     this.currentMouse = { ...pos };
+  }
+  cancelInput() {
+    this.clearInput();
+    this.clearAimAndCharge();
   }
   clearInput() {
     this.start = null;
@@ -6120,22 +9267,28 @@ class UiSystem {
   }
 }
 
+function findStructureById(structures, structureId) {
+  return structures.find((structure) => structure.getId() === structureId);
+}
+
 class EnvironmentalSystem {
   mechanics;
-  structureIndexes;
+  structureIds;
   systemId = "core.environmental";
   state;
-  constructor(mechanics, state, structureIndexes = []) {
+  constructor(mechanics, state, structureIds = []) {
     this.mechanics = mechanics;
-    this.structureIndexes = structureIndexes;
+    this.structureIds = structureIds;
     this.state = state ? structuredClone(state) : { tick: 0, active: mechanics.map((mechanic) => mechanic.type !== "triggered-zone"), triggerUntil: mechanics.map(() => 0), cooldownUntil: mechanics.map(() => 0), cyclePhase: mechanics.map(() => 0) };
+    if (this.structureIds.length !== mechanics.length || !this.structureIds.every((structureId) => typeof structureId === "string" && structureId.length > 0))
+      throw new Error("Malformed environmental structure references");
     if (this.state.active.length !== mechanics.length || this.state.triggerUntil.length !== mechanics.length || this.state.cooldownUntil.length !== mechanics.length || this.state.cyclePhase.length !== mechanics.length)
       throw new Error("Malformed environmental state");
     if (!Number.isSafeInteger(this.state.tick) || !this.state.active.every(isBoolean) || !this.state.triggerUntil.every(Number.isSafeInteger) || !this.state.cooldownUntil.every(Number.isSafeInteger) || !this.state.cyclePhase.every(Number.isSafeInteger))
       throw new Error("Malformed environmental lifecycle state");
   }
   toSettings() {
-    return { systemId: this.systemId, schemaVersion: 1, state: { ...structuredClone(this.state), mechanics: structuredClone(this.mechanics), structureIndexes: [...this.structureIndexes] } };
+    return { systemId: this.systemId, schemaVersion: 1, state: { ...structuredClone(this.state), mechanics: structuredClone(this.mechanics), structureIds: [...this.structureIds] } };
   }
   ticker(ctx) {
     this.state.tick++;
@@ -6157,9 +9310,9 @@ class EnvironmentalSystem {
       }
       const changed = this.state.active[index] !== active;
       this.state.active[index] = active;
-      const structure = ctx.structures[this.structureIndexes[index]];
+      const structure = findStructureById(ctx.structures, this.structureIds[index]);
       if (!structure)
-        continue;
+        throw new Error(`Unknown environmental structure '${this.structureIds[index]}'`);
       if (mechanic.type === "moving-structure" && "getPos" in structure && "setPos" in structure)
         this.move(structure, mechanic);
       if (changed && "setPhysicsEnabled" in structure)
@@ -6375,68 +9528,6 @@ function matches(value, threshold) {
   }
 }
 
-var ENVIRONMENT_SCHEMA_VERSION = 1;
-function validateEnvironmentalMechanics(value) {
-  if (!Array.isArray(value))
-    throw new Error("Invalid environmental mechanics");
-  const ids = new Set;
-  for (const mechanic of value) {
-    if (!isRecord6(mechanic) || mechanic.schemaVersion !== ENVIRONMENT_SCHEMA_VERSION || typeof mechanic.id !== "string" || !mechanic.id || ids.has(mechanic.id))
-      throw new Error("Invalid environmental mechanic identity");
-    ids.add(mechanic.id);
-    if (!isBoundary(mechanic.structure) || !Array.isArray(mechanic.effects ?? []))
-      throw new Error(`Invalid environmental structure '${mechanic.id}'`);
-    if (mechanic.ownerTeam !== undefined && (!Number.isSafeInteger(mechanic.ownerTeam) || mechanic.ownerTeam < 0))
-      throw new Error("Invalid environmental ownership");
-    switch (mechanic.type) {
-      case "force-field":
-        break;
-      case "timed-hazard":
-        if (!positiveInteger(mechanic.startTick) || !positiveInteger(mechanic.intervalTicks) || !positiveInteger(mechanic.durationTicks))
-          throw new Error("Invalid timed hazard timing");
-        break;
-      case "triggered-zone":
-        if (!isZone(mechanic.triggerZone) || !positiveInteger(mechanic.durationTicks) || mechanic.cooldownTicks !== undefined && !positiveInteger(mechanic.cooldownTicks))
-          throw new Error("Invalid triggered zone timing");
-        break;
-      case "moving-structure":
-        if (!isVector2(mechanic.to) || !positiveInteger(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
-          throw new Error("Invalid moving structure path");
-        break;
-      case "environmental-cycle":
-        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord6(phase) || !positiveInteger(phase.durationTicks) || typeof phase.enabled !== "boolean"))
-          throw new Error("Invalid environmental cycle");
-        break;
-      default:
-        throw new Error(`Unsupported environmental mechanic '${String(mechanic.type)}'`);
-    }
-  }
-}
-function isRecord6(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function finite4(value) {
-  return typeof value === "number" && Number.isFinite(value);
-}
-function positiveInteger(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
-}
-function isVector2(value) {
-  return isRecord6(value) && finite4(value.x) && finite4(value.y);
-}
-function isZone(value) {
-  return isRecord6(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
-}
-function isBoundary(value) {
-  if (!isRecord6(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
-    return false;
-  if (value.type === 0 /* CIRCLE */)
-    return finite4(value.r) && value.r > 0;
-  if (value.type === 2 /* RECTANGLE */)
-    return finite4(value.w) && finite4(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && finite4(value.x2) && finite4(value.y2);
-}
-
 function validateSystemSettings(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Malformed system settings");
@@ -6552,13 +9643,13 @@ function createSystemFromSettings(settings, restored = new Map) {
     case "ai.opponent":
       return AiOpponentSystem.fromSettings(state);
     case "core.environmental": {
-      if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIndexes) || !state.structureIndexes.every((index) => Number.isSafeInteger(index) && index >= 0))
+      if (!Array.isArray(state.mechanics) || !Array.isArray(state.structureIds) || !state.structureIds.every((structureId) => typeof structureId === "string" && structureId.length > 0))
         throw new Error("Malformed environmental settings");
       validateEnvironmentalMechanics(state.mechanics);
       const lifecycle = { tick: state.tick, active: state.active, triggerUntil: state.triggerUntil, cooldownUntil: state.cooldownUntil, cyclePhase: state.cyclePhase };
       if (!Number.isSafeInteger(lifecycle.tick) || !Array.isArray(lifecycle.active) || !Array.isArray(lifecycle.triggerUntil) || !Array.isArray(lifecycle.cooldownUntil) || !Array.isArray(lifecycle.cyclePhase))
         throw new Error("Malformed environmental lifecycle state");
-      return new EnvironmentalSystem(state.mechanics, lifecycle, state.structureIndexes);
+      return new EnvironmentalSystem(state.mechanics, lifecycle, state.structureIds);
     }
     case "core.counter":
       if (Object.keys(state).length)
@@ -6579,310 +9670,6 @@ function createSystemFromSettings(settings, restored = new Map) {
     default:
       throw new Error(`Unknown system ID '${settings.systemId}'`);
   }
-}
-
-var debug = true;
-var [x, y] = [800, 450];
-var debugColorStruct = debug ? "blue" : undefined;
-function createPlayerStartPoints(team, players) {
-  players.forEach((player) => player.size = 12);
-  const teamNr = [{ x: 120, y: 150, w: 200, h: 450 - 150 }, { x: 800 - 120 * 2, y: 120, w: 200, h: 450 - 100 }];
-  arrangeInGrid(players, teamNr[team], 46);
-}
-var friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 };
-var defaultEffects = [{ trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectMove({ typeValue: { deltaTime: 10, x: 0, y: 0 } }).toSettings() }, { trigger: "EffectTrigger.Always" /* Always */, triggerValue: [], ...new EffectPhysics({ typeValue: { ...friction } }).toSettings() }];
-var deadly = createCollisionCommandBinding(createEngineEffectComposition([
-  { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
-  { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
-]));
-var IceMap = {
-  schemaVersion: 1,
-  screenResolution: { x, y },
-  worldSize: { x, y },
-  background: { type: "image", url: 2 /* slipStirkeMapIceJPG */ },
-  drift: 0,
-  mapBoundarys: [
-    { id: "ice.wall.left", type: 2 /* RECTANGLE */, x: 66, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.top-left", type: 2 /* RECTANGLE */, x: 100, y: 50, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.top-right", type: 2 /* RECTANGLE */, x: 425, y: 55, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.bottom-left", type: 2 /* RECTANGLE */, x: 100, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.bottom-right", type: 2 /* RECTANGLE */, x: 425, y: 385, w: 270, h: 10, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.right", type: 2 /* RECTANGLE */, x: 725, y: 90, w: 10, h: 270, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.wall.center", type: 2 /* RECTANGLE */, x: 400, y: 150, w: 10, h: 150, color: debugColorStruct, effects: [...defaultEffects] },
-    { id: "ice.hazard.top-left", type: 0 /* CIRCLE */, x: 60, y: 45, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
-    { id: "ice.hazard.top-right", type: 0 /* CIRCLE */, x: 720, y: 50, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
-    { id: "ice.hazard.bottom-right", type: 0 /* CIRCLE */, x: 720, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
-    { id: "ice.hazard.bottom-left", type: 0 /* CIRCLE */, x: 60, y: 385, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
-    { id: "ice.hazard.center-top", type: 0 /* CIRCLE */, x: 390, y: 35, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] },
-    { id: "ice.hazard.center-bottom", type: 0 /* CIRCLE */, x: 390, y: 400, r: 10, color: debugColorStruct, effects: defaultEffects, collisionCommands: [deadly] }
-  ]
-};
-var iceMap_default = { createPlayerStartPoints, IceMap };
-
-class TriggerDefinitionCatalog {
-  definitions = new Map;
-  register(definition) {
-    validateTriggerDefinition(definition);
-    if (this.definitions.has(definition.id))
-      throw new Error(`Duplicate trigger definition '${definition.id}'`);
-    this.definitions.set(definition.id, structuredClone(definition));
-    return this;
-  }
-  get(id) {
-    const definition = this.definitions.get(id);
-    return definition === undefined ? undefined : structuredClone(definition);
-  }
-  require(id) {
-    const definition = this.get(id);
-    if (!definition)
-      throw new Error(`Unknown trigger definition '${id}'`);
-    return definition;
-  }
-  describe() {
-    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({ schemaVersion: 1, id: definition.id, effectType: definition.effect.type }));
-  }
-  toSettings() {
-    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => structuredClone(definition));
-  }
-}
-function validateTriggerDefinition(value) {
-  const definition = record8(value, "Trigger definition");
-  exactKeys8(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
-  if (definition.schemaVersion !== 1)
-    throw new Error("Unsupported trigger definition schema version");
-  if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
-    throw new Error("Invalid trigger definition ID");
-  if (isEngineComposition(definition.effect))
-    validateEngineEffectComposition(definition.effect);
-  else
-    validateEffectSettings(definition.effect);
-}
-function isEngineComposition(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
-}
-function record8(value, label) {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error(`${label} must be an object`);
-  return value;
-}
-function exactKeys8(value, keys, label) {
-  const allowed = new Set(keys);
-  for (const key of Object.keys(value))
-    if (!allowed.has(key))
-      throw new Error(`${label} contains unknown field '${key}'`);
-  for (const key of keys)
-    if (!(key in value))
-      throw new Error(`${label} is missing '${key}'`);
-}
-
-var DEFAULT_DRIFT = 0;
-function validateDrift(drift) {
-  if (!Number.isFinite(drift) || drift < 0 || drift > 1)
-    throw new Error("Map drift must be a finite number between 0 and 1");
-}
-function validateFigureCounts(playerCount, figuresPerPlayer) {
-  if (!Number.isSafeInteger(playerCount) || playerCount < 1 || !Number.isSafeInteger(figuresPerPlayer) || figuresPerPlayer < 1) {
-    throw new Error("Player count and figures per player must be positive integers");
-  }
-}
-function validateGameSettings(settings) {
-  if (!isRecord7(settings) || settings.schemaVersion !== 1 || typeof settings.id !== "string")
-    throw new Error("Invalid game settings document");
-  if (!isVector3(settings.screenResolution) || settings.screenResolution.x <= 0 || settings.screenResolution.y <= 0)
-    throw new Error("Invalid screen resolution");
-  if (!isRecord7(settings.friction) || ![settings.friction.friction, settings.friction.linearDrag, settings.friction.stopThreshold].every(Number.isFinite))
-    throw new Error("Invalid friction settings");
-  validateDrift(settings.drift);
-  validateFigureCounts(settings.playerCount, settings.figuresPerPlayer);
-  if (!Array.isArray(settings.myTeam) || !settings.myTeam.every(isTeam))
-    throw new Error("Invalid team settings");
-  if (!Array.isArray(settings.players) || !settings.players.every((player) => isRecord7(player) && isVector3(player.position) && isVector3(player.velocity) && Array.isArray(player.team) && player.team.every(isTeam) && Array.isArray(player.effects) && player.effects.every(isEffect)))
-    throw new Error("Invalid player settings");
-  if (!isBackground(settings.background))
-    throw new Error("Invalid background settings");
-  if (!Array.isArray(settings.mapBoundarys) || !settings.mapBoundarys.every(isBoundary2))
-    throw new Error("Invalid map boundary settings");
-  const structureIds = settings.mapBoundarys.flatMap((boundary) => boundary.id === undefined ? [] : [boundary.id]);
-  if (new Set(structureIds).size !== structureIds.length)
-    throw new Error("Structure IDs must be unique");
-  if (!Array.isArray(settings.effects) || !settings.effects.every(isEffect))
-    throw new Error("Invalid effect settings");
-  if (!Array.isArray(settings.items))
-    throw new Error("Invalid item settings");
-  try {
-    settings.items.forEach(validateItemDocument);
-  } catch {
-    throw new Error("Invalid item settings");
-  }
-  if (settings.gameMode !== undefined) {
-    if (settings.gameMode.schemaVersion !== undefined && settings.gameMode.schemaVersion !== 1)
-      throw new Error("Unsupported game mode schema version");
-    validateItemEconomySettings(settings.gameMode.itemEconomy);
-    const draw = settings.gameMode.itemEconomy.randomDraw;
-    if (draw && !draw.itemIds.every((itemId) => settings.items.some((item) => item.id === itemId))) {
-      throw new Error("Seeded item draw references an unknown item");
-    }
-    const mysteryBox = settings.gameMode.itemEconomy.mysteryBox;
-    if (mysteryBox && !mysteryBox.candidatePool.every((itemId) => settings.items.some((item) => item.id === itemId))) {
-      throw new Error("Mystery Box pool references an unknown item");
-    }
-  }
-  if (settings.ai !== undefined)
-    validateAiSettings(settings.ai);
-  if (settings.environmentalMechanics !== undefined)
-    validateEnvironmentalMechanics(settings.environmentalMechanics);
-  if (settings.triggerDefinitions !== undefined)
-    settings.triggerDefinitions.forEach(validateTriggerDefinition);
-  if (settings.counters !== undefined)
-    canonicalizeCounterStates(settings.counters);
-}
-function isRecord7(value) {
-  return typeof value === "object" && value !== null;
-}
-function isVector3(value) {
-  return isRecord7(value) && Number.isFinite(value.x) && Number.isFinite(value.y);
-}
-function isBackground(value) {
-  if (!isRecord7(value))
-    return false;
-  if (value.type === "color")
-    return typeof value.color === "string";
-  if (value.type !== "image" || typeof value.url !== "number" && typeof value.url !== "string")
-    return false;
-  if (typeof value.url !== "string")
-    return true;
-  try {
-    const url = new URL(value.url, "https://kore.invalid");
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-function isTeam(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
-function isEffect(value) {
-  try {
-    validateFullEffectSettings(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function isBoundary2(value) {
-  if (!isRecord7(value) || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects) || !value.effects.every(isEffect))
-    return false;
-  if (value.collisionCommands !== undefined) {
-    if (!Array.isArray(value.collisionCommands))
-      return false;
-    try {
-      value.collisionCommands.forEach(validateCollisionCommandBinding);
-    } catch {
-      return false;
-    }
-  }
-  if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(value.id))
-    return false;
-  if (value.physicsEnabled !== undefined && typeof value.physicsEnabled !== "boolean")
-    return false;
-  if (value.drawingEnabled !== undefined && typeof value.drawingEnabled !== "boolean")
-    return false;
-  if (value.role !== undefined && !isStructureCollisionRole(value.role))
-    return false;
-  if (value.type === 0 /* CIRCLE */)
-    return Number.isFinite(value.r) && value.r > 0;
-  if (value.type === 2 /* RECTANGLE */)
-    return Number.isFinite(value.w) && Number.isFinite(value.h) && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && Number.isFinite(value.x2) && Number.isFinite(value.y2);
-}
-var FRICTION_TABLE = {
-  ice: { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 },
-  tiles: { friction: 0.98, linearDrag: 0.05, stopThreshold: 0.15 },
-  wood: { friction: 0.96, linearDrag: 0.1, stopThreshold: 0.2 },
-  billiards: { friction: 0.94, linearDrag: 0.15, stopThreshold: 0.2 },
-  carpet_office: { friction: 0.91, linearDrag: 0.25, stopThreshold: 0.3 },
-  gym: { friction: 0.88, linearDrag: 0.4, stopThreshold: 0.4 },
-  turf: { friction: 0.82, linearDrag: 0.8, stopThreshold: 0.5 },
-  asphalt: { friction: 0.75, linearDrag: 1.2, stopThreshold: 0.6 },
-  grass: { friction: 0.6, linearDrag: 2.5, stopThreshold: 1 },
-  sand: { friction: 0.4, linearDrag: 5, stopThreshold: 2 }
-};
-var playerSize = 14;
-var defaultHoop = 18 /* pictureReifenWEBP */;
-var defaultEffects2 = [
-  {
-    trigger: "EffectTrigger.Always" /* Always */,
-    triggerValue: [],
-    ...new EffectMove({ typeValue: { deltaTime: 0, x: 0, y: 0 } }).toSettings()
-  },
-  {
-    trigger: "EffectTrigger.Always" /* Always */,
-    triggerValue: [],
-    ...new EffectPhysics({ typeValue: { ...FRICTION_TABLE.ice } }).toSettings()
-  }
-];
-function createDefaultPlayers(playerCount, figuresPerPlayer) {
-  validateFigureCounts(playerCount, figuresPerPlayer);
-  if (playerCount > 2)
-    throw new Error("The ice map supports at most two players");
-  const icons = [22 /* picturePenguinPenguinIdleFrame1WEBP */, 46 /* picturePolarBearPolarBearIdleFrame1WEBP */];
-  return Array.from({ length: playerCount }, (_, team) => {
-    const players = Array.from({ length: figuresPerPlayer }, () => createPlayerSettings({
-      position: { x: 0, y: 0 },
-      playericon: icons[team],
-      team: [team],
-      size: playerSize,
-      hoop: defaultHoop,
-      effects: defaultEffects2
-    }));
-    iceMap_default.createPlayerStartPoints(team, players);
-    return players;
-  }).flat();
-}
-function createDefaultGameSettings(playerCount = 2, figuresPerPlayer = 6) {
-  return {
-    id: "8a67d1b0-5c76-4348-bc7a-012d8c9746cc",
-    players: createDefaultPlayers(playerCount, figuresPerPlayer),
-    friction: FRICTION_TABLE.ice,
-    items: [],
-    effects: [],
-    minPlayers: 2,
-    maxPlayers: 2,
-    allTeams: ["1bafa3d2-b0e3-4e66-8c4f-e8da14278123", "5935f4b2-b3bd-4792-a356-fdf74f20ca2e"],
-    allTeamSize: 2,
-    playerCount,
-    figuresPerPlayer,
-    gameMode: currentTurnMode,
-    myTeam: [],
-    ...iceMap_default.IceMap
-  };
-}
-var GameSettings = createDefaultGameSettings();
-function arrangeInGrid(players, rect, padding = 0) {
-  if (players.length === 0)
-    return;
-  const size = players[0].size * 2;
-  const cellSize = size + padding + 1;
-  const cols = Math.max(1, Math.floor(rect.w / cellSize));
-  const rows = Math.max(1, Math.floor(rect.h / cellSize));
-  if (cols * rows < players.length)
-    throw new Error("Nicht genug Platz für alle Spieler!");
-  players.forEach((player, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    player.position.x = rect.x + col * cellSize + size / 2;
-    player.position.y = rect.y + row * cellSize + size / 2;
-  });
-}
-
-function deriveStructureId(settings) {
-  if (settings.id !== undefined)
-    return settings.id;
-  const canonical = settings.type === 0 ? [settings.type, settings.x, settings.y, settings.r, settings.role ?? ""].join("|") : settings.type === 2 ? [settings.type, settings.x, settings.y, settings.w, settings.h, settings.role ?? ""].join("|") : [settings.type, settings.x, settings.y, settings.x2, settings.y2].join("|");
-  let hash = 2166136261;
-  for (let index = 0;index < canonical.length; index++)
-    hash = Math.imul(hash ^ canonical.charCodeAt(index), 16777619) >>> 0;
-  return `structure-${hash.toString(16).padStart(8, "0")}`;
 }
 
 class StructureCircle {
@@ -6906,12 +9693,12 @@ class StructureCircle {
   constructor(x2, y2, r, color, effects, role, id, physicsEnabled, drawingEnabled, collisionCommands = []) {
     this.position = { x: x2, y: y2 };
     this.r = r;
-    this.shape = 0 /* CIRCLE */;
+    this.shape = SHAPE.CIRCLE;
     this.color = color;
     this.bounce = Infinity;
     this.vel = { x: 0, y: 0 };
     this.collisionRole = role;
-    this.id = id ?? deriveStructureId({ type: 0 /* CIRCLE */, x: x2, y: y2, r, color, effects, role });
+    this.id = id ?? deriveStructureId({ type: SHAPE.CIRCLE, x: x2, y: y2, r, color, effects, role });
     this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
     this.isPhysicsEnabled = physicsEnabled ?? true;
     this.isDrawingEnabled = drawingEnabled ?? true;
@@ -6935,7 +9722,7 @@ class StructureCircle {
     this.toSettings();
   }
   draw(ctx) {
-    if (!this.color || !this.isDrawingEnabled)
+    if (!this.color || this.color === "transparent" || !this.isDrawingEnabled)
       return;
     ctx.push();
     ctx.setFillColor(this.color);
@@ -7089,10 +9876,10 @@ class StructureLine {
     this.w = x22;
     this.h = y22;
     this.color = color || "green";
-    this.shape = 1 /* LINE */;
+    this.shape = SHAPE.LINE;
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
-    this.id = id ?? deriveStructureId({ type: 1 /* LINE */, x: x2, y: y2, x2: x22, y2: y22, color, effects: [] });
+    this.id = id ?? deriveStructureId({ type: SHAPE.LINE, x: x2, y: y2, x2: x22, y2: y22, color, effects: [] });
     this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
     this.isPhysicsEnabled = physicsEnabled ?? true;
     this.isDrawingEnabled = drawingEnabled ?? true;
@@ -7191,7 +9978,7 @@ class StructureLine {
     return;
   }
   toSettings() {
-    const out = { type: 1 /* LINE */, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
+    const out = { type: SHAPE.LINE, x: this.position.x, y: this.position.y, x2: this.w, y2: this.h, color: this.color, effects: [] };
     if (this.serializeState) {
       out.id = this.id;
       out.physicsEnabled = this.isPhysicsEnabled;
@@ -7241,11 +10028,11 @@ class StructureRectangle {
     this.w = w;
     this.h = h;
     this.color = color;
-    this.shape = 2 /* RECTANGLE */;
+    this.shape = SHAPE.RECTANGLE;
     this.vel = { x: 0, y: 0 };
     this.bounce = Infinity;
     this.collisionRole = role;
-    this.id = id ?? deriveStructureId({ type: 2 /* RECTANGLE */, x: x2, y: y2, w, h, color, effects, role });
+    this.id = id ?? deriveStructureId({ type: SHAPE.RECTANGLE, x: x2, y: y2, w, h, color, effects, role });
     this.serializeState = id !== undefined || physicsEnabled !== undefined || drawingEnabled !== undefined;
     this.isPhysicsEnabled = physicsEnabled ?? true;
     this.isDrawingEnabled = drawingEnabled ?? true;
@@ -7272,7 +10059,7 @@ class StructureRectangle {
       return;
     ctx.push();
     ctx.setFillColor(this.color);
-    ctx.setStrokeColor(this.color);
+    ctx.noStroke();
     ctx.drawRect(this.x, this.y, this.w, this.h);
     ctx.pop();
   }
@@ -7367,7 +10154,7 @@ class StructureRectangle {
     this.collisionEffects.forEach((effect) => effects.push({ trigger: "EffectTrigger.Collision" /* Collision */, triggerValue: [], ...effect.toSettings() }));
     this.roundEffects.forEach((effect) => effects.push({ trigger: "EffectTrigger.Round" /* Round */, triggerValue: [], ...effect.toSettings() }));
     const out = {
-      type: 2 /* RECTANGLE */,
+      type: SHAPE.RECTANGLE,
       x: this.x,
       y: this.y,
       w: this.w,
@@ -7402,13 +10189,13 @@ class FullStructure {
     if (str.id === undefined)
       throw new Error("Runtime structures require an explicit canonical ID");
     switch (str.type) {
-      case 0 /* CIRCLE */:
+      case SHAPE.CIRCLE:
         this.str = new StructureCircle(str.x, str.y, str.r, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
-      case 2 /* RECTANGLE */:
+      case SHAPE.RECTANGLE:
         this.str = new StructureRectangle(str.x, str.y, str.w, str.h, str.color, str.effects, str.role, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
-      case 1 /* LINE */:
+      case SHAPE.LINE:
         this.str = new StructureLine(str.x, str.y, str.x2, str.y2, str.color ?? "green", str.effects, str.id, str.physicsEnabled, str.drawingEnabled, str.collisionCommands);
         break;
     }
@@ -7500,16 +10287,57 @@ class FullStructure {
 }
 
 function migrateStructureSettings(boundaries) {
-  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
+  const derivedCounts = new Map;
+  const migrated = boundaries.map((boundary) => {
+    if (boundary.id !== undefined)
+      return { ...boundary };
+    const baseId = deriveStructureId(boundary);
+    const occurrence = derivedCounts.get(baseId) ?? 0;
+    derivedCounts.set(baseId, occurrence + 1);
+    return { ...boundary, id: occurrence === 0 ? baseId : `${baseId}-${occurrence}` };
+  });
+  const ids = new Set;
+  for (const boundary of migrated) {
+    if (ids.has(boundary.id))
+      throw new Error(`Duplicate Structure ID '${boundary.id}'`);
+    ids.add(boundary.id);
+  }
+  return migrated;
+}
+function migratePhysicsContactPair(pair, boundaries) {
+  if (pair.includes("|"))
+    return pair;
+  const structureMarker = ":structure:";
+  const structureOffset = pair.lastIndexOf(structureMarker);
+  if (structureOffset >= 0) {
+    const entity = pair.slice(0, structureOffset);
+    const index = parseStructureIndex(pair.slice(structureOffset + structureMarker.length), boundaries.length);
+    return `${entity}|structure:${boundaries[index].id}`;
+  }
+  const entityMatch = /^entity:([^:]+):entity:(.+)$/.exec(pair);
+  if (entityMatch) {
+    const left = `entity:${entityMatch[1]}`;
+    const right = `entity:${entityMatch[2]}`;
+    return left < right ? `${left}|${right}` : `${right}|${left}`;
+  }
+  throw new Error("Invalid historical physics contact pair");
+}
+function parseStructureIndex(value, length) {
+  if (!/^\d+$/.test(value))
+    throw new Error("Invalid historical Structure index");
+  const index = Number(value);
+  if (!Number.isSafeInteger(index) || index < 0 || index >= length)
+    throw new Error("Historical Structure index is out of range");
+  return index;
 }
 
 function migrateEffectSettings(value) {
-  if (!isRecord8(value))
+  if (!isRecord13(value))
     throw new Error("Effect migration requires an object");
   if (value.schemaVersion !== undefined && value.schemaVersion !== EFFECT_SCHEMA_VERSION)
     throw new Error(`Unsupported historical Effect schema version: ${String(value.schemaVersion)}`);
   if (value.type === "EffectType.Damage") {
-    const payload = isRecord8(value.typeValue) ? value.typeValue : undefined;
+    const payload = isRecord13(value.typeValue) ? value.typeValue : undefined;
     if (!payload || typeof payload.damage !== "number" || !Number.isFinite(payload.damage) || payload.damage < 0)
       throw new Error("Historical Damage payload is invalid");
     return { schemaVersion: EFFECT_SCHEMA_VERSION, type: "numeric.add" /* NumericAdd */, typeValue: { stateId: "hp", amount: -payload.damage } };
@@ -7520,7 +10348,7 @@ function migrateEffectSettings(value) {
   return effect;
 }
 function migrateFullEffectSettings(value) {
-  if (!isRecord8(value))
+  if (!isRecord13(value))
     throw new Error("Full Effect migration requires an object");
   return { ...migrateEffectSettings(value), trigger: value.trigger, triggerValue: structuredClone(value.triggerValue) };
 }
@@ -7556,7 +10384,7 @@ function migrateGameSettingsEffects(settings) {
           throw new Error("Historical aimVariance random state must be an unsigned 32-bit integer");
         if (seed !== undefined && (typeof seed !== "number" || !Number.isSafeInteger(seed)))
           throw new Error("Historical aimVariance seed must be a safe integer");
-        const randomState = rawState === undefined ? new SeededRandom(seed === undefined ? 1337 : seed).getState() : rawState;
+        const randomState = rawState === undefined ? new SeededRandom2(seed === undefined ? 1337 : seed).getState() : rawState;
         return [createActionModifier({
           id: `${player.id}:action-modifier:${index}`,
           action: "aim",
@@ -7612,6 +10440,42 @@ function migrateGameSettingsEffects(settings) {
     };
   });
   copy.mapBoundarys = migrateStructureSettings(copy.mapBoundarys ?? []).map((boundary) => ({ ...boundary, effects: (boundary.effects ?? []).map(migrateFullEffectSettings) }));
+  copy.environmentalMechanics = copy.environmentalMechanics?.map((mechanic, index) => {
+    const firstIndex = copy.mapBoundarys.length - (copy.environmentalMechanics?.length ?? 0);
+    const boundary = copy.mapBoundarys[firstIndex + index];
+    if (!mechanic.structure.id) {
+      if (!boundary)
+        throw new Error(`Missing historical environmental Structure for '${mechanic.id}'`);
+      return { ...mechanic, structure: { ...mechanic.structure, id: boundary.id } };
+    }
+    if (!copy.mapBoundarys.some((candidate) => candidate.id === mechanic.structure.id))
+      throw new Error(`Unknown environmental Structure '${mechanic.structure.id}'`);
+    return mechanic;
+  });
+  const engineCopy = copy;
+  if (engineCopy.physicsState && Array.isArray(engineCopy.physicsState.activePairs))
+    engineCopy.physicsState = { ...engineCopy.physicsState, activePairs: engineCopy.physicsState.activePairs.map((pair) => migratePhysicsContactPair(pair, copy.mapBoundarys)) };
+  if (engineCopy.systems)
+    engineCopy.systems = engineCopy.systems.map((system) => {
+      if (system.systemId === "core.physics") {
+        const state = system.state;
+        if (Array.isArray(state.contacts))
+          return { ...system, state: { ...state, contacts: state.contacts.map((pair) => migratePhysicsContactPair(String(pair), copy.mapBoundarys)) } };
+      }
+      if (system.systemId === "core.environmental") {
+        const state = system.state;
+        if (Array.isArray(state.structureIndexes)) {
+          const structureIds = state.structureIndexes.map((index) => {
+            if (!Number.isSafeInteger(index) || index < 0 || index >= copy.mapBoundarys.length)
+              throw new Error("Historical environmental Structure index is out of range");
+            return copy.mapBoundarys[index].id;
+          });
+          const { structureIndexes: _structureIndexes, ...rest } = state;
+          return { ...system, state: { ...rest, structureIds } };
+        }
+      }
+      return system;
+    });
   if (copy.triggerDefinitions)
     copy.triggerDefinitions = copy.triggerDefinitions.map((definition) => ({ ...definition, effect: isEngineEffectComposition(definition.effect) ? structuredClone(definition.effect) : migrateEffectSettings(definition.effect) }));
   if (copy.environmentalMechanics)
@@ -7637,7 +10501,7 @@ function migrateItemDocument(item) {
 function isEngineEffectComposition(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
 }
-function isRecord8(value) {
+function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -7683,14 +10547,28 @@ class MapPickupSystem {
   pickups = [];
   items = new Map;
   state;
-  configure(pickups, items) {
+  worldSize = { x: 800, y: 450 };
+  collect = (entity, item) => {
+    const inventory = entity.getInventory();
+    addDrawnInventoryItem(inventory, item);
+    entity.setInventory(inventory);
+  };
+  configure(pickups, items, worldSize = this.worldSize) {
     this.pickups = structuredClone(pickups);
     this.items = new Map(items.map((item) => [item.id, item]));
+    this.worldSize = { ...worldSize };
     for (const pickup of this.pickups) {
       if (!this.items.has(pickup.itemId))
         throw new Error(`Map pickup references unknown item '${pickup.itemId}'`);
     }
     this.state = this.pickups.length === 0 ? undefined : createItemPickupState(this.pickups.length);
+  }
+  setCollector(collector) {
+    this.collect = collector ?? ((entity, item) => {
+      const inventory = entity.getInventory();
+      addDrawnInventoryItem(inventory, item);
+      entity.setInventory(inventory);
+    });
   }
   restore(state) {
     if (this.pickups.length === 0) {
@@ -7702,6 +10580,9 @@ class MapPickupSystem {
       throw new Error("Configured map pickups require a serialized pickup state");
     validateItemPickupState(state, this.pickups.length);
     this.state = clonePickupState(state);
+    for (const [index, pickupState] of this.state.pickups.entries())
+      if (pickupState.spawnRegion)
+        this.pickups[index].spawnRegion = { ...pickupState.spawnRegion };
   }
   reset() {
     this.state = this.pickups.length === 0 ? undefined : createItemPickupState(this.pickups.length);
@@ -7730,9 +10611,7 @@ class MapPickupSystem {
       for (const entity of entitiesInRegion) {
         if (pickupState.collected >= limit || pickupState.occupants.includes(entity.getId()))
           continue;
-        const inventory = entity.getInventory();
-        addDrawnInventoryItem(inventory, item);
-        entity.setInventory(inventory);
+        this.collect(entity, item);
         pickupState.collected++;
       }
       pickupState.occupants = [...occupants];
@@ -7758,6 +10637,10 @@ class MapPickupSystem {
         if (state.respawnCountdown <= 0) {
           state.collected = 0;
           state.respawnCountdown = undefined;
+          if (pickup.respawnConfig?.relocate) {
+            pickup.spawnRegion = relocatedRegion(pickup.spawnRegion, index, turnNumber, this.worldSize);
+            state.spawnRegion = { ...pickup.spawnRegion };
+          }
         }
       }
     }
@@ -7781,8 +10664,15 @@ function createItemPickupState(pickupCount, turnNumber = 0) {
 function clonePickupState(state) {
   return {
     turnNumber: state.turnNumber,
-    pickups: state.pickups.map((pickup) => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown } }))
+    pickups: state.pickups.map((pickup) => ({ collected: pickup.collected, occupants: [...pickup.occupants], ...pickup.respawnCountdown === undefined ? {} : { respawnCountdown: pickup.respawnCountdown }, ...pickup.spawnRegion ? { spawnRegion: { ...pickup.spawnRegion } } : {} }))
   };
+}
+function relocatedRegion(region, pickupIndex, turnNumber, worldSize) {
+  const seed = Math.imul(turnNumber + 1 ^ (pickupIndex + 1) * 73244475, 668265261) >>> 0;
+  const padding = Math.max(0, Math.min(40, Math.floor(Math.min(worldSize.x - region.w, worldSize.y - region.h) / 2)));
+  const maxX = Math.max(padding, Math.floor(worldSize.x - region.w - padding));
+  const maxY = Math.max(padding, Math.floor(worldSize.y - region.h - padding));
+  return { ...region, x: maxX === padding ? padding : padding + seed % (maxX - padding + 1), y: maxY === padding ? padding : padding + Math.floor(seed / (maxX - padding + 1)) % (maxY - padding + 1) };
 }
 
 function dispatchPredefinedEffect(options) {
@@ -7905,103 +10795,6 @@ function bindComposition(composition, target) {
   };
 }
 
-var ALLOW_ALL_TARGETS = {
-  allowSelf: true,
-  allowAlly: true,
-  allowEnemy: true
-};
-function validateItemTarget(item, target, context) {
-  const validation = item.targetValidation ?? ALLOW_ALL_TARGETS;
-  if (!isRecord9(target) || typeof target.type !== "string") {
-    throw new Error("Item target must be an object with a valid type");
-  }
-  if (target.type !== item.targetType) {
-    throw new Error(`Item requires a ${item.targetType} target`);
-  }
-  switch (target.type) {
-    case "self":
-      if (!validation.allowSelf)
-        throw new Error("Item does not allow self targets");
-      return;
-    case "entity":
-      validateEntityTarget(target, validation, context);
-      return;
-    case "position":
-      validatePositionTarget(target.position, validation.maxRange, context);
-      return;
-    case "zone":
-      validateZoneTarget(target, validation.maxRange, context);
-      return;
-    default:
-      throw new Error("Item target has an unsupported type");
-  }
-}
-function resolveEffectTarget(target, context) {
-  switch (target.type) {
-    case "self":
-      return createEntityResolvedTarget(String(context.actor.getId()));
-    case "entity":
-      return createEntityResolvedTarget(target.entityId);
-    case "position":
-      return createPositionResolvedTarget(target.position);
-    case "zone":
-      throw new Error("Delayed Effects do not support zone targets without a stable zone contract");
-  }
-}
-function validateEntityTarget(target, validation, context) {
-  if (typeof target.entityId !== "string" || target.entityId.length === 0) {
-    throw new Error("Entity targets require a non-empty entityId");
-  }
-  const entity = context.entities.find((candidate) => candidate.getId() === target.entityId);
-  if (!entity || entity.isDead())
-    throw new Error("Entity target must be an active entity");
-  if (entity === context.actor || entity.getId() === context.actor.getId()) {
-    if (!validation.allowSelf)
-      throw new Error("Item does not allow self targets");
-  } else if (sharesTeam(context.actor, entity)) {
-    if (!validation.allowAlly)
-      throw new Error("Item does not allow ally targets");
-  } else if (!validation.allowEnemy) {
-    throw new Error("Item does not allow enemy targets");
-  }
-  validateRange(context.actor.getPos(), entity.getPos(), validation.maxRange);
-}
-function validatePositionTarget(position, maxRange, context) {
-  if (!isVector4(position))
-    throw new Error("Position targets require finite x and y coordinates");
-  validateWorldPosition(position, context.worldSize);
-  validateRange(context.actor.getPos(), position, maxRange);
-}
-function validateZoneTarget(target, maxRange, context) {
-  if (!isVector4(target.center) || typeof target.radius !== "number" || !Number.isFinite(target.radius) || target.radius <= 0) {
-    throw new Error("Zone targets require a finite center and positive radius");
-  }
-  validateWorldPosition(target.center, context.worldSize);
-  if (target.center.x - target.radius < 0 || target.center.y - target.radius < 0 || target.center.x + target.radius > context.worldSize.x || target.center.y + target.radius > context.worldSize.y) {
-    throw new Error("Zone target must be contained within the world");
-  }
-  validateRange(context.actor.getPos(), target.center, maxRange);
-}
-function validateRange(origin, target, maxRange) {
-  if (maxRange !== undefined && Math.hypot(origin.x - target.x, origin.y - target.y) > maxRange) {
-    throw new Error("Item target is outside the maximum range");
-  }
-}
-function validateWorldPosition(position, worldSize) {
-  if (position.x < 0 || position.y < 0 || position.x > worldSize.x || position.y > worldSize.y) {
-    throw new Error("Item target must be inside the world");
-  }
-}
-function sharesTeam(first, second) {
-  return first.getTeam().some((team) => second.getTeam().includes(team));
-}
-function isRecord9(value) {
-  return typeof value === "object" && value !== null;
-}
-function isVector4(value) {
-  return isRecord9(value) && typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y);
-}
-
 function itemInteractionMode(item, otherItemId) {
   return item.interaction?.with?.[otherItemId] ?? item.interaction?.mode ?? "stack";
 }
@@ -8070,7 +10863,8 @@ var ITEM_FIELDS = new Set([
   "useLimit",
   "targetValidation",
   "cooldown",
-  "interaction"
+  "interaction",
+  "ui"
 ]);
 var EFFECT_FIELDS = new Set(["type", "value"]);
 var DURATION_FIELDS = new Set(["type", "value"]);
@@ -8082,6 +10876,7 @@ var TARGET_VALIDATION_FIELDS = new Set([
   "maxRange"
 ]);
 var INTERACTION_FIELDS = new Set(["mode", "with", "order"]);
+var ITEM_UI_FIELDS = new Set(["component", "showLabel"]);
 function isPlainObject(value) {
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
@@ -8116,7 +10911,7 @@ function assertKnownObject(value, path, allowedFields) {
 function isExecutableKey(key) {
   return key === "script" || key === "code" || key === "handler" || key === "eval" || key === "exec" || key === "function" || key === "__proto__" || key === "constructor" || key === "prototype" || /^on[a-zA-Z]/i.test(key);
 }
-function assertJsonValue2(value, path, ancestors) {
+function assertJsonValue3(value, path, ancestors) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
   if (typeof value === "number") {
@@ -8151,7 +10946,7 @@ function assertJsonValue2(value, path, ancestors) {
       for (let index = 0;index < value.length; index += 1) {
         if (!(index in value))
           throw new Error(`${path}[${index}] must not be sparse`);
-        assertJsonValue2(value[index], `${path}[${index}]`, ancestors);
+        assertJsonValue3(value[index], `${path}[${index}]`, ancestors);
       }
       return;
     }
@@ -8162,7 +10957,7 @@ function assertJsonValue2(value, path, ancestors) {
       if (isExecutableKey(key)) {
         throw new Error(`${childPath} is an executable field and is not allowed`);
       }
-      assertJsonValue2(value[key], childPath, ancestors);
+      assertJsonValue3(value[key], childPath, ancestors);
     }
   } finally {
     ancestors.delete(value);
@@ -8197,7 +10992,7 @@ class ItemValidator {
         throw new Error(`Effect type '${String(type)}' is not in the whitelist`);
       }
       if (effect.value !== undefined) {
-        assertJsonValue2(effect.value, `item.effects[${index}].value`, new Set);
+        assertJsonValue3(effect.value, `item.effects[${index}].value`, new Set);
       }
     }
     assertKnownObject(item.duration, "item.duration", DURATION_FIELDS);
@@ -8215,20 +11010,32 @@ class ItemValidator {
         }
       }
     }
+    if (item.ui !== undefined) {
+      const ui2 = assertKnownObject(item.ui, "item.ui", ITEM_UI_FIELDS);
+      if (ui2.component !== undefined) {
+        const component = assertKnownObject(ui2.component, "item.ui.component", new Set(["type", "source"]));
+        if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0)
+          throw new Error("item.ui.component must be an image with a non-empty source");
+      }
+      if (ui2.showLabel !== undefined && typeof ui2.showLabel !== "boolean")
+        throw new Error("item.ui.showLabel must be a boolean");
+    }
     return document;
   }
 }
 
-function clone4(value) {
+var TRANSFORM_SWAP_POSITION_EFFECT_ID2 = "transform.swap-position";
+var MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID2 = "movement.apply-force-to-entity";
+function clone7(value) {
   return structuredClone(value);
 }
 function sdkItemEffectTypes() {
-  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", TRANSFORM_SWAP_POSITION_EFFECT_ID, "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
+  return ["modifyForce", "modifyRotation", "lockRotation", "applyTorque", "spawnTrigger", "shield", TRANSFORM_SWAP_POSITION_EFFECT_ID2, "ghostMode", MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID2, "selectionLock", "aimVariance", "temporalModifier", "structureLifecycle", "deferredEffect"];
 }
 function createItem(input) {
   const item = createItemDocument({
     ...input,
-    effects: (input.effects ?? []).map((effect) => ({ type: effect.type, ...effect.value === undefined ? {} : { value: clone4(effect.value) } }))
+    effects: (input.effects ?? []).map((effect) => ({ type: effect.type, ...effect.value === undefined ? {} : { value: clone7(effect.value) } }))
   });
   const validator = new ItemValidator;
   for (const effectType of sdkItemEffectTypes())
@@ -8236,13 +11043,13 @@ function createItem(input) {
   for (const effect of item.effects)
     if (!sdkItemEffectTypes().includes(effect.type))
       throw new Error(`Unsupported KORE item effect '${effect.type}'`);
-  return clone4(validator.validate(item));
+  return clone7(validator.validate(item));
 }
 function composeItemEffects(...effects) {
   return effects.map((effect) => {
     if (!sdkItemEffectTypes().includes(effect.type))
       throw new Error(`Unsupported KORE item effect '${effect.type}'`);
-    return { type: effect.type, ...effect.value === undefined ? {} : { value: clone4(effect.value) } };
+    return { type: effect.type, ...effect.value === undefined ? {} : { value: clone7(effect.value) } };
   });
 }
 
@@ -8268,7 +11075,19 @@ var SWITCH_RANGE = 300;
 var JAEGERMEISTER_ELIXIER_DURATION_TURNS = 2;
 var VODKA_ZERO_MAX_VARIANCE_DEGREES = 10;
 var MYSTERY_BOX_ITEM_ID = "mystery-box";
-var DEFAULT_MYSTERY_BOX_POOL = ["anker", "durchlaessigkeit", "power-dash", "magnet", "freeze-shot"];
+var DEFAULT_MYSTERY_BOX_POOL = [
+  "anker",
+  "durchlaessigkeit",
+  "magnet",
+  "falltuer",
+  "power-dash",
+  "verzoegerte-mine",
+  "mini-wall",
+  "freeze-shot",
+  "switch",
+  "jaegermeister-elixier",
+  "vodka-zero"
+];
 var ankerItem = createItem({
   id: "anker",
   name: "Anker",
@@ -8322,7 +11141,7 @@ var falltuerDeathCollision = createCollisionCommandBinding(createEngineEffectCom
 ]));
 var falltuerStructure = {
   id: FALLTUER_STRUCTURE_ID,
-  type: 0 /* CIRCLE */,
+  type: SHAPE.CIRCLE,
   x: 0,
   y: 0,
   r: FALLTUER_RADIUS,
@@ -8428,7 +11247,8 @@ var mysteryBoxItem = createItem({
   targetType: "self",
   duration: { type: "instant", value: 0 },
   useLimit: { perTurn: 1, perGame: 3 },
-  targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false }
+  targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
+  ui: { component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: true }
 });
 function validateMysteryBoxReward(rewardId, options) {
   if (rewardId === MYSTERY_BOX_ITEM_ID && !options.allowMysteryBoxReward) {
@@ -8484,6 +11304,7 @@ var LANGUAGE_KEYS = {
   MenuDifficultyTitle: "kore.ui.menu.difficultyTitle",
   MenuKiLabel: "kore.ui.menu.kiLabel",
   MenuMapTitle: "kore.ui.menu.mapTitle",
+  MenuMatchmakingLabel: "kore.ui.menu.matchmakingLabel",
   ModsButton: "kore.ui.menu.modsButton",
   ModsTitle: "kore.ui.mods.title",
   ModsLoadFile: "kore.ui.mods.loadFile",
@@ -8509,8 +11330,16 @@ var LANGUAGE_KEYS = {
   HudReplayShare: "kore.ui.hud.replayShare",
   HudPaused: "kore.ui.hud.paused",
   HudResume: "kore.ui.hud.resume",
+  HudReport: "kore.ui.hud.report",
+  HudReportTitle: "kore.ui.hud.reportTitle",
+  HudReportConduct: "kore.ui.hud.reportConduct",
+  HudReportTechnical: "kore.ui.hud.reportTechnical",
+  HudReportSubmit: "kore.ui.hud.reportSubmit",
+  HudReportCancel: "kore.ui.hud.reportCancel",
   HudNone: "kore.ui.hud.none",
   HudWaiting: "kore.ui.hud.waiting",
+  HudTutorial: "kore.ui.hud.tutorial",
+  HudAiThinking: "kore.ui.hud.aiThinking",
   HudTurn: "kore.ui.hud.turn",
   HudActor: "kore.ui.hud.actor",
   HudAim: "kore.ui.hud.aim",
@@ -8539,6 +11368,7 @@ var LANGUAGE_KEYS = {
   LoadingConnecting: "kore.ui.loading.connecting",
   LoadingFindingOpponent: "kore.ui.loading.findingOpponent",
   LoadingWaitingOpponent: "kore.ui.loading.waitingOpponent",
+  LoadingWaitingTime: "kore.ui.loading.waitingTime",
   LoadingConnectFailed: "kore.ui.loading.connectFailed",
   LoadingConnectionClosed: "kore.ui.loading.connectionClosed",
   LoadingTimedOut: "kore.ui.loading.timedOut",
@@ -8569,13 +11399,14 @@ var EN_EN_STRINGS = {
   [LANGUAGE_KEYS.MenuAiButton]: "1 vs AI",
   [LANGUAGE_KEYS.MenuBattleButton]: "AI vs AI",
   [LANGUAGE_KEYS.MenuOnlineButton]: "Play Online",
-  [LANGUAGE_KEYS.MenuLocalButton]: "Play Local Game",
+  [LANGUAGE_KEYS.MenuLocalButton]: "Play Offline",
   [LANGUAGE_KEYS.MenuChooseMapButton]: "Choose Map",
   [LANGUAGE_KEYS.MenuOnlineMapNote]: "Preference only - the server may choose Ice Map",
   [LANGUAGE_KEYS.MenuBackButton]: "Back",
   [LANGUAGE_KEYS.MenuDifficultyTitle]: "Choose AI difficulty",
   [LANGUAGE_KEYS.MenuKiLabel]: "AI",
   [LANGUAGE_KEYS.MenuMapTitle]: "Choose Map",
+  [LANGUAGE_KEYS.MenuMatchmakingLabel]: "Matchmaking",
   [LANGUAGE_KEYS.ModsButton]: "Mods",
   [LANGUAGE_KEYS.ModsTitle]: "Mods",
   [LANGUAGE_KEYS.ModsLoadFile]: "Load JSON file",
@@ -8601,8 +11432,16 @@ var EN_EN_STRINGS = {
   [LANGUAGE_KEYS.HudReplayShare]: "Replay / Share",
   [LANGUAGE_KEYS.HudPaused]: "Paused",
   [LANGUAGE_KEYS.HudResume]: "Resume",
+  [LANGUAGE_KEYS.HudReport]: "Report",
+  [LANGUAGE_KEYS.HudReportTitle]: "Report a problem",
+  [LANGUAGE_KEYS.HudReportConduct]: "Cheater / conduct",
+  [LANGUAGE_KEYS.HudReportTechnical]: "Bug / technical",
+  [LANGUAGE_KEYS.HudReportSubmit]: "Submit report",
+  [LANGUAGE_KEYS.HudReportCancel]: "Cancel",
   [LANGUAGE_KEYS.HudNone]: "None",
   [LANGUAGE_KEYS.HudWaiting]: "Waiting for opponent/server",
+  [LANGUAGE_KEYS.HudTutorial]: "Select a figure, drag to aim, then release to shoot.",
+  [LANGUAGE_KEYS.HudAiThinking]: "This is a hard move - the AI is still thinking...",
   [LANGUAGE_KEYS.HudTurn]: "Team {team} | {phase} | Turn {turn}",
   [LANGUAGE_KEYS.HudActor]: "Actor: {actor}",
   [LANGUAGE_KEYS.HudAim]: "Aim: {aim}",
@@ -8631,6 +11470,7 @@ var EN_EN_STRINGS = {
   [LANGUAGE_KEYS.LoadingConnecting]: "Connecting to the match server…",
   [LANGUAGE_KEYS.LoadingFindingOpponent]: "Finding an opponent…",
   [LANGUAGE_KEYS.LoadingWaitingOpponent]: "Waiting for an opponent…",
+  [LANGUAGE_KEYS.LoadingWaitingTime]: "Waiting time: {elapsed}",
   [LANGUAGE_KEYS.LoadingConnectFailed]: "Could not connect to the match server.",
   [LANGUAGE_KEYS.LoadingConnectionClosed]: "The match connection closed before setup completed.",
   [LANGUAGE_KEYS.LoadingTimedOut]: "Matchmaking timed out. Please retry.",
@@ -8672,19 +11512,19 @@ class AuthoritativeGameplayRenderer {
     const snapshot = this.state.getAuthoritativeRenderState();
     for (const structure of snapshot.structures)
       this.drawStructure(renderer, structure);
-    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState);
+    this.drawPickups(renderer, snapshot.pickups, snapshot.pickupState, snapshot.items);
     for (const player of snapshot.players)
       this.drawPlayer(renderer, player, snapshot.ruleState.activeTeam);
   }
   drawStructure(renderer, structure) {
-    if (structure.drawingEnabled === false)
+    if (structure.drawingEnabled === false || structure.color === "transparent")
       return;
     const role = structure.role;
     const color = structure.color ?? "#64748b";
     if (role !== "containment") {
       renderer.push();
       renderer.setFillColor(color);
-      renderer.setStrokeColor(color);
+      renderer.noStroke();
       this.drawShape(renderer, structure);
       renderer.pop();
     }
@@ -8699,29 +11539,36 @@ class AuthoritativeGameplayRenderer {
   }
   drawShape(renderer, structure) {
     switch (structure.type) {
-      case 0 /* CIRCLE */:
+      case SHAPE.CIRCLE:
         renderer.drawCircle(structure.x, structure.y, structure.r);
         return;
-      case 2 /* RECTANGLE */:
+      case SHAPE.RECTANGLE:
         renderer.drawRect(structure.x, structure.y, structure.w, structure.h);
         return;
-      case 1 /* LINE */:
+      case SHAPE.LINE:
         renderer.line(structure.x, structure.y, structure.x2, structure.y2);
         return;
     }
   }
-  drawPickups(renderer, pickups, state) {
+  drawPickups(renderer, pickups, state, items) {
     for (const [index, pickup] of pickups.entries()) {
       const collected = state?.pickups[index]?.collected ?? 0;
       if (collected >= (pickup.maxPickupsPerTurn ?? 1))
         continue;
+      const item = items.find((candidate) => candidate.id === pickup.itemId);
       renderer.push();
+      if (item?.ui?.component) {
+        renderer.drawImage(item.ui.component.source, pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+      }
+      const centerX = pickup.spawnRegion.x + pickup.spawnRegion.w / 2;
+      const centerY = pickup.spawnRegion.y + pickup.spawnRegion.h / 2;
+      const radius = Math.max(16, Math.min(pickup.spawnRegion.w, pickup.spawnRegion.h) / 2);
       renderer.setNoFill();
       renderer.setStrokeColor("#facc15");
       renderer.setStroke(2);
-      renderer.drawRect(pickup.spawnRegion.x, pickup.spawnRegion.y, pickup.spawnRegion.w, pickup.spawnRegion.h);
+      renderer.drawCircle(centerX, centerY, radius);
       renderer.setFillColor("#713f12");
-      renderer.drawText(pickup.itemId, pickup.spawnRegion.x, pickup.spawnRegion.y - 4, 12);
+      renderer.drawText(item?.name ?? pickup.itemId, centerX - radius + 4, centerY + 4, 11);
       renderer.pop();
     }
   }
@@ -8744,779 +11591,9 @@ class AuthoritativeGameplayRenderer {
       renderer.setNoFill();
       renderer.setStrokeColor(activeTeam === 0 ? "#38bdf8" : "#fb7185");
     }
-    player.effects.forEach((effect, index) => {
-      renderer.setNoFill();
-      renderer.setStrokeColor("#a78bfa");
-      renderer.drawCircle(position.x, position.y, player.size + 7 + index * 3);
-      renderer.setFillColor("#4c1d95");
-      renderer.drawText(effect.type.replace("EffectType.", ""), position.x + player.size + 4, position.y + index * 12, 11);
-    });
     renderer.pop();
   }
 }
-
-var DEFAULT_BUSES = [
-  { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
-  { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
-  { id: "ambience", volume: 1, muted: false, maxVoices: 8, defaultPriority: 20, paused: false },
-  { id: "effects", volume: 1, muted: false, maxVoices: 32, defaultPriority: 10, paused: false },
-  { id: "ui", volume: 1, muted: false, maxVoices: 8, defaultPriority: 30, paused: false },
-  { id: "voice", volume: 1, muted: false, maxVoices: 8, defaultPriority: 40, paused: false }
-];
-
-class AudioEmitter {
-  soundSourceId;
-  pending = [];
-  constructor(soundSourceId) {
-    this.soundSourceId = soundSourceId;
-    validateId(soundSourceId, "sound source ID");
-  }
-  emit(command) {
-    validateAudioCommand(command);
-    if (command.sourceId !== this.soundSourceId)
-      throw new Error(`Audio command source '${command.sourceId}' does not match emitter '${this.soundSourceId}'`);
-    this.pending.push(clone5(command));
-  }
-  drainSoundCommands() {
-    const commands = this.pending.map(clone5);
-    this.pending = [];
-    return commands;
-  }
-}
-
-class SoundSystem {
-  runtimeId;
-  buses = new Map;
-  persistent = new Map;
-  pending = [];
-  output;
-  sequence;
-  constructor(runtimeId, settings = { buses: clone5(DEFAULT_BUSES), persistentSources: [] }) {
-    this.runtimeId = runtimeId;
-    validateId(runtimeId, "runtime ID");
-    for (const bus of settings.buses) {
-      validateBus(bus);
-      if (this.buses.has(bus.id))
-        throw new Error(`Duplicate audio bus '${bus.id}'`);
-      this.buses.set(bus.id, clone5(bus));
-    }
-    if (!this.buses.has("master"))
-      this.buses.set("master", clone5(DEFAULT_BUSES[0]));
-    for (const source of settings.persistentSources) {
-      validatePersistentSource(source, this.buses);
-      if (this.persistent.has(source.sourceId))
-        throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
-      this.persistent.set(source.sourceId, clone5(source));
-    }
-    this.sequence = settings.sequence ?? 0;
-    this.output = emptyBatch(runtimeId, this.sequence, this.diagnostics());
-  }
-  submit(command) {
-    validateAudioCommand(command);
-    this.pending.push(clone5(command));
-  }
-  tick(candidates) {
-    const collected = [];
-    let ordinal = 0;
-    for (const candidate of candidates.filter(isSoundEmitter).sort((a, b) => a.soundSourceId.localeCompare(b.soundSourceId))) {
-      for (const command of candidate.drainSoundCommands())
-        collected.push({ command, ordinal: ordinal++ });
-    }
-    for (const command of this.pending.splice(0))
-      collected.push({ command, ordinal: ordinal++ });
-    const result = this.aggregate(collected);
-    this.output = { schemaVersion: 1, runtimeId: this.runtimeId, sequence: ++this.sequence, commands: result.commands, diagnostics: { ...this.diagnostics(), ...result.diagnostics, sequence: this.sequence } };
-  }
-  drainOutput() {
-    const value = clone5(this.output);
-    this.output = emptyBatch(this.runtimeId, this.sequence, this.diagnostics());
-    return value;
-  }
-  restorePersistentIntent() {
-    for (const source of [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)))
-      this.pending.push(clone5(source.command));
-  }
-  toSettings(framework = createDefaultAudioFramework()) {
-    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, buses: [...this.buses.values()].sort(byBus).map(clone5), persistentSources: [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)).map(clone5), framework: clone5(framework), sequence: this.sequence };
-    validateAudioSettings(settings);
-    return settings;
-  }
-  getDiagnostics() {
-    return clone5(this.diagnostics());
-  }
-  aggregate(collected) {
-    let rejected = 0;
-    let deduplicated = 0;
-    let droppedByPriority = 0;
-    const valid = [];
-    for (const entry of collected) {
-      try {
-        validateAudioCommand(entry.command);
-        validateBusReference(entry.command, this.buses);
-        valid.push(entry);
-      } catch {
-        rejected++;
-      }
-    }
-    const dedupe = new Map;
-    const retained = [];
-    for (const entry of valid) {
-      const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
-      if (!key) {
-        retained.push(entry);
-        continue;
-      }
-      const prior = dedupe.get(key);
-      if (!prior || compareCommand(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) {
-        if (prior)
-          deduplicated++;
-        dedupe.set(key, entry);
-      } else
-        deduplicated++;
-    }
-    retained.push(...dedupe.values());
-    const admitted = [];
-    for (const [busId, entries] of groupBy(retained.filter((entry) => isVoiceCommand(entry.command)), (entry) => commandBus(entry.command)).entries()) {
-      const bus = this.buses.get(busId);
-      const ordered = entries.sort((a, b) => compareCommand(a.command, b.command, a.ordinal, b.ordinal, this.buses));
-      admitted.push(...ordered.slice(0, bus.maxVoices));
-      droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
-    }
-    admitted.push(...retained.filter((entry) => !isVoiceCommand(entry.command)));
-    for (const entry of admitted)
-      this.applyPersistent(entry.command);
-    const commands = admitted.sort((a, b) => comparePipeline(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map((entry) => this.resolve(entry.command));
-    return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
-  }
-  resolve(command) {
-    return { ...clone5(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 };
-  }
-  applyPersistent(command) {
-    if (command.type === "startLoop" || command.type === "playMusic")
-      this.persistent.set(command.sourceId, { sourceId: command.sourceId, command: clone5(command) });
-    if (command.type === "stopSource")
-      this.persistent.delete(command.sourceId);
-    if (command.type === "stopMusic") {
-      for (const [id, source] of this.persistent)
-        if (source.command.type === "playMusic" && (!command.sourceId || command.sourceId === id))
-          this.persistent.delete(id);
-    }
-    if (command.type === "stopAll")
-      this.persistent.clear();
-    if (command.type === "setBusVolume") {
-      const bus = this.buses.get(command.bus);
-      bus.volume = command.volume;
-      if (command.muted !== undefined)
-        bus.muted = command.muted;
-    }
-    if (command.type === "pauseBus" || command.type === "resumeBus")
-      this.buses.get(command.bus).paused = command.type === "pauseBus";
-  }
-  diagnostics() {
-    return { collected: 0, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [...this.persistent.keys()].sort(), outputStatus: "ready", sequence: this.sequence };
-  }
-}
-
-class AudioRuntime {
-  system;
-  framework;
-  constructor(settings) {
-    validateAudioSettings(settings);
-    this.framework = clone5(settings.framework);
-    this.system = new SoundSystem(settings.runtimeId, settings);
-  }
-  tick(emitters) {
-    this.system.tick(emitters);
-  }
-  submit(command) {
-    this.system.submit(command);
-  }
-  drainOutput() {
-    return this.system.drainOutput();
-  }
-  restorePersistentIntent() {
-    this.system.restorePersistentIntent();
-  }
-  toSettings() {
-    return this.system.toSettings(this.framework);
-  }
-  getDiagnostics() {
-    return this.system.getDiagnostics();
-  }
-}
-
-class ApplicationAudioMixer {
-  applicationId;
-  buses = new Map;
-  pending = [];
-  activeMusic;
-  sequence;
-  constructor(applicationId, settings = { buses: clone5(DEFAULT_BUSES) }) {
-    this.applicationId = applicationId;
-    validateId(applicationId, "application ID");
-    for (const bus of settings.buses) {
-      validateBus(bus);
-      if (this.buses.has(bus.id))
-        throw new Error(`Duplicate audio bus '${bus.id}'`);
-      this.buses.set(bus.id, clone5(bus));
-    }
-    if (!this.buses.has("master"))
-      this.buses.set("master", clone5(DEFAULT_BUSES[0]));
-    if (settings.activeMusic) {
-      validateResolvedCommand(settings.activeMusic);
-      this.activeMusic = clone5(settings.activeMusic);
-    }
-    this.sequence = settings.sequence ?? 0;
-  }
-  submit(batch) {
-    validateAudioBatch(batch);
-    this.pending.push(clone5(batch));
-  }
-  flush() {
-    const submitted = this.pending.splice(0).flatMap((batch) => batch.commands);
-    const rejected = submitted.filter((command) => ("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus)).length;
-    const incoming = submitted.filter((command) => !(("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved(a, b, this.buses));
-    const controls = incoming.filter((command) => !isVoiceCommand(command));
-    for (const command of controls)
-      this.applyControl(command);
-    const voices = incoming.filter(isVoiceCommand);
-    const music = voices.filter((command) => command.type === "playMusic");
-    const nonMusic = this.limitVoices(voices.filter((command) => command.type !== "playMusic"));
-    const previousMusic = this.activeMusic;
-    const selectedMusic = this.selectMusic(music);
-    const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId ? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 }] : [];
-    const commands = [...controls, ...replacedMusic, ...nonMusic, ...selectedMusic ? [selectedMusic] : []].sort((a, b) => compareResolved(a, b, this.buses));
-    const diagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter((command) => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
-    return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map((command) => ({ ...command, sequence: this.sequence })), diagnostics };
-  }
-  toSettings() {
-    const settings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus).map(clone5), ...this.activeMusic ? { activeMusic: clone5(this.activeMusic) } : {}, sequence: this.sequence };
-    validateApplicationAudioSettings(settings);
-    return settings;
-  }
-  limitVoices(commands) {
-    const result = [];
-    for (const [busId, entries] of groupBy(commands, (command) => commandBus(command)).entries())
-      result.push(...entries.sort((a, b) => compareResolved(a, b, this.buses)).slice(0, this.buses.get(busId).maxVoices));
-    return result;
-  }
-  selectMusic(candidates) {
-    const ordered = candidates.sort((a, b) => compareResolved(a, b, this.buses));
-    for (const candidate of ordered) {
-      const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
-      const currentPriority = this.activeMusic ? resolvedPriority(this.activeMusic, this.buses) : -Infinity;
-      const priority = resolvedPriority(candidate, this.buses);
-      if (!this.activeMusic || policy === "replace-current" || policy === "replace-lower-or-equal" && priority >= currentPriority || policy === "keep-current" && !this.activeMusic) {
-        this.activeMusic = clone5(candidate);
-        return candidate;
-      }
-    }
-    return;
-  }
-  applyControl(command) {
-    if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`))
-      this.activeMusic = undefined;
-    if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)
-      this.activeMusic = undefined;
-    if (command.type === "stopAll")
-      this.activeMusic = undefined;
-    if (command.type === "setBusVolume") {
-      const bus = this.buses.get(command.bus);
-      if (bus) {
-        bus.volume = command.volume;
-        if (command.muted !== undefined)
-          bus.muted = command.muted;
-      }
-    }
-    if (command.type === "pauseBus" || command.type === "resumeBus") {
-      const bus = this.buses.get(command.bus);
-      if (bus)
-        bus.paused = command.type === "pauseBus";
-    }
-  }
-}
-function createDefaultAudioFramework() {
-  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
-  return registry.select(["audio.collect", "audio.mix"]);
-}
-function createAudioRuntime(settings) {
-  return new AudioRuntime(settings);
-}
-function createAudioSettings(options) {
-  return { schemaVersion: 1, runtimeId: options.runtimeId, buses: clone5(options.buses ?? DEFAULT_BUSES), persistentSources: clone5(options.persistentSources ?? []), framework: createDefaultAudioFramework(), sequence: 0 };
-}
-function validateAudioSettings(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio settings");
-  const settings = value;
-  if (settings.schemaVersion !== 1 || typeof settings.runtimeId !== "string" || !Array.isArray(settings.buses) || !Array.isArray(settings.persistentSources) || !settings.framework || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
-    throw new Error("Malformed audio settings");
-  const sequence = settings.sequence;
-  validateId(settings.runtimeId, "runtime ID");
-  const buses = new Map;
-  for (const bus of settings.buses) {
-    validateBus(bus);
-    if (buses.has(bus.id))
-      throw new Error(`Duplicate audio bus '${bus.id}'`);
-    buses.set(bus.id, bus);
-  }
-  if (!buses.has("master"))
-    throw new Error("Audio settings require a master bus");
-  const sources = new Set;
-  for (const source of settings.persistentSources) {
-    validatePersistentSource(source, buses);
-    if (sources.has(source.sourceId))
-      throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
-    sources.add(source.sourceId);
-  }
-  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
-  registry.validate(settings.framework);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue(settings);
-}
-function validateApplicationAudioSettings(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed application audio settings");
-  const settings = value;
-  if (settings.schemaVersion !== 1 || typeof settings.applicationId !== "string" || !Array.isArray(settings.buses) || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
-    throw new Error("Malformed application audio settings");
-  const sequence = settings.sequence;
-  validateId(settings.applicationId, "application ID");
-  const ids = new Set;
-  for (const bus of settings.buses) {
-    validateBus(bus);
-    if (ids.has(bus.id))
-      throw new Error(`Duplicate audio bus '${bus.id}'`);
-    ids.add(bus.id);
-  }
-  if (!ids.has("master"))
-    throw new Error("Application audio settings require a master bus");
-  if (settings.activeMusic)
-    validateResolvedCommand(settings.activeMusic);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue(settings);
-}
-function validateAudioCommand(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio command");
-  const command = value;
-  if (typeof command.type !== "string" || !COMMAND_TYPES.has(command.type))
-    throw new Error("Unknown audio command");
-  if (command.type !== "stopMusic")
-    validateId(command.sourceId, "audio source ID");
-  else if (command.sourceId !== undefined)
-    validateId(command.sourceId, "audio source ID");
-  if ("soundId" in command)
-    validateId(command.soundId, "sound ID");
-  if ("bus" in command && command.bus !== undefined)
-    validateId(command.bus, "audio bus ID");
-  if ("instanceId" in command && command.instanceId !== undefined)
-    validateId(command.instanceId, "audio instance ID");
-  if ("dedupeKey" in command && command.dedupeKey !== undefined)
-    validateId(command.dedupeKey, "audio dedupe key");
-  for (const name of ["volume", "pitch", "pan", "fadeInMs", "fadeOutMs", "priority"]) {
-    const numeric = command[name];
-    if (numeric !== undefined && (typeof numeric !== "number" || !Number.isFinite(numeric) || name === "volume" && (numeric < 0 || numeric > 1) || name === "pitch" && numeric <= 0 || name === "pan" && (numeric < -1 || numeric > 1) || (name === "fadeInMs" || name === "fadeOutMs") && numeric < 0 || name === "priority" && !Number.isInteger(numeric)))
-      throw new Error(`Invalid audio ${name}`);
-  }
-  if (command.type === "playMusic" && command.replacementPolicy !== undefined && !["replace-current", "replace-lower-or-equal", "keep-current"].includes(command.replacementPolicy))
-    throw new Error("Invalid music replacement policy");
-  assertJsonValue(command);
-}
-function validateAudioBatch(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio batch");
-  const batch = value;
-  if (batch.schemaVersion !== 1 || typeof batch.runtimeId !== "string" || typeof batch.sequence !== "number" || !Number.isSafeInteger(batch.sequence) || batch.sequence < 0 || !Array.isArray(batch.commands) || !batch.diagnostics)
-    throw new Error("Malformed audio batch");
-  const sequence = batch.sequence;
-  validateId(batch.runtimeId, "runtime ID");
-  for (const command of batch.commands)
-    validateResolvedCommand(command);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue(batch);
-}
-var audio = {
-  engine: { createSystemRegistry: engine.createSystemRegistry },
-  createSettings: createAudioSettings,
-  createRuntime: createAudioRuntime,
-  createApplicationMixer(applicationId, settings) {
-    return new ApplicationAudioMixer(applicationId, settings);
-  },
-  createDefaultFramework: createDefaultAudioFramework,
-  emitter(sourceId) {
-    return new AudioEmitter(sourceId);
-  },
-  bus(settings) {
-    validateBus(settings);
-    return clone5(settings);
-  },
-  command: {
-    play(settings) {
-      return { type: "playSound", ...clone5(settings) };
-    },
-    loop(settings) {
-      return { type: "startLoop", ...clone5(settings) };
-    },
-    music(settings) {
-      return { type: "playMusic", ...clone5(settings) };
-    },
-    stopSource(settings) {
-      return { type: "stopSource", ...clone5(settings) };
-    },
-    stopInstance(settings) {
-      return { type: "stopInstance", ...clone5(settings) };
-    },
-    stopMusic(settings = {}) {
-      return { type: "stopMusic", ...clone5(settings) };
-    },
-    setBusVolume(settings) {
-      return { type: "setBusVolume", ...clone5(settings) };
-    },
-    pauseBus(settings) {
-      return { type: "pauseBus", ...clone5(settings) };
-    },
-    resumeBus(settings) {
-      return { type: "resumeBus", ...clone5(settings) };
-    },
-    stopAll(settings) {
-      return { type: "stopAll", ...clone5(settings) };
-    }
-  },
-  validate: validateAudioSettings,
-  validateCommand: validateAudioCommand,
-  validateBatch: validateAudioBatch
-};
-var COMMAND_TYPES = new Set(["playSound", "startLoop", "playMusic", "stopSource", "stopInstance", "stopMusic", "pauseBus", "resumeBus", "setBusVolume", "stopAll"]);
-function isSoundEmitter(value) {
-  return !!value && typeof value === "object" && typeof value.soundSourceId === "string" && typeof value.drainSoundCommands === "function";
-}
-function validateId(value, name) {
-  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
-    throw new Error(`Invalid ${name}`);
-}
-function validateBus(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio bus");
-  const bus = value;
-  validateId(bus.id, "audio bus ID");
-  const volume = bus.volume;
-  const maxVoices = bus.maxVoices;
-  if (typeof volume !== "number" || !Number.isFinite(volume) || volume < 0 || volume > 1 || typeof bus.muted !== "boolean" || typeof maxVoices !== "number" || !Number.isSafeInteger(maxVoices) || maxVoices < 1 || !Number.isSafeInteger(bus.defaultPriority) || typeof bus.paused !== "boolean")
-    throw new Error(`Invalid audio bus '${bus.id}'`);
-  assertJsonValue(bus);
-}
-function validatePersistentSource(value, buses) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed persistent audio source");
-  const source = value;
-  validateId(source.sourceId, "persistent source ID");
-  validateAudioCommand(source.command);
-  if (source.command.type !== "startLoop" && source.command.type !== "playMusic")
-    throw new Error("Persistent audio source must be a loop or music command");
-  if (source.command.sourceId !== source.sourceId)
-    throw new Error("Persistent audio source ID mismatch");
-  validateBusReference(source.command, buses);
-}
-function validateBusReference(command, buses) {
-  if ("bus" in command && command.bus !== undefined && !buses.has(command.bus))
-    throw new Error(`Unknown audio bus '${command.bus}'`);
-}
-function validateResolvedCommand(value) {
-  validateAudioCommand(value);
-  const command = value;
-  validateId(command.runtimeId, "runtime ID");
-  validateId(command.globalSourceId, "global audio source ID");
-  const sequence = command.sequence;
-  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0)
-    throw new Error("Invalid audio sequence");
-}
-function commandBus(command) {
-  return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects";
-}
-function isVoiceCommand(command) {
-  return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic";
-}
-function resolvedPriority(command, buses) {
-  return command.priority ?? buses.get(commandBus(command))?.defaultPriority ?? 0;
-}
-function compareCommand(a, b, aOrdinal, bOrdinal, buses) {
-  return resolvedPriority(b, buses) - resolvedPriority(a, buses) || commandBus(a).localeCompare(commandBus(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal;
-}
-function pipelineOrder(command) {
-  if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume")
-    return 0;
-  if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic")
-    return 1;
-  if (command.type === "playMusic")
-    return 2;
-  if (command.type === "startLoop")
-    return 3;
-  return 4;
-}
-function comparePipeline(a, b, aOrdinal, bOrdinal, buses) {
-  return pipelineOrder(a) - pipelineOrder(b) || compareCommand(a, b, aOrdinal, bOrdinal, buses);
-}
-function compareResolved(a, b, buses) {
-  return pipelineOrder(a) - pipelineOrder(b) || resolvedPriority(b, buses) - resolvedPriority(a, buses) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence;
-}
-function byBus(a, b) {
-  return a.id.localeCompare(b.id);
-}
-function emptyBatch(runtimeId, sequence, diagnostics) {
-  return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } };
-}
-function groupBy(items, key) {
-  const grouped = new Map;
-  for (const item of items) {
-    const id = key(item);
-    const values = grouped.get(id) ?? [];
-    values.push(item);
-    grouped.set(id, values);
-  }
-  return grouped;
-}
-function clone5(value) {
-  return structuredClone(value);
-}
-
-function validateAnimationSettings(value) {
-  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
-    throw new Error("Malformed animation settings");
-  assertKeys(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
-  validateId2(value.id, "animation ID");
-  validateId2(value.channel, "animation channel");
-  const ids = new Set;
-  for (const track of value.tracks) {
-    if (!isRecord10(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
-      throw new Error("Malformed animation track");
-    assertKeys(track, ["id", "keyframes"], "animation track");
-    validateId2(track.id, "animation track ID");
-    if (ids.has(track.id))
-      throw new Error(`Duplicate animation track '${track.id}'`);
-    ids.add(track.id);
-    let previous = -1;
-    for (const keyframe of track.keyframes) {
-      if (!isRecord10(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
-        throw new Error("Invalid animation keyframe");
-      assertKeys(keyframe, ["tick", "value"], "animation keyframe");
-      assertJsonValue(keyframe.value);
-      previous = keyframe.tick;
-    }
-    if (track.keyframes.length === 0)
-      throw new Error("Animation tracks require keyframes");
-  }
-  assertJsonValue(value);
-}
-function validatePresentationEvent(value) {
-  if (!isRecord10(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
-    throw new Error("Malformed presentation event");
-  assertKeys(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
-  validateId2(value.eventId, "presentation event ID");
-  if (value.channel !== undefined)
-    validateId2(value.channel, "presentation channel");
-  if (value.animationId !== undefined)
-    validateId2(value.animationId, "animation ID");
-  if (value.instanceId !== undefined)
-    validateId2(value.instanceId, "presentation instance ID");
-  if (value.priority !== undefined && !integer(value.priority))
-    throw new Error("Invalid presentation priority");
-  if (value.type === "play" && value.animationId === undefined)
-    throw new Error("Play events require an animation ID");
-  if (value.type === "cancel" && value.instanceId === undefined && value.channel === undefined)
-    throw new Error("Cancel events require an instance or channel");
-  if (value.payload !== undefined)
-    assertJsonValue(value.payload);
-  assertJsonValue(value);
-}
-function validatePresentationRuntimeSettings(value) {
-  if (!isRecord10(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
-    throw new Error("Malformed presentation runtime settings");
-  assertKeys(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
-  validateId2(value.runtimeId, "presentation runtime ID");
-  for (const active of value.active) {
-    if (!isRecord10(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
-      throw new Error("Malformed active animation");
-    assertKeys(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
-    validateId2(active.instanceId, "presentation instance ID");
-    validateId2(active.animationId, "animation ID");
-    validateId2(active.channel, "presentation channel");
-  }
-  for (const event of value.pending)
-    validatePresentationEvent(event);
-  assertJsonValue(value);
-}
-
-class PresentationRuntime {
-  runtimeId;
-  animations = new Map;
-  active = new Map;
-  pending = [];
-  tickNumber;
-  sequence;
-  lastFrame;
-  constructor(runtimeId, settings) {
-    this.runtimeId = runtimeId;
-    validateId2(runtimeId, "presentation runtime ID");
-    for (const animation of settings.animations) {
-      validateAnimationSettings(animation);
-      if (this.animations.has(animation.id))
-        throw new Error(`Duplicate animation '${animation.id}'`);
-      this.animations.set(animation.id, clone6(animation));
-    }
-    this.tickNumber = settings.tick ?? 0;
-    this.sequence = settings.sequence ?? 0;
-    for (const item of settings.active ?? [])
-      this.restoreActive(item);
-    for (const event of settings.pending ?? []) {
-      validatePresentationEvent(event);
-      this.pending.push(clone6(event));
-    }
-    this.lastFrame = this.frame([]);
-  }
-  emit(event) {
-    validatePresentationEvent(event);
-    this.pending.push(clone6(event));
-  }
-  tick(ticks = 1) {
-    if (!nonNegativeInteger(ticks))
-      throw new Error("Presentation tick count must be a non-negative integer");
-    const records = [];
-    for (let step = 0;step < ticks; step++) {
-      this.tickNumber++;
-      this.processPending(records);
-      this.expire(records);
-    }
-    this.lastFrame = this.frame(records);
-    return clone6(this.lastFrame);
-  }
-  project() {
-    return clone6(this.frame([]));
-  }
-  toSettings() {
-    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [...this.active.values()].sort(byInstance).map(clone6), pending: this.pending.map(clone6) };
-    validatePresentationRuntimeSettings(settings);
-    return settings;
-  }
-  processPending(records) {
-    const pending = this.pending.splice(0).map((event, ordinal) => ({ event, ordinal })).sort((a, b) => this.eventPriority(b.event) - this.eventPriority(a.event) || a.ordinal - b.ordinal || a.event.eventId.localeCompare(b.event.eventId));
-    for (const { event } of pending) {
-      if (event.type === "cancel") {
-        for (const item2 of [...this.active.values()])
-          if (event.instanceId && item2.instanceId === event.instanceId || event.channel && item2.channel === event.channel)
-            this.cancel(item2, records, event.eventId);
-        continue;
-      }
-      const animation = this.animations.get(event.animationId);
-      if (!animation)
-        throw new Error(`Unknown animation '${event.animationId}'`);
-      const current = this.active.get(animation.channel);
-      if (current && (animation.interruption === "ignore" || animation.interruption === "higher-priority" && animation.priority <= current.priority))
-        continue;
-      if (current)
-        this.cancel(current, records, event.eventId);
-      const item = { instanceId: event.instanceId ?? `${this.runtimeId}:${event.eventId}`, animationId: animation.id, channel: animation.channel, startTick: this.tickNumber, priority: animation.priority };
-      this.active.set(animation.channel, item);
-      records.push(this.record({ ...event, type: "play", animationId: animation.id, instanceId: item.instanceId }, this.sequence++));
-    }
-  }
-  eventPriority(event) {
-    return event.priority ?? (event.type === "play" ? this.animations.get(event.animationId)?.priority ?? 0 : 0);
-  }
-  cancel(item, records, eventId) {
-    this.active.delete(item.channel);
-    records.push(this.record({ schemaVersion: 1, type: "cancel", eventId, instanceId: item.instanceId, channel: item.channel }, this.sequence++));
-  }
-  expire(records) {
-    for (const item of [...this.active.values()]) {
-      const animation = this.animations.get(item.animationId);
-      if (this.tickNumber - item.startTick >= animation.durationTicks)
-        this.cancel(item, records, `${item.instanceId}:complete`);
-    }
-  }
-  record(event, sequence) {
-    return { ...clone6(event), sequence, tick: this.tickNumber };
-  }
-  frame(events) {
-    return { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, events: events.map(clone6), animations: [...this.active.values()].sort(byInstance).map((item) => this.projectAnimation(item)) };
-  }
-  projectAnimation(item) {
-    const animation = this.animations.get(item.animationId);
-    const localTick = Math.max(0, this.tickNumber - item.startTick);
-    const values = {};
-    for (const track of animation.tracks)
-      values[track.id] = sample(track.keyframes, localTick);
-    return { instanceId: item.instanceId, animationId: item.animationId, channel: item.channel, priority: item.priority, localTick, progress: Math.min(1, localTick / animation.durationTicks), values };
-  }
-  restoreActive(item) {
-    validatePresentationRuntimeSettings({ schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [item], pending: [] });
-    if (this.active.has(item.channel))
-      throw new Error(`Duplicate active animation channel '${item.channel}'`);
-    if (!this.animations.has(item.animationId))
-      throw new Error(`Unknown animation '${item.animationId}'`);
-    this.active.set(item.channel, clone6(item));
-  }
-}
-function sample(keyframes, tick) {
-  let result = keyframes[0].value;
-  for (const keyframe of keyframes) {
-    if (keyframe.tick > tick)
-      break;
-    result = keyframe.value;
-  }
-  return clone6(result);
-}
-function validateId2(value, name) {
-  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
-    throw new Error(`Invalid ${name}`);
-}
-function assertKeys(value, allowed, name) {
-  const keys = new Set(allowed);
-  for (const key of Object.keys(value))
-    if (!keys.has(key))
-      throw new Error(`Unknown ${name} field '${key}'`);
-}
-function isRecord10(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-function integer(value) {
-  return typeof value === "number" && Number.isSafeInteger(value);
-}
-function nonNegativeInteger(value) {
-  return integer(value) && value >= 0;
-}
-function positiveInteger2(value) {
-  return integer(value) && value > 0;
-}
-function clone6(value) {
-  return structuredClone(value);
-}
-function byInstance(a, b) {
-  return a.channel.localeCompare(b.channel) || a.instanceId.localeCompare(b.instanceId);
-}
-var INTERRUPTIONS = new Set(["replace", "higher-priority", "ignore"]);
-var presentation = {
-  createAnimation(settings) {
-    const result = { schemaVersion: 1, ...clone6(settings) };
-    validateAnimationSettings(result);
-    return result;
-  },
-  createRuntime(runtimeId, settings) {
-    return new PresentationRuntime(runtimeId, settings);
-  },
-  play(eventId, animationId, options = {}) {
-    return { schemaVersion: 1, type: "play", eventId, animationId, ...clone6(options) };
-  },
-  cancel(eventId, options) {
-    return { schemaVersion: 1, type: "cancel", eventId, ...clone6(options) };
-  },
-  validateAnimation: validateAnimationSettings,
-  validateEvent: validatePresentationEvent,
-  validateRuntime: validatePresentationRuntimeSettings
-};
 
 var KoreGameplayFeedbackType;
 ((KoreGameplayFeedbackType2) => {
@@ -9531,7 +11608,7 @@ var KoreGameplayFeedbackType;
   KoreGameplayFeedbackType2["Result"] = "result";
 })(KoreGameplayFeedbackType ||= {});
 var TYPES = new Set(Object.values(KoreGameplayFeedbackType));
-function clone7(value) {
+function clone8(value) {
   return structuredClone(value);
 }
 function validId(value) {
@@ -9557,7 +11634,7 @@ class GameplayFeedbackTrace {
   sequence;
   constructor(settings = {}) {
     this.sequence = settings.sequence ?? 0;
-    this.events = (settings.events ?? []).map(clone7);
+    this.events = (settings.events ?? []).map(clone8);
     this.events.forEach(validateEvent);
     if (this.events.some((event, index) => event.sequence !== index))
       throw new Error("Feedback sequence must be contiguous");
@@ -9565,13 +11642,13 @@ class GameplayFeedbackTrace {
       throw new Error("Invalid feedback sequence");
   }
   record(type, turnNumber, details = {}) {
-    const event = { schemaVersion: 1, sequence: this.sequence++, turnNumber, type, ...clone7(details) };
+    const event = { schemaVersion: 1, sequence: this.sequence++, turnNumber, type, ...clone8(details) };
     validateEvent(event);
     this.events.push(event);
-    return clone7(event);
+    return clone8(event);
   }
   list(fromSequence = 0) {
-    return this.events.slice(fromSequence).map(clone7);
+    return this.events.slice(fromSequence).map(clone8);
   }
   toSettings() {
     return { schemaVersion: 1, sequence: this.sequence, events: this.list() };
@@ -9608,7 +11685,7 @@ class KoreGameplayFeedbackSurface {
   }
   accept(event) {
     validateEvent(event);
-    this.visible.push(clone7(event));
+    this.visible.push(clone8(event));
     this.runtime.emit(presentation.play(`feedback:${event.sequence}:${event.type}`, `kore.feedback.${event.type}`, event.data === undefined ? {} : { payload: event.data }));
     try {
       this.sounds.emit(audio.command.play({ sourceId: this.soundSourceId, soundId: KORE_FEEDBACK_AUDIO[event.type], bus: "effects", priority: event.type === "result" /* Result */ ? 80 : 20, dedupeKey: `feedback:${event.sequence}` }));
@@ -9642,17 +11719,23 @@ class KoreGameplayFeedbackSurface {
     return this.sounds.drainSoundCommands();
   }
   getFrame() {
-    return clone7(this.frame);
+    return clone8(this.frame);
   }
   toPresentationSettings() {
     return this.runtime.toSettings();
   }
 }
 function feedbackLabel(event) {
-  return event.type === "result" /* Result */ ? "Match complete" : event.type[0].toUpperCase() + event.type.slice(1);
+  if (event.type === "result" /* Result */)
+    return "Match complete";
+  if (event.type === "item" /* Item */ && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.rewardName === "string")
+    return `Mystery Box: ${event.data.rewardName}`;
+  return event.type[0].toUpperCase() + event.type.slice(1);
 }
 
 class GameHandler {
+  static LONG_TURN_WARNING_TICKS = 600;
+  LoggerType = LoggerType;
   teamSize = 0;
   id;
   turns = [];
@@ -9669,6 +11752,8 @@ class GameHandler {
   dt = 1;
   mouseHandler;
   logs = [];
+  playbackStartedAt;
+  turnStartedAt;
   team = [];
   effectAlways = [];
   effectRound = [];
@@ -9702,7 +11787,8 @@ class GameHandler {
       myTeamNumber: 0,
       counters: [],
       drift: DEFAULT_DRIFT,
-      finishMatch: (result) => this.finishMatch(result)
+      finishMatch: (result) => this.finishMatch(result),
+      log: (type, data) => this.log(type, data)
     };
     this.entityManager = em;
     this.physicsStrategy = new defaultPhysics;
@@ -9718,32 +11804,102 @@ class GameHandler {
         system.strategy = strategy;
     });
   }
-  simulateTurn(actorId, angle, power) {
+  simulateTurn(actorId, angle, power, options = {}) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot simulate further turns");
+    const started = runtimeNow();
+    this.log("turn.simulation.started", { actorId, angle, power });
+    const maxTicks = options.maxTicks ?? 1200;
+    if (!Number.isSafeInteger(maxTicks) || maxTicks < 1)
+      throw new Error("Simulation maxTicks must be a positive safe integer");
     const settings = JSON.parse(JSON.stringify(this.toSettings()));
     if (settings.systems && settings.systemOrder) {
       settings.systems = settings.systems.filter((system) => system.systemId !== "ai.battle" && system.systemId !== "ai.opponent");
       settings.systemOrder = settings.systemOrder.filter((id) => id !== "ai.battle" && id !== "ai.opponent");
     }
     const g = new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
-    return g.resolveTurn({ actorId, angle, power });
+    const packet = g.resolveTurnWithDiagnostics({ actorId, angle, power }, maxTicks, (type, data) => this.log(`turn.simulation.${type}`, data));
+    this.log("turn.simulation.completed", { actorId, ticks: packet.durationFrames, durationMs: runtimeNow() - started });
+    this.log("turnPacket.created", { actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
+    return packet;
   }
   resolveTurn({ actorId, angle, power }) {
+    return this.resolveTurnWithTickBudget({ actorId, angle, power }, 1200);
+  }
+  resolveTurnWithTickBudget({ actorId, angle, power }, maxTicks) {
+    return this.resolveTurnWithDiagnostics({ actorId, angle, power }, maxTicks, undefined);
+  }
+  resolveTurnWithDiagnostics({ actorId, angle, power }, maxTicks, diagnosticSink) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot resolve further turns");
     const actor = this.validateActorForAction(actorId);
+    this.log("input.received", { actionType: "shot", actorId, angle, power });
+    this.log("input.accepted", { actionType: "shot", actorId, angle, power, team: actor.getTeam() });
+    this.turnStartedAt = runtimeNow();
+    this.log("turn.started", { actorId, actionType: "shot", angle, power });
     this.feedback.record("shot" /* Shot */, this.getTurnNumber(), { actorId, data: { angle, power } });
     const before = new Map(this.entityManager.toSettings().map((player) => [player.id, player]));
     this.applyAcceptedForce(actor, { angle, power });
     this.applyTemporalModifiers(actor);
     this.resolvingTurn = true;
     let frames = 0;
+    let lastMeaningfulMotionTick = 0;
+    let lastPositionChangeTick = 0;
+    let lastVelocityChangeTick = 0;
+    let lastRotationChangeTick = 0;
+    let previousKinematics = maxTicks >= GameHandler.LONG_TURN_WARNING_TICKS ? new Map(this.entityManager.getEntities().map((entity) => [String(entity.getId()), { position: entity.getPos(), velocity: entity.getVel(), rotation: entity.getRotation() }])) : undefined;
+    const emitLongRunningWarning = (data) => diagnosticSink ? diagnosticSink("long-running", data) : this.log("turn.simulation.long-running", data);
+    const emitMaxDiagnostic = (data) => diagnosticSink ? diagnosticSink("max-ticks", data) : this.log("turn.simulation.max-ticks", data);
+    let longRunningWarningLogged = false;
+    const inspectBodies = () => {
+      const bodies = this.entityManager.getEntities().filter(isPhysicsParticipant).map((entity) => {
+        const velocity = entity.getVel();
+        const getAngularVelocity = entity.getAngularVelocity;
+        return { entityId: String(entity.getId()), velocity, velocityMagnitude: Math.hypot(velocity.x, velocity.y), angularVelocity: getAngularVelocity?.call(entity) ?? 0, physicsEnabled: entity.physicsEnabled(), isDead: entity.isDead(), drawingEnabled: entity.drawingEnabled() };
+      });
+      const blockers = bodies.filter((body) => Math.abs(body.velocity.x) >= 0.1 || Math.abs(body.velocity.y) >= 0.1).sort((first, second) => second.velocityMagnitude - first.velocityMagnitude).slice(0, 4);
+      return { activePhysicalEntities: bodies.length, movingPhysicalEntities: blockers.length, maxVelocityMagnitude: bodies.reduce((max, body) => Math.max(max, body.velocityMagnitude), 0), maxAngularVelocityMagnitude: bodies.reduce((max, body) => Math.max(max, Math.abs(body.angularVelocity)), 0), blockers };
+    };
     try {
-      for (;!this.physicsStrategy.isStatic(this.entityManager) && frames < 1200; frames++)
+      for (;!this.physicsStrategy.isStatic(this.entityManager) && frames < maxTicks; frames++) {
         this.tick();
+        if (previousKinematics) {
+          let moved = false;
+          for (const entity of this.entityManager.getEntities()) {
+            if (!isPhysicsParticipant(entity))
+              continue;
+            const id = String(entity.getId());
+            const previous = previousKinematics.get(id);
+            const position = entity.getPos();
+            const velocity = entity.getVel();
+            const rotation = entity.getRotation();
+            if (previous && Math.hypot(position.x - previous.position.x, position.y - previous.position.y) > 0.000001) {
+              moved = true;
+              lastPositionChangeTick = frames + 1;
+            }
+            if (previous && Math.hypot(velocity.x - previous.velocity.x, velocity.y - previous.velocity.y) > 0.000001) {
+              moved = true;
+              lastVelocityChangeTick = frames + 1;
+            }
+            if (previous && Math.abs(rotation - previous.rotation) > 0.000001) {
+              moved = true;
+              lastRotationChangeTick = frames + 1;
+            }
+            previousKinematics.set(id, { position, velocity, rotation });
+          }
+          if (moved)
+            lastMeaningfulMotionTick = frames + 1;
+          if (!longRunningWarningLogged && frames + 1 >= GameHandler.LONG_TURN_WARNING_TICKS) {
+            longRunningWarningLogged = true;
+            emitLongRunningWarning({ ticks: frames + 1, maxTicks, lastMeaningfulMotionTick, ...inspectBodies() });
+          }
+        }
+      }
     } finally {
       this.resolvingTurn = false;
+    }
+    if (frames >= maxTicks && !this.physicsStrategy.isStatic(this.entityManager)) {
+      emitMaxDiagnostic({ ticks: frames, maxTicks, lastPositionChangeTick, lastVelocityChangeTick, lastRotationChangeTick, lastMeaningfulMotionTick, ...inspectBodies() });
     }
     const finalState = this.entityManager.serialize();
     for (const player of this.entityManager.toSettings()) {
@@ -9756,12 +11912,15 @@ class GameHandler {
         this.feedback.record("elimination" /* Elimination */, this.getTurnNumber(), { targetIds: [player.id] });
     }
     this.feedback.record("turn" /* Turn */, this.getTurnNumber(), { actorId, data: { durationFrames: frames } });
-    return {
+    const packet = {
       actorId,
       input: { angle, power },
       durationFrames: frames,
       finalState
     };
+    this.log("turn.simulation.completed", { actorId, ticks: frames, durationMs: runtimeNow() - (this.turnStartedAt ?? runtimeNow()) });
+    this.log("turnPacket.created", { actorId, frameCount: frames, playerCount: finalState.length });
+    return packet;
   }
   validateActorForAction(actorId) {
     const actor = this.entityManager.getEntityById(actorId);
@@ -9785,7 +11944,11 @@ class GameHandler {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
       throw new Error("A completed match cannot play further turns");
     this.turns.push(packet);
+    this.playbackStartedAt = runtimeNow();
+    this.log("turnPacket.playbackStarted", { actorId: packet.actorId, frameCount: packet.durationFrames, playerCount: packet.finalState.length });
+    this.log("turn.playback.started", { actorId: packet.actorId, frames: packet.durationFrames });
     this.setState("GameState.Playing" /* Playing */);
+    const turnStartState = this.entityManager.serialize();
     const actor = this.entityManager.getEntityById(packet.actorId);
     if (!actor)
       throw new Error("actor not found!");
@@ -9795,11 +11958,22 @@ class GameHandler {
     if (!playback)
       throw new Error("playbacksystem not found!");
     playback.start(packet.durationFrames, packet.finalState, () => {
+      const drift = playback.getLastPositionDrift();
+      if (drift.some((entry) => entry.distance > 0))
+        this.log("turnPacket.pre-sync-drift", { actorId: packet.actorId, drift });
+      const durationMs = runtimeNow() - (this.playbackStartedAt ?? runtimeNow());
+      const team = this.entityManager.getEntityById(packet.actorId)?.getTeam()[0];
+      this.log("turn.playback.completed", { actorId: packet.actorId, team, frames: packet.durationFrames, durationMs, playerVisibleDurationMs: durationMs });
+      this.log("turnPacket.playbackCompleted", { actorId: packet.actorId, frameCount: packet.durationFrames, durationMs });
+      const turnDurationMs = this.turnStartedAt === undefined ? durationMs : runtimeNow() - this.turnStartedAt;
+      this.log("turn.completed", { actorId: packet.actorId, team, frames: packet.durationFrames, durationMs: turnDurationMs, turnDurationMs });
+      this.playbackStartedAt = undefined;
+      this.turnStartedAt = undefined;
       if (this.context.state !== "GameState.Game_over" /* Game_over */) {
         this.setState("GameState.Playing_done" /* Playing_done */);
       }
       onComplete?.();
-    });
+    }, turnStartState);
   }
   applyRawTurn({ actorId, angle, power }) {
     if (this.context.state === "GameState.Game_over" /* Game_over */)
@@ -9874,6 +12048,8 @@ class GameHandler {
   handleMousePressed() {
     if (this.disposed)
       return;
+    if (this.ruleState.phase !== "physics" /* Physics */ && !this.mouseHandler?.acceptsUiInputWhileLocked)
+      return;
     if (this.context.state !== "GameState.Starting" /* Starting */ && this.context.state !== "GameState.Your_turn" /* Your_turn */ && this.context.state !== "GameState.Game_over" /* Game_over */ && !this.mouseHandler?.acceptsUiInputWhileLocked)
       return;
     this.mouseHandler?.handleMousePressed();
@@ -9886,9 +12062,16 @@ class GameHandler {
   handleMouseReleased() {
     if (this.disposed)
       return;
+    if (this.ruleState.phase !== "physics" /* Physics */ && !this.mouseHandler?.acceptsUiInputWhileLocked)
+      return;
     if (this.context.state !== "GameState.Your_turn" /* Your_turn */)
       return;
     this.mouseHandler?.handleMouseReleased();
+  }
+  handleMouseCancelled() {
+    if (this.disposed)
+      return;
+    this.mouseHandler?.handleMouseCancelled?.();
   }
   handleMouseWheel(event) {
     if (this.disposed)
@@ -9977,6 +12160,10 @@ class GameHandler {
   getPlaybackFramesRemaining() {
     const playback = this.systems.find((system) => system instanceof PlaybackSystem);
     return playback?.getRemainingFrames() ?? 0;
+  }
+  getLastPositionDrift() {
+    const playback = this.systems.find((system) => system instanceof PlaybackSystem);
+    return playback?.getLastPositionDrift() ?? [];
   }
   getPhysics() {
     return this.physicsStrategy;
@@ -10131,6 +12318,9 @@ class GameHandler {
   getActiveTeam() {
     return this.context.activeTeam;
   }
+  beginTurnTiming() {
+    this.turnStartedAt = runtimeNow();
+  }
   start(state) {
     this.context.state = state ?? "GameState.Your_turn" /* Your_turn */;
     for (const entity of this.entityManager.getEntities())
@@ -10178,8 +12368,18 @@ class GameHandler {
   exportGame() {
     return { logs: this.turns, settings: JSON.stringify(this.settings) };
   }
-  addLog(log) {
-    this.logs.push(log);
+  log(type, data) {
+    if (!type || typeof type !== "string")
+      throw new Error("Runtime log type must be a non-empty string");
+    const entry = { type, timestampMs: runtimeNow(), turnNumber: this.getTurnNumber(), data };
+    this.logs.push(entry);
+    return entry;
+  }
+  getLogs(types) {
+    if (types === undefined)
+      return this.logs.slice();
+    const categories = new Set(Array.isArray(types) ? types : [types]);
+    return this.logs.filter((log) => [...categories].some((category) => isRuntimeLogCategory(log.type, category)));
   }
   recordFeedback(type, details = {}) {
     return this.feedback.record(type, this.getTurnNumber(), details);
@@ -10290,7 +12490,22 @@ class GameHandler {
     this.items = structuredClone(items);
   }
   configureMapItemPickups(pickups) {
-    this.mapPickupSystem.configure(pickups, this.items);
+    this.mapPickupSystem.configure(pickups, this.items, this.context.worldSize);
+    this.mapPickupSystem.setCollector((entity, item) => item.id === MYSTERY_BOX_ITEM_ID ? this.unwrapMysteryBoxPickup(entity) : this.collectItemPickup(entity, item));
+  }
+  collectItemPickup(entity, item) {
+    const inventory = entity.getInventory();
+    addDrawnInventoryItem(inventory, item);
+    entity.setInventory(inventory);
+  }
+  unwrapMysteryBoxPickup(actor) {
+    const options = this.mysteryBoxRewardOptions(actor.getId());
+    const rewardId = resolveMysteryBoxReward(options);
+    const reward = this.items.find((candidate) => candidate.id === rewardId);
+    const inventory = actor.getInventory();
+    grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId });
+    actor.setInventory(inventory);
+    this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId: String(actor.getId()), data: { itemId: MYSTERY_BOX_ITEM_ID, rewardItemId: rewardId, rewardName: reward?.name ?? rewardId, source: "map-pickup" } });
   }
   getAuthoritativeRenderState() {
     return {
@@ -10299,6 +12514,7 @@ class GameHandler {
       matchResult: this.getMatchResult(),
       structures: this.context.structures.map((structure) => structure.toSettings()),
       players: this.entityManager.toSettings(),
+      items: structuredClone(this.items),
       pickups: this.mapPickupSystem.getPickups(),
       pickupState: this.mapPickupSystem.toState()
     };
@@ -10366,8 +12582,9 @@ class GameHandler {
     validateItemTarget(item, target, { actor, entities: this.entityManager.getEntities(), worldSize: this.context.worldSize });
     const resolvedItemTarget = item.effects.some((effect) => effect.type === "deferredEffect" /* DeferredEffect */ || effect.type === "spawnTrigger" /* SpawnTrigger */) ? resolveEffectTarget(target, { actor }) : undefined;
     if (item.id === MYSTERY_BOX_ITEM_ID) {
-      this.resolveMysteryBoxUse(actor, item);
-      this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, data: { itemId } });
+      const rewardId = this.resolveMysteryBoxUse(actor, item);
+      const reward = this.items.find((candidate) => candidate.id === rewardId);
+      this.feedback.record("item" /* Item */, this.getTurnNumber(), { actorId, data: { itemId, rewardItemId: rewardId, rewardName: reward?.name ?? rewardId } });
       return;
     }
     const targetEntity = target.type === "entity" ? this.entityManager.getEntityById(target.entityId) : actor;
@@ -10513,7 +12730,7 @@ class GameHandler {
       throw new Error(`Structure lifecycle ID '${structureId}' already exists`);
     this.context.structures.push(new FullStructure({
       id: structureId,
-      type: 2 /* RECTANGLE */,
+      type: SHAPE.RECTANGLE,
       x: position.x,
       y: position.y,
       w: template.structure.w,
@@ -10596,6 +12813,7 @@ class GameHandler {
     consumeInventoryItem(inventory, item);
     grantMysteryBoxReward(inventory, this.items, { ...options, specificItemId: rewardId });
     actor.setInventory(inventory);
+    return rewardId;
   }
   loadEffects(effects) {
     this.effectAlways = [];
@@ -10627,7 +12845,7 @@ class GameHandler {
   }
   initializeItemDraws() {
     const draw = this.settings?.gameMode?.itemEconomy.randomDraw;
-    this.itemDrawRandom = draw ? new SeededRandom(draw.seed) : undefined;
+    this.itemDrawRandom = draw ? new SeededRandom2(draw.seed) : undefined;
     if (draw)
       this.validateItemDrawPool(draw.itemIds);
   }
@@ -10642,7 +12860,7 @@ class GameHandler {
     this.validateItemDrawPool(draw.itemIds);
     if (!state)
       throw new Error("Configured item draws require a serialized draw state");
-    this.itemDrawRandom = SeededRandom.fromState(state.randomState);
+    this.itemDrawRandom = SeededRandom2.fromState(state.randomState);
   }
   drawItemsForActiveTeam() {
     const draw = this.settings?.gameMode?.itemEconomy.randomDraw;
@@ -10792,8 +13010,11 @@ class GameHandlerBuilder {
     this.engine.restoreStructureLifecycles(gameSettings.structureLifecycles);
     this.engine.restoreDeferredEffects(gameSettings.deferredEffects);
     if (!("state" in gameSettings) && gameSettings.environmentalMechanics?.length) {
-      const firstIndex = mapBoundarys.length - gameSettings.environmentalMechanics.length;
-      this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((_, index) => firstIndex + index)));
+      this.engine.addSystem(new EnvironmentalSystem(gameSettings.environmentalMechanics, undefined, gameSettings.environmentalMechanics.map((mechanic) => {
+        if (!mechanic.structure.id)
+          throw new Error(`Environmental Structure '${mechanic.id}' has no stable ID`);
+        return mechanic.structure.id;
+      })));
     }
     if ("state" in gameSettings) {
       this.state = gameSettings.state;
@@ -10832,191 +13053,6 @@ function createRuntimeHandler(settings, systems, systemOrder) {
   }
   return new GameHandlerBuilder().defaultSystems().fromSettings(settings).build();
 }
-
-var DOCUMENT_SCHEMA_VERSION = 1;
-function validateMapDocument(document) {
-  if (!isRecord11(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION)
-    throw new Error("Invalid map schema version");
-  if (!isRecord11(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string")
-    throw new Error("Invalid map metadata");
-  if (!isVector5(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0)
-    throw new Error("Invalid map world size");
-  if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1)
-    throw new Error("Invalid map physics");
-  if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards))
-    throw new Error("Invalid map collections");
-  if (!document.spawnRegions.every(isSpawnRegion))
-    throw new Error("Invalid map spawn region");
-  if (!document.hazards.every(isMapHazard))
-    throw new Error("Invalid map hazard");
-  if (document.environmentalMechanics !== undefined)
-    validateEnvironmentalMechanics(document.environmentalMechanics);
-}
-function isRecord11(value) {
-  return typeof value === "object" && value !== null;
-}
-function isVector5(value) {
-  return isRecord11(value) && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
-}
-function isFriction(value) {
-  return isRecord11(value) && [value.friction, value.linearDrag, value.stopThreshold].every((item) => typeof item === "number" && Number.isFinite(item));
-}
-function isSpawnRegion(value) {
-  return isRecord11(value) && typeof value.team === "number" && Number.isSafeInteger(value.team) && value.team >= 0 && typeof value.w === "number" && typeof value.h === "number" && [value.x, value.y, value.w, value.h].every((item) => typeof item === "number" && Number.isFinite(item)) && value.w > 0 && value.h > 0;
-}
-function isArenaGeometry(value) {
-  if (!isRecord11(value) || typeof value.x !== "number" || typeof value.y !== "number" || !Number.isFinite(value.x) || !Number.isFinite(value.y) || !Array.isArray(value.effects))
-    return false;
-  if (value.type === 0 /* CIRCLE */)
-    return typeof value.r === "number" && value.r > 0;
-  if (value.type === 2 /* RECTANGLE */)
-    return typeof value.w === "number" && typeof value.h === "number" && value.w > 0 && value.h > 0;
-  return value.type === 1 /* LINE */ && typeof value.x2 === "number" && typeof value.y2 === "number" && Number.isFinite(value.x2) && Number.isFinite(value.y2);
-}
-function arrangeTeamStartGrid(players, region) {
-  if (players.length === 6) {
-    const size = players[0].size * 2;
-    const cellSize = Math.min(region.w / 2, region.h / 3);
-    if (!(cellSize > size))
-      throw new Error("Map spawn region is too small for the 2x3 team formation");
-    const offsetX = (region.w - cellSize * 2) / 2;
-    const offsetY = 0;
-    players.forEach((player, index) => {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      player.position.x = region.x + offsetX + col * cellSize + size / 2;
-      player.position.y = region.y + offsetY + row * cellSize + size / 2;
-    });
-    return;
-  }
-  arrangeInGrid(players, region);
-}
-function loadMapDocument(map, template) {
-  validateMapDocument(map);
-  const players = template.players.map((player) => createPlayerSettings(player));
-  const playersByTeam = new Map;
-  for (const player of players) {
-    const team = player.team[0];
-    if (team === undefined)
-      throw new Error("Map loading requires each player to have a team");
-    const teamPlayers = playersByTeam.get(team) ?? [];
-    teamPlayers.push(player);
-    playersByTeam.set(team, teamPlayers);
-  }
-  for (const [team, teamPlayers] of playersByTeam) {
-    const region = map.spawnRegions.find((spawn) => spawn.team === team);
-    if (!region)
-      throw new Error(`Map has no spawn region for team ${team}`);
-    arrangeTeamStartGrid(teamPlayers, region);
-  }
-  return {
-    ...template,
-    players,
-    worldSize: { ...map.worldSize },
-    friction: { ...map.friction },
-    drift: map.drift,
-    mapBoundarys: assignStableStructureIds([
-      ...map.arenaGeometry.map((boundary) => ({
-        ...boundary,
-        color: boundary.color ?? (boundary.role === "containment" ? undefined : DEFAULT_MAP_STRUCTURE_COLOR),
-        effects: boundary.effects.map((effect) => ({ ...effect }))
-      })),
-      ...map.hazards.map(hazardToBoundary),
-      ...(map.environmentalMechanics ?? []).map(environmentalMechanicToBoundary)
-    ]),
-    environmentalMechanics: map.environmentalMechanics ? structuredClone(map.environmentalMechanics) : undefined
-  };
-}
-var DEFAULT_MAP_STRUCTURE_COLOR = "#315b7d";
-function assignStableStructureIds(boundaries) {
-  return boundaries.map((boundary) => ({ ...boundary, id: boundary.id ?? deriveStructureId(boundary) }));
-}
-function isMapHazard(value) {
-  if (!isRecord11(value) || value.schemaVersion !== DOCUMENT_SCHEMA_VERSION || typeof value.id !== "string" || !value.id || typeof value.type !== "string" || !isRecord11(value.trigger) || value.trigger.type !== "collision" || !isRecord11(value.config))
-    return false;
-  if (!isHazardZone(value.config))
-    return false;
-  if (value.type === "kill-zone")
-    return true;
-  return value.type === "force" && typeof value.config.angle === "number" && Number.isFinite(value.config.angle) && value.config.angle >= 0 && value.config.angle < 360 && typeof value.config.power === "number" && Number.isFinite(value.config.power) && value.config.power > 0;
-}
-function isHazardZone(value) {
-  const { x: x2, y: y2, r } = value;
-  return [x2, y2, r].every((item) => typeof item === "number" && Number.isFinite(item)) && typeof r === "number" && r > 0;
-}
-function hazardToBoundary(hazard) {
-  const zone = hazard.config;
-  return {
-    type: 0 /* CIRCLE */,
-    x: zone.x,
-    y: zone.y,
-    r: zone.r,
-    color: hazard.type === "kill-zone" ? "#d94b28" : "#f0a020",
-    effects: [],
-    ...hazard.type === "kill-zone" ? { collisionCommands: [lethalCollisionCommand()] } : { collisionCommands: [forceHazardCommand(hazard)] }
-  };
-}
-function lethalCollisionCommand() {
-  return createCollisionCommandBinding(createEngineEffectComposition([
-    { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
-    { schemaVersion: 1, type: PARTICIPATION_SET_DRAWING_EFFECT_ID, typeValue: { enabled: false } }
-  ]));
-}
-function forceHazardCommand(hazard) {
-  const config = hazard.config;
-  const radians = config.angle * Math.PI / 180;
-  return createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * config.power, y: Math.sin(radians) * config.power } });
-}
-function environmentalMechanicToBoundary(mechanic) {
-  return { ...structuredClone(mechanic.structure), effects: structuredClone(mechanic.effects ?? mechanic.structure.effects) };
-}
-var KORE_AUDIO_ASSETS = {
-  "kore.music.menu": "/public/audio/CM_01_Ascension.mp3",
-  "kore.music.match": "/public/audio/CM_02_Moon_Shadows.mp3",
-  "kore.ui.confirm": "/public/audio/CM_03_Ritualis.mp3",
-  "kore.game.shot": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.collision": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.damage": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.shield": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.item": "/public/audio/CM_03_Ritualis.mp3",
-  "kore.game.hazard": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.elimination": "/public/audio/CM_04_Sacrifice.mp3",
-  "kore.game.turn": "/public/audio/CM_03_Ritualis.mp3",
-  "kore.game.result": "/public/audio/CM_03_Ritualis.mp3"
-};
-var KORE_AUDIO_BUSES = [
-  audio.bus({ id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false }),
-  audio.bus({ id: "music", volume: 0.1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false }),
-  audio.bus({ id: "ambience", volume: 0.6, muted: false, maxVoices: 8, defaultPriority: 20, paused: false }),
-  audio.bus({ id: "effects", volume: 0.6, muted: false, maxVoices: 32, defaultPriority: 10, paused: false }),
-  audio.bus({ id: "ui", volume: 0.45, muted: false, maxVoices: 8, defaultPriority: 30, paused: false }),
-  audio.bus({ id: "voice", volume: 0.8, muted: false, maxVoices: 8, defaultPriority: 40, paused: false })
-];
-function createKoreAudioSettings(runtimeId) {
-  return audio.createSettings({ runtimeId, buses: KORE_AUDIO_BUSES });
-}
-var koreAudio = {
-  assets: KORE_AUDIO_ASSETS,
-  buses: KORE_AUDIO_BUSES,
-  createSettings: createKoreAudioSettings,
-  sounds: { uiConfirm: "kore.ui.confirm", shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield", item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result" },
-  music: { menu: "kore.music.menu", match: "kore.music.match" },
-  command: {
-    uiConfirm(sourceId, soundId = "kore.ui.confirm") {
-      return audio.command.play({ sourceId, soundId, bus: "ui", priority: 30, dedupeKey: "confirm" });
-    },
-    shot(sourceId) {
-      return audio.command.play({ sourceId, soundId: "kore.game.shot", bus: "effects", priority: 20, dedupeKey: "shot" });
-    },
-    menuMusic(sourceId = "menu.music") {
-      return audio.command.music({ sourceId, soundId: "kore.music.menu", bus: "music", priority: 10, replacementPolicy: "replace-current", fadeInMs: 250 });
-    },
-    matchMusic(sourceId = "match.music") {
-      return audio.command.music({ sourceId, soundId: "kore.music.match", bus: "music", priority: 20, replacementPolicy: "replace-lower-or-equal", fadeInMs: 500 });
-    }
-  }
-};
-
 var KORE_MATCH_DEFINITION_VERSION = 1;
 function createGameMode(input) {
   if (!input || typeof input.id !== "string" || input.id.trim() === "")
@@ -11106,7 +13142,7 @@ function createMatchDefinition(options) {
   return structuredClone(definition);
 }
 function validateKoreMatchDefinition(value) {
-  if (!isRecord12(value))
+  if (!isRecord14(value))
     throw new Error("Malformed match definition");
   if (value.schemaVersion !== KORE_MATCH_DEFINITION_VERSION)
     throw new Error("Unsupported match definition version");
@@ -11122,7 +13158,7 @@ function validateKoreMatchDefinition(value) {
     throw new Error("A match definition requires systems and systemOrder arrays");
   const ids = new Set;
   for (const system of value.systems) {
-    if (!isRecord12(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord12(system.state)) {
+    if (!isRecord14(system) || typeof system.systemId !== "string" || !/^[a-z0-9.-]{1,80}$/.test(system.systemId) || system.schemaVersion !== 1 || !isRecord14(system.state)) {
       throw new Error("Malformed system settings in match definition");
     }
     if (ids.has(system.systemId))
@@ -11138,7 +13174,7 @@ function createRuntimeMatch(definition) {
   validateKoreMatchDefinition(definition);
   return createRuntimeHandler(definition.settings, definition.systems, definition.systemOrder);
 }
-function isRecord12(value) {
+function isRecord14(value) {
   return typeof value === "object" && value !== null;
 }
 
@@ -11180,7 +13216,7 @@ var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
   assertJson(value, "package");
   const pkg = value;
-  assertKeys2(pkg, ["schemaVersion", "manifest", "maps", "items", "modes", "ui", "audio", "presentation"], "package");
+  assertKeys3(pkg, ["schemaVersion", "manifest", "maps", "items", "modes", "ui", "audio", "presentation"], "package");
   if (pkg.schemaVersion !== CONTENT_PACKAGE_SCHEMA_VERSION)
     throw new Error(`Unsupported content package schema version: ${String(pkg.schemaVersion)}`);
   validateManifest(pkg.manifest);
@@ -11190,8 +13226,8 @@ function validateContentPackage(value) {
   const ids = new Set;
   for (const map of maps) {
     validateMapDocument(map);
-    assertKeys2(map, ["schemaVersion", "metadata", "worldSize", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map");
-    assertKeys2(map.metadata, ["id", "name", "description"], "map metadata");
+    assertKeys3(map, ["schemaVersion", "metadata", "worldSize", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map");
+    assertKeys3(map.metadata, ["id", "name", "description"], "map metadata");
     unique(ids, map.metadata.id, "map");
   }
   const itemValidator = new ItemValidator;
@@ -11199,7 +13235,7 @@ function validateContentPackage(value) {
     itemValidator.registerEffectType(effect);
   for (const item of items) {
     validateItemDocument(item);
-    assertKeys2(item, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction"], "item");
+    assertKeys3(item, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction", "ui"], "item");
     itemValidator.validate(item);
     unique(ids, item.id, "item");
   }
@@ -11235,15 +13271,15 @@ function hashContentPackage(value) {
   return hashCanonicalJson(JSON.parse(canonicalizeContentPackage(value)));
 }
 function validateManifest(value) {
-  if (!isRecord13(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
+  if (!isRecord15(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
     throw new Error("Malformed content package manifest");
-  assertKeys2(value, ["id", "name", "version", "dependencies"], "manifest");
+  assertKeys3(value, ["id", "name", "version", "dependencies"], "manifest");
   const dependencies = arrayOf(value.dependencies, "manifest dependencies");
   if (dependencies.length > CONTENT_PACKAGE_MAX_DEPENDENCIES)
     throw new Error("Content package has too many dependencies");
   const seen = new Set;
   for (const dependency of dependencies) {
-    if (!isRecord13(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
+    if (!isRecord15(dependency) || typeof dependency.id !== "string" || !validId2(dependency.id) || typeof dependency.version !== "string" || !validVersion(dependency.version))
       throw new Error("Malformed content package dependency");
     if (seen.has(dependency.id))
       throw new Error(`Duplicate dependency '${dependency.id}'`);
@@ -11251,42 +13287,42 @@ function validateManifest(value) {
   }
 }
 function validateMode(value) {
-  if (!isRecord13(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
+  if (!isRecord15(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
     throw new Error("Malformed content package mode");
-  assertKeys2(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
+  assertKeys3(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
   if (value.phases.length === 0 || !value.phases.every((phase) => typeof phase === "string"))
     throw new Error("Malformed content package mode phases");
   validateItemEconomySettings(value.itemEconomy);
 }
 function validateUi(value) {
-  if (!isRecord13(value))
+  if (!isRecord15(value))
     throw new Error("Malformed UI metadata");
-  assertKeys2(value, ["labels", "icons", "menu"], "UI metadata");
+  assertKeys3(value, ["labels", "icons", "menu"], "UI metadata");
   for (const key of ["labels", "icons"])
-    if (value[key] !== undefined && (!isRecord13(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
+    if (value[key] !== undefined && (!isRecord15(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
       throw new Error("UI metadata must contain string maps");
   if (value.menu !== undefined) {
     for (const entry of arrayOf(value.menu, "UI menu"))
-      if (!isRecord13(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
+      if (!isRecord15(entry) || typeof entry.route !== "string" || !validId2(entry.route) || typeof entry.label !== "string" || !entry.label || !Number.isSafeInteger(entry.order))
         throw new Error("Malformed UI menu entry");
   }
 }
 function validateAudio(value) {
-  if (!isRecord13(value))
+  if (!isRecord15(value))
     throw new Error("Malformed audio declarations");
-  assertKeys2(value, ["sounds", "music"], "audio declarations");
+  assertKeys3(value, ["sounds", "music"], "audio declarations");
   for (const key of ["sounds", "music"])
     if (value[key] !== undefined)
       for (const [id, declaration] of Object.entries(value[key])) {
-        if (!validId2(id) || !isRecord13(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
+        if (!validId2(id) || !isRecord15(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
           throw new Error("Malformed audio declaration");
-        assertKeys2(declaration, ["asset", "bus"], "audio declaration");
+        assertKeys3(declaration, ["asset", "bus"], "audio declaration");
       }
 }
 function validatePresentation(value) {
-  if (!isRecord13(value))
+  if (!isRecord15(value))
     throw new Error("Malformed presentation declarations");
-  assertKeys2(value, ["animations", "events"], "presentation declarations");
+  assertKeys3(value, ["animations", "events"], "presentation declarations");
   for (const animation2 of arrayOf(value.animations, "animations"))
     validateAnimationSettings(animation2);
   for (const event of arrayOf(value.events, "presentation events"))
@@ -11309,14 +13345,14 @@ function normalize(value) {
   for (const key of ["maps", "items", "modes"])
     if (Array.isArray(copy[key]))
       copy[key] = [...copy[key]].sort((a, b) => collectionId(a).localeCompare(collectionId(b)));
-  if (isRecord13(copy.manifest) && Array.isArray(copy.manifest.dependencies))
+  if (isRecord15(copy.manifest) && Array.isArray(copy.manifest.dependencies))
     copy.manifest.dependencies = [...copy.manifest.dependencies].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   return copy;
 }
 function canonicalize(value) {
   if (Array.isArray(value))
     return value.map(canonicalize);
-  if (isRecord13(value))
+  if (isRecord15(value))
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
   return value;
 }
@@ -11332,7 +13368,7 @@ function assertJson(value, path) {
     value.forEach((entry, index) => assertJson(entry, `${path}[${index}]`));
     return;
   }
-  if (!isRecord13(value))
+  if (!isRecord15(value))
     throw new Error(`Malformed JSON value at ${path}`);
   for (const [key, entry] of Object.entries(value)) {
     if (EXECUTABLE_KEYS.has(key.toLowerCase()) || key.includes("/") || key.includes("\\"))
@@ -11340,7 +13376,7 @@ function assertJson(value, path) {
     assertJson(entry, `${path}.${key}`);
   }
 }
-function assertKeys2(value, allowed, label) {
+function assertKeys3(value, allowed, label) {
   for (const key of Object.keys(value))
     if (!allowed.includes(key))
       throw new Error(`Unknown ${label} field '${key}'`);
@@ -11366,7 +13402,7 @@ function validVersion(value) {
 function safeAsset(value) {
   return value.length <= 512 && !MODULE_SCHEMES.test(value) && !/[<>\s]/.test(value) && !value.toLowerCase().startsWith("data:");
 }
-function isRecord13(value) {
+function isRecord15(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function collectionId(value) {
@@ -11473,7 +13509,7 @@ class KoreMapBuilder {
     this.options = options;
     this.world = engine.createWorld({ id: options.id, worldSize: options.worldSize });
     this.world.setBackground(toJson(this.background));
-    const containment = { id: `${options.id}.containment`, type: 2 /* RECTANGLE */, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
+    const containment = { id: `${options.id}.containment`, type: SHAPE.RECTANGLE, x: 0, y: 0, w: options.worldSize.x, h: options.worldSize.y, role: "containment", effects: [] };
     this.structures.push(containment);
     this.world.addStructure(toJson(containment));
   }
@@ -11531,20 +13567,20 @@ class KoreMapBuilder {
   addStructure(structure) {
     const settings = "toSettings" in structure ? structure.toSettings() : structure;
     const canonical = { ...settings, id: settings.id ?? `${this.options.id}.structure.${this.structures.length}` };
-    this.structures.push(clone8(canonical));
+    this.structures.push(clone9(canonical));
     this.world.addStructure(toJson(canonical));
     this.built = undefined;
     return this;
   }
   addRectangle(settings) {
-    return this.addStructure({ type: 2 /* RECTANGLE */, ...settings, effects: (settings.effects ?? []).map((effect) => toFullEffectSettings(effect, "EffectTrigger.Collision" /* Collision */, [])) });
+    return this.addStructure({ type: SHAPE.RECTANGLE, ...settings, effects: (settings.effects ?? []).map((effect) => toFullEffectSettings(effect, "EffectTrigger.Collision" /* Collision */, [])) });
   }
   addCircle(settings) {
-    return this.addStructure({ type: 0 /* CIRCLE */, ...settings, effects: (settings.effects ?? []).map((effect) => toFullEffectSettings(effect, "EffectTrigger.Collision" /* Collision */, [])) });
+    return this.addStructure({ type: SHAPE.CIRCLE, ...settings, effects: (settings.effects ?? []).map((effect) => toFullEffectSettings(effect, "EffectTrigger.Collision" /* Collision */, [])) });
   }
   addKillZone(settings) {
     this.assertHazardZone(settings);
-    this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r } });
+    this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "kill-zone", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, ...settings.color === undefined ? {} : { color: settings.color } } });
     const structureIndex = this.structures.length;
     this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#d94b28", effects: [], collisionCommands: [createCollisionCommandBinding(createEngineEffectComposition([
       { schemaVersion: 1, type: PARTICIPATION_SET_PHYSICS_EFFECT_ID, typeValue: { enabled: false } },
@@ -11558,7 +13594,7 @@ class KoreMapBuilder {
     if (!Number.isFinite(settings.angle) || settings.angle < 0 || settings.angle >= 360 || !Number.isFinite(settings.power) || settings.power <= 0)
       throw new Error("Force hazard requires an angle in [0, 360) and positive power");
     const radians = settings.angle * Math.PI / 180;
-    this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power } });
+    this.hazards.push({ schemaVersion: DOCUMENT_SCHEMA_VERSION, id: settings.id, type: "force", trigger: { type: "collision" }, config: { x: settings.x, y: settings.y, r: settings.r, angle: settings.angle, power: settings.power, ...settings.color === undefined ? {} : { color: settings.color } } });
     const structureIndex = this.structures.length;
     this.addCircle({ x: settings.x, y: settings.y, r: settings.r, color: settings.color ?? "#f0a020", effects: [], collisionCommands: [createCollisionCommandBinding({ schemaVersion: 1, type: MOVEMENT_ADD_VELOCITY_EFFECT_ID, typeValue: { x: Math.cos(radians) * settings.power, y: Math.sin(radians) * settings.power } })] });
     this.generatedHazardStructureIndexes.add(structureIndex);
@@ -11583,10 +13619,11 @@ class KoreMapBuilder {
     validateEnvironmentalMechanics([mechanic]);
     if (this.environmentalMechanics.some((candidate) => candidate.id === mechanic.id))
       throw new Error(`Environmental mechanic ${mechanic.id} is already registered`);
-    this.environmentalMechanics.push(clone8(mechanic));
-    const structureIndex = this.structures.length;
-    this.addStructure({ ...clone8(mechanic.structure), effects: clone8(mechanic.effects ?? mechanic.structure.effects) });
-    this.generatedHazardStructureIndexes.add(structureIndex);
+    const structureId = mechanic.structure.id ?? `${this.options.id}.environment.${mechanic.id}`;
+    const canonicalMechanic = { ...clone9(mechanic), structure: { ...clone9(mechanic.structure), id: structureId } };
+    this.environmentalMechanics.push(canonicalMechanic);
+    this.addStructure({ ...clone9(canonicalMechanic.structure), effects: clone9(canonicalMechanic.effects ?? canonicalMechanic.structure.effects) });
+    this.generatedHazardStructureIndexes.add(this.structures.length - 1);
     this.built = undefined;
     return this;
   }
@@ -11605,33 +13642,33 @@ class KoreMapBuilder {
       throw new Error(`Team ${loadout.team} already has an item loadout`);
     if (loadout.items.some((item) => !Number.isSafeInteger(item.uses) || item.uses < 1 || typeof item.itemId !== "string" || item.itemId.length === 0))
       throw new Error("Fixed loadout items require an ID and positive use count");
-    this.itemEconomy.fixedLoadouts.push(clone8(loadout));
+    this.itemEconomy.fixedLoadouts.push(clone9(loadout));
     this.built = undefined;
     return this;
   }
   addItemPickup(pickup) {
     validateItemPickup(pickup);
-    this.itemEconomy.mapPickups.push(clone8(pickup));
+    this.itemEconomy.mapPickups.push(clone9(pickup));
     this.built = undefined;
     return this;
   }
   setSeededItemDraw(draw) {
     if (!Number.isSafeInteger(draw.seed) || !Array.isArray(draw.itemIds) || draw.itemIds.length === 0 || draw.itemIds.some((id) => typeof id !== "string" || id.length === 0) || !Number.isSafeInteger(draw.drawsPerTurn) || draw.drawsPerTurn < 1)
       throw new Error("Seeded item draws require a safe seed, item IDs, and positive draws per turn");
-    this.itemEconomy.randomDraw = clone8(draw);
+    this.itemEconomy.randomDraw = clone9(draw);
     this.built = undefined;
     return this;
   }
   setMysteryBox(settings) {
     if (!Array.isArray(settings.candidatePool) || settings.candidatePool.length === 0 || settings.candidatePool.some((id) => typeof id !== "string" || id.length === 0))
       throw new Error("Mystery box rewards require a non-empty candidate pool");
-    this.itemEconomy.mysteryBox = clone8(settings);
+    this.itemEconomy.mysteryBox = clone9(settings);
     this.built = undefined;
     return this;
   }
   build() {
     if (this.built)
-      return clone8(this.built);
+      return clone9(this.built);
     const genericWorld = this.world.build();
     const spawns = this.spawns.map((spawn) => ({ team: spawn.teamNr, x: spawn.x, y: spawn.y, w: spawn.w, h: spawn.h }));
     const canonical = this.buildMapDocumentFrom(spawns);
@@ -11650,23 +13687,23 @@ class KoreMapBuilder {
     const settings = {
       ...template,
       id: this.options.id,
-      screenResolution: clone8(this.options.worldSize),
-      worldSize: clone8(this.options.worldSize),
-      background: clone8(genericWorld.background),
-      friction: clone8(this.options.friction),
+      screenResolution: clone9(this.options.worldSize),
+      worldSize: clone9(this.options.worldSize),
+      background: clone9(genericWorld.background),
+      friction: clone9(this.options.friction),
       drift: this.options.drift,
       players,
-      environmentalMechanics: clone8(this.environmentalMechanics),
-      items: clone8(this.items),
-      mapBoundarys: clone8(genericWorld.structures),
-      effects: clone8(genericWorld.effects),
+      environmentalMechanics: clone9(this.environmentalMechanics),
+      items: clone9(this.items),
+      mapBoundarys: clone9(genericWorld.structures),
+      effects: clone9(genericWorld.effects),
       ...this.hasItemEconomy() ? {
         gameMode: {
           id: `${this.options.id}-mode`,
           phases: ["item" /* Item */, "aim" /* Aim */, "charge" /* Charge */, "push" /* Push */, "physics" /* Physics */],
           maxItemsPerTurn: 1,
           winCondition: "last-team-standing" /* LastTeamStanding */,
-          itemEconomy: clone8(this.itemEconomy)
+          itemEconomy: clone9(this.itemEconomy)
         }
       } : {},
       allTeams: teamNumbers.map((team) => this.teams.get(team)?.name ?? `Team ${team + 1}`),
@@ -11678,8 +13715,8 @@ class KoreMapBuilder {
       maxPlayers: teamNumbers.length
     };
     validateGameSettings(settings);
-    this.built = clone8(settings);
-    return clone8(this.built);
+    this.built = clone9(settings);
+    return clone9(this.built);
   }
   buildMapDocument() {
     return this.buildMapDocumentFrom(this.spawns.map((spawn) => ({ team: spawn.teamNr, x: spawn.x, y: spawn.y, w: spawn.w, h: spawn.h })));
@@ -11693,13 +13730,14 @@ class KoreMapBuilder {
     return {
       schemaVersion: DOCUMENT_SCHEMA_VERSION,
       metadata,
-      worldSize: clone8(genericWorld.worldSize),
-      friction: clone8(this.options.friction),
+      worldSize: clone9(genericWorld.worldSize),
+      background: clone9(genericWorld.background),
+      friction: clone9(this.options.friction),
       drift: this.options.drift,
-      arenaGeometry: clone8(genericWorld.structures.filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),
-      spawnRegions: spawnRegions.map(clone8),
-      hazards: clone8(this.hazards),
-      environmentalMechanics: clone8(this.environmentalMechanics)
+      arenaGeometry: clone9(genericWorld.structures.filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),
+      spawnRegions: spawnRegions.map(clone9),
+      hazards: clone9(this.hazards),
+      environmentalMechanics: clone9(this.environmentalMechanics)
     };
   }
   assertHazardZone(settings) {
@@ -11753,8 +13791,8 @@ function arrangePlayers(players, region) {
 function toFullEffectSettings(input, trigger, triggerValue) {
   const settings = "toSettings" in input ? input.toSettings() : input;
   if (isFullEffectSettings(settings))
-    return clone8(settings);
-  return { ...clone8(settings), trigger, triggerValue: clone8(triggerValue) };
+    return clone9(settings);
+  return { ...clone9(settings), trigger, triggerValue: clone9(triggerValue) };
 }
 function isFullEffectSettings(settings) {
   return "trigger" in settings && "triggerValue" in settings;
@@ -11768,7 +13806,7 @@ function validateImageUrl(value) {
     throw new Error("Background URLs must use http(s) or be same-origin paths");
   }
 }
-function clone8(value) {
+function clone9(value) {
   return structuredClone(value);
 }
 function toJson(value) {
@@ -11827,9 +13865,9 @@ var kore = {
     const worldSize = options.worldSize ?? { x: 800, y: 450 };
     const name = options.name ?? "Untitled KORE Map";
     const description = options.description ?? "";
-    const friction2 = clone8(options.friction ?? FRICTION_TABLE.ice);
+    const friction2 = clone9(options.friction ?? FRICTION_TABLE.ice);
     const id = options.id ?? `kore-map-${stableAuthoringHash({ name, description, worldSize, friction: friction2, drift: options.drift ?? 0 })}`;
-    return new KoreMapBuilder({ id, name, description, worldSize: clone8(worldSize), friction: friction2, drift: options.drift ?? 0 });
+    return new KoreMapBuilder({ id, name, description, worldSize: clone9(worldSize), friction: friction2, drift: options.drift ?? 0 });
   },
   validate(settings) {
     validateGameSettings(settings);
@@ -11897,7 +13935,7 @@ var kore = {
       return new MultiEffect({ schemaVersion: 1, type: "EffectType.Multi" /* Multi */, typeValue: effects.map((effect) => ("toSettings" in effect) ? effect.toSettings() : effect) });
     },
     itemEffect(type, typeValue = {}) {
-      return { type, typeValue: clone8(typeValue) };
+      return { type, typeValue: clone9(typeValue) };
     },
     shield(capacity) {
       if (!Number.isFinite(capacity) || capacity <= 0)
@@ -11949,7 +13987,7 @@ var kore = {
     deferredEffect(delayTicks, effect) {
       if (!Number.isSafeInteger(delayTicks) || delayTicks < 1)
         throw new Error("Delay ticks must be a positive integer");
-      return { type: "deferredEffect" /* DeferredEffect */, typeValue: { durationUnit: "ticks", duration: delayTicks, effect: clone8(effect) } };
+      return { type: "deferredEffect" /* DeferredEffect */, typeValue: { durationUnit: "ticks", duration: delayTicks, effect: clone9(effect) } };
     },
     spawnTrigger(delayTicks, triggerType) {
       if (!Number.isInteger(delayTicks) || delayTicks < 0)
@@ -11961,7 +13999,7 @@ var kore = {
     gameState: { yourTurn: "GameState.Your_turn" /* Your_turn */, gameOver: "GameState.Game_over" /* Game_over */ },
     rulePhase: { item: "item" /* Item */, aim: "aim" /* Aim */, charge: "charge" /* Charge */, push: "push" /* Push */, physics: "physics" /* Physics */, complete: "complete" /* Complete */ },
     winCondition: { lastTeamStanding: "last-team-standing" /* LastTeamStanding */ },
-    shape: { circle: 0 /* CIRCLE */, rectangle: 2 /* RECTANGLE */, line: 1 /* LINE */ },
+    shape: { circle: SHAPE.CIRCLE, rectangle: SHAPE.RECTANGLE, line: SHAPE.LINE },
     effectType: { physics: "EffectType.Physics" /* Physics */, movement: "EffectType.Movement" /* Movement */, multi: "EffectType.Multi" /* Multi */, modifySetting: "EffectType.ModifySetting" /* ModifySetting */ },
     itemEffectType: {
       modifyForce: "modifyForce" /* ModifyForce */,

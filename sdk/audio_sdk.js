@@ -1,3 +1,4 @@
+// ../engine-repo/packages/roast/contracts/systemSettings.ts
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -18,6 +19,7 @@ function assertJsonValue(value) {
   throw new Error("System settings must contain JSON data only");
 }
 
+// ../engine-repo/packages/roast/sdk/systemRegistry.ts
 class EngineSystemRegistry {
   definitions = new Map;
   register(definition) {
@@ -166,6 +168,7 @@ function clone(value) {
   return structuredClone(value);
 }
 
+// ../engine-repo/packages/roast/contracts/counterState.ts
 var COUNTER_SCHEMA_VERSION = 1;
 function createCounterState(input) {
   const state = {
@@ -202,6 +205,7 @@ function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// ../engine-repo/packages/roast/sdk/worldBuilder.ts
 class EngineWorldBuilder {
   id;
   worldSize;
@@ -259,6 +263,7 @@ function clone2(value) {
   return structuredClone(value);
 }
 
+// ../engine-repo/packages/roast/sdk/effectRegistry.ts
 class EngineEffectRegistry {
   definitions = new Map;
   register(definition) {
@@ -312,6 +317,7 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 
+// ../engine-repo/packages/roast/sdk/entityState.ts
 function createTransformState(input) {
   const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
   validateTransformState(state);
@@ -365,6 +371,7 @@ function finite(value, label) {
     throw new Error(`${label} must be finite`);
 }
 
+// ../engine-repo/packages/roast/sdk/index.ts
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -400,6 +407,7 @@ var engine = {
   }
 };
 
+// ../engine-repo/packages/roast/audio-sdk/index.ts
 var DEFAULT_BUSES = [
   { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
   { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
