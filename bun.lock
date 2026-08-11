@@ -5,9 +5,9 @@
     "": {
       "name": "game",
       "dependencies": {
-        "@coffeemakerstudio/bean": "file:../engine-repo/packages/bean",
-        "@coffeemakerstudio/drip": "file:../engine-repo/packages/drip",
-        "@coffeemakerstudio/roast": "file:../engine-repo/packages/roast",
+        "@coffeemakerstudio/bean": "git+ssh://git@github.com/coffeemakerstudio/Bean.git#v0.1.0",
+        "@coffeemakerstudio/drip": "git+ssh://git@github.com/coffeemakerstudio/Drip.git#v0.1.0",
+        "@coffeemakerstudio/roast": "git+ssh://git@github.com/coffeemakerstudio/Roast.git#v0.1.0",
         "p5": "^2.3.0",
       },
       "devDependencies": {
@@ -29,11 +29,11 @@
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.28.6", "", {}, "sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA=="],
 
-    "@coffeemakerstudio/bean": ["@coffeemakerstudio/bean@file:../engine-repo/packages/bean", {}],
+    "@coffeemakerstudio/bean": ["@coffeemakerstudio/bean@git+ssh://git@github.com/coffeemakerstudio/Bean.git#98de232b4ea520960bafdd755404732481b732e1", { "peerDependencies": { "@coffeemakerstudio/roast": "^0.1.0" }, "optionalPeers": ["@coffeemakerstudio/roast"] }, "98de232b4ea520960bafdd755404732481b732e1"],
 
-    "@coffeemakerstudio/drip": ["@coffeemakerstudio/drip@file:../engine-repo/packages/drip", {}],
+    "@coffeemakerstudio/drip": ["@coffeemakerstudio/drip@git+ssh://git@github.com/coffeemakerstudio/Drip.git#be9ec65fb64a3e2147e81a3ab0c26a021e7f6f24", { "peerDependencies": { "@coffeemakerstudio/roast": "^0.1.0" }, "optionalPeers": ["@coffeemakerstudio/roast"] }, "be9ec65fb64a3e2147e81a3ab0c26a021e7f6f24"],
 
-    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@file:../engine-repo/packages/roast", {}],
+    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@git+ssh://git@github.com/coffeemakerstudio/Roast.git#2be0d33431ab49ccf3135918c2420701985f737c", {}, "2be0d33431ab49ccf3135918c2420701985f737c"],
 
     "@davepagurek/bezier-path": ["@davepagurek/bezier-path@0.0.7", "", {}, "sha512-CVlnCOrV1iy4Z12T756i9l4G6kF7r8uhlnb+xqDemAMmWQB+8Q0b+8VEqIiUfywgZDSiDr18Rm7pZlnA69rE8Q=="],
 

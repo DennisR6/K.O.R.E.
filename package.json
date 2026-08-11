@@ -73,10 +73,10 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
-    "p5": "^2.3.0",
-    "@coffeemakerstudio/roast": "file:../engine-repo/packages/roast",
-    "@coffeemakerstudio/bean": "file:../engine-repo/packages/bean",
-    "@coffeemakerstudio/drip": "file:../engine-repo/packages/drip"
+    "@coffeemakerstudio/bean": "git+ssh://git@github.com/coffeemakerstudio/Bean.git#v0.1.0",
+    "@coffeemakerstudio/drip": "git+ssh://git@github.com/coffeemakerstudio/Drip.git#v0.1.0",
+    "@coffeemakerstudio/roast": "git+ssh://git@github.com/coffeemakerstudio/Roast.git#v0.1.0",
+    "p5": "^2.3.0"
   },
   "module": "index.ts"
 }
