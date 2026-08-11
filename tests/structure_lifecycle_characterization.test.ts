@@ -6,7 +6,7 @@ import { MultiEffect } from "../src/effects/effects.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { FullStructure } from "../src/structures/fullStructure.ts";
-import type { RenderContext } from "../src/engine/RenderContext.ts";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";
 
 function rendererSpy(): RenderContext & { circles: number; rectangles: number } {
 	return {

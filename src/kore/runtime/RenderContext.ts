@@ -1,5 +1,5 @@
-import type { AssetList } from "../assetManager/assets/assetRegistry";
-import type { IGameContext } from "../systems/types";
+import type { AssetList } from "../../assetManager/assets/assetRegistry";
+import type { IGameContext } from "../../systems/types";
 
 /**
  * Der RenderContext stellt alle Zeichenbefehle bereit.

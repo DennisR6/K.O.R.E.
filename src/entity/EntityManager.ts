@@ -1,8 +1,8 @@
 import { type IEntity } from "./Entity.js";
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
+import type { IDrawer, ITicker, RenderContext } from "../kore/runtime/RenderContext.js";
 import { Player } from "./Player.js";
 import { createRuntimePlayer } from "./runtimeFactory.js";
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import type { PlayerSettings } from "./types.js";
 
 /**

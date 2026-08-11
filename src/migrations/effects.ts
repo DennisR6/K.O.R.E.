@@ -1,5 +1,5 @@
 import { EffectType, EFFECT_SCHEMA_VERSION, type EffectSettings, type FullEffectSettings } from "../effects/types.js";
-import type { EngineSettings } from "../engine/types.js";
+import type { EngineSettings } from "../kore/runtime/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import { migratePhysicsContactPair, migrateStructureSettings } from "./structures.js";
 import type { EngineEffectComposition } from "../engine/sdk/composition.js";

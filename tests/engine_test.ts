@@ -4,9 +4,9 @@ import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
 import { EffectPhysics } from "../src/effects/physics.ts"
-import { EngineSettings, GameState } from "../src/engine/types.ts";
+import { EngineSettings, GameState } from "../src/kore/runtime/types.ts";
 import { FRICTION_TABLE } from "../src/settings/settings.ts";
-import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts"
+import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.ts"
 import { ObjectEmitter } from "../src/emitter/ObjectEmitter.ts"
 import { EmitterSystem } from "../src/systems/Emitter.ts"
 import { UiSystem } from "../src/systems/UiSystem.ts";

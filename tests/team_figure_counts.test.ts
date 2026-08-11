@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createDefaultGameSettings, GameSettings, validateFigureCounts } from "../src/settings/settings.ts";
 
 test("player and figure counts persist through engine settings snapshots", () => {

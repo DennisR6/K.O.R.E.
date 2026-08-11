@@ -1,13 +1,13 @@
 import { assertJsonValue, type SystemSettings } from "../../engine/contracts/systemSettings.js";
 import { EngineSystemRegistry, registerMovementSystem, registerNumericSystem, registerParticipationSystem, type EngineFrameworkSettings } from "../../engine/sdk/index.js";
-import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
+import { createRuntimeHandler } from "../runtime/runtimeFactory.js";
 import { RuleInterpreter } from "../../rules/RuleInterpreter.js";
 import { RulePhase, validateItemEconomySettings, WinCondition, type GameModeSettings, type ItemEconomySettings } from "../../rules/types.js";
 import { validateGameSettings, type GameSettings } from "../../settings/settings.js";
 import { validateAiSettings, type AiSettings } from "../../ai/types.js";
 import type { ItemDocument } from "../../item/types.js";
 import type { PlayerSettings } from "../../entity/types.js";
-import type { GameHandler } from "../../engine/Handler.js";
+import type { GameHandler } from "../runtime/Handler.js";
 
 /** Versioned, JSON-safe match definition authored by the KORE SDK. */
 export const KORE_MATCH_DEFINITION_VERSION = 1 as const;

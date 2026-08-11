@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EasyAi } from "../src/ai/easyAi.ts";
 import type { AiSettings } from "../src/ai/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 describe("Deterministic Easy AI", () => {

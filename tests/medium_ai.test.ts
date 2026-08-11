@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { MediumAi } from "../src/ai/mediumAi.ts";
 import type { AiSettings } from "../src/ai/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 

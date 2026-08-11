@@ -1,4 +1,4 @@
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
 

@@ -1,13 +1,13 @@
 import { createAiBattleHandler } from "../src/scenes/LocalMatchSceneRouter.js";
 import { AiBattleSystem } from "../src/ai/AiBattleSystem.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { RulePhase } from "../src/rules/types.js";
 import { SeededRandom } from "../src/utils/random.js";
 import { AI_BATTLE_LIMITS } from "../src/scenes/matchPipeline.js";
 import { HardAi } from "../src/ai/hardAi.js";
 import type { AiSettings } from "../src/ai/types.js";
-import type { GameHandler } from "../src/engine/Handler.js";
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import type { GameHandler } from "../src/kore/runtime/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 
 const HORIZONS = [100, 200, 300, 400, 500, 600, 800, 1000, 1200] as const;
 const MAX_HORIZON = HORIZONS[HORIZONS.length - 1];

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { loadMapDocument, validateMapDocument } from "../src/contracts/documents.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createMagmaCradleMap } from "../src/settings/magmaCradleMap.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { SHAPE } from "../src/physics/physics.ts";

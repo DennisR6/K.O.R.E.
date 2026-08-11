@@ -1,9 +1,9 @@
 import type p5Types from "p5";
 import type { RenderContext } from "./RenderContext.js";
-import { assetManager } from "../assetManager/loader.js";
-import type { AssetKey } from "../assetManager/assets/assetRegistry.js";
-import { calculateDesktopLayout } from "../ui/layout.js";
-import { FitWorldCamera } from "../ui/FitWorldCamera.js";
+import { assetManager } from "../../assetManager/loader.js";
+import type { AssetKey } from "../../assetManager/assets/assetRegistry.js";
+import { calculateDesktopLayout } from "../../ui/layout.js";
+import { FitWorldCamera } from "../../ui/FitWorldCamera.js";
 /**
  * P5Renderer - Der konkrete Grafik-Adapter für p5.js.
  * 

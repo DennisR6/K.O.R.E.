@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
 import { ankerItem, powerDashItem } from "../src/item/officialItems.ts";
 import { MatchEndReason, RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";

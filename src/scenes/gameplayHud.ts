@@ -1,4 +1,4 @@
-import type { GameHandler } from "../engine/Handler.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
 import { EmitterSystem } from "../systems/Emitter.js";
 import { UiSystem } from "../systems/UiSystem.js";
 import { ItemPhaseUI } from "../ui/ItemPhaseUI.js";

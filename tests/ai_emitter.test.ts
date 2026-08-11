@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AiTurnEmitter, type IAiTurnProducer } from "../src/ai/aiEmitter.ts";
 import type { AiSettings } from "../src/ai/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import type { IInputEmitter } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import type { IInputEmitter } from "../src/kore/runtime/types.ts";
 import type { ItemTarget } from "../src/item/target.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 

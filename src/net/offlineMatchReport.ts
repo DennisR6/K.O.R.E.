@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState } from "../kore/runtime/types.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
 import type { CombiEmitter } from "../emitter/InputEmitter.js";
 import type { MatchResult } from "../rules/types.js";

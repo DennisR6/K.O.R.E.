@@ -1,7 +1,7 @@
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { describe, expect, test } from "bun:test";
 import { GameSettings } from "../src/settings/settings";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { UiSystem } from "../src/systems/UiSystem.js";
 
 

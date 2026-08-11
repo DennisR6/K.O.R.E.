@@ -1,6 +1,6 @@
 import { AudioEmitter, type AudioCommand, type ISoundEmitter } from "../../engine/audio-sdk/index.js";
-import type { IMouse } from "../../engine/types.js";
-import type { IDrawer, RenderContext } from "../../engine/RenderContext.js";
+import type { IMouse } from "../runtime/types.js";
+import type { IDrawer, RenderContext } from "../runtime/RenderContext.js";
 import { UiRuntime, type UiCommand, type UiRenderer } from "../../engine/ui-sdk/index.js";
 import { koreAudio } from "../audio.js";
 import { createGameHudComposition, validateKoreGameHudSettings, type KoreGameHudSettings } from "./gameHud.js";

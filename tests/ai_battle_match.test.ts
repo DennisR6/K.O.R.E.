@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.js";
-import { GameState } from "../src/engine/types.js";
+import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { MatchStatus, RulePhase } from "../src/rules/types.js";
 import { createAiBattleHandler } from "../src/scenes/LocalMatchSceneRouter.js";
 

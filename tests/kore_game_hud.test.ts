@@ -3,7 +3,7 @@ import { createGameHudComposition, validateKoreGameHudSettings } from "../src/ko
 import { createKoreGameHudSurface } from "../src/kore/ui/KoreGameHudSurface.ts";
 import { KoreHudCommand, parseKoreHudCommand } from "../src/kore/ui/hudCommands.ts";
 import { KoreHudElement, KoreHudId } from "../src/kore/ui/hudVocabulary.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 
 const projection = (overrides: object = {}) => ({ revision: 1, turn: { number: 0, activeTeam: 0, phase: RulePhase.Item, engineState: GameState.Your_turn, selectedActorId: "actor", aimAngle: 30, power: 4 }, inventory: [{ itemId: "freeze-shot", remainingUses: 1, enabled: true }], match: { inputLocked: false, waiting: false, paused: false }, guidance: { activeMarkers: [] }, ...overrides });

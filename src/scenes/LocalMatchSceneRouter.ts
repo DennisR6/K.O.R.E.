@@ -1,5 +1,5 @@
-import { GameHandler } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { AiDifficulty } from "../ai/types.js";
 import { createKoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import type { KoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
@@ -14,7 +14,7 @@ import { createMatchHandler, type MatchMode } from "./matchPipeline.js";
 import { flushOfflineMatchReports, installOfflineMatchReport, reportOfflineMatch } from "../net/offlineMatchReport.js";
 import { buildFeedbackEndpoint, installFeedbackPrompt } from "../net/feedback.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import { readClipboardText } from "../mods/browserClipboard.js";
 import { createModFileInput } from "../mods/browserFileInput.js";
 import type { LoadedContentPackage } from "../content/package.js";

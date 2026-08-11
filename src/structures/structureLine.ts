@@ -1,6 +1,6 @@
 import { type Effect, type EffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
-import type { RenderContext } from "../engine/RenderContext.js"
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js"
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";

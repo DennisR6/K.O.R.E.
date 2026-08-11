@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { loadMapDocument, validateMapDocument } from "../src/contracts/documents.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createFrostbiteArenaMap } from "../src/settings/frostbiteArenaMap.ts";
 import { createDefaultGameSettings, FRICTION_TABLE } from "../src/settings/settings.ts";
 

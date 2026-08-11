@@ -6,7 +6,7 @@ import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectShield } from "../src/effects/shield.ts";
 import { MetaEffect, MultiEffect } from "../src/effects/effects.ts";
 import { EffectType, SettingOperation, type EffectSettings } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 
 /**
  * Task 12.11 - Harden The Effect Factory Against Unknown Types.

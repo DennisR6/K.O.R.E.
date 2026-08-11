@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { EffectAimVariance } from "../src/effects/aimVariance.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { createRuntimeItemEffect } from "../src/kore/sdk/itemRuntime.ts";
 import { vodkaZeroItem } from "../src/item/officialItems.ts";
 import { ItemEffectType } from "../src/effects/types.ts";

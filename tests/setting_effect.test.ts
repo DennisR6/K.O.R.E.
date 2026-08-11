@@ -5,7 +5,7 @@ import { EffectType, SettingOperation } from "../src/effects/types.ts";
 import { createCollisionCommandBinding } from "../src/engine/sdk/collisionCommand.ts";
 import { createEngineEffectComposition } from "../src/engine/sdk/composition.ts";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../src/engine/sdk/participationCapability.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";

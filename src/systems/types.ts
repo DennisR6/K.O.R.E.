@@ -1,8 +1,8 @@
-import type { GameState, IInput, TurnPacket } from "../engine/types.js";
+import type { GameState, IInput, TurnPacket } from "../kore/runtime/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
 import type { MatchResult } from "../rules/types.js";
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
 import type { CounterState } from "../engine/contracts/counterState.js";
 import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";

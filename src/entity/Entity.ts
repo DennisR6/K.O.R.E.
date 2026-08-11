@@ -1,7 +1,7 @@
 import type { UUID } from "node:crypto";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
-import type { IDrawer, ITicker } from "../engine/RenderContext.js";
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { IDrawer, ITicker } from "../kore/runtime/RenderContext.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
 import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect, ItemEffectSettings } from "../effects/types.js";

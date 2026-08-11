@@ -1,5 +1,5 @@
 import type p5Types from "p5";
-import { P5Renderer } from "../engine/drawingEngine.js";
+import { P5Renderer } from "../kore/runtime/drawingEngine.js";
 import type { UiAction, UiInput, UiMenuSettings, UiPoint, UiRenderer, UiRuntime } from "../engine/ui-sdk/index.js";
 import { ui, validateUiSettings } from "../engine/ui-sdk/index.js";
 

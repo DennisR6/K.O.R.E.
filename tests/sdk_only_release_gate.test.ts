@@ -21,9 +21,9 @@ const REMOVED_LEGACY_FILES = [
 	"src/server/utils.ts",
 ] as const;
 
-const BUILDER_RUNTIME_ALLOWLIST = new Set(["src/engine/Handler.ts", "src/engine/runtimeFactory.ts"]);
+const BUILDER_RUNTIME_ALLOWLIST = new Set(["src/kore/runtime/Handler.ts", "src/kore/runtime/runtimeFactory.ts"]);
 const CORE_SYSTEM_RUNTIME_ALLOWLIST = new Set([
-	"src/engine/Handler.ts",
+	"src/kore/runtime/Handler.ts",
 	"src/systems/systemSettings.ts",
 	"src/replay/player.ts",
 	"src/server/gameRegistry.ts",

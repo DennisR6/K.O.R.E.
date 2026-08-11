@@ -3,7 +3,7 @@ import { GameEmitter } from "../emitter/EngineEmitter.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
-import type { GameHandler } from "../engine/Handler.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
 import { kore } from "../kore/sdk/index.js";
 import { CANONICAL_PLAYABLE_MATCH, createCanonicalPlayableMatchSettings } from "../settings/canonicalPlayableMatch.js";
 import { buildMapSettings } from "../content/mapCatalog.js";

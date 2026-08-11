@@ -4,7 +4,7 @@ import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectPhysics } from "../src/effects/physics.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameSettings, validateGameSettings } from "../src/settings/settings.ts";
 import { getOuterContainmentBoundaries } from "../src/structures/containment.ts";
 import { FullStructure } from "../src/structures/fullStructure.ts";

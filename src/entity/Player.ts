@@ -1,5 +1,5 @@
 import type { UUID } from "crypto";
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
 import type { IEntity } from "./Entity.js";
 import { createDefaultNumericThresholdBindings, createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";

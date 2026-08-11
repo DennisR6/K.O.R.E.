@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import { createRuntimePlayer } from "../src/entity/runtimeFactory.js";
 import { kore } from "../src/kore/sdk/index.js";

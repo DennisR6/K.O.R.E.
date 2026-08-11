@@ -1,4 +1,4 @@
-import type { TurnPacket } from "../engine/types.js";
+import type { TurnPacket } from "../kore/runtime/types.js";
 import { SHAPE } from "../physics/physics.js";
 import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect, type SettingsBackground } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";

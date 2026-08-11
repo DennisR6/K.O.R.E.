@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { convertEditorMapDocument, DOCUMENT_SCHEMA_VERSION, type EditorMapDocument } from "../src/contracts/documents.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import type { MapBoundarySettingsRect } from "../src/settings/settings.ts";

@@ -4,7 +4,7 @@ import { Player } from "../src/entity/Player.ts";
 import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { SettingOperation, EffectTrigger, EffectType } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 
 test("current entity state is canonical and is serialized separately from a setting request", () => {
 	const player = new Player(createPlayerSettings({ hp: 10 }));

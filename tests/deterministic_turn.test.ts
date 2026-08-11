@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameSettings } from "../src/settings/settings.ts";
 
 test("a real ice-map shot resolves to a deterministic final snapshot", () => {

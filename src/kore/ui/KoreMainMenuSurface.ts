@@ -1,6 +1,6 @@
 import { AudioEmitter, type AudioCommand, type ISoundEmitter } from "../../engine/audio-sdk/index.js";
-import type { IMouse } from "../../engine/types.js";
-import type { RenderContext } from "../../engine/RenderContext.js";
+import type { IMouse } from "../runtime/types.js";
+import type { RenderContext } from "../runtime/RenderContext.js";
 import { UiRuntime, type UiCommand, type UiRenderer } from "../../engine/ui-sdk/index.js";
 import { AssetList } from "../../assetManager/assets/assetRegistry.js";
 import type { AiDifficulty } from "../../ai/types.js";

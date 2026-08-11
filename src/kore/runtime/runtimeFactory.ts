@@ -1,6 +1,6 @@
-import type { SystemSettings } from "./contracts/systemSettings.js";
+import type { SystemSettings } from "../../engine/contracts/systemSettings.js";
 import type { EngineSettings } from "./types.js";
-import type { GameSettings } from "../settings/settings.js";
+import type { GameSettings } from "../../settings/settings.js";
 import { GameHandler, GameHandlerBuilder } from "./Handler.js";
 
 /**

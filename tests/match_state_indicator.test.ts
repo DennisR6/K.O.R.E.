@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import type { RenderContext } from "../src/engine/RenderContext.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";
 import { MatchStateIndicator } from "../src/systems/MatchStateIndicator.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
 

@@ -1,8 +1,8 @@
 // import { describe, it } from "node:test";
 // import { Player } from "../src/entity/Player.js";
-// import { GameState } from "../src/engine/types.js";
+// import { GameState } from "../src/kore/runtime/types.js";
 // import assert from "node:assert";
-// import { GameHandlerBuilder } from "../src/engine/Handler.js";
+// import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 // import { Mouse } from "../src/ui/Mouse.js";
 //
 // /**

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { Player } from "../src/entity/Player.ts";
 import { NUMERIC_ADD_EFFECT_ID, NUMERIC_SET_EFFECT_ID } from "../src/engine/sdk/numericCapability.ts";

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createCanonicalPlayableMatchHandler, createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 import { ItemPhaseUI } from "../src/ui/ItemPhaseUI.ts";

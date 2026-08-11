@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { EffectModifyMass } from "../src/effects/modifyMass.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { NetworkEmitter, installTurnReceiver } from "../src/emitter/NetworkEmitter.ts";
-import { GameState, type TurnPacket } from "../src/engine/types.ts";
+import { GameState, type TurnPacket } from "../src/kore/runtime/types.ts";
 import { createPlayerSettings, type PlayerSettings } from "../src/entity/types.ts";
 import { Player } from "../src/entity/Player.ts";
 import { RulePhase } from "../src/rules/types.ts";

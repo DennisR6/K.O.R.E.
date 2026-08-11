@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { HardAi, HARD_AI_SPECULATIVE_MAX_TICKS } from "../src/ai/hardAi.ts";
 import type { AiSettings } from "../src/ai/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 function buildHandler(friction = { friction: 0.995, linearDrag: 0.01, stopThreshold: 0.1 }) {

@@ -1,5 +1,5 @@
 import type { UUID } from "node:crypto";
-import { GameState } from "../engine/types.js";
+import { GameState } from "../kore/runtime/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase } from "../rules/types.js";

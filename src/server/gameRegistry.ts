@@ -1,5 +1,5 @@
-import { GameHandler } from "../engine/Handler.js";
-import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../engine/types.js";
+import { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState, type EngineSettings, type IInput, type TurnPacket } from "../kore/runtime/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { MatchEndReason, MatchStatus, RulePhase, type MatchResult, type RuleState } from "../rules/types.js";

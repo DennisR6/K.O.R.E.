@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { fingerprintCanonicalSnapshot, fingerprintHardAiRequest } from "../src/ai/worker/protocol.ts";
 
 test("worker provenance fingerprints are deterministic and state-sensitive", () => {

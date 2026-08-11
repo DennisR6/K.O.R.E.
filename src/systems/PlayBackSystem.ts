@@ -1,4 +1,4 @@
-import { GameState } from "../engine/types.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { PlayerSettings } from "../entity/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";

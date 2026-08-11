@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { RenderContext } from "../src/engine/RenderContext.js";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.js";
 import type { JsonValue } from "../src/engine/contracts/systemSettings.js";
 import type { UiElementSettings, UiMenuSettings } from "../src/engine/ui-sdk/index.js";
 import { createKoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.js";

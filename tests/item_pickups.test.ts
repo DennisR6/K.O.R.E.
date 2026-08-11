@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createItemDocument } from "../src/item/types.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";

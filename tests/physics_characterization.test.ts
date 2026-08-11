@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { EffectPhysics } from "../src/effects/physics.js";
 import { EffectTrigger, EffectType, type FullEffectSettings } from "../src/effects/types.js";
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { Player } from "../src/entity/Player.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 

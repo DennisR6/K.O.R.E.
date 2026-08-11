@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { durchlaessigkeitItem } from "../src/item/officialItems.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";

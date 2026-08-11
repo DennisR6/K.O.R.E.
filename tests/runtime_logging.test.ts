@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { summarizeFrameWindow } from "../src/engine/runtimeLog.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";

@@ -5,7 +5,7 @@ import { createMatchHandler } from "../src/scenes/matchPipeline.ts";
 import { computeHardAiWorkerRequest } from "../src/ai/worker/compute.ts";
 import { HardAi } from "../src/ai/hardAi.ts";
 import { AiBattleSystem } from "../src/ai/AiBattleSystem.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { AiOpponentSystem } from "../src/ai/AiOpponentSystem.ts";
 

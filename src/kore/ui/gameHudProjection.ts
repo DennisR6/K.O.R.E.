@@ -1,5 +1,5 @@
-import { GameState } from "../../engine/types.js";
-import type { GameHandler } from "../../engine/Handler.js";
+import { GameState } from "../runtime/types.js";
+import type { GameHandler } from "../runtime/Handler.js";
 import { MatchStatus, RulePhase, type MatchResult } from "../../rules/types.js";
 import type { UiSystem } from "../../systems/UiSystem.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";

@@ -1,8 +1,8 @@
 import { createRuntimeEffect } from "../effects/runtimeFactory.js";
 import { createCollisionEnterEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
 import { EffectTrigger, type Effect, type FullEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
-import type { RenderContext } from "../engine/RenderContext.js"
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js"
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
 import type { MapBoundarySettingsRect } from "../settings/settings.js";
 import { type IStructure } from "./types.js";

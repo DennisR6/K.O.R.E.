@@ -1,7 +1,7 @@
 import { audio, AudioEmitter, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
 import { presentation, type AnimationSettings, type PresentationFrame, type PresentationOutputPort, type PresentationRuntimeSettings } from "../engine/presentation-sdk/index.js";
 import { assertJsonValue, type JsonValue } from "../engine/contracts/systemSettings.js";
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext.js";
+import type { IDrawer, ITicker, RenderContext } from "./runtime/RenderContext.js";
 
 export enum KoreGameplayFeedbackType {
 	Shot = "shot", Collision = "collision", Damage = "damage", Shield = "shield", Item = "item",

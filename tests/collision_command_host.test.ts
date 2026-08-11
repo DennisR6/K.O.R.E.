@@ -3,7 +3,7 @@ import { createCollisionCommandBinding } from "../src/engine/sdk/collisionComman
 import { createEngineEffectComposition } from "../src/engine/sdk/composition.js";
 import { MOVEMENT_ADD_VELOCITY_EFFECT_ID } from "../src/engine/sdk/movementCapability.js";
 import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../src/engine/sdk/participationCapability.js";
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 import { Player } from "../src/entity/Player.js";
 import { StructureCircle } from "../src/structures/structureCircle.js";

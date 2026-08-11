@@ -1,6 +1,6 @@
 import type { AiDecision } from "../aiEmitter.js";
 import type { AiSettings } from "../types.js";
-import type { IInput, EngineSettings } from "../../engine/types.js";
+import type { IInput, EngineSettings } from "../../kore/runtime/types.js";
 import type { RuleState } from "../../rules/types.js";
 
 export const HARD_AI_WORKER_PROTOCOL_VERSION = 1 as const;

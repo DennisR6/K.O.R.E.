@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { LocalMatchSceneRouter, createLocalGameplayHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
 

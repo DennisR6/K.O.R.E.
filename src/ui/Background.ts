@@ -1,4 +1,4 @@
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import type { SettingsBackground } from "../settings/settings.js";
 import type { IBackground } from "./types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";

@@ -3,7 +3,7 @@ import { validateMapDocument, loadMapDocument } from "../src/contracts/documents
 import { kore } from "../src/kore/sdk/index.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { EnvironmentalSystem } from "../src/systems/EnvironmentalSystem.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { SHAPE } from "../src/physics/physics.ts";
 import { FullStructure } from "../src/structures/fullStructure.ts";
 

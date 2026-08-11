@@ -3,7 +3,7 @@ import { AiBattleSystem } from "../src/ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../src/ai/AiOpponentSystem.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import type { CombiEmitter } from "../src/emitter/InputEmitter.js";
-import { GameHandler } from "../src/engine/Handler.js";
+import { GameHandler } from "../src/kore/runtime/Handler.js";
 import { createMatchHandler } from "../src/scenes/matchPipeline.js";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.js";
 import { EmitterSystem } from "../src/systems/Emitter.js";

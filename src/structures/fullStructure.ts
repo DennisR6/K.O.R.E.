@@ -1,5 +1,5 @@
 import type { EffectSettings } from "../effects/types.js";
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import { SHAPE, type IdefaultPhysics, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureLine, StructureRectangle } from "./types.js";

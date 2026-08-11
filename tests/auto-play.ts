@@ -1,5 +1,5 @@
 #!/home/eugen/.bun/bin/bun
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { Player } from "../src/entity/Player.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 import { StructureRectangle } from "../src/structures/structureRectangle.js";

@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import type { IInputEmitter } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import type { IInputEmitter } from "../kore/runtime/types.js";
 import type { ItemTarget } from "../item/target.js";
 import type { AiSettings } from "./types.js";
 // The pure shared input boundary: `server/gameRegistry` re-exports the same

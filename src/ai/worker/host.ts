@@ -1,7 +1,7 @@
-import type { GameHandler } from "../../engine/Handler.js";
+import type { GameHandler } from "../../kore/runtime/Handler.js";
 import { fingerprintCanonicalSnapshot, fingerprintHardAiRequest, type HardAiWorkerRequest, type HardAiWorkerResponse } from "./protocol.js";
 import type { AiSettings } from "../types.js";
-import type { IInput } from "../../engine/types.js";
+import type { IInput } from "../../kore/runtime/types.js";
 import type { RuleState } from "../../rules/types.js";
 import { isValidInput } from "../../input/validate.js";
 import { runtimeNow, summarizeFrameWindow } from "../../engine/runtimeLog.js";

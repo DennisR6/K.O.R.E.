@@ -1,7 +1,7 @@
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { IGameContext, ISerializableSystem, ISimulator, SystemSettings } from "./types.js";
 import type { PhysicsSystem } from "./PhysicsSystem.js";
-import { GameState } from "../engine/types.js";
+import { GameState } from "../kore/runtime/types.js";
 import { isPhysicsParticipant } from "../physics/physics.js";
 
 /**

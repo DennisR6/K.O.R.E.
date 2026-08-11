@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
 import { createOfficialItemLoader, falltuerItem, falltuerStructure, falltuerTriggerDefinitions, MYSTERY_BOX_ITEM_ID } from "../src/item/officialItems.ts";
 import type { ItemDocument } from "../src/item/types.ts";

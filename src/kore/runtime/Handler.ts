@@ -1,72 +1,72 @@
-import { isPhysicsParticipant, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../physics/physics.js";
-import { EntityManager } from "../entity/EntityManager.js";
-import { PlaybackSystem } from "../systems/PlayBackSystem.js";
+import { isPhysicsParticipant, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../../physics/physics.js";
+import { EntityManager } from "../../entity/EntityManager.js";
+import { PlaybackSystem } from "../../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
 import { GameState } from "./types.js";
 import type { EngineSettings, IInput, IMouse, ISettingsSerialize, ItemDrawState, TurnPacket } from "./types.js"
-import type { IGameContext, ISerializableSystem, ISystem } from "../systems/types.js";
-import { createSystemFromSettings, validateSystemSettingsList } from "../systems/systemSettings.js";
-import { defaultPhysics } from "../physics/defaultPhysics.js";
-import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../settings/settings.js"
-import type { IStructure } from "../structures/types.js";
-import type { IEntity } from "../entity/Entity.js";
-import type { IBackground } from "../ui/types.js";
-import { createRuntimePlayer } from "../entity/runtimeFactory.js";
+import type { IGameContext, ISerializableSystem, ISystem } from "../../systems/types.js";
+import { createSystemFromSettings, validateSystemSettingsList } from "../../systems/systemSettings.js";
+import { defaultPhysics } from "../../physics/defaultPhysics.js";
+import { DEFAULT_DRIFT, GameSettings, type FrictionSettings, validateDrift, validateFigureCounts } from "../../settings/settings.js"
+import type { IStructure } from "../../structures/types.js";
+import type { IEntity } from "../../entity/Entity.js";
+import type { IBackground } from "../../ui/types.js";
+import { createRuntimePlayer } from "../../entity/runtimeFactory.js";
 
-import { FullStructure } from "../structures/fullStructure.js";
+import { FullStructure } from "../../structures/fullStructure.js";
 import type { UUID } from "crypto";
-import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type FullEffectSettings, type ItemEffectSettings } from "../effects/types.js";
-import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
-import { createRuntimeEffect } from "../effects/runtimeFactory.js";
-import { migrateGameSettingsEffects } from "../migrations/effects.js";
-import { canonicalizeCounterStates, type CounterState } from "./contracts/counterState.js";
+import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type FullEffectSettings, type ItemEffectSettings } from "../../effects/types.js";
+import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../../effects/triggerDispatcher.js";
+import { createRuntimeEffect } from "../../effects/runtimeFactory.js";
+import { migrateGameSettingsEffects } from "../../migrations/effects.js";
+import { canonicalizeCounterStates, type CounterState } from "../../engine/contracts/counterState.js";
 
-import { GameStateManager } from "../systems/GameStateManager.js";
-import { getBackgoundSystem } from "../ui/Background.js";
-import { PhysicsSystem } from "../systems/PhysicsSystem.js";
-import { MovementSystem } from "../systems/MovementSystem.js";
-import { BoundarySystem } from "../systems/BoundarySystem.js";
-import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } from "../rules/types.js";
-import { RuleInterpreter } from "../rules/RuleInterpreter.js";
-import { currentTurnMode } from "../rules/defaultGameModes.js";
-import type { MatchResult } from "../rules/types.js";
-import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../item/inventory.js";
-import { MapPickupSystem } from "../item/MapPickupSystem.js";
-import { EnvironmentalSystem } from "../systems/EnvironmentalSystem.js";
-import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../systems/predefinedEffectDispatcher.js";
-import { createTemporalModifier, type TemporalModifierSettings } from "./contracts/temporalModifier.js";
-import { createActionModifier } from "./contracts/actionModifier.js";
-import { createCollisionFilter, createCollisionFilterLifetime } from "./contracts/collisionFilter.js";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "./contracts/actorEligibility.js";
-import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "./contracts/structureLifecycle.js";
-import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "./contracts/deferredEffect.js";
-import { dispatchCollisionCommands } from "../systems/collisionCommandHost.js";
-import type { EngineEffectComposition } from "../engine/sdk/composition.js";
-import { TransformSystem } from "../systems/TransformSystem.js";
-import { ParticipationSystem } from "../systems/ParticipationSystem.js";
-import { NumericSystem } from "../systems/NumericSystem.js";
-import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../item/types.js";
-import { SeededRandom } from "../utils/random.js";
-import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../item/target.js";
-import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../item/resolvedTarget.js";
-import { itemOrder, validateItemCombination } from "../item/interactions.js";
-import { createRuntimeItemEffect, isActionModifierTemplate, isActorEligibilityConstraintTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../kore/sdk/itemRuntime.js";
-import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
-import { EffectSpawnTrigger } from "../effects/spawnTrigger.js";
-import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../engine/sdk/transformCapability.js";
-import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
-import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../item/officialItems.js";
-import { TriggerDefinitionCatalog, type TriggerDefinition } from "../item/triggerDefinitions.js";
-import type { AiSettings } from "../ai/types.js";
-import type { IAiTurnProducer } from "../ai/aiEmitter.js";
-import { EasyAi } from "../ai/easyAi.js";
-import { MediumAi } from "../ai/mediumAi.js";
-import { HardAi } from "../ai/hardAi.js";
-import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../ui/AuthoritativeGameplayRenderer.js";
-import type { LanguageCatalog } from "../i18n/language.js";
-import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../kore/gameplayFeedback.js";
-import type { JsonValue } from "../engine/contracts/systemSettings.js";
-import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "./runtimeLog.js";
+import { GameStateManager } from "../../systems/GameStateManager.js";
+import { getBackgoundSystem } from "../../ui/Background.js";
+import { PhysicsSystem } from "../../systems/PhysicsSystem.js";
+import { MovementSystem } from "../../systems/MovementSystem.js";
+import { BoundarySystem } from "../../systems/BoundarySystem.js";
+import { MatchStatus, RulePhase, validateItemEconomySettings, type RuleState } from "../../rules/types.js";
+import { RuleInterpreter } from "../../rules/RuleInterpreter.js";
+import { currentTurnMode } from "../../rules/defaultGameModes.js";
+import type { MatchResult } from "../../rules/types.js";
+import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventory } from "../../item/inventory.js";
+import { MapPickupSystem } from "../../item/MapPickupSystem.js";
+import { EnvironmentalSystem } from "../../systems/EnvironmentalSystem.js";
+import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../../systems/predefinedEffectDispatcher.js";
+import { createTemporalModifier, type TemporalModifierSettings } from "../../engine/contracts/temporalModifier.js";
+import { createActionModifier } from "../../engine/contracts/actionModifier.js";
+import { createCollisionFilter, createCollisionFilterLifetime } from "../../engine/contracts/collisionFilter.js";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "../../engine/contracts/actorEligibility.js";
+import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "../../engine/contracts/structureLifecycle.js";
+import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "../../engine/contracts/deferredEffect.js";
+import { dispatchCollisionCommands } from "../../systems/collisionCommandHost.js";
+import type { EngineEffectComposition } from "../../engine/sdk/composition.js";
+import { TransformSystem } from "../../systems/TransformSystem.js";
+import { ParticipationSystem } from "../../systems/ParticipationSystem.js";
+import { NumericSystem } from "../../systems/NumericSystem.js";
+import { validateItemDocument, type ItemDocument, type ItemPickup, type ItemPickupState } from "../../item/types.js";
+import { SeededRandom } from "../../utils/random.js";
+import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../../item/target.js";
+import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../../item/resolvedTarget.js";
+import { itemOrder, validateItemCombination } from "../../item/interactions.js";
+import { createRuntimeItemEffect, isActionModifierTemplate, isActorEligibilityConstraintTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../sdk/itemRuntime.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
+import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../../engine/sdk/transformCapability.js";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
+import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../../item/officialItems.js";
+import { TriggerDefinitionCatalog, type TriggerDefinition } from "../../item/triggerDefinitions.js";
+import type { AiSettings } from "../../ai/types.js";
+import type { IAiTurnProducer } from "../../ai/aiEmitter.js";
+import { EasyAi } from "../../ai/easyAi.js";
+import { MediumAi } from "../../ai/mediumAi.js";
+import { HardAi } from "../../ai/hardAi.js";
+import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../../ui/AuthoritativeGameplayRenderer.js";
+import type { LanguageCatalog } from "../../i18n/language.js";
+import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../gameplayFeedback.js";
+import type { JsonValue } from "../../engine/contracts/systemSettings.js";
+import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "../../engine/runtimeLog.js";
 
 type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };
 type EntitySwapPositionItemEffect = { type: typeof TRANSFORM_SWAP_POSITION_EFFECT_ID; typeValue: Record<string, unknown> };
@@ -1344,7 +1344,7 @@ export class GameHandlerBuilder {
 		const snapshot = gameSettings as EngineSettings
 		if (snapshot.systems !== undefined && snapshot.systems.length > 0) {
 			validateSystemSettingsList(snapshot.systems, snapshot.systemOrder)
-			const systemSettings = snapshot.systems as import("../systems/types.js").SystemSettings[]
+			const systemSettings = snapshot.systems as import("../../systems/types.js").SystemSettings[]
 			const systemOrder = snapshot.systemOrder as string[]
 			const byId = new Map(systemSettings.map(system => [system.systemId, system]))
 			const restored = new Map<string, ISerializableSystem>()

@@ -24,5 +24,5 @@ test("the frozen contract and direct legacy authoring audit are complete", () =>
 	const contract = readFileSync("SDK_MIGRATION_CONTRACT.md", "utf8");
 	for (const heading of ["Layer Model", "Frozen Rules", "Migration Queue"]) expect(contract).toContain(heading);
 	const paths = new Set(legacyAuthoringPaths.map(entry => entry.path));
-	for (const path of ["src/scenes/matchPipeline.ts", "src/settings/canonicalPlayableMatch.ts", "src/item/officialItems.ts", "src/engine/Handler.ts", "src/server/gameRegistry.ts", "src/replay/player.ts", "src/main.ts"]) expect(paths.has(path)).toBe(true);
+	for (const path of ["src/scenes/matchPipeline.ts", "src/settings/canonicalPlayableMatch.ts", "src/item/officialItems.ts", "src/kore/runtime/Handler.ts", "src/server/gameRegistry.ts", "src/replay/player.ts", "src/main.ts"]) expect(paths.has(path)).toBe(true);
 });

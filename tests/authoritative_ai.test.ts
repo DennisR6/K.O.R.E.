@@ -5,7 +5,7 @@ import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { createVersusAiGameSettings } from "../src/settings/settings.ts";
 import { validateReplayDocument } from "../src/replay/types.ts";
 import { ReplayPlayer } from "../src/replay/player.ts";
-import type { IInputEmitter } from "../src/engine/types.ts";
+import type { IInputEmitter } from "../src/kore/runtime/types.ts";
 
 const humanUser = "11111111-1111-4111-8111-111111111111";
 const aiUser = "22222222-2222-4222-8222-222222222222";

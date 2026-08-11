@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
 import { EffectType, EffectTrigger } from "../src/effects/types.ts";
-import type { RenderContext } from "../src/engine/RenderContext.ts";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
 import { AuthoritativeGameplayRenderer } from "../src/ui/AuthoritativeGameplayRenderer.ts";
 import { createItemPickup } from "../src/item/types.ts";
 import { mysteryBoxItem } from "../src/item/officialItems.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 
 type DrawCall = { type: string; values: unknown[] };
 

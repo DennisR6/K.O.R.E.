@@ -1,5 +1,5 @@
-import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
-import { GameState, type IMouse } from "../engine/types.js";
+import type { IDrawer, RenderContext } from "../kore/runtime/RenderContext.js";
+import { GameState, type IMouse } from "../kore/runtime/types.js";
 import type { Vector2D } from "../physics/physics.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { isValidInput } from "../input/validate.js";

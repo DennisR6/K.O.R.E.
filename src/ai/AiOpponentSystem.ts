@@ -1,7 +1,7 @@
 import { AiTurnEmitter } from "./aiEmitter.js";
 import type { AiSettings } from "./types.js";
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState, type IInputEmitter } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState, type IInputEmitter } from "../kore/runtime/types.js";
 import { RulePhase } from "../rules/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "../systems/types.js";
 import { koreAi } from "../kore/ai.js";

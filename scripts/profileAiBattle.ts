@@ -1,9 +1,9 @@
 import { createAiBattleHandler } from "../src/scenes/LocalMatchSceneRouter.js";
-import { GameHandler } from "../src/engine/Handler.js";
-import { GameHandlerBuilder } from "../src/engine/Handler.js";
+import { GameHandler } from "../src/kore/runtime/Handler.js";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { HardAi } from "../src/ai/hardAi.js";
 import { HARD_AI_SPECULATIVE_MAX_TICKS } from "../src/ai/hardAi.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
 

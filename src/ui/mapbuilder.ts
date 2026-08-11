@@ -1,5 +1,5 @@
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
-import type { IMouse } from "../engine/types";
+import type { IDrawer, ITicker, RenderContext } from "../kore/runtime/RenderContext";
+import type { IMouse } from "../kore/runtime/types";
 import type { Vector2D } from "../physics/physics";
 
 export class Builder implements IDrawer, ITicker, IMouse {

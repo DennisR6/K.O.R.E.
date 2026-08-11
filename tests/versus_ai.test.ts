@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { EasyAi } from "../src/ai/easyAi.ts";
 import { HardAi } from "../src/ai/hardAi.ts";
 import { MediumAi } from "../src/ai/mediumAi.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createVersusAiGameSettings, validateGameSettings } from "../src/settings/settings.ts";
 
 describe("Versus AI Game Mode", () => {
