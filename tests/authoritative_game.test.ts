@@ -196,8 +196,11 @@ test("explicit leave ends the match and lets the same user enter a fresh lobby",
 	const { runtime, first, second } = connectMatchedRuntime()
 	const oldGameId = runtime.getRegistry().getForUser(userOne)!.id
 	runtime.message(first, JSON.stringify({ type: NetworkMessageType.LEAVE_GAME }))
-	expect(packet(first)).toEqual({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" })
-	expect(packet(second)).toEqual({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" })
+	const firstEnded = packet(first)
+	const secondEnded = packet(second)
+	expect(firstEnded).toMatchObject({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" })
+	expect(firstEnded.players).toBeArray()
+	expect(secondEnded).toMatchObject({ type: NetworkMessageType.GAME_ENDED, reason: "A player left the game", players: firstEnded.players })
 	expect(runtime.getRegistry().getForUser(userOne)).toBeUndefined()
 	expect(runtime.getRegistry().getForUser(userTwo)).toBeUndefined()
 

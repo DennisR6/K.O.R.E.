@@ -128,9 +128,11 @@ export class ServerRuntime {
 	private leaveGame(socket: ServerSocket): void {
 		const userId = this.userByConnection.get(socket.data.connectionId);
 		if (!userId) return this.sendError(socket, "Login is required before leaving a game");
+		const current = this.games.getForUser(userId);
+		const players = current?.handler.getEntityManager().serialize();
 		const record = this.games.endGameForUser(userId);
 		if (!record) return this.sendError(socket, "No active game for this user");
-		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player left the game" };
+		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player left the game", players };
 		for (const user of record.users) this.socketForUser(user)?.send(wrap(ended));
 	}
 
