@@ -19,6 +19,7 @@ test("single kore SDK export builds JSON-safe settings accepted by the engine", 
 	expect(() => validateGameSettings(settings)).not.toThrow();
 	expect(JSON.parse(json)).toEqual(settings);
 	expect(settings.background).toEqual({ type: "image", url: "https://example.test/arena.png" });
+	expect(map.buildMapDocument().background).toEqual({ type: "image", url: "https://example.test/arena.png" });
 	expect(settings.players).toHaveLength(4);
 	expect(settings.effects).toHaveLength(2);
 	expect(() => new GameHandlerBuilder().defaultSystems().fromSettings(settings).build()).not.toThrow();

@@ -25,6 +25,13 @@ test("map loader applies canonical physics, geometry, and team spawns", () => {
 	expect(settings.players.map(player => player.position)).toEqual([{ x: 22, y: 22 }, { x: 152, y: 22 }]);
 });
 
+test("map loader applies an explicit canonical map background", () => {
+		const withBackground: MapDocument = { ...map, background: { type: "color", color: "blue" } };
+		const settings = loadMapDocument(withBackground, createDefaultGameSettings(2, 1));
+
+		expect(settings.background).toEqual({ type: "color", color: "blue" });
+});
+
 test("map loader keeps the containment boundary invisible and hazard colors", () => {
 	const withContainment: MapDocument = {
 		...map,

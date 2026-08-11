@@ -454,6 +454,7 @@ export class KoreMapBuilder {
 			schemaVersion: DOCUMENT_SCHEMA_VERSION,
 			metadata,
 			worldSize: clone(genericWorld.worldSize),
+			background: clone(genericWorld.background) as unknown as GameSettings["background"],
 			friction: clone(this.options.friction),
 			drift: this.options.drift,
 			arenaGeometry: clone((genericWorld.structures as unknown as MapBoundarySettings[]).filter((_, index) => !this.generatedHazardStructureIndexes.has(index))),

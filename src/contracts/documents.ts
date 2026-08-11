@@ -1,6 +1,6 @@
 import type { TurnPacket } from "../engine/types.js";
 import { SHAPE } from "../physics/physics.js";
-import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect } from "../settings/settings.js";
+import { arrangeInGrid, type GameSettings, type FrictionSettings, type MapBoundarySettings, type MapBoundarySettingsCircle, type MapBoundarySettingsRect, type SettingsBackground } from "../settings/settings.js";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { deriveStructureId } from "../structures/identity.js";
@@ -48,6 +48,8 @@ export interface MapSpawnRegion {
 export interface MapDocument extends VersionedDocument {
 	metadata: MapMetadata;
 	worldSize: { x: number; y: number };
+	/** Optional for legacy documents; omitted values inherit the match template. */
+	background?: SettingsBackground;
 	friction: FrictionSettings;
 	drift: number;
 	arenaGeometry: MapBoundarySettings[];
@@ -127,6 +129,7 @@ export function validateMapDocument(document: unknown): asserts document is MapD
 	if (!isRecord(document) || document.schemaVersion !== DOCUMENT_SCHEMA_VERSION) throw new Error("Invalid map schema version")
 	if (!isRecord(document.metadata) || typeof document.metadata.id !== "string" || typeof document.metadata.name !== "string") throw new Error("Invalid map metadata")
 	if (!isVector(document.worldSize) || document.worldSize.x <= 0 || document.worldSize.y <= 0) throw new Error("Invalid map world size")
+	if (document.background !== undefined && !isMapBackground(document.background)) throw new Error("Invalid map background")
 	if (!isFriction(document.friction) || typeof document.drift !== "number" || !Number.isFinite(document.drift) || document.drift < 0 || document.drift > 1) throw new Error("Invalid map physics")
 	if (!Array.isArray(document.arenaGeometry) || !document.arenaGeometry.every(isArenaGeometry) || !Array.isArray(document.spawnRegions) || !Array.isArray(document.hazards)) throw new Error("Invalid map collections")
 	if (!document.spawnRegions.every(isSpawnRegion)) throw new Error("Invalid map spawn region")
@@ -153,6 +156,16 @@ function isSafeUrl(url: string): boolean {
 	return !lower.startsWith("javascript:") && !lower.startsWith("vbscript:") && !lower.startsWith("data:text/html")
 }
 function isEditorBackground(value: unknown): value is EditorBackground | null { return value === null || (isRecord(value) && value.type === "image" && typeof value.url === "string" && isSafeUrl(value.url)) }
+function isMapBackground(value: unknown): value is SettingsBackground {
+	if (!isRecord(value)) return false
+	if (value.type === "color") return typeof value.color === "string"
+	if (value.type !== "image" || (typeof value.url !== "number" && typeof value.url !== "string")) return false
+	if (typeof value.url !== "string") return Number.isSafeInteger(value.url) && value.url >= 0
+	try {
+		const url = new URL(value.url, "https://kore.invalid")
+		return url.protocol === "http:" || url.protocol === "https:"
+	} catch { return false }
+}
 function isEditorScreenResolution(value: unknown): value is EditorScreenResolution { return isRecord(value) && isPositiveFinite(value.x) && isPositiveFinite(value.y) && isPositiveFinite(value.factor) }
 function hasFiniteVector(value: Record<string, unknown>): boolean { return typeof value.x === "number" && Number.isFinite(value.x) && typeof value.y === "number" && Number.isFinite(value.y) }
 function isEditorWall(value: unknown): value is EditorWall { return isRecord(value) && value.type === "rectangle" && hasFiniteVector(value) && isPositiveFinite(value.w) && isPositiveFinite(value.h) && typeof value.color === "string" }
@@ -238,6 +251,7 @@ export function loadMapDocument(map: MapDocument, template: GameSettings): GameS
 		...template,
 		players,
 		worldSize: { ...map.worldSize },
+		background: map.background === undefined ? template.background : structuredClone(map.background),
 		friction: { ...map.friction },
 		drift: map.drift,
 		mapBoundarys: assignStableStructureIds([
