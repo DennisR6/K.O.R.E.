@@ -177,6 +177,6 @@ export interface NetworkLeaveGame { type: NetworkMessageType.LEAVE_GAME }
 export interface NetworkSurrenderGame { type: NetworkMessageType.SURRENDER_GAME }
 export interface NetworkSurrendered { type: NetworkMessageType.SURRENDERED, result: MatchResult }
 /** Sent to every connected participant when a player abandons a match. */
-export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string, result?: MatchResult }
+export interface NetworkGameEnded { type: NetworkMessageType.GAME_ENDED, reason: string, result?: MatchResult, players?: EngineSettings["players"] }
 export interface NetworkNewUser { type: NetworkMessageType.NEWUSER, userid: UUID }
 export interface WebSocketData { connectionId: UUID }

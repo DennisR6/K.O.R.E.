@@ -573,7 +573,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
   advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
-  authoritative `TURN` playback, `ITEM_USED` inventory snapshots, and active-team updates.
+  authoritative `TURN` playback, `ITEM_USED` inventory snapshots, active-team
+  updates, and authoritative player snapshots included with `GAME_ENDED`
+  surrender packets.
 - `src/emitter/InputEmitter.ts` and `ObjectEmitter.ts`:
   emitter composition and test capture.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.

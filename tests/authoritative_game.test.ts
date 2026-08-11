@@ -219,7 +219,9 @@ test("surrender completes the persisted match and allows immediate rematch match
 	const surrendered = packet(first)
 	expect(ended.type).toBe(NetworkMessageType.GAME_ENDED)
 	expect(ended.result).toMatchObject({ status: "winner", winnerTeam: 1, reason: "surrendered" })
-	expect(otherEnded).toMatchObject({ type: NetworkMessageType.GAME_ENDED, result: ended.result })
+	expect(ended.players).toBeArray()
+	expect(ended.players.length).toBeGreaterThan(0)
+	expect(otherEnded).toMatchObject({ type: NetworkMessageType.GAME_ENDED, result: ended.result, players: ended.players })
 	expect(surrendered).toMatchObject({ type: NetworkMessageType.SURRENDERED, result: ended.result })
 	expect(runtime.getRegistry().getForUser(userOne)?.lifecycle.status).toBe("completed")
 	expect(runtime.getRegistry().getDatabase().getLifecycle(oldGameId)?.status).toBe("completed")
@@ -266,4 +268,9 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 	expect(handler.getEntityManager().getEntities()[0].toSettings()).toEqual(finalState)
 	expect(handler.getContext().currTurn).toBe(3)
 	expect(handler.getRuleState()).toEqual(ruleState)
+
+	const endedPlayers = [createPlayerSettings({ ...finalState, position: { x: 90, y: 100 } })];
+	socket.receive(JSON.stringify({ type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", players: endedPlayers }));
+	expect(handler.getState()).toBe(GameState.Game_over);
+	expect(handler.getEntityManager().getEntities()[0].toSettings()).toEqual(endedPlayers[0]);
 })

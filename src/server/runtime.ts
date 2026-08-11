@@ -138,7 +138,7 @@ export class ServerRuntime {
 		if (!userId) return this.sendError(socket, "Login is required before surrendering");
 		const surrendered = this.games.surrenderGameForUser(userId);
 		if (!surrendered) return this.sendError(socket, "No active game for this user");
-		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", result: surrendered.result };
+		const ended: NetworkGameEnded = { type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", result: surrendered.result, players: surrendered.record.handler.getEntityManager().serialize() };
 		for (const user of surrendered.record.users) this.socketForUser(user)?.send(wrap(ended));
 		socket.send(wrap<NetworkSurrendered>({ type: NetworkMessageType.SURRENDERED, result: surrendered.result }));
 	}

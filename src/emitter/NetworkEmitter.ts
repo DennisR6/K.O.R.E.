@@ -86,6 +86,7 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		}
 		if (message.type === NetworkMessageType.GAME_ENDED) {
 			const ended = message as NetworkGameEnded;
+			if (ended.players) handler.getEntityManager().applySettings(ended.players);
 			if (ended.result) handler.setMatchResult(ended.result);
 			handler.setState(GameState.Game_over);
 		}
