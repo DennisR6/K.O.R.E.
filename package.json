@@ -11,7 +11,7 @@
     "mapbuilder:dev": "concurrently \"bun run server.ts\" \"bun run watch:ts\" \"bun run scripts/watchDebugMap.ts\" \"live-server . --port=4002 --open=/src-website/index.html\"",
     "watch:ts": "tsc --watch",
     "serve": "live-server",
-    "build": "tsc && cp index.html dist/ && cp -r public dist/",
+    "build": "rm -rf dist && mkdir -p dist && tsc --noEmit && bun build src/main.ts --outfile dist/main.js --target browser --format esm --sourcemap=none --minify-whitespace && cp index.html dist/ && cp -r public dist/",
     "examples:typecheck": "tsc -p examples/tsconfig.json --noEmit",
     "examples:verify": "bun test tests/sdk_examples_ci.test.ts",
     "sdk:build": "bun run scripts/buildSdkBundles.ts",

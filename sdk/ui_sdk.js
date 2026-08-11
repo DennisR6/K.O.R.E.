@@ -1,4 +1,3 @@
-// ../engine-repo/packages/roast/dist/index.js
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -1140,7 +1139,6 @@ function byInstance(a, b) {
 }
 var INTERRUPTIONS = new Set(["replace", "higher-priority", "ignore"]);
 
-// ../engine-repo/packages/drip/ui-sdk/index.ts
 class UiRuntime {
   settings;
   screens = new Map;

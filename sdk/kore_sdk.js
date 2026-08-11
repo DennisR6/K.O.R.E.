@@ -203,7 +203,6 @@ function isSettingMutable(entity) {
   return "setSetting" in entity && "addSetting" in entity && "removeSetting" in entity;
 }
 
-// ../engine-repo/packages/bean/dist/index.js
 var PHYSICS_CONTACT_SLOP = 0.05;
 var PHYSICS_CONTACT_PERCENT = 0.2;
 var MAX_CONTACT_SOLVER_ITERATIONS = 16;
@@ -1167,7 +1166,6 @@ class MetaEffect {
   }
 }
 
-// ../engine-repo/packages/roast/dist/index.js
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -3345,1148 +3343,6 @@ var presentation = {
   validateRuntime: validatePresentationRuntimeSettings
 };
 
-// ../engine-repo/packages/drip/dist/index.js
-function assertJsonValue2(value) {
-  if (value === null || typeof value === "string" || typeof value === "boolean")
-    return;
-  if (typeof value === "number") {
-    if (Number.isFinite(value))
-      return;
-    throw new Error("System settings must contain finite JSON numbers");
-  }
-  if (Array.isArray(value)) {
-    value.forEach(assertJsonValue2);
-    return;
-  }
-  if (typeof value === "object") {
-    for (const child of Object.values(value))
-      assertJsonValue2(child);
-    return;
-  }
-  throw new Error("System settings must contain JSON data only");
-}
-
-class EngineSystemRegistry2 {
-  definitions = new Map;
-  register(definition) {
-    validateDefinition3(definition);
-    if (this.definitions.has(definition.id))
-      throw new Error(`Duplicate system definition '${definition.id}'`);
-    this.definitions.set(definition.id, clone5(definition));
-    return this;
-  }
-  select(ids) {
-    const selected = new Set;
-    const add = (id) => {
-      if (selected.has(id))
-        return;
-      const definition = this.definitions.get(id);
-      if (!definition)
-        throw new Error(`Unknown system '${id}'`);
-      selected.add(id);
-      for (const capability of definition.requires ?? []) {
-        const providers = [...this.definitions.values()].filter((candidate) => provides2(candidate, capability));
-        const active = providers.filter((candidate) => selected.has(candidate.id));
-        if (active.length === 1)
-          continue;
-        if (active.length > 1 || providers.length !== 1)
-          throw new Error(`System '${id}' requires exactly one provider for '${capability}'`);
-        add(providers[0].id);
-      }
-    };
-    ids.forEach(add);
-    validateReplacements2([...selected].map((id) => this.definitions.get(id)));
-    const order = topologicalOrder2([...selected].map((id) => this.definitions.get(id)));
-    return {
-      schemaVersion: 1,
-      systems: order.map((definition) => ({ systemId: definition.id, schemaVersion: definition.schemaVersion ?? 1, state: clone5(definition.state ?? {}) })).sort((a, b) => a.systemId.localeCompare(b.systemId)),
-      systemOrder: order.map((definition) => definition.id)
-    };
-  }
-  validate(settings) {
-    if (!settings || typeof settings !== "object" || Array.isArray(settings))
-      throw new Error("Malformed framework settings");
-    const value = settings;
-    if (value.schemaVersion !== 1 || !Array.isArray(value.systems) || !Array.isArray(value.systemOrder))
-      throw new Error("Malformed framework settings");
-    const ids = new Set;
-    for (const system of value.systems) {
-      if (!system || typeof system.systemId !== "string" || system.schemaVersion !== 1 || !system.state || typeof system.state !== "object" || Array.isArray(system.state))
-        throw new Error("Malformed system settings");
-      if (!this.definitions.has(system.systemId) || ids.has(system.systemId))
-        throw new Error(`Unknown or duplicate system '${system.systemId}'`);
-      assertJsonValue2(system.state);
-      ids.add(system.systemId);
-    }
-    if (value.systemOrder.length !== ids.size || new Set(value.systemOrder).size !== ids.size || value.systemOrder.some((id) => !ids.has(id)))
-      throw new Error("Invalid framework system order");
-    const expected = this.select(value.systemOrder).systemOrder;
-    if (expected.join("|") !== value.systemOrder.join("|"))
-      throw new Error("Framework system order violates dependencies");
-  }
-  validateEffectSupport(settings, effects, catalog) {
-    this.validate(settings);
-    const selected = new Set(settings.systemOrder);
-    const definitions = [...selected].map((id) => this.definitions.get(id));
-    for (const effect of effects) {
-      catalog.validate(effect);
-      const typed = effect;
-      const definition = catalog.get(typed.type);
-      const accepted = definitions.some((candidate) => candidate.acceptsEffects?.includes(typed.type) === true);
-      if (!accepted)
-        throw new Error(`No selected system accepts effect '${typed.type}'`);
-      for (const capability of definition.requiresCapability ?? []) {
-        if (!definitions.some((candidate) => provides2(candidate, capability)))
-          throw new Error(`Effect '${typed.type}' requires missing capability '${capability}'`);
-      }
-    }
-  }
-}
-function validateDefinition3(definition) {
-  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
-    throw new Error("Invalid system definition ID");
-  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
-    throw new Error("Unsupported system definition version");
-  for (const list of [definition.provides, definition.requires, definition.before, definition.after, definition.replaces]) {
-    if (list !== undefined && (!Array.isArray(list) || list.some((value) => typeof value !== "string" || value.length === 0)))
-      throw new Error(`Invalid system definition '${definition.id}'`);
-  }
-  if (definition.acceptsEffects !== undefined && (!Array.isArray(definition.acceptsEffects) || definition.acceptsEffects.some((value) => typeof value !== "string" || value.length === 0)))
-    throw new Error(`Invalid accepted Effects for '${definition.id}'`);
-  assertJsonValue2(definition.state ?? {});
-}
-function provides2(definition, capability) {
-  return definition.id === capability || definition.provides?.includes(capability) === true;
-}
-function validateReplacements2(definitions) {
-  for (const definition of definitions) {
-    for (const capability of definition.replaces ?? []) {
-      const conflicts = definitions.filter((candidate) => candidate.id !== definition.id && provides2(candidate, capability) && !definition.replaces?.includes(capability) && !(definition.replaces?.includes(candidate.id) || candidate.replaces?.includes(definition.id)));
-      if (conflicts.length > 0)
-        throw new Error(`System '${definition.id}' conflicts with '${conflicts[0].id}' for '${capability}'`);
-    }
-  }
-  const capabilities = new Set(definitions.flatMap((definition) => [definition.id, ...definition.provides ?? []]));
-  for (const capability of capabilities) {
-    const providers = definitions.filter((definition) => provides2(definition, capability));
-    if (providers.length > 1 && !providers.some((definition) => definition.replaces?.includes(capability)))
-      throw new Error(`Multiple selected providers for '${capability}'`);
-  }
-}
-function topologicalOrder2(definitions) {
-  const byId = new Map(definitions.map((definition) => [definition.id, definition]));
-  const edges = new Map(definitions.map((definition) => [definition.id, new Set]));
-  for (const definition of definitions) {
-    for (const dependency of definition.after ?? [])
-      if (byId.has(dependency))
-        edges.get(dependency).add(definition.id);
-    for (const dependency of definition.before ?? [])
-      if (byId.has(dependency))
-        edges.get(definition.id).add(dependency);
-    for (const capability of definition.requires ?? []) {
-      const provider = definitions.find((candidate) => candidate.id !== definition.id && provides2(candidate, capability));
-      if (provider)
-        edges.get(provider.id).add(definition.id);
-    }
-  }
-  const incoming = new Map(definitions.map((definition) => [definition.id, 0]));
-  for (const targets of edges.values())
-    for (const target of targets)
-      incoming.set(target, incoming.get(target) + 1);
-  const available = definitions.filter((definition) => incoming.get(definition.id) === 0).map((definition) => definition.id).sort();
-  const result = [];
-  while (available.length) {
-    const id = available.shift();
-    result.push(byId.get(id));
-    for (const target of edges.get(id)) {
-      incoming.set(target, incoming.get(target) - 1);
-      if (incoming.get(target) === 0) {
-        available.push(target);
-        available.sort();
-      }
-    }
-  }
-  if (result.length !== definitions.length)
-    throw new Error("System dependencies contain a cycle");
-  return result;
-}
-function clone5(value) {
-  return structuredClone(value);
-}
-var COUNTER_SCHEMA_VERSION2 = 1;
-function createCounterState2(input) {
-  const state = {
-    schemaVersion: COUNTER_SCHEMA_VERSION2,
-    id: input.id,
-    value: input.value ?? 0
-  };
-  validateCounterState2(state);
-  return state;
-}
-function validateCounterState2(value) {
-  if (!isRecord3(value) || Object.keys(value).some((key) => !["schemaVersion", "id", "value"].includes(key)) || Object.keys(value).length !== 3) {
-    throw new Error("Malformed counter state");
-  }
-  if (value.schemaVersion !== COUNTER_SCHEMA_VERSION2)
-    throw new Error("Unsupported counter state schema version");
-  if (typeof value.id !== "string" || value.id.length === 0)
-    throw new Error("Counter state requires a non-empty id");
-  if (typeof value.value !== "number" || !Number.isFinite(value.value))
-    throw new Error("Counter state value must be finite");
-}
-function canonicalizeCounterStates2(value) {
-  if (!Array.isArray(value))
-    throw new Error("Counter states must be an array");
-  const counters = value.map((counter) => {
-    validateCounterState2(counter);
-    return { ...counter };
-  });
-  if (new Set(counters.map((counter) => counter.id)).size !== counters.length)
-    throw new Error("Counter state IDs must be unique");
-  return counters.sort((a, b) => a.id.localeCompare(b.id));
-}
-function isRecord3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-class EngineWorldBuilder2 {
-  id;
-  worldSize;
-  entities = [];
-  structures = [];
-  effects = [];
-  counters = [];
-  background;
-  framework;
-  constructor(id, worldSize) {
-    this.id = id;
-    this.worldSize = worldSize;
-    if (!id || !isPositiveVector2(worldSize))
-      throw new Error("A world requires an ID and positive finite worldSize");
-  }
-  setBackground(background) {
-    assertJsonValue2(background);
-    this.background = clone22(background);
-    return this;
-  }
-  addEntity(entity) {
-    assertJsonValue2(entity);
-    this.entities.push(clone22(entity));
-    return this;
-  }
-  addStructure(structure) {
-    assertJsonValue2(structure);
-    this.structures.push(clone22(structure));
-    return this;
-  }
-  addEffect(effect) {
-    assertJsonValue2(effect);
-    this.effects.push(clone22(effect));
-    return this;
-  }
-  addCounter(counter) {
-    this.counters.push(...canonicalizeCounterStates2([counter]));
-    return this;
-  }
-  useFramework(framework) {
-    this.framework = clone22(framework);
-    return this;
-  }
-  build() {
-    return { schemaVersion: 1, id: this.id, worldSize: clone22(this.worldSize), ...this.background === undefined ? {} : { background: clone22(this.background) }, entities: clone22(this.entities), structures: clone22(this.structures), effects: clone22(this.effects), counters: canonicalizeCounterStates2(this.counters), ...this.framework ? { framework: clone22(this.framework) } : {} };
-  }
-  buildJson(space = 2) {
-    return JSON.stringify(this.build(), null, space);
-  }
-}
-function isPositiveVector2(value) {
-  return Number.isFinite(value.x) && value.x > 0 && Number.isFinite(value.y) && value.y > 0;
-}
-function clone22(value) {
-  return structuredClone(value);
-}
-
-class EngineEffectRegistry2 {
-  definitions = new Map;
-  register(definition) {
-    validateDefinition22(definition);
-    if (this.definitions.has(definition.id))
-      throw new Error(`Duplicate effect definition '${definition.id}'`);
-    this.definitions.set(definition.id, { ...definition, ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {} });
-    return this;
-  }
-  get(id) {
-    return this.definitions.get(id);
-  }
-  validate(effect) {
-    if (!effect || typeof effect !== "object" || Array.isArray(effect))
-      throw new Error("Malformed effect settings");
-    const value = effect;
-    if (typeof value.type !== "string" || !this.definitions.has(value.type))
-      throw new Error(`Unknown effect '${String(value.type)}'`);
-    if (value.schemaVersion !== undefined && value.schemaVersion !== 1)
-      throw new Error(`Unsupported effect schema version for '${value.type}'`);
-    assertJsonValue2(value.typeValue);
-    this.definitions.get(value.type).validatePayload?.(value.typeValue);
-    if (value.target !== undefined)
-      assertJsonValue2(value.target);
-    if (value.target !== undefined)
-      this.definitions.get(value.type).validateTarget?.(value.target);
-  }
-  describe() {
-    return [...this.definitions.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
-      id: definition.id,
-      schemaVersion: definition.schemaVersion ?? 1,
-      ...definition.requiresCapability ? { requiresCapability: [...definition.requiresCapability] } : {},
-      ...definition.targetType ? { targetType: definition.targetType } : {},
-      ...definition.lifecycleCategory ? { lifecycleCategory: definition.lifecycleCategory } : {}
-    }));
-  }
-}
-function validateDefinition22(definition) {
-  if (!definition || typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
-    throw new Error("Invalid effect definition ID");
-  if (definition.schemaVersion !== undefined && definition.schemaVersion !== 1)
-    throw new Error("Unsupported effect definition version");
-  for (const value of [definition.targetType, definition.lifecycleCategory])
-    if (value !== undefined && (typeof value !== "string" || value.length === 0))
-      throw new Error(`Invalid effect definition '${definition.id}'`);
-  if (definition.requiresCapability !== undefined && (!Array.isArray(definition.requiresCapability) || definition.requiresCapability.some((value) => typeof value !== "string" || value.length === 0)))
-    throw new Error(`Invalid effect capabilities for '${definition.id}'`);
-  if (definition.validatePayload !== undefined && typeof definition.validatePayload !== "function")
-    throw new Error(`Invalid effect validator for '${definition.id}'`);
-  if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
-    throw new Error(`Invalid effect target validator for '${definition.id}'`);
-}
-function createTransformState2(input) {
-  const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
-  validateTransformState2(state);
-  return structuredClone(state);
-}
-function createMovementState2(input) {
-  const state = { schemaVersion: 1, velocity: { ...input.velocity }, angularVelocity: input.angularVelocity ?? 0, enabled: input.enabled ?? true };
-  validateMovementState2(state);
-  return structuredClone(state);
-}
-function validateTransformState2(value) {
-  const state = record8(value, "Transform state");
-  exactKeys8(state, ["schemaVersion", "position", "rotation"], "Transform state");
-  if (state.schemaVersion !== 1)
-    throw new Error("Unsupported Transform state schema version");
-  validateVector3(state.position, "Transform position");
-  finite4(state.rotation, "Transform rotation");
-}
-function validateMovementState2(value) {
-  const state = record8(value, "Movement state");
-  exactKeys8(state, ["schemaVersion", "velocity", "angularVelocity", "enabled"], "Movement state");
-  if (state.schemaVersion !== 1)
-    throw new Error("Unsupported Movement state schema version");
-  validateVector3(state.velocity, "Movement velocity");
-  finite4(state.angularVelocity, "Movement angularVelocity");
-  if (typeof state.enabled !== "boolean")
-    throw new Error("Movement enabled must be boolean");
-}
-function validateVector3(value, label) {
-  const vector = record8(value, label);
-  exactKeys8(vector, ["x", "y"], label);
-  finite4(vector.x, `${label} x`);
-  finite4(vector.y, `${label} y`);
-}
-function record8(value, label) {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error(`${label} must be an object`);
-  return value;
-}
-function exactKeys8(value, keys, label) {
-  const allowed = new Set(keys);
-  for (const key of Object.keys(value))
-    if (!allowed.has(key))
-      throw new Error(`${label} contains unknown field '${key}'`);
-  for (const key of keys)
-    if (!(key in value))
-      throw new Error(`${label} is missing '${key}'`);
-}
-function finite4(value, label) {
-  if (typeof value !== "number" || !Number.isFinite(value))
-    throw new Error(`${label} must be finite`);
-}
-var engine2 = {
-  createWorld(options) {
-    return new EngineWorldBuilder2(options.id, options.worldSize);
-  },
-  createSystemRegistry() {
-    return new EngineSystemRegistry2;
-  },
-  createEffectRegistry() {
-    return new EngineEffectRegistry2;
-  },
-  createTransformState: createTransformState2,
-  createMovementState: createMovementState2,
-  createCounterState: createCounterState2,
-  canonicalizeCounterStates: canonicalizeCounterStates2,
-  validateCounterState: validateCounterState2,
-  createEntity(settings) {
-    assertJsonValue2(settings);
-    return structuredClone(settings);
-  },
-  createStructure(settings) {
-    assertJsonValue2(settings);
-    return structuredClone(settings);
-  },
-  createEffect(settings) {
-    assertJsonValue2(settings);
-    return structuredClone(settings);
-  },
-  validate(value) {
-    assertJsonValue2(value);
-  },
-  buildJson(settings, space = 2) {
-    return JSON.stringify(settings, null, space);
-  }
-};
-var DEFAULT_BUSES2 = [
-  { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
-  { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
-  { id: "ambience", volume: 1, muted: false, maxVoices: 8, defaultPriority: 20, paused: false },
-  { id: "effects", volume: 1, muted: false, maxVoices: 32, defaultPriority: 10, paused: false },
-  { id: "ui", volume: 1, muted: false, maxVoices: 8, defaultPriority: 30, paused: false },
-  { id: "voice", volume: 1, muted: false, maxVoices: 8, defaultPriority: 40, paused: false }
-];
-
-class AudioEmitter2 {
-  soundSourceId;
-  pending = [];
-  constructor(soundSourceId) {
-    this.soundSourceId = soundSourceId;
-    validateId3(soundSourceId, "sound source ID");
-  }
-  emit(command) {
-    validateAudioCommand2(command);
-    if (command.sourceId !== this.soundSourceId)
-      throw new Error(`Audio command source '${command.sourceId}' does not match emitter '${this.soundSourceId}'`);
-    this.pending.push(clone32(command));
-  }
-  drainSoundCommands() {
-    const commands = this.pending.map(clone32);
-    this.pending = [];
-    return commands;
-  }
-}
-
-class SoundSystem2 {
-  runtimeId;
-  buses = new Map;
-  persistent = new Map;
-  pending = [];
-  output;
-  sequence;
-  constructor(runtimeId, settings = { buses: clone32(DEFAULT_BUSES2), persistentSources: [] }) {
-    this.runtimeId = runtimeId;
-    validateId3(runtimeId, "runtime ID");
-    for (const bus of settings.buses) {
-      validateBus2(bus);
-      if (this.buses.has(bus.id))
-        throw new Error(`Duplicate audio bus '${bus.id}'`);
-      this.buses.set(bus.id, clone32(bus));
-    }
-    if (!this.buses.has("master"))
-      this.buses.set("master", clone32(DEFAULT_BUSES2[0]));
-    for (const source of settings.persistentSources) {
-      validatePersistentSource2(source, this.buses);
-      if (this.persistent.has(source.sourceId))
-        throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
-      this.persistent.set(source.sourceId, clone32(source));
-    }
-    this.sequence = settings.sequence ?? 0;
-    this.output = emptyBatch2(runtimeId, this.sequence, this.diagnostics());
-  }
-  submit(command) {
-    validateAudioCommand2(command);
-    this.pending.push(clone32(command));
-  }
-  tick(candidates) {
-    const collected = [];
-    let ordinal = 0;
-    for (const candidate of candidates.filter(isSoundEmitter2).sort((a, b) => a.soundSourceId.localeCompare(b.soundSourceId))) {
-      for (const command of candidate.drainSoundCommands())
-        collected.push({ command, ordinal: ordinal++ });
-    }
-    for (const command of this.pending.splice(0))
-      collected.push({ command, ordinal: ordinal++ });
-    const result = this.aggregate(collected);
-    this.output = { schemaVersion: 1, runtimeId: this.runtimeId, sequence: ++this.sequence, commands: result.commands, diagnostics: { ...this.diagnostics(), ...result.diagnostics, sequence: this.sequence } };
-  }
-  drainOutput() {
-    const value = clone32(this.output);
-    this.output = emptyBatch2(this.runtimeId, this.sequence, this.diagnostics());
-    return value;
-  }
-  restorePersistentIntent() {
-    for (const source of [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)))
-      this.pending.push(clone32(source.command));
-  }
-  toSettings(framework = createDefaultAudioFramework2()) {
-    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, buses: [...this.buses.values()].sort(byBus2).map(clone32), persistentSources: [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)).map(clone32), framework: clone32(framework), sequence: this.sequence };
-    validateAudioSettings2(settings);
-    return settings;
-  }
-  getDiagnostics() {
-    return clone32(this.diagnostics());
-  }
-  aggregate(collected) {
-    let rejected = 0;
-    let deduplicated = 0;
-    let droppedByPriority = 0;
-    const valid = [];
-    for (const entry of collected) {
-      try {
-        validateAudioCommand2(entry.command);
-        validateBusReference2(entry.command, this.buses);
-        valid.push(entry);
-      } catch {
-        rejected++;
-      }
-    }
-    const dedupe = new Map;
-    const retained = [];
-    for (const entry of valid) {
-      const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
-      if (!key) {
-        retained.push(entry);
-        continue;
-      }
-      const prior = dedupe.get(key);
-      if (!prior || compareCommand2(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) {
-        if (prior)
-          deduplicated++;
-        dedupe.set(key, entry);
-      } else
-        deduplicated++;
-    }
-    retained.push(...dedupe.values());
-    const admitted = [];
-    for (const [busId, entries] of groupBy2(retained.filter((entry) => isVoiceCommand2(entry.command)), (entry) => commandBus2(entry.command)).entries()) {
-      const bus = this.buses.get(busId);
-      const ordered = entries.sort((a, b) => compareCommand2(a.command, b.command, a.ordinal, b.ordinal, this.buses));
-      admitted.push(...ordered.slice(0, bus.maxVoices));
-      droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
-    }
-    admitted.push(...retained.filter((entry) => !isVoiceCommand2(entry.command)));
-    for (const entry of admitted)
-      this.applyPersistent(entry.command);
-    const commands = admitted.sort((a, b) => comparePipeline2(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map((entry) => this.resolve(entry.command));
-    return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
-  }
-  resolve(command) {
-    return { ...clone32(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 };
-  }
-  applyPersistent(command) {
-    if (command.type === "startLoop" || command.type === "playMusic")
-      this.persistent.set(command.sourceId, { sourceId: command.sourceId, command: clone32(command) });
-    if (command.type === "stopSource")
-      this.persistent.delete(command.sourceId);
-    if (command.type === "stopMusic") {
-      for (const [id, source] of this.persistent)
-        if (source.command.type === "playMusic" && (!command.sourceId || command.sourceId === id))
-          this.persistent.delete(id);
-    }
-    if (command.type === "stopAll")
-      this.persistent.clear();
-    if (command.type === "setBusVolume") {
-      const bus = this.buses.get(command.bus);
-      bus.volume = command.volume;
-      if (command.muted !== undefined)
-        bus.muted = command.muted;
-    }
-    if (command.type === "pauseBus" || command.type === "resumeBus")
-      this.buses.get(command.bus).paused = command.type === "pauseBus";
-  }
-  diagnostics() {
-    return { collected: 0, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [...this.persistent.keys()].sort(), outputStatus: "ready", sequence: this.sequence };
-  }
-}
-
-class AudioRuntime2 {
-  system;
-  framework;
-  constructor(settings) {
-    validateAudioSettings2(settings);
-    this.framework = clone32(settings.framework);
-    this.system = new SoundSystem2(settings.runtimeId, settings);
-  }
-  tick(emitters) {
-    this.system.tick(emitters);
-  }
-  submit(command) {
-    this.system.submit(command);
-  }
-  drainOutput() {
-    return this.system.drainOutput();
-  }
-  restorePersistentIntent() {
-    this.system.restorePersistentIntent();
-  }
-  toSettings() {
-    return this.system.toSettings(this.framework);
-  }
-  getDiagnostics() {
-    return this.system.getDiagnostics();
-  }
-}
-
-class ApplicationAudioMixer2 {
-  applicationId;
-  buses = new Map;
-  pending = [];
-  activeMusic;
-  sequence;
-  constructor(applicationId, settings = { buses: clone32(DEFAULT_BUSES2) }) {
-    this.applicationId = applicationId;
-    validateId3(applicationId, "application ID");
-    for (const bus of settings.buses) {
-      validateBus2(bus);
-      if (this.buses.has(bus.id))
-        throw new Error(`Duplicate audio bus '${bus.id}'`);
-      this.buses.set(bus.id, clone32(bus));
-    }
-    if (!this.buses.has("master"))
-      this.buses.set("master", clone32(DEFAULT_BUSES2[0]));
-    if (settings.activeMusic) {
-      validateResolvedCommand2(settings.activeMusic);
-      this.activeMusic = clone32(settings.activeMusic);
-    }
-    this.sequence = settings.sequence ?? 0;
-  }
-  submit(batch) {
-    validateAudioBatch2(batch);
-    this.pending.push(clone32(batch));
-  }
-  flush() {
-    const submitted = this.pending.splice(0).flatMap((batch) => batch.commands);
-    const rejected = submitted.filter((command) => ("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus)).length;
-    const incoming = submitted.filter((command) => !(("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved2(a, b, this.buses));
-    const controls = incoming.filter((command) => !isVoiceCommand2(command));
-    for (const command of controls)
-      this.applyControl(command);
-    const voices = incoming.filter(isVoiceCommand2);
-    const music = voices.filter((command) => command.type === "playMusic");
-    const nonMusic = this.limitVoices(voices.filter((command) => command.type !== "playMusic"));
-    const previousMusic = this.activeMusic;
-    const selectedMusic = this.selectMusic(music);
-    const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId ? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 }] : [];
-    const commands = [...controls, ...replacedMusic, ...nonMusic, ...selectedMusic ? [selectedMusic] : []].sort((a, b) => compareResolved2(a, b, this.buses));
-    const diagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter((command) => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
-    return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map((command) => ({ ...command, sequence: this.sequence })), diagnostics };
-  }
-  toSettings() {
-    const settings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus2).map(clone32), ...this.activeMusic ? { activeMusic: clone32(this.activeMusic) } : {}, sequence: this.sequence };
-    validateApplicationAudioSettings2(settings);
-    return settings;
-  }
-  limitVoices(commands) {
-    const result = [];
-    for (const [busId, entries] of groupBy2(commands, (command) => commandBus2(command)).entries())
-      result.push(...entries.sort((a, b) => compareResolved2(a, b, this.buses)).slice(0, this.buses.get(busId).maxVoices));
-    return result;
-  }
-  selectMusic(candidates) {
-    const ordered = candidates.sort((a, b) => compareResolved2(a, b, this.buses));
-    for (const candidate of ordered) {
-      const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
-      const currentPriority = this.activeMusic ? resolvedPriority2(this.activeMusic, this.buses) : -Infinity;
-      const priority = resolvedPriority2(candidate, this.buses);
-      if (!this.activeMusic || policy === "replace-current" || policy === "replace-lower-or-equal" && priority >= currentPriority || policy === "keep-current" && !this.activeMusic) {
-        this.activeMusic = clone32(candidate);
-        return candidate;
-      }
-    }
-    return;
-  }
-  applyControl(command) {
-    if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`))
-      this.activeMusic = undefined;
-    if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)
-      this.activeMusic = undefined;
-    if (command.type === "stopAll")
-      this.activeMusic = undefined;
-    if (command.type === "setBusVolume") {
-      const bus = this.buses.get(command.bus);
-      if (bus) {
-        bus.volume = command.volume;
-        if (command.muted !== undefined)
-          bus.muted = command.muted;
-      }
-    }
-    if (command.type === "pauseBus" || command.type === "resumeBus") {
-      const bus = this.buses.get(command.bus);
-      if (bus)
-        bus.paused = command.type === "pauseBus";
-    }
-  }
-}
-function createDefaultAudioFramework2() {
-  const registry = new EngineSystemRegistry2().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
-  return registry.select(["audio.collect", "audio.mix"]);
-}
-function createAudioRuntime2(settings) {
-  return new AudioRuntime2(settings);
-}
-function createAudioSettings2(options) {
-  return { schemaVersion: 1, runtimeId: options.runtimeId, buses: clone32(options.buses ?? DEFAULT_BUSES2), persistentSources: clone32(options.persistentSources ?? []), framework: createDefaultAudioFramework2(), sequence: 0 };
-}
-function validateAudioSettings2(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio settings");
-  const settings = value;
-  if (settings.schemaVersion !== 1 || typeof settings.runtimeId !== "string" || !Array.isArray(settings.buses) || !Array.isArray(settings.persistentSources) || !settings.framework || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
-    throw new Error("Malformed audio settings");
-  const sequence = settings.sequence;
-  validateId3(settings.runtimeId, "runtime ID");
-  const buses = new Map;
-  for (const bus of settings.buses) {
-    validateBus2(bus);
-    if (buses.has(bus.id))
-      throw new Error(`Duplicate audio bus '${bus.id}'`);
-    buses.set(bus.id, bus);
-  }
-  if (!buses.has("master"))
-    throw new Error("Audio settings require a master bus");
-  const sources = new Set;
-  for (const source of settings.persistentSources) {
-    validatePersistentSource2(source, buses);
-    if (sources.has(source.sourceId))
-      throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
-    sources.add(source.sourceId);
-  }
-  const registry = new EngineSystemRegistry2().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
-  registry.validate(settings.framework);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue2(settings);
-}
-function validateApplicationAudioSettings2(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed application audio settings");
-  const settings = value;
-  if (settings.schemaVersion !== 1 || typeof settings.applicationId !== "string" || !Array.isArray(settings.buses) || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
-    throw new Error("Malformed application audio settings");
-  const sequence = settings.sequence;
-  validateId3(settings.applicationId, "application ID");
-  const ids = new Set;
-  for (const bus of settings.buses) {
-    validateBus2(bus);
-    if (ids.has(bus.id))
-      throw new Error(`Duplicate audio bus '${bus.id}'`);
-    ids.add(bus.id);
-  }
-  if (!ids.has("master"))
-    throw new Error("Application audio settings require a master bus");
-  if (settings.activeMusic)
-    validateResolvedCommand2(settings.activeMusic);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue2(settings);
-}
-function validateAudioCommand2(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio command");
-  const command = value;
-  if (typeof command.type !== "string" || !COMMAND_TYPES2.has(command.type))
-    throw new Error("Unknown audio command");
-  if (command.type !== "stopMusic")
-    validateId3(command.sourceId, "audio source ID");
-  else if (command.sourceId !== undefined)
-    validateId3(command.sourceId, "audio source ID");
-  if ("soundId" in command)
-    validateId3(command.soundId, "sound ID");
-  if ("bus" in command && command.bus !== undefined)
-    validateId3(command.bus, "audio bus ID");
-  if ("instanceId" in command && command.instanceId !== undefined)
-    validateId3(command.instanceId, "audio instance ID");
-  if ("dedupeKey" in command && command.dedupeKey !== undefined)
-    validateId3(command.dedupeKey, "audio dedupe key");
-  for (const name of ["volume", "pitch", "pan", "fadeInMs", "fadeOutMs", "priority"]) {
-    const numeric = command[name];
-    if (numeric !== undefined && (typeof numeric !== "number" || !Number.isFinite(numeric) || name === "volume" && (numeric < 0 || numeric > 1) || name === "pitch" && numeric <= 0 || name === "pan" && (numeric < -1 || numeric > 1) || (name === "fadeInMs" || name === "fadeOutMs") && numeric < 0 || name === "priority" && !Number.isInteger(numeric)))
-      throw new Error(`Invalid audio ${name}`);
-  }
-  if (command.type === "playMusic" && command.replacementPolicy !== undefined && !["replace-current", "replace-lower-or-equal", "keep-current"].includes(command.replacementPolicy))
-    throw new Error("Invalid music replacement policy");
-  assertJsonValue2(command);
-}
-function validateAudioBatch2(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio batch");
-  const batch = value;
-  if (batch.schemaVersion !== 1 || typeof batch.runtimeId !== "string" || typeof batch.sequence !== "number" || !Number.isSafeInteger(batch.sequence) || batch.sequence < 0 || !Array.isArray(batch.commands) || !batch.diagnostics)
-    throw new Error("Malformed audio batch");
-  const sequence = batch.sequence;
-  validateId3(batch.runtimeId, "runtime ID");
-  for (const command of batch.commands)
-    validateResolvedCommand2(command);
-  if (sequence < 0)
-    throw new Error("Invalid audio sequence");
-  assertJsonValue2(batch);
-}
-var audio2 = {
-  engine: { createSystemRegistry: engine2.createSystemRegistry },
-  createSettings: createAudioSettings2,
-  createRuntime: createAudioRuntime2,
-  createApplicationMixer(applicationId, settings) {
-    return new ApplicationAudioMixer2(applicationId, settings);
-  },
-  createDefaultFramework: createDefaultAudioFramework2,
-  emitter(sourceId) {
-    return new AudioEmitter2(sourceId);
-  },
-  bus(settings) {
-    validateBus2(settings);
-    return clone32(settings);
-  },
-  command: {
-    play(settings) {
-      return { type: "playSound", ...clone32(settings) };
-    },
-    loop(settings) {
-      return { type: "startLoop", ...clone32(settings) };
-    },
-    music(settings) {
-      return { type: "playMusic", ...clone32(settings) };
-    },
-    stopSource(settings) {
-      return { type: "stopSource", ...clone32(settings) };
-    },
-    stopInstance(settings) {
-      return { type: "stopInstance", ...clone32(settings) };
-    },
-    stopMusic(settings = {}) {
-      return { type: "stopMusic", ...clone32(settings) };
-    },
-    setBusVolume(settings) {
-      return { type: "setBusVolume", ...clone32(settings) };
-    },
-    pauseBus(settings) {
-      return { type: "pauseBus", ...clone32(settings) };
-    },
-    resumeBus(settings) {
-      return { type: "resumeBus", ...clone32(settings) };
-    },
-    stopAll(settings) {
-      return { type: "stopAll", ...clone32(settings) };
-    }
-  },
-  validate: validateAudioSettings2,
-  validateCommand: validateAudioCommand2,
-  validateBatch: validateAudioBatch2
-};
-var COMMAND_TYPES2 = new Set(["playSound", "startLoop", "playMusic", "stopSource", "stopInstance", "stopMusic", "pauseBus", "resumeBus", "setBusVolume", "stopAll"]);
-function isSoundEmitter2(value) {
-  return !!value && typeof value === "object" && typeof value.soundSourceId === "string" && typeof value.drainSoundCommands === "function";
-}
-function validateId3(value, name) {
-  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
-    throw new Error(`Invalid ${name}`);
-}
-function validateBus2(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed audio bus");
-  const bus = value;
-  validateId3(bus.id, "audio bus ID");
-  const volume = bus.volume;
-  const maxVoices = bus.maxVoices;
-  if (typeof volume !== "number" || !Number.isFinite(volume) || volume < 0 || volume > 1 || typeof bus.muted !== "boolean" || typeof maxVoices !== "number" || !Number.isSafeInteger(maxVoices) || maxVoices < 1 || !Number.isSafeInteger(bus.defaultPriority) || typeof bus.paused !== "boolean")
-    throw new Error(`Invalid audio bus '${bus.id}'`);
-  assertJsonValue2(bus);
-}
-function validatePersistentSource2(value, buses) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("Malformed persistent audio source");
-  const source = value;
-  validateId3(source.sourceId, "persistent source ID");
-  validateAudioCommand2(source.command);
-  if (source.command.type !== "startLoop" && source.command.type !== "playMusic")
-    throw new Error("Persistent audio source must be a loop or music command");
-  if (source.command.sourceId !== source.sourceId)
-    throw new Error("Persistent audio source ID mismatch");
-  validateBusReference2(source.command, buses);
-}
-function validateBusReference2(command, buses) {
-  if ("bus" in command && command.bus !== undefined && !buses.has(command.bus))
-    throw new Error(`Unknown audio bus '${command.bus}'`);
-}
-function validateResolvedCommand2(value) {
-  validateAudioCommand2(value);
-  const command = value;
-  validateId3(command.runtimeId, "runtime ID");
-  validateId3(command.globalSourceId, "global audio source ID");
-  const sequence = command.sequence;
-  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0)
-    throw new Error("Invalid audio sequence");
-}
-function commandBus2(command) {
-  return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects";
-}
-function isVoiceCommand2(command) {
-  return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic";
-}
-function resolvedPriority2(command, buses) {
-  return command.priority ?? buses.get(commandBus2(command))?.defaultPriority ?? 0;
-}
-function compareCommand2(a, b, aOrdinal, bOrdinal, buses) {
-  return resolvedPriority2(b, buses) - resolvedPriority2(a, buses) || commandBus2(a).localeCompare(commandBus2(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal;
-}
-function pipelineOrder2(command) {
-  if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume")
-    return 0;
-  if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic")
-    return 1;
-  if (command.type === "playMusic")
-    return 2;
-  if (command.type === "startLoop")
-    return 3;
-  return 4;
-}
-function comparePipeline2(a, b, aOrdinal, bOrdinal, buses) {
-  return pipelineOrder2(a) - pipelineOrder2(b) || compareCommand2(a, b, aOrdinal, bOrdinal, buses);
-}
-function compareResolved2(a, b, buses) {
-  return pipelineOrder2(a) - pipelineOrder2(b) || resolvedPriority2(b, buses) - resolvedPriority2(a, buses) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence;
-}
-function byBus2(a, b) {
-  return a.id.localeCompare(b.id);
-}
-function emptyBatch2(runtimeId, sequence, diagnostics) {
-  return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } };
-}
-function groupBy2(items, key) {
-  const grouped = new Map;
-  for (const item of items) {
-    const id = key(item);
-    const values = grouped.get(id) ?? [];
-    values.push(item);
-    grouped.set(id, values);
-  }
-  return grouped;
-}
-function clone32(value) {
-  return structuredClone(value);
-}
-function validateAnimationSettings2(value) {
-  if (!isRecord22(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger2(value.durationTicks) || !integer2(value.priority) || !INTERRUPTIONS2.has(value.interruption) || !Array.isArray(value.tracks))
-    throw new Error("Malformed animation settings");
-  assertKeys2(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
-  validateId22(value.id, "animation ID");
-  validateId22(value.channel, "animation channel");
-  const ids = new Set;
-  for (const track of value.tracks) {
-    if (!isRecord22(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
-      throw new Error("Malformed animation track");
-    assertKeys2(track, ["id", "keyframes"], "animation track");
-    validateId22(track.id, "animation track ID");
-    if (ids.has(track.id))
-      throw new Error(`Duplicate animation track '${track.id}'`);
-    ids.add(track.id);
-    let previous = -1;
-    for (const keyframe of track.keyframes) {
-      if (!isRecord22(keyframe) || !nonNegativeInteger2(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
-        throw new Error("Invalid animation keyframe");
-      assertKeys2(keyframe, ["tick", "value"], "animation keyframe");
-      assertJsonValue2(keyframe.value);
-      previous = keyframe.tick;
-    }
-    if (track.keyframes.length === 0)
-      throw new Error("Animation tracks require keyframes");
-  }
-  assertJsonValue2(value);
-}
-function validatePresentationEvent2(value) {
-  if (!isRecord22(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
-    throw new Error("Malformed presentation event");
-  assertKeys2(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
-  validateId22(value.eventId, "presentation event ID");
-  if (value.channel !== undefined)
-    validateId22(value.channel, "presentation channel");
-  if (value.animationId !== undefined)
-    validateId22(value.animationId, "animation ID");
-  if (value.instanceId !== undefined)
-    validateId22(value.instanceId, "presentation instance ID");
-  if (value.priority !== undefined && !integer2(value.priority))
-    throw new Error("Invalid presentation priority");
-  if (value.type === "play" && value.animationId === undefined)
-    throw new Error("Play events require an animation ID");
-  if (value.type === "cancel" && value.instanceId === undefined && value.channel === undefined)
-    throw new Error("Cancel events require an instance or channel");
-  if (value.payload !== undefined)
-    assertJsonValue2(value.payload);
-  assertJsonValue2(value);
-}
-function validatePresentationRuntimeSettings2(value) {
-  if (!isRecord22(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger2(value.tick) || !nonNegativeInteger2(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
-    throw new Error("Malformed presentation runtime settings");
-  assertKeys2(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
-  validateId22(value.runtimeId, "presentation runtime ID");
-  for (const active of value.active) {
-    if (!isRecord22(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger2(active.startTick) || !integer2(active.priority))
-      throw new Error("Malformed active animation");
-    assertKeys2(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
-    validateId22(active.instanceId, "presentation instance ID");
-    validateId22(active.animationId, "animation ID");
-    validateId22(active.channel, "presentation channel");
-  }
-  for (const event of value.pending)
-    validatePresentationEvent2(event);
-  assertJsonValue2(value);
-}
-
-class PresentationRuntime2 {
-  runtimeId;
-  animations = new Map;
-  active = new Map;
-  pending = [];
-  tickNumber;
-  sequence;
-  lastFrame;
-  constructor(runtimeId, settings) {
-    this.runtimeId = runtimeId;
-    validateId22(runtimeId, "presentation runtime ID");
-    for (const animation of settings.animations) {
-      validateAnimationSettings2(animation);
-      if (this.animations.has(animation.id))
-        throw new Error(`Duplicate animation '${animation.id}'`);
-      this.animations.set(animation.id, clone42(animation));
-    }
-    this.tickNumber = settings.tick ?? 0;
-    this.sequence = settings.sequence ?? 0;
-    for (const item of settings.active ?? [])
-      this.restoreActive(item);
-    for (const event of settings.pending ?? []) {
-      validatePresentationEvent2(event);
-      this.pending.push(clone42(event));
-    }
-    this.lastFrame = this.frame([]);
-  }
-  emit(event) {
-    validatePresentationEvent2(event);
-    this.pending.push(clone42(event));
-  }
-  tick(ticks = 1) {
-    if (!nonNegativeInteger2(ticks))
-      throw new Error("Presentation tick count must be a non-negative integer");
-    const records = [];
-    for (let step = 0;step < ticks; step++) {
-      this.tickNumber++;
-      this.processPending(records);
-      this.expire(records);
-    }
-    this.lastFrame = this.frame(records);
-    return clone42(this.lastFrame);
-  }
-  project() {
-    return clone42(this.frame([]));
-  }
-  toSettings() {
-    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [...this.active.values()].sort(byInstance2).map(clone42), pending: this.pending.map(clone42) };
-    validatePresentationRuntimeSettings2(settings);
-    return settings;
-  }
-  processPending(records) {
-    const pending = this.pending.splice(0).map((event, ordinal) => ({ event, ordinal })).sort((a, b) => this.eventPriority(b.event) - this.eventPriority(a.event) || a.ordinal - b.ordinal || a.event.eventId.localeCompare(b.event.eventId));
-    for (const { event } of pending) {
-      if (event.type === "cancel") {
-        for (const item2 of [...this.active.values()])
-          if (event.instanceId && item2.instanceId === event.instanceId || event.channel && item2.channel === event.channel)
-            this.cancel(item2, records, event.eventId);
-        continue;
-      }
-      const animation = this.animations.get(event.animationId);
-      if (!animation)
-        throw new Error(`Unknown animation '${event.animationId}'`);
-      const current = this.active.get(animation.channel);
-      if (current && (animation.interruption === "ignore" || animation.interruption === "higher-priority" && animation.priority <= current.priority))
-        continue;
-      if (current)
-        this.cancel(current, records, event.eventId);
-      const item = { instanceId: event.instanceId ?? `${this.runtimeId}:${event.eventId}`, animationId: animation.id, channel: animation.channel, startTick: this.tickNumber, priority: animation.priority };
-      this.active.set(animation.channel, item);
-      records.push(this.record({ ...event, type: "play", animationId: animation.id, instanceId: item.instanceId }, this.sequence++));
-    }
-  }
-  eventPriority(event) {
-    return event.priority ?? (event.type === "play" ? this.animations.get(event.animationId)?.priority ?? 0 : 0);
-  }
-  cancel(item, records, eventId) {
-    this.active.delete(item.channel);
-    records.push(this.record({ schemaVersion: 1, type: "cancel", eventId, instanceId: item.instanceId, channel: item.channel }, this.sequence++));
-  }
-  expire(records) {
-    for (const item of [...this.active.values()]) {
-      const animation = this.animations.get(item.animationId);
-      if (this.tickNumber - item.startTick >= animation.durationTicks)
-        this.cancel(item, records, `${item.instanceId}:complete`);
-    }
-  }
-  record(event, sequence) {
-    return { ...clone42(event), sequence, tick: this.tickNumber };
-  }
-  frame(events) {
-    return { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, events: events.map(clone42), animations: [...this.active.values()].sort(byInstance2).map((item) => this.projectAnimation(item)) };
-  }
-  projectAnimation(item) {
-    const animation = this.animations.get(item.animationId);
-    const localTick = Math.max(0, this.tickNumber - item.startTick);
-    const values = {};
-    for (const track of animation.tracks)
-      values[track.id] = sample2(track.keyframes, localTick);
-    return { instanceId: item.instanceId, animationId: item.animationId, channel: item.channel, priority: item.priority, localTick, progress: Math.min(1, localTick / animation.durationTicks), values };
-  }
-  restoreActive(item) {
-    validatePresentationRuntimeSettings2({ schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [item], pending: [] });
-    if (this.active.has(item.channel))
-      throw new Error(`Duplicate active animation channel '${item.channel}'`);
-    if (!this.animations.has(item.animationId))
-      throw new Error(`Unknown animation '${item.animationId}'`);
-    this.active.set(item.channel, clone42(item));
-  }
-}
-function sample2(keyframes, tick) {
-  let result = keyframes[0].value;
-  for (const keyframe of keyframes) {
-    if (keyframe.tick > tick)
-      break;
-    result = keyframe.value;
-  }
-  return clone42(result);
-}
-function validateId22(value, name) {
-  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
-    throw new Error(`Invalid ${name}`);
-}
-function assertKeys2(value, allowed, name) {
-  const keys = new Set(allowed);
-  for (const key of Object.keys(value))
-    if (!keys.has(key))
-      throw new Error(`Unknown ${name} field '${key}'`);
-}
-function isRecord22(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-function integer2(value) {
-  return typeof value === "number" && Number.isSafeInteger(value);
-}
-function nonNegativeInteger2(value) {
-  return integer2(value) && value >= 0;
-}
-function positiveInteger2(value) {
-  return integer2(value) && value > 0;
-}
-function clone42(value) {
-  return structuredClone(value);
-}
-function byInstance2(a, b) {
-  return a.channel.localeCompare(b.channel) || a.instanceId.localeCompare(b.instanceId);
-}
-var INTERRUPTIONS2 = new Set(["replace", "higher-priority", "ignore"]);
-
 class UiRuntime {
   settings;
   screens = new Map;
@@ -4504,7 +3360,7 @@ class UiRuntime {
     this.activeScreen = settings.activeScreen;
     this.history = [...settings.history];
     for (const screen of settings.screens)
-      this.screens.set(screen.id, { settings: clone52(screen), elements: screen.elements.map((element) => createNode(element)) });
+      this.screens.set(screen.id, { settings: clone5(screen), elements: screen.elements.map((element) => createNode(element)) });
     this.systems = settings.framework.systemOrder.map(createUiSystem);
     this.layout();
   }
@@ -4520,8 +3376,8 @@ class UiRuntime {
       system.draw?.(this, renderer);
   }
   toSettings() {
-    const screens = [...this.screens.values()].map((screen) => ({ ...clone52(screen.settings), elements: screen.elements.map((node) => node.toSettings()) }));
-    return { ...clone52(this.settings), activeScreen: this.activeScreen, history: [...this.history], screens };
+    const screens = [...this.screens.values()].map((screen) => ({ ...clone5(screen.settings), elements: screen.elements.map((node) => node.toSettings()) }));
+    return { ...clone5(this.settings), activeScreen: this.activeScreen, history: [...this.history], screens };
   }
   getActiveElements() {
     return this.screens.get(this.activeScreen).elements;
@@ -4544,7 +3400,7 @@ class UiRuntime {
   }
   dispatch(action) {
     validateAction(action, new Set(this.screens.keys()), "action", true);
-    this.applyAction(clone52(action));
+    this.applyAction(clone5(action));
   }
   setElementVisible(id, visible) {
     const node = this.findNodeAnywhere(id);
@@ -4560,7 +3416,7 @@ class UiRuntime {
     const element = this.findElementAnywhere(id);
     if (!element)
       return false;
-    element.action = action ? clone52(action) : undefined;
+    element.action = action ? clone5(action) : undefined;
     return true;
   }
   setElementEnabled(id, enabled) {
@@ -4583,11 +3439,11 @@ class UiRuntime {
     const element = this.findElementAnywhere(id);
     if (!element || element.kind !== "button")
       return false;
-    element.component = component ? clone52(component) : undefined;
+    element.component = component ? clone5(component) : undefined;
     return true;
   }
   drainCommands() {
-    const commands = this.emitted.map(clone52);
+    const commands = this.emitted.map(clone5);
     this.emitted = [];
     return commands;
   }
@@ -4681,7 +3537,7 @@ class UiRuntime {
     const found = this.findNode(this.pendingPress);
     if (!found || !found.enabled || !found.visible || !found.action)
       return;
-    this.pendingActions.push(clone52(found.action));
+    this.pendingActions.push(clone5(found.action));
   }
   navigate() {
     for (const action of this.pendingActions.splice(0))
@@ -4745,7 +3601,7 @@ class UiRuntime {
       return;
     }
     if (action.type === "emit")
-      this.emitted.push({ command: action.command, ...action.payload === undefined ? {} : { payload: clone52(action.payload) } });
+      this.emitted.push({ command: action.command, ...action.payload === undefined ? {} : { payload: clone5(action.payload) } });
   }
   resolveLayout(parent, layout, nodes, parentVisible, parentEnabled) {
     const padding = normalizePadding(layout.padding);
@@ -4911,7 +3767,7 @@ class UiElement {
   resolvedStyle;
   constructor(settings, parentStyle) {
     this.settings = settings;
-    this.localRect = clone52(settings.rect);
+    this.localRect = clone5(settings.rect);
     this.visible = settings.visible ?? true;
     this.enabled = settings.enabled ?? true;
     this.focused = false;
@@ -4974,7 +3830,7 @@ class UiElement {
     this.text = this.value;
   }
   toSettings() {
-    const base = { ...clone52(this.settings), rect: clone52(this.localRect), visible: this.visible, enabled: this.enabled };
+    const base = { ...clone5(this.settings), rect: clone5(this.localRect), visible: this.visible, enabled: this.enabled };
     if (this.kind !== "image")
       base.text = this.text;
     return this.kind === "textInput" ? { ...base, value: this.value } : base;
@@ -4991,10 +3847,10 @@ class UiContainer {
   resolvedStyle;
   constructor(settings, parentStyle) {
     this.settings = settings;
-    this.localRect = clone52(settings.rect);
+    this.localRect = clone5(settings.rect);
     this.visible = settings.visible ?? true;
     this.enabled = settings.enabled ?? true;
-    this.layout = clone52(settings.layout);
+    this.layout = clone5(settings.layout);
     this.resolvedStyle = settings.style ?? (settings.inheritStyle ? parentStyle : undefined);
     this.elements = settings.elements.map((child) => createNode(child, this.resolvedStyle));
   }
@@ -5017,13 +3873,13 @@ class UiContainer {
     return this.settings.groupHover;
   }
   get action() {
-    return this.settings.action ? clone52(this.settings.action) : undefined;
+    return this.settings.action ? clone5(this.settings.action) : undefined;
   }
   containsPoint(point) {
     return point.x >= this.rect.x && point.x <= this.rect.x + this.rect.width && point.y >= this.rect.y && point.y <= this.rect.y + this.rect.height;
   }
   toSettings() {
-    return { ...clone52(this.settings), rect: clone52(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map((node) => node.toSettings()) };
+    return { ...clone5(this.settings), rect: clone5(this.localRect), visible: this.visible, enabled: this.enabled, elements: this.elements.map((node) => node.toSettings()) };
   }
 }
 var UI_SYSTEMS = {
@@ -5044,7 +3900,7 @@ function createUiSystem(id) {
   return system;
 }
 function createDefaultUiFramework() {
-  const registry = new EngineSystemRegistry2().register({ id: "ui.visibility", provides: ["ui.visibility"] }).register({ id: "ui.layout", provides: ["ui.layout"], after: ["ui.visibility"] }).register({ id: "ui.input.pointer", provides: ["ui.pointer"], after: ["ui.layout"] }).register({ id: "ui.focus", requires: ["ui.pointer"], provides: ["ui.focus"], after: ["ui.input.pointer"] }).register({ id: "ui.input.keyboard", provides: ["ui.keyboard"], after: ["ui.focus"] }).register({ id: "ui.text-input", requires: ["ui.focus", "ui.keyboard"], after: ["ui.input.keyboard"] }).register({ id: "ui.button", requires: ["ui.pointer"], after: ["ui.focus", "ui.text-input"] }).register({ id: "ui.navigation", after: ["ui.button", "ui.text-input"] }).register({ id: "ui.render", requires: ["ui.layout"], after: ["ui.navigation"] });
+  const registry = new EngineSystemRegistry().register({ id: "ui.visibility", provides: ["ui.visibility"] }).register({ id: "ui.layout", provides: ["ui.layout"], after: ["ui.visibility"] }).register({ id: "ui.input.pointer", provides: ["ui.pointer"], after: ["ui.layout"] }).register({ id: "ui.focus", requires: ["ui.pointer"], provides: ["ui.focus"], after: ["ui.input.pointer"] }).register({ id: "ui.input.keyboard", provides: ["ui.keyboard"], after: ["ui.focus"] }).register({ id: "ui.text-input", requires: ["ui.focus", "ui.keyboard"], after: ["ui.input.keyboard"] }).register({ id: "ui.button", requires: ["ui.pointer"], after: ["ui.focus", "ui.text-input"] }).register({ id: "ui.navigation", after: ["ui.button", "ui.text-input"] }).register({ id: "ui.render", requires: ["ui.layout"], after: ["ui.navigation"] });
   return registry.select(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
 }
 
@@ -5060,15 +3916,15 @@ class UiMenuBuilder {
       throw new Error("A UI menu requires an ID and positive size");
   }
   addScreen(screen) {
-    this.screens.push(clone52(screen));
+    this.screens.push(clone5(screen));
     return this;
   }
   useFramework(framework) {
-    this.framework = clone52(framework);
+    this.framework = clone5(framework);
     return this;
   }
   build() {
-    const settings = { schemaVersion: 1, id: this.id, size: clone52(this.size), activeScreen: this.screens[0]?.id ?? "", history: [], screens: clone52(this.screens), framework: clone52(this.framework) };
+    const settings = { schemaVersion: 1, id: this.id, size: clone5(this.size), activeScreen: this.screens[0]?.id ?? "", history: [], screens: clone5(this.screens), framework: clone5(this.framework) };
     validateUiSettings(settings);
     return settings;
   }
@@ -5080,7 +3936,7 @@ class UiMenuBuilder {
   }
 }
 function createNode(settings, parentStyle) {
-  const cloned = clone52(settings);
+  const cloned = clone5(settings);
   return cloned.kind === "container" ? new UiContainer(cloned, parentStyle) : new UiElement(cloned, parentStyle);
 }
 function isContainerNode(node) {
@@ -5098,10 +3954,10 @@ function isTextInputElement(value) {
 function positive(value) {
   return Number.isFinite(value) && value > 0;
 }
-function isRecord32(value) {
+function isRecord3(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function clone52(value) {
+function clone5(value) {
   return structuredClone(value);
 }
 function range(count, compute) {
@@ -5172,12 +4028,12 @@ function validateUiSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     throw new Error("Invalid UI settings");
   const value = settings;
-  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord32(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
+  if (value.schemaVersion !== 1 || typeof value.id !== "string" || !value.size || !isRecord3(value.size) || !positive(Number(value.size.width)) || !positive(Number(value.size.height)) || !Array.isArray(value.screens) || typeof value.activeScreen !== "string" || !Array.isArray(value.history))
     throw new Error("Invalid UI settings");
   const screenIds = new Set;
   const seenScreens = new WeakSet;
   for (const screen of value.screens) {
-    if (!isRecord32(screen))
+    if (!isRecord3(screen))
       throw new Error("Invalid UI screen");
     if (typeof screen.id !== "string" || screen.id.length === 0 || screenIds.has(screen.id))
       throw new Error("Invalid UI screen");
@@ -5206,15 +4062,15 @@ function validateUiSettings(settings) {
   if (value.history.some((id) => typeof id !== "string" || !screenIds.has(id)))
     throw new Error("UI navigation history references an unknown screen");
   if (value.theme !== undefined)
-    assertJsonValue2(value.theme);
-  if (!value.framework || !isRecord32(value.framework))
+    assertJsonValue(value.theme);
+  if (!value.framework || !isRecord3(value.framework))
     throw new Error("UI framework is required");
   const expected = createDefaultUiFramework().systemOrder;
   if (!Array.isArray(value.framework.systemOrder) || value.framework.systemOrder.join("|") !== expected.join("|"))
     throw new Error("Unsupported UI framework order");
 }
 function validateElement(value, ids, screenIds, path, ancestors, requireScreenTargets) {
-  if (!isRecord32(value))
+  if (!isRecord3(value))
     throw invalidElement(path, "malformed element");
   if (ancestors.has(value))
     throw invalidElement(path, "cyclic element tree");
@@ -5279,11 +4135,11 @@ function validateElement(value, ids, screenIds, path, ancestors, requireScreenTa
   }
 }
 function validateUiComponent(value, path = "component") {
-  if (!isRecord32(value) || value.type !== "image" || typeof value.source !== "string" || value.source.length === 0 || Object.keys(value).some((key) => key !== "type" && key !== "source"))
+  if (!isRecord3(value) || value.type !== "image" || typeof value.source !== "string" || value.source.length === 0 || Object.keys(value).some((key) => key !== "type" && key !== "source"))
     throw new Error(`Invalid ${path}`);
 }
 function validateLayout(value, path) {
-  if (!isRecord32(value))
+  if (!isRecord3(value))
     throw invalidElement(path, "invalid layout");
   if (typeof value.type !== "string" || !LAYOUT_TYPES.has(value.type))
     throw invalidElement(path, "invalid layout type");
@@ -5307,7 +4163,7 @@ function validatePadding(value, path) {
       return;
     throw invalidElement(path, "invalid padding");
   }
-  if (!isRecord32(value))
+  if (!isRecord3(value))
     throw invalidElement(path, "invalid padding");
   for (const key of Object.keys(value))
     if (!PADDING_KEYS.has(key))
@@ -5317,7 +4173,7 @@ function validatePadding(value, path) {
       throw invalidElement(path, "invalid padding");
 }
 function validateRect(value, path) {
-  if (!isRecord32(value))
+  if (!isRecord3(value))
     throw invalidElement(path, "invalid rect");
   for (const key of Object.keys(value))
     if (!RECT_KEYS.has(key))
@@ -5339,7 +4195,7 @@ function validateAction(action, screenIds, path, requireScreenTargets) {
     throw invalidElement(path, "Invalid UI enabled action");
   if (action.type === "setText" && (typeof action.target !== "string" || typeof action.text !== "string"))
     throw invalidElement(path, "Invalid UI text action");
-  assertJsonValue2(action);
+  assertJsonValue(action);
 }
 function invalidElement(path, reason) {
   return new Error(`Invalid UI element in ${path}: ${reason}`);
@@ -5354,8 +4210,8 @@ var ui = {
   createDefaultFramework: createDefaultUiFramework,
   validate: validateUiSettings,
   screen(settings) {
-    const input = clone52(settings);
-    const result = { id: input.id, elements: input.elements.map((element) => clone52(element)) };
+    const input = clone5(settings);
+    const result = { id: input.id, elements: input.elements.map((element) => clone5(element)) };
     if (input.layout !== undefined)
       result.layout = normalizeLayout(input.layout);
     if (input.visible !== undefined)
@@ -5365,16 +4221,16 @@ var ui = {
   button(settings) {
     if (settings.component)
       validateUiComponent(settings.component);
-    return { ...clone52(settings), kind: "button", focusable: settings.focusable ?? true };
+    return { ...clone5(settings), kind: "button", focusable: settings.focusable ?? true };
   },
   text(settings) {
-    return { ...clone52(settings), kind: "text", focusable: false };
+    return { ...clone5(settings), kind: "text", focusable: false };
   },
   textInput(settings) {
-    return { ...clone52(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text };
+    return { ...clone5(settings), kind: "textInput", focusable: true, value: settings.value ?? settings.text };
   },
   image(settings) {
-    return { ...clone52(settings), kind: "image" };
+    return { ...clone5(settings), kind: "image" };
   },
   component: {
     image(source) {
@@ -5386,18 +4242,18 @@ var ui = {
   container(settings) {
     let input;
     try {
-      input = clone52(settings);
+      input = clone5(settings);
     } catch (error) {
       throw new Error(`UI container input must be acyclic JSON data: ${error instanceof Error ? error.message : String(error)}`);
     }
     const result = {
       kind: "container",
       id: input.id,
-      rect: clone52(input.rect),
+      rect: clone5(input.rect),
       layout: normalizeLayout(input.layout ?? { type: "absolute" }),
       elements: [
         ...input.text === undefined ? [] : [{ kind: "text", id: `${input.id}__text`, text: input.text, rect: { x: 0, y: 0, width: input.rect.width, height: input.rect.height }, focusable: false }],
-        ...input.elements.map((element) => clone52(element))
+        ...input.elements.map((element) => clone5(element))
       ]
     };
     if (input.visible !== undefined)
@@ -5413,7 +4269,7 @@ var ui = {
     if (input.text !== undefined)
       result.text = input.text;
     if (input.action !== undefined)
-      result.action = clone52(input.action);
+      result.action = clone5(input.action);
     const ids = new Set;
     validateElement(result, ids, new Set, `container "${input.id}"`, new WeakSet, false);
     return result;
@@ -7459,19 +6315,19 @@ function validateEnvironmentalMechanics(value) {
       case "force-field":
         break;
       case "timed-hazard":
-        if (!positiveInteger3(mechanic.startTick) || !positiveInteger3(mechanic.intervalTicks) || !positiveInteger3(mechanic.durationTicks))
+        if (!positiveInteger2(mechanic.startTick) || !positiveInteger2(mechanic.intervalTicks) || !positiveInteger2(mechanic.durationTicks))
           throw new Error("Invalid timed hazard timing");
         break;
       case "triggered-zone":
-        if (!isZone(mechanic.triggerZone) || !positiveInteger3(mechanic.durationTicks) || mechanic.cooldownTicks !== undefined && !positiveInteger3(mechanic.cooldownTicks))
+        if (!isZone(mechanic.triggerZone) || !positiveInteger2(mechanic.durationTicks) || mechanic.cooldownTicks !== undefined && !positiveInteger2(mechanic.cooldownTicks))
           throw new Error("Invalid triggered zone timing");
         break;
       case "moving-structure":
-        if (!isVector3(mechanic.to) || !positiveInteger3(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
+        if (!isVector3(mechanic.to) || !positiveInteger2(mechanic.periodTicks) || mechanic.loop !== undefined && typeof mechanic.loop !== "boolean")
           throw new Error("Invalid moving structure path");
         break;
       case "environmental-cycle":
-        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord8(phase) || !positiveInteger3(phase.durationTicks) || typeof phase.enabled !== "boolean"))
+        if (!Array.isArray(mechanic.phases) || mechanic.phases.length === 0 || mechanic.phases.some((phase) => !isRecord8(phase) || !positiveInteger2(phase.durationTicks) || typeof phase.enabled !== "boolean"))
           throw new Error("Invalid environmental cycle");
         break;
       default:
@@ -7482,26 +6338,26 @@ function validateEnvironmentalMechanics(value) {
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function finite5(value) {
+function finite4(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
-function positiveInteger3(value) {
+function positiveInteger2(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 function isVector3(value) {
-  return isRecord8(value) && finite5(value.x) && finite5(value.y);
+  return isRecord8(value) && finite4(value.x) && finite4(value.y);
 }
 function isZone(value) {
-  return isRecord8(value) && finite5(value.x) && finite5(value.y) && finite5(value.r) && value.r > 0;
+  return isRecord8(value) && finite4(value.x) && finite4(value.y) && finite4(value.r) && value.r > 0;
 }
 function isBoundary(value) {
-  if (!isRecord8(value) || !finite5(value.x) || !finite5(value.y) || !Array.isArray(value.effects))
+  if (!isRecord8(value) || !finite4(value.x) || !finite4(value.y) || !Array.isArray(value.effects))
     return false;
   if (value.type === SHAPE.CIRCLE)
-    return finite5(value.r) && value.r > 0;
+    return finite4(value.r) && value.r > 0;
   if (value.type === SHAPE.RECTANGLE)
-    return finite5(value.w) && finite5(value.h) && value.w > 0 && value.h > 0;
-  return value.type === SHAPE.LINE && finite5(value.x2) && finite5(value.y2);
+    return finite4(value.w) && finite4(value.h) && value.w > 0 && value.h > 0;
+  return value.type === SHAPE.LINE && finite4(value.x2) && finite4(value.y2);
 }
 
 class TriggerDefinitionCatalog {
@@ -7531,8 +6387,8 @@ class TriggerDefinitionCatalog {
   }
 }
 function validateTriggerDefinition(value) {
-  const definition = record10(value, "Trigger definition");
-  exactKeys10(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
+  const definition = record8(value, "Trigger definition");
+  exactKeys8(definition, ["schemaVersion", "id", "effect"], "Trigger definition");
   if (definition.schemaVersion !== 1)
     throw new Error("Unsupported trigger definition schema version");
   if (typeof definition.id !== "string" || !/^[a-z0-9.-]{1,80}$/.test(definition.id))
@@ -7545,12 +6401,12 @@ function validateTriggerDefinition(value) {
 function isEngineComposition(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) && value.type === "effect.composition";
 }
-function record10(value, label) {
+function record8(value, label) {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(`${label} must be an object`);
   return value;
 }
-function exactKeys10(value, keys, label) {
+function exactKeys8(value, keys, label) {
   const allowed = new Set(keys);
   for (const key of Object.keys(value))
     if (!allowed.has(key))
@@ -10911,7 +9767,7 @@ function assertKnownObject(value, path, allowedFields) {
 function isExecutableKey(key) {
   return key === "script" || key === "code" || key === "handler" || key === "eval" || key === "exec" || key === "function" || key === "__proto__" || key === "constructor" || key === "prototype" || /^on[a-zA-Z]/i.test(key);
 }
-function assertJsonValue3(value, path, ancestors) {
+function assertJsonValue2(value, path, ancestors) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
   if (typeof value === "number") {
@@ -10946,7 +9802,7 @@ function assertJsonValue3(value, path, ancestors) {
       for (let index = 0;index < value.length; index += 1) {
         if (!(index in value))
           throw new Error(`${path}[${index}] must not be sparse`);
-        assertJsonValue3(value[index], `${path}[${index}]`, ancestors);
+        assertJsonValue2(value[index], `${path}[${index}]`, ancestors);
       }
       return;
     }
@@ -10957,7 +9813,7 @@ function assertJsonValue3(value, path, ancestors) {
       if (isExecutableKey(key)) {
         throw new Error(`${childPath} is an executable field and is not allowed`);
       }
-      assertJsonValue3(value[key], childPath, ancestors);
+      assertJsonValue2(value[key], childPath, ancestors);
     }
   } finally {
     ancestors.delete(value);
@@ -10992,7 +9848,7 @@ class ItemValidator {
         throw new Error(`Effect type '${String(type)}' is not in the whitelist`);
       }
       if (effect.value !== undefined) {
-        assertJsonValue3(effect.value, `item.effects[${index}].value`, new Set);
+        assertJsonValue2(effect.value, `item.effects[${index}].value`, new Set);
       }
     }
     assertKnownObject(item.duration, "item.duration", DURATION_FIELDS);
@@ -11587,6 +10443,8 @@ class AuthoritativeGameplayRenderer {
     }
     renderer.drawImage(player.hoop, position.x - player.size, position.y - player.size, player.size * 2, player.size * 2);
     renderer.drawImage(player.playericon, position.x - player.size, position.y - player.size, player.size * 2, player.size * 2);
+    for (const effect of player.effects)
+      renderer.drawText(effect.type.split(".").pop() ?? effect.type, position.x + player.size + 4, position.y, 10);
     if (player.team.includes(activeTeam)) {
       renderer.setNoFill();
       renderer.setStrokeColor(activeTeam === 0 ? "#38bdf8" : "#fb7185");
@@ -13216,7 +12074,7 @@ var MODULE_SCHEMES = /^(?:[a-z]+:|[./\\]|@)/i;
 function validateContentPackage(value) {
   assertJson(value, "package");
   const pkg = value;
-  assertKeys3(pkg, ["schemaVersion", "manifest", "maps", "items", "modes", "ui", "audio", "presentation"], "package");
+  assertKeys2(pkg, ["schemaVersion", "manifest", "maps", "items", "modes", "ui", "audio", "presentation"], "package");
   if (pkg.schemaVersion !== CONTENT_PACKAGE_SCHEMA_VERSION)
     throw new Error(`Unsupported content package schema version: ${String(pkg.schemaVersion)}`);
   validateManifest(pkg.manifest);
@@ -13226,8 +12084,8 @@ function validateContentPackage(value) {
   const ids = new Set;
   for (const map of maps) {
     validateMapDocument(map);
-    assertKeys3(map, ["schemaVersion", "metadata", "worldSize", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map");
-    assertKeys3(map.metadata, ["id", "name", "description"], "map metadata");
+    assertKeys2(map, ["schemaVersion", "metadata", "worldSize", "background", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map");
+    assertKeys2(map.metadata, ["id", "name", "description"], "map metadata");
     unique(ids, map.metadata.id, "map");
   }
   const itemValidator = new ItemValidator;
@@ -13235,7 +12093,7 @@ function validateContentPackage(value) {
     itemValidator.registerEffectType(effect);
   for (const item of items) {
     validateItemDocument(item);
-    assertKeys3(item, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction", "ui"], "item");
+    assertKeys2(item, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction", "ui"], "item");
     itemValidator.validate(item);
     unique(ids, item.id, "item");
   }
@@ -13273,7 +12131,7 @@ function hashContentPackage(value) {
 function validateManifest(value) {
   if (!isRecord15(value) || typeof value.id !== "string" || !validId2(value.id) || typeof value.name !== "string" || !value.name || typeof value.version !== "string" || !validVersion(value.version))
     throw new Error("Malformed content package manifest");
-  assertKeys3(value, ["id", "name", "version", "dependencies"], "manifest");
+  assertKeys2(value, ["id", "name", "version", "dependencies"], "manifest");
   const dependencies = arrayOf(value.dependencies, "manifest dependencies");
   if (dependencies.length > CONTENT_PACKAGE_MAX_DEPENDENCIES)
     throw new Error("Content package has too many dependencies");
@@ -13289,7 +12147,7 @@ function validateManifest(value) {
 function validateMode(value) {
   if (!isRecord15(value) || value.schemaVersion !== undefined && value.schemaVersion !== 1 || typeof value.id !== "string" || !validId2(value.id) || !Array.isArray(value.phases) || typeof value.maxItemsPerTurn !== "number" || !Number.isSafeInteger(value.maxItemsPerTurn) || value.maxItemsPerTurn < 0 || value.winCondition !== "last-team-standing")
     throw new Error("Malformed content package mode");
-  assertKeys3(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
+  assertKeys2(value, ["schemaVersion", "id", "phases", "maxItemsPerTurn", "winCondition", "itemEconomy"], "mode");
   if (value.phases.length === 0 || !value.phases.every((phase) => typeof phase === "string"))
     throw new Error("Malformed content package mode phases");
   validateItemEconomySettings(value.itemEconomy);
@@ -13297,7 +12155,7 @@ function validateMode(value) {
 function validateUi(value) {
   if (!isRecord15(value))
     throw new Error("Malformed UI metadata");
-  assertKeys3(value, ["labels", "icons", "menu"], "UI metadata");
+  assertKeys2(value, ["labels", "icons", "menu"], "UI metadata");
   for (const key of ["labels", "icons"])
     if (value[key] !== undefined && (!isRecord15(value[key]) || Object.entries(value[key]).some(([id, text]) => !validId2(id) || typeof text !== "string")))
       throw new Error("UI metadata must contain string maps");
@@ -13310,19 +12168,19 @@ function validateUi(value) {
 function validateAudio(value) {
   if (!isRecord15(value))
     throw new Error("Malformed audio declarations");
-  assertKeys3(value, ["sounds", "music"], "audio declarations");
+  assertKeys2(value, ["sounds", "music"], "audio declarations");
   for (const key of ["sounds", "music"])
     if (value[key] !== undefined)
       for (const [id, declaration] of Object.entries(value[key])) {
         if (!validId2(id) || !isRecord15(declaration) || typeof declaration.asset !== "string" || !safeAsset(declaration.asset) || declaration.bus !== undefined && (typeof declaration.bus !== "string" || !validId2(declaration.bus)))
           throw new Error("Malformed audio declaration");
-        assertKeys3(declaration, ["asset", "bus"], "audio declaration");
+        assertKeys2(declaration, ["asset", "bus"], "audio declaration");
       }
 }
 function validatePresentation(value) {
   if (!isRecord15(value))
     throw new Error("Malformed presentation declarations");
-  assertKeys3(value, ["animations", "events"], "presentation declarations");
+  assertKeys2(value, ["animations", "events"], "presentation declarations");
   for (const animation2 of arrayOf(value.animations, "animations"))
     validateAnimationSettings(animation2);
   for (const event of arrayOf(value.events, "presentation events"))
@@ -13376,7 +12234,7 @@ function assertJson(value, path) {
     assertJson(entry, `${path}.${key}`);
   }
 }
-function assertKeys3(value, allowed, label) {
+function assertKeys2(value, allowed, label) {
   for (const key of Object.keys(value))
     if (!allowed.includes(key))
       throw new Error(`Unknown ${label} field '${key}'`);

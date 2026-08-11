@@ -1,4 +1,3 @@
-// ../engine-repo/packages/roast/contracts/systemSettings.ts
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -19,7 +18,6 @@ function assertJsonValue(value) {
   throw new Error("System settings must contain JSON data only");
 }
 
-// ../engine-repo/packages/roast/sdk/systemRegistry.ts
 class EngineSystemRegistry {
   definitions = new Map;
   register(definition) {
@@ -167,8 +165,6 @@ function topologicalOrder(definitions) {
 function clone(value) {
   return structuredClone(value);
 }
-
-// ../engine-repo/packages/roast/contracts/counterState.ts
 var COUNTER_SCHEMA_VERSION = 1;
 function createCounterState(input) {
   const state = {
@@ -205,7 +201,6 @@ function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// ../engine-repo/packages/roast/sdk/worldBuilder.ts
 class EngineWorldBuilder {
   id;
   worldSize;
@@ -263,7 +258,6 @@ function clone2(value) {
   return structuredClone(value);
 }
 
-// ../engine-repo/packages/roast/sdk/effectRegistry.ts
 class EngineEffectRegistry {
   definitions = new Map;
   register(definition) {
@@ -316,8 +310,6 @@ function validateDefinition2(definition) {
   if (definition.validateTarget !== undefined && typeof definition.validateTarget !== "function")
     throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
-
-// ../engine-repo/packages/roast/sdk/entityState.ts
 function createTransformState(input) {
   const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
   validateTransformState(state);
@@ -370,8 +362,6 @@ function finite(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
-
-// ../engine-repo/packages/roast/sdk/movementCapability.ts
 var MOVEMENT_CAPABILITY = "movement.state";
 var MOVEMENT_EFFECT_ID = "movement.integrate";
 var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
@@ -485,7 +475,6 @@ function exactKeys2(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
-// ../engine-repo/packages/roast/sdk/movementForceField.ts
 function calculateRadialVelocityDelta(origin, target, field) {
   validateVector2(origin, "Movement force origin");
   validateVector2(target, "Movement force target");
@@ -518,7 +507,6 @@ function validateVector2(value, label) {
 function normalizeZero(value) {
   return Object.is(value, -0) ? 0 : value;
 }
-// ../engine-repo/packages/roast/sdk/transformCapability.ts
 var TRANSFORM_CAPABILITY = "transform.state";
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
 var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
@@ -598,7 +586,7 @@ function finite2(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
-// ../engine-repo/packages/roast/sdk/trigger.ts
+
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -765,8 +753,6 @@ function finiteNonNegative(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
     throw new Error(`${label} must be a finite non-negative number`);
 }
-
-// ../engine-repo/packages/roast/sdk/counterCapability.ts
 var COUNTER_CAPABILITY = "counter.state";
 var COUNTER_SET_EFFECT_ID = "counter.set";
 var COUNTER_ADD_EFFECT_ID = "counter.add";
@@ -838,7 +824,6 @@ function exactKeys5(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
-// ../engine-repo/packages/roast/sdk/participationCapability.ts
 var PARTICIPATION_CAPABILITY = "participation.state";
 var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
 var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
@@ -859,7 +844,6 @@ function validateParticipationPayload(payload) {
   if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
     throw new Error("Participation payload requires only boolean enabled");
 }
-// ../engine-repo/packages/roast/sdk/numericCapability.ts
 var NUMERIC_CAPABILITY = "numeric.state";
 var NUMERIC_SET_EFFECT_ID = "numeric.set";
 var NUMERIC_ADD_EFFECT_ID = "numeric.add";
@@ -916,7 +900,6 @@ function exactKeys6(value, keys, label) {
   if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
-// ../engine-repo/packages/roast/sdk/composition.ts
 var ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION = 1;
 var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
 function createEngineEffectComposition(effects) {
@@ -938,7 +921,6 @@ function validateEngineEffectComposition(value) {
       throw new Error("Composition children must be Engine effects");
   });
 }
-// ../engine-repo/packages/roast/sdk/collisionCommand.ts
 var COLLISION_COMMAND_SCHEMA_VERSION = 1;
 var COLLISION_COMMAND_TYPE = "collision.command";
 function createCollisionCommandBinding(effect) {
@@ -978,7 +960,6 @@ function validateRelativeEffect(value) {
     throw new Error("Collision command must be a target-relative Engine effect");
   assertJsonValue(effect.typeValue);
 }
-// ../engine-repo/packages/roast/contracts/numericState.ts
 var NUMERIC_STATE_SCHEMA_VERSION = 1;
 var NUMERIC_THRESHOLD_COMPARATORS = ["below", "below-or-equal", "above", "above-or-equal"];
 function validateNumericThresholdBindings(value) {
@@ -1043,7 +1024,6 @@ function knownKeys(value, keys, label) {
   if (Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
-// ../engine-repo/packages/roast/sdk/assetReferences.ts
 function collectAssetReferences(settings) {
   const references = new Set;
   const add = (value) => {
@@ -1082,7 +1062,6 @@ function collectAssetReferences(settings) {
     }
   return [...references];
 }
-// ../engine-repo/packages/roast/contracts/lifetime.ts
 var LIFETIME_DURATION_UNITS = ["turns", "ticks"];
 function createLifetime(input) {
   const lifetime = {
@@ -1110,8 +1089,6 @@ function validateLifetime(value) {
   if (!Number.isSafeInteger(lifetime.remaining) || lifetime.remaining < 1 || lifetime.remaining > lifetime.duration)
     throw new Error("Lifetime remaining duration is invalid");
 }
-
-// ../engine-repo/packages/roast/contracts/temporalModifier.ts
 var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
 var TEMPORAL_DURATION_UNITS = ["turns"];
 function createTemporalModifierTemplate(input) {
@@ -1174,7 +1151,6 @@ function validateTemporalModifier(value) {
 function lifetimeOf(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
-// ../engine-repo/packages/roast/contracts/structureLifecycle.ts
 var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
 var STRUCTURE_LIFECYCLE_DURATION_UNITS = ["turns"];
 function createStructureLifecycleTemplate(input) {
@@ -1245,7 +1221,6 @@ function validateStructureLifecycle(value) {
 function lifetimeOf2(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
-// ../engine-repo/packages/roast/contracts/deferredEffect.ts
 var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
 var DEFERRED_EFFECT_DURATION_UNITS = ["ticks"];
 function createDeferredEffectTemplate(input) {
@@ -1313,7 +1288,7 @@ function validateEngineEffect(value) {
 function lifetimeOf3(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
-// ../engine-repo/packages/roast/random.ts
+
 class SeededRandom {
   state;
   constructor(seed) {
@@ -1346,8 +1321,6 @@ class SeededRandom {
     return random;
   }
 }
-
-// ../engine-repo/packages/roast/contracts/actionModifier.ts
 var ACTION_MODIFIER_SCHEMA_VERSION = 1;
 function createActionModifierTemplate(input) {
   const template = structuredClone(input);
@@ -1447,7 +1420,6 @@ function compareModifiers(first, second) {
 function normalizeAngle(angle) {
   return (angle % 360 + 360) % 360;
 }
-// ../engine-repo/packages/roast/contracts/collisionFilter.ts
 var COLLISION_FILTER_SCHEMA_VERSION = 1;
 var COLLISION_FILTER_LIFETIME_SCHEMA_VERSION = 1;
 var COLLISION_CATEGORIES = ["entity", "structure"];
@@ -1563,7 +1535,6 @@ function compareFilterOrder(first, second) {
 function compareLifetimeOrder(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
-// ../engine-repo/packages/roast/contracts/actorEligibility.ts
 var ACTOR_ELIGIBILITY_SCHEMA_VERSION = 1;
 var ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION = 1;
 function createActorEligibilityConstraint(input) {
@@ -1664,8 +1635,6 @@ function compareConstraintOrder(first, second) {
 function compareLifetimeOrder2(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
-
-// ../engine-repo/packages/roast/sdk/index.ts
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -1700,6 +1669,767 @@ var engine = {
     return JSON.stringify(settings, null, space);
   }
 };
+var DEFAULT_BUSES = [
+  { id: "master", volume: 1, muted: false, maxVoices: 64, defaultPriority: 0, paused: false },
+  { id: "music", volume: 1, muted: false, maxVoices: 1, defaultPriority: 50, paused: false },
+  { id: "ambience", volume: 1, muted: false, maxVoices: 8, defaultPriority: 20, paused: false },
+  { id: "effects", volume: 1, muted: false, maxVoices: 32, defaultPriority: 10, paused: false },
+  { id: "ui", volume: 1, muted: false, maxVoices: 8, defaultPriority: 30, paused: false },
+  { id: "voice", volume: 1, muted: false, maxVoices: 8, defaultPriority: 40, paused: false }
+];
+
+class AudioEmitter {
+  soundSourceId;
+  pending = [];
+  constructor(soundSourceId) {
+    this.soundSourceId = soundSourceId;
+    validateId(soundSourceId, "sound source ID");
+  }
+  emit(command) {
+    validateAudioCommand(command);
+    if (command.sourceId !== this.soundSourceId)
+      throw new Error(`Audio command source '${command.sourceId}' does not match emitter '${this.soundSourceId}'`);
+    this.pending.push(clone3(command));
+  }
+  drainSoundCommands() {
+    const commands = this.pending.map(clone3);
+    this.pending = [];
+    return commands;
+  }
+}
+
+class SoundSystem {
+  runtimeId;
+  buses = new Map;
+  persistent = new Map;
+  pending = [];
+  output;
+  sequence;
+  constructor(runtimeId, settings = { buses: clone3(DEFAULT_BUSES), persistentSources: [] }) {
+    this.runtimeId = runtimeId;
+    validateId(runtimeId, "runtime ID");
+    for (const bus of settings.buses) {
+      validateBus(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone3(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone3(DEFAULT_BUSES[0]));
+    for (const source of settings.persistentSources) {
+      validatePersistentSource(source, this.buses);
+      if (this.persistent.has(source.sourceId))
+        throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+      this.persistent.set(source.sourceId, clone3(source));
+    }
+    this.sequence = settings.sequence ?? 0;
+    this.output = emptyBatch(runtimeId, this.sequence, this.diagnostics());
+  }
+  submit(command) {
+    validateAudioCommand(command);
+    this.pending.push(clone3(command));
+  }
+  tick(candidates) {
+    const collected = [];
+    let ordinal = 0;
+    for (const candidate of candidates.filter(isSoundEmitter).sort((a, b) => a.soundSourceId.localeCompare(b.soundSourceId))) {
+      for (const command of candidate.drainSoundCommands())
+        collected.push({ command, ordinal: ordinal++ });
+    }
+    for (const command of this.pending.splice(0))
+      collected.push({ command, ordinal: ordinal++ });
+    const result = this.aggregate(collected);
+    this.output = { schemaVersion: 1, runtimeId: this.runtimeId, sequence: ++this.sequence, commands: result.commands, diagnostics: { ...this.diagnostics(), ...result.diagnostics, sequence: this.sequence } };
+  }
+  drainOutput() {
+    const value = clone3(this.output);
+    this.output = emptyBatch(this.runtimeId, this.sequence, this.diagnostics());
+    return value;
+  }
+  restorePersistentIntent() {
+    for (const source of [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)))
+      this.pending.push(clone3(source.command));
+  }
+  toSettings(framework = createDefaultAudioFramework()) {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, buses: [...this.buses.values()].sort(byBus).map(clone3), persistentSources: [...this.persistent.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)).map(clone3), framework: clone3(framework), sequence: this.sequence };
+    validateAudioSettings(settings);
+    return settings;
+  }
+  getDiagnostics() {
+    return clone3(this.diagnostics());
+  }
+  aggregate(collected) {
+    let rejected = 0;
+    let deduplicated = 0;
+    let droppedByPriority = 0;
+    const valid = [];
+    for (const entry of collected) {
+      try {
+        validateAudioCommand(entry.command);
+        validateBusReference(entry.command, this.buses);
+        valid.push(entry);
+      } catch {
+        rejected++;
+      }
+    }
+    const dedupe = new Map;
+    const retained = [];
+    for (const entry of valid) {
+      const key = entry.command.type === "playSound" && entry.command.dedupeKey ? `${entry.command.sourceId}|${entry.command.dedupeKey}` : undefined;
+      if (!key) {
+        retained.push(entry);
+        continue;
+      }
+      const prior = dedupe.get(key);
+      if (!prior || compareCommand(entry.command, prior.command, entry.ordinal, prior.ordinal, this.buses) < 0) {
+        if (prior)
+          deduplicated++;
+        dedupe.set(key, entry);
+      } else
+        deduplicated++;
+    }
+    retained.push(...dedupe.values());
+    const admitted = [];
+    for (const [busId, entries] of groupBy(retained.filter((entry) => isVoiceCommand(entry.command)), (entry) => commandBus(entry.command)).entries()) {
+      const bus = this.buses.get(busId);
+      const ordered = entries.sort((a, b) => compareCommand(a.command, b.command, a.ordinal, b.ordinal, this.buses));
+      admitted.push(...ordered.slice(0, bus.maxVoices));
+      droppedByPriority += Math.max(0, ordered.length - bus.maxVoices);
+    }
+    admitted.push(...retained.filter((entry) => !isVoiceCommand(entry.command)));
+    for (const entry of admitted)
+      this.applyPersistent(entry.command);
+    const commands = admitted.sort((a, b) => comparePipeline(a.command, b.command, a.ordinal, b.ordinal, this.buses)).map((entry) => this.resolve(entry.command));
+    return { commands, diagnostics: { collected: collected.length, rejected, deduplicated, droppedByPriority } };
+  }
+  resolve(command) {
+    return { ...clone3(command), runtimeId: this.runtimeId, globalSourceId: `${this.runtimeId}:${command.sourceId}`, sequence: this.sequence + 1 };
+  }
+  applyPersistent(command) {
+    if (command.type === "startLoop" || command.type === "playMusic")
+      this.persistent.set(command.sourceId, { sourceId: command.sourceId, command: clone3(command) });
+    if (command.type === "stopSource")
+      this.persistent.delete(command.sourceId);
+    if (command.type === "stopMusic") {
+      for (const [id, source] of this.persistent)
+        if (source.command.type === "playMusic" && (!command.sourceId || command.sourceId === id))
+          this.persistent.delete(id);
+    }
+    if (command.type === "stopAll")
+      this.persistent.clear();
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      bus.volume = command.volume;
+      if (command.muted !== undefined)
+        bus.muted = command.muted;
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus")
+      this.buses.get(command.bus).paused = command.type === "pauseBus";
+  }
+  diagnostics() {
+    return { collected: 0, rejected: 0, deduplicated: 0, droppedByPriority: 0, activePersistentSources: [...this.persistent.keys()].sort(), outputStatus: "ready", sequence: this.sequence };
+  }
+}
+
+class AudioRuntime {
+  system;
+  framework;
+  constructor(settings) {
+    validateAudioSettings(settings);
+    this.framework = clone3(settings.framework);
+    this.system = new SoundSystem(settings.runtimeId, settings);
+  }
+  tick(emitters) {
+    this.system.tick(emitters);
+  }
+  submit(command) {
+    this.system.submit(command);
+  }
+  drainOutput() {
+    return this.system.drainOutput();
+  }
+  restorePersistentIntent() {
+    this.system.restorePersistentIntent();
+  }
+  toSettings() {
+    return this.system.toSettings(this.framework);
+  }
+  getDiagnostics() {
+    return this.system.getDiagnostics();
+  }
+}
+
+class ApplicationAudioMixer {
+  applicationId;
+  buses = new Map;
+  pending = [];
+  activeMusic;
+  sequence;
+  constructor(applicationId, settings = { buses: clone3(DEFAULT_BUSES) }) {
+    this.applicationId = applicationId;
+    validateId(applicationId, "application ID");
+    for (const bus of settings.buses) {
+      validateBus(bus);
+      if (this.buses.has(bus.id))
+        throw new Error(`Duplicate audio bus '${bus.id}'`);
+      this.buses.set(bus.id, clone3(bus));
+    }
+    if (!this.buses.has("master"))
+      this.buses.set("master", clone3(DEFAULT_BUSES[0]));
+    if (settings.activeMusic) {
+      validateResolvedCommand(settings.activeMusic);
+      this.activeMusic = clone3(settings.activeMusic);
+    }
+    this.sequence = settings.sequence ?? 0;
+  }
+  submit(batch) {
+    validateAudioBatch(batch);
+    this.pending.push(clone3(batch));
+  }
+  flush() {
+    const submitted = this.pending.splice(0).flatMap((batch) => batch.commands);
+    const rejected = submitted.filter((command) => ("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus)).length;
+    const incoming = submitted.filter((command) => !(("bus" in command) && command.bus !== undefined && !this.buses.has(command.bus))).sort((a, b) => compareResolved(a, b, this.buses));
+    const controls = incoming.filter((command) => !isVoiceCommand(command));
+    for (const command of controls)
+      this.applyControl(command);
+    const voices = incoming.filter(isVoiceCommand);
+    const music = voices.filter((command) => command.type === "playMusic");
+    const nonMusic = this.limitVoices(voices.filter((command) => command.type !== "playMusic"));
+    const previousMusic = this.activeMusic;
+    const selectedMusic = this.selectMusic(music);
+    const replacedMusic = selectedMusic && previousMusic && previousMusic.globalSourceId !== selectedMusic.globalSourceId ? [{ type: "stopSource", sourceId: previousMusic.sourceId, runtimeId: previousMusic.runtimeId, globalSourceId: previousMusic.globalSourceId, sequence: this.sequence + 1 }] : [];
+    const commands = [...controls, ...replacedMusic, ...nonMusic, ...selectedMusic ? [selectedMusic] : []].sort((a, b) => compareResolved(a, b, this.buses));
+    const diagnostics = { collected: submitted.length, rejected, deduplicated: 0, droppedByPriority: Math.max(0, voices.filter((command) => command.type !== "playMusic").length - nonMusic.length) + Math.max(0, music.length - (selectedMusic ? 1 : 0)), activePersistentSources: this.activeMusic ? [this.activeMusic.globalSourceId] : [], activeMusicSourceId: this.activeMusic?.globalSourceId, outputStatus: "ready", sequence: ++this.sequence };
+    return { schemaVersion: 1, runtimeId: this.applicationId, sequence: this.sequence, commands: commands.map((command) => ({ ...command, sequence: this.sequence })), diagnostics };
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, applicationId: this.applicationId, buses: [...this.buses.values()].sort(byBus).map(clone3), ...this.activeMusic ? { activeMusic: clone3(this.activeMusic) } : {}, sequence: this.sequence };
+    validateApplicationAudioSettings(settings);
+    return settings;
+  }
+  limitVoices(commands) {
+    const result = [];
+    for (const [busId, entries] of groupBy(commands, (command) => commandBus(command)).entries())
+      result.push(...entries.sort((a, b) => compareResolved(a, b, this.buses)).slice(0, this.buses.get(busId).maxVoices));
+    return result;
+  }
+  selectMusic(candidates) {
+    const ordered = candidates.sort((a, b) => compareResolved(a, b, this.buses));
+    for (const candidate of ordered) {
+      const policy = candidate.replacementPolicy ?? "replace-lower-or-equal";
+      const currentPriority = this.activeMusic ? resolvedPriority(this.activeMusic, this.buses) : -Infinity;
+      const priority = resolvedPriority(candidate, this.buses);
+      if (!this.activeMusic || policy === "replace-current" || policy === "replace-lower-or-equal" && priority >= currentPriority || policy === "keep-current" && !this.activeMusic) {
+        this.activeMusic = clone3(candidate);
+        return candidate;
+      }
+    }
+    return;
+  }
+  applyControl(command) {
+    if (command.type === "stopMusic" && (!command.sourceId || this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`))
+      this.activeMusic = undefined;
+    if (command.type === "stopSource" && this.activeMusic?.globalSourceId === `${command.runtimeId}:${command.sourceId}`)
+      this.activeMusic = undefined;
+    if (command.type === "stopAll")
+      this.activeMusic = undefined;
+    if (command.type === "setBusVolume") {
+      const bus = this.buses.get(command.bus);
+      if (bus) {
+        bus.volume = command.volume;
+        if (command.muted !== undefined)
+          bus.muted = command.muted;
+      }
+    }
+    if (command.type === "pauseBus" || command.type === "resumeBus") {
+      const bus = this.buses.get(command.bus);
+      if (bus)
+        bus.paused = command.type === "pauseBus";
+    }
+  }
+}
+function createDefaultAudioFramework() {
+  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  return registry.select(["audio.collect", "audio.mix"]);
+}
+function createAudioRuntime(settings) {
+  return new AudioRuntime(settings);
+}
+function createAudioSettings(options) {
+  return { schemaVersion: 1, runtimeId: options.runtimeId, buses: clone3(options.buses ?? DEFAULT_BUSES), persistentSources: clone3(options.persistentSources ?? []), framework: createDefaultAudioFramework(), sequence: 0 };
+}
+function validateAudioSettings(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.runtimeId !== "string" || !Array.isArray(settings.buses) || !Array.isArray(settings.persistentSources) || !settings.framework || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed audio settings");
+  const sequence = settings.sequence;
+  validateId(settings.runtimeId, "runtime ID");
+  const buses = new Map;
+  for (const bus of settings.buses) {
+    validateBus(bus);
+    if (buses.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    buses.set(bus.id, bus);
+  }
+  if (!buses.has("master"))
+    throw new Error("Audio settings require a master bus");
+  const sources = new Set;
+  for (const source of settings.persistentSources) {
+    validatePersistentSource(source, buses);
+    if (sources.has(source.sourceId))
+      throw new Error(`Duplicate persistent audio source '${source.sourceId}'`);
+    sources.add(source.sourceId);
+  }
+  const registry = new EngineSystemRegistry().register({ id: "audio.collect", provides: ["audio.commands"] }).register({ id: "audio.mix", requires: ["audio.commands"], after: ["audio.collect"], provides: ["audio.batch"] });
+  registry.validate(settings.framework);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(settings);
+}
+function validateApplicationAudioSettings(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed application audio settings");
+  const settings = value;
+  if (settings.schemaVersion !== 1 || typeof settings.applicationId !== "string" || !Array.isArray(settings.buses) || typeof settings.sequence !== "number" || !Number.isSafeInteger(settings.sequence) || settings.sequence < 0)
+    throw new Error("Malformed application audio settings");
+  const sequence = settings.sequence;
+  validateId(settings.applicationId, "application ID");
+  const ids = new Set;
+  for (const bus of settings.buses) {
+    validateBus(bus);
+    if (ids.has(bus.id))
+      throw new Error(`Duplicate audio bus '${bus.id}'`);
+    ids.add(bus.id);
+  }
+  if (!ids.has("master"))
+    throw new Error("Application audio settings require a master bus");
+  if (settings.activeMusic)
+    validateResolvedCommand(settings.activeMusic);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(settings);
+}
+function validateAudioCommand(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio command");
+  const command = value;
+  if (typeof command.type !== "string" || !COMMAND_TYPES.has(command.type))
+    throw new Error("Unknown audio command");
+  if (command.type !== "stopMusic")
+    validateId(command.sourceId, "audio source ID");
+  else if (command.sourceId !== undefined)
+    validateId(command.sourceId, "audio source ID");
+  if ("soundId" in command)
+    validateId(command.soundId, "sound ID");
+  if ("bus" in command && command.bus !== undefined)
+    validateId(command.bus, "audio bus ID");
+  if ("instanceId" in command && command.instanceId !== undefined)
+    validateId(command.instanceId, "audio instance ID");
+  if ("dedupeKey" in command && command.dedupeKey !== undefined)
+    validateId(command.dedupeKey, "audio dedupe key");
+  for (const name of ["volume", "pitch", "pan", "fadeInMs", "fadeOutMs", "priority"]) {
+    const numeric = command[name];
+    if (numeric !== undefined && (typeof numeric !== "number" || !Number.isFinite(numeric) || name === "volume" && (numeric < 0 || numeric > 1) || name === "pitch" && numeric <= 0 || name === "pan" && (numeric < -1 || numeric > 1) || (name === "fadeInMs" || name === "fadeOutMs") && numeric < 0 || name === "priority" && !Number.isInteger(numeric)))
+      throw new Error(`Invalid audio ${name}`);
+  }
+  if (command.type === "playMusic" && command.replacementPolicy !== undefined && !["replace-current", "replace-lower-or-equal", "keep-current"].includes(command.replacementPolicy))
+    throw new Error("Invalid music replacement policy");
+  assertJsonValue(command);
+}
+function validateAudioBatch(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio batch");
+  const batch = value;
+  if (batch.schemaVersion !== 1 || typeof batch.runtimeId !== "string" || typeof batch.sequence !== "number" || !Number.isSafeInteger(batch.sequence) || batch.sequence < 0 || !Array.isArray(batch.commands) || !batch.diagnostics)
+    throw new Error("Malformed audio batch");
+  const sequence = batch.sequence;
+  validateId(batch.runtimeId, "runtime ID");
+  for (const command of batch.commands)
+    validateResolvedCommand(command);
+  if (sequence < 0)
+    throw new Error("Invalid audio sequence");
+  assertJsonValue(batch);
+}
+var audio = {
+  engine: { createSystemRegistry: engine.createSystemRegistry },
+  createSettings: createAudioSettings,
+  createRuntime: createAudioRuntime,
+  createApplicationMixer(applicationId, settings) {
+    return new ApplicationAudioMixer(applicationId, settings);
+  },
+  createDefaultFramework: createDefaultAudioFramework,
+  emitter(sourceId) {
+    return new AudioEmitter(sourceId);
+  },
+  bus(settings) {
+    validateBus(settings);
+    return clone3(settings);
+  },
+  command: {
+    play(settings) {
+      return { type: "playSound", ...clone3(settings) };
+    },
+    loop(settings) {
+      return { type: "startLoop", ...clone3(settings) };
+    },
+    music(settings) {
+      return { type: "playMusic", ...clone3(settings) };
+    },
+    stopSource(settings) {
+      return { type: "stopSource", ...clone3(settings) };
+    },
+    stopInstance(settings) {
+      return { type: "stopInstance", ...clone3(settings) };
+    },
+    stopMusic(settings = {}) {
+      return { type: "stopMusic", ...clone3(settings) };
+    },
+    setBusVolume(settings) {
+      return { type: "setBusVolume", ...clone3(settings) };
+    },
+    pauseBus(settings) {
+      return { type: "pauseBus", ...clone3(settings) };
+    },
+    resumeBus(settings) {
+      return { type: "resumeBus", ...clone3(settings) };
+    },
+    stopAll(settings) {
+      return { type: "stopAll", ...clone3(settings) };
+    }
+  },
+  validate: validateAudioSettings,
+  validateCommand: validateAudioCommand,
+  validateBatch: validateAudioBatch
+};
+var COMMAND_TYPES = new Set(["playSound", "startLoop", "playMusic", "stopSource", "stopInstance", "stopMusic", "pauseBus", "resumeBus", "setBusVolume", "stopAll"]);
+function isSoundEmitter(value) {
+  return !!value && typeof value === "object" && typeof value.soundSourceId === "string" && typeof value.drainSoundCommands === "function";
+}
+function validateId(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function validateBus(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed audio bus");
+  const bus = value;
+  validateId(bus.id, "audio bus ID");
+  const volume = bus.volume;
+  const maxVoices = bus.maxVoices;
+  if (typeof volume !== "number" || !Number.isFinite(volume) || volume < 0 || volume > 1 || typeof bus.muted !== "boolean" || typeof maxVoices !== "number" || !Number.isSafeInteger(maxVoices) || maxVoices < 1 || !Number.isSafeInteger(bus.defaultPriority) || typeof bus.paused !== "boolean")
+    throw new Error(`Invalid audio bus '${bus.id}'`);
+  assertJsonValue(bus);
+}
+function validatePersistentSource(value, buses) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Malformed persistent audio source");
+  const source = value;
+  validateId(source.sourceId, "persistent source ID");
+  validateAudioCommand(source.command);
+  if (source.command.type !== "startLoop" && source.command.type !== "playMusic")
+    throw new Error("Persistent audio source must be a loop or music command");
+  if (source.command.sourceId !== source.sourceId)
+    throw new Error("Persistent audio source ID mismatch");
+  validateBusReference(source.command, buses);
+}
+function validateBusReference(command, buses) {
+  if ("bus" in command && command.bus !== undefined && !buses.has(command.bus))
+    throw new Error(`Unknown audio bus '${command.bus}'`);
+}
+function validateResolvedCommand(value) {
+  validateAudioCommand(value);
+  const command = value;
+  validateId(command.runtimeId, "runtime ID");
+  validateId(command.globalSourceId, "global audio source ID");
+  const sequence = command.sequence;
+  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0)
+    throw new Error("Invalid audio sequence");
+}
+function commandBus(command) {
+  return "bus" in command && command.bus ? command.bus : command.type === "playMusic" ? "music" : "effects";
+}
+function isVoiceCommand(command) {
+  return command.type === "playSound" || command.type === "startLoop" || command.type === "playMusic";
+}
+function resolvedPriority(command, buses) {
+  return command.priority ?? buses.get(commandBus(command))?.defaultPriority ?? 0;
+}
+function compareCommand(a, b, aOrdinal, bOrdinal, buses) {
+  return resolvedPriority(b, buses) - resolvedPriority(a, buses) || commandBus(a).localeCompare(commandBus(b)) || (a.sourceId ?? "").localeCompare(b.sourceId ?? "") || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || aOrdinal - bOrdinal;
+}
+function pipelineOrder(command) {
+  if (command.type === "stopAll" || command.type === "pauseBus" || command.type === "resumeBus" || command.type === "setBusVolume")
+    return 0;
+  if (command.type === "stopSource" || command.type === "stopInstance" || command.type === "stopMusic")
+    return 1;
+  if (command.type === "playMusic")
+    return 2;
+  if (command.type === "startLoop")
+    return 3;
+  return 4;
+}
+function comparePipeline(a, b, aOrdinal, bOrdinal, buses) {
+  return pipelineOrder(a) - pipelineOrder(b) || compareCommand(a, b, aOrdinal, bOrdinal, buses);
+}
+function compareResolved(a, b, buses) {
+  return pipelineOrder(a) - pipelineOrder(b) || resolvedPriority(b, buses) - resolvedPriority(a, buses) || a.globalSourceId.localeCompare(b.globalSourceId) || ("soundId" in a ? a.soundId : "").localeCompare("soundId" in b ? b.soundId : "") || a.sequence - b.sequence;
+}
+function byBus(a, b) {
+  return a.id.localeCompare(b.id);
+}
+function emptyBatch(runtimeId, sequence, diagnostics) {
+  return { schemaVersion: 1, runtimeId, sequence, commands: [], diagnostics: { ...diagnostics, sequence } };
+}
+function groupBy(items, key) {
+  const grouped = new Map;
+  for (const item of items) {
+    const id = key(item);
+    const values = grouped.get(id) ?? [];
+    values.push(item);
+    grouped.set(id, values);
+  }
+  return grouped;
+}
+function clone3(value) {
+  return structuredClone(value);
+}
+function validateAnimationSettings(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
+    throw new Error("Malformed animation settings");
+  assertKeys(value, ["schemaVersion", "id", "channel", "durationTicks", "priority", "interruption", "tracks"], "animation settings");
+  validateId2(value.id, "animation ID");
+  validateId2(value.channel, "animation channel");
+  const ids = new Set;
+  for (const track of value.tracks) {
+    if (!isRecord2(track) || typeof track.id !== "string" || !Array.isArray(track.keyframes))
+      throw new Error("Malformed animation track");
+    assertKeys(track, ["id", "keyframes"], "animation track");
+    validateId2(track.id, "animation track ID");
+    if (ids.has(track.id))
+      throw new Error(`Duplicate animation track '${track.id}'`);
+    ids.add(track.id);
+    let previous = -1;
+    for (const keyframe of track.keyframes) {
+      if (!isRecord2(keyframe) || !nonNegativeInteger(keyframe.tick) || keyframe.tick > value.durationTicks || keyframe.tick <= previous)
+        throw new Error("Invalid animation keyframe");
+      assertKeys(keyframe, ["tick", "value"], "animation keyframe");
+      assertJsonValue(keyframe.value);
+      previous = keyframe.tick;
+    }
+    if (track.keyframes.length === 0)
+      throw new Error("Animation tracks require keyframes");
+  }
+  assertJsonValue(value);
+}
+function validatePresentationEvent(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || value.type !== "play" && value.type !== "cancel" || typeof value.eventId !== "string")
+    throw new Error("Malformed presentation event");
+  assertKeys(value, ["schemaVersion", "type", "eventId", "channel", "animationId", "instanceId", "priority", "payload"], "presentation event");
+  validateId2(value.eventId, "presentation event ID");
+  if (value.channel !== undefined)
+    validateId2(value.channel, "presentation channel");
+  if (value.animationId !== undefined)
+    validateId2(value.animationId, "animation ID");
+  if (value.instanceId !== undefined)
+    validateId2(value.instanceId, "presentation instance ID");
+  if (value.priority !== undefined && !integer(value.priority))
+    throw new Error("Invalid presentation priority");
+  if (value.type === "play" && value.animationId === undefined)
+    throw new Error("Play events require an animation ID");
+  if (value.type === "cancel" && value.instanceId === undefined && value.channel === undefined)
+    throw new Error("Cancel events require an instance or channel");
+  if (value.payload !== undefined)
+    assertJsonValue(value.payload);
+  assertJsonValue(value);
+}
+function validatePresentationRuntimeSettings(value) {
+  if (!isRecord2(value) || value.schemaVersion !== 1 || typeof value.runtimeId !== "string" || !nonNegativeInteger(value.tick) || !nonNegativeInteger(value.sequence) || !Array.isArray(value.active) || !Array.isArray(value.pending))
+    throw new Error("Malformed presentation runtime settings");
+  assertKeys(value, ["schemaVersion", "runtimeId", "tick", "sequence", "active", "pending"], "presentation runtime settings");
+  validateId2(value.runtimeId, "presentation runtime ID");
+  for (const active of value.active) {
+    if (!isRecord2(active) || typeof active.instanceId !== "string" || typeof active.animationId !== "string" || typeof active.channel !== "string" || !nonNegativeInteger(active.startTick) || !integer(active.priority))
+      throw new Error("Malformed active animation");
+    assertKeys(active, ["instanceId", "animationId", "channel", "startTick", "priority"], "active animation");
+    validateId2(active.instanceId, "presentation instance ID");
+    validateId2(active.animationId, "animation ID");
+    validateId2(active.channel, "presentation channel");
+  }
+  for (const event of value.pending)
+    validatePresentationEvent(event);
+  assertJsonValue(value);
+}
+
+class PresentationRuntime {
+  runtimeId;
+  animations = new Map;
+  active = new Map;
+  pending = [];
+  tickNumber;
+  sequence;
+  lastFrame;
+  constructor(runtimeId, settings) {
+    this.runtimeId = runtimeId;
+    validateId2(runtimeId, "presentation runtime ID");
+    for (const animation of settings.animations) {
+      validateAnimationSettings(animation);
+      if (this.animations.has(animation.id))
+        throw new Error(`Duplicate animation '${animation.id}'`);
+      this.animations.set(animation.id, clone4(animation));
+    }
+    this.tickNumber = settings.tick ?? 0;
+    this.sequence = settings.sequence ?? 0;
+    for (const item of settings.active ?? [])
+      this.restoreActive(item);
+    for (const event of settings.pending ?? []) {
+      validatePresentationEvent(event);
+      this.pending.push(clone4(event));
+    }
+    this.lastFrame = this.frame([]);
+  }
+  emit(event) {
+    validatePresentationEvent(event);
+    this.pending.push(clone4(event));
+  }
+  tick(ticks = 1) {
+    if (!nonNegativeInteger(ticks))
+      throw new Error("Presentation tick count must be a non-negative integer");
+    const records = [];
+    for (let step = 0;step < ticks; step++) {
+      this.tickNumber++;
+      this.processPending(records);
+      this.expire(records);
+    }
+    this.lastFrame = this.frame(records);
+    return clone4(this.lastFrame);
+  }
+  project() {
+    return clone4(this.frame([]));
+  }
+  toSettings() {
+    const settings = { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [...this.active.values()].sort(byInstance).map(clone4), pending: this.pending.map(clone4) };
+    validatePresentationRuntimeSettings(settings);
+    return settings;
+  }
+  processPending(records) {
+    const pending = this.pending.splice(0).map((event, ordinal) => ({ event, ordinal })).sort((a, b) => this.eventPriority(b.event) - this.eventPriority(a.event) || a.ordinal - b.ordinal || a.event.eventId.localeCompare(b.event.eventId));
+    for (const { event } of pending) {
+      if (event.type === "cancel") {
+        for (const item2 of [...this.active.values()])
+          if (event.instanceId && item2.instanceId === event.instanceId || event.channel && item2.channel === event.channel)
+            this.cancel(item2, records, event.eventId);
+        continue;
+      }
+      const animation = this.animations.get(event.animationId);
+      if (!animation)
+        throw new Error(`Unknown animation '${event.animationId}'`);
+      const current = this.active.get(animation.channel);
+      if (current && (animation.interruption === "ignore" || animation.interruption === "higher-priority" && animation.priority <= current.priority))
+        continue;
+      if (current)
+        this.cancel(current, records, event.eventId);
+      const item = { instanceId: event.instanceId ?? `${this.runtimeId}:${event.eventId}`, animationId: animation.id, channel: animation.channel, startTick: this.tickNumber, priority: animation.priority };
+      this.active.set(animation.channel, item);
+      records.push(this.record({ ...event, type: "play", animationId: animation.id, instanceId: item.instanceId }, this.sequence++));
+    }
+  }
+  eventPriority(event) {
+    return event.priority ?? (event.type === "play" ? this.animations.get(event.animationId)?.priority ?? 0 : 0);
+  }
+  cancel(item, records, eventId) {
+    this.active.delete(item.channel);
+    records.push(this.record({ schemaVersion: 1, type: "cancel", eventId, instanceId: item.instanceId, channel: item.channel }, this.sequence++));
+  }
+  expire(records) {
+    for (const item of [...this.active.values()]) {
+      const animation = this.animations.get(item.animationId);
+      if (this.tickNumber - item.startTick >= animation.durationTicks)
+        this.cancel(item, records, `${item.instanceId}:complete`);
+    }
+  }
+  record(event, sequence) {
+    return { ...clone4(event), sequence, tick: this.tickNumber };
+  }
+  frame(events) {
+    return { schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, events: events.map(clone4), animations: [...this.active.values()].sort(byInstance).map((item) => this.projectAnimation(item)) };
+  }
+  projectAnimation(item) {
+    const animation = this.animations.get(item.animationId);
+    const localTick = Math.max(0, this.tickNumber - item.startTick);
+    const values = {};
+    for (const track of animation.tracks)
+      values[track.id] = sample(track.keyframes, localTick);
+    return { instanceId: item.instanceId, animationId: item.animationId, channel: item.channel, priority: item.priority, localTick, progress: Math.min(1, localTick / animation.durationTicks), values };
+  }
+  restoreActive(item) {
+    validatePresentationRuntimeSettings({ schemaVersion: 1, runtimeId: this.runtimeId, tick: this.tickNumber, sequence: this.sequence, active: [item], pending: [] });
+    if (this.active.has(item.channel))
+      throw new Error(`Duplicate active animation channel '${item.channel}'`);
+    if (!this.animations.has(item.animationId))
+      throw new Error(`Unknown animation '${item.animationId}'`);
+    this.active.set(item.channel, clone4(item));
+  }
+}
+function sample(keyframes, tick) {
+  let result = keyframes[0].value;
+  for (const keyframe of keyframes) {
+    if (keyframe.tick > tick)
+      break;
+    result = keyframe.value;
+  }
+  return clone4(result);
+}
+function validateId2(value, name) {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9._:-]{1,120}$/.test(value))
+    throw new Error(`Invalid ${name}`);
+}
+function assertKeys(value, allowed, name) {
+  const keys = new Set(allowed);
+  for (const key of Object.keys(value))
+    if (!keys.has(key))
+      throw new Error(`Unknown ${name} field '${key}'`);
+}
+function isRecord2(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function integer(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function nonNegativeInteger(value) {
+  return integer(value) && value >= 0;
+}
+function positiveInteger(value) {
+  return integer(value) && value > 0;
+}
+function clone4(value) {
+  return structuredClone(value);
+}
+function byInstance(a, b) {
+  return a.channel.localeCompare(b.channel) || a.instanceId.localeCompare(b.instanceId);
+}
+var INTERRUPTIONS = new Set(["replace", "higher-priority", "ignore"]);
+var presentation = {
+  createAnimation(settings) {
+    const result = { schemaVersion: 1, ...clone4(settings) };
+    validateAnimationSettings(result);
+    return result;
+  },
+  createRuntime(runtimeId, settings) {
+    return new PresentationRuntime(runtimeId, settings);
+  },
+  play(eventId, animationId, options = {}) {
+    return { schemaVersion: 1, type: "play", eventId, animationId, ...clone4(options) };
+  },
+  cancel(eventId, options) {
+    return { schemaVersion: 1, type: "cancel", eventId, ...clone4(options) };
+  },
+  validateAnimation: validateAnimationSettings,
+  validateEvent: validatePresentationEvent,
+  validateRuntime: validatePresentationRuntimeSettings
+};
 export {
   validateTriggerEvent,
   validateTriggerActivation,
@@ -1708,6 +2438,8 @@ export {
   validateTemporalModifier,
   validateStructureLifecycleTemplate,
   validateStructureLifecycle,
+  validatePresentationRuntimeSettings,
+  validatePresentationEvent,
   validateNumericThresholdBindings,
   validateNumericThresholdBinding,
   validateNumericThreshold,
@@ -1726,6 +2458,11 @@ export {
   validateCollisionFilterLifetime,
   validateCollisionFilter,
   validateCollisionCommandBinding,
+  validateAudioSettings,
+  validateAudioCommand,
+  validateAudioBatch,
+  validateApplicationAudioSettings,
+  validateAnimationSettings,
   validateActorEligibilityState,
   validateActorEligibilityConstraintLifetime,
   validateActorEligibilityConstraint,
@@ -1740,6 +2477,7 @@ export {
   registerMovementCommands,
   registerCounterSystem,
   registerCounterCommands,
+  presentation,
   participationSystemDefinition,
   numericSystemDefinition,
   movementSystemDefinition,
@@ -1762,12 +2500,15 @@ export {
   createEngineEffectComposition,
   createDeferredEffectTemplate,
   createDeferredEffect,
+  createDefaultAudioFramework,
   createCounterState,
   createCollisionFilterTemplate,
   createCollisionFilterLifetime,
   createCollisionFilter,
   createCollisionEnterTriggerEvent,
   createCollisionCommandBinding,
+  createAudioSettings,
+  createAudioRuntime,
   createActorEligibilityConstraintTemplate,
   createActorEligibilityConstraintLifetime,
   createActorEligibilityConstraint,
@@ -1779,6 +2520,8 @@ export {
   collectAssetReferences,
   canonicalizeCounterStates,
   calculateRadialVelocityDelta,
+  audio,
+  assertJsonValue,
   applyRadialVelocityDelta,
   applyActionModifiers,
   advanceTemporalModifier,
@@ -1793,8 +2536,11 @@ export {
   TRANSFORM_CAPABILITY,
   TEMPORAL_MODIFIER_SCHEMA_VERSION,
   TEMPORAL_DURATION_UNITS,
+  SoundSystem,
+  SeededRandom,
   STRUCTURE_LIFECYCLE_SCHEMA_VERSION,
   STRUCTURE_LIFECYCLE_DURATION_UNITS,
+  PresentationRuntime,
   PARTICIPATION_SET_PHYSICS_EFFECT_ID,
   PARTICIPATION_SET_DRAWING_EFFECT_ID,
   PARTICIPATION_EFFECT_IDS,
@@ -1834,6 +2580,9 @@ export {
   COLLISION_COMMAND_TYPE,
   COLLISION_COMMAND_SCHEMA_VERSION,
   COLLISION_CATEGORIES,
+  AudioRuntime,
+  AudioEmitter,
+  ApplicationAudioMixer,
   ACTOR_ELIGIBILITY_SCHEMA_VERSION,
   ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION,
   ACTION_MODIFIER_SCHEMA_VERSION

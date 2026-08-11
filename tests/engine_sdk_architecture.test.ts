@@ -5,6 +5,28 @@ import { engine, EngineSystemRegistry } from "@coffeemakerstudio/roast";
 import { kore } from "../src/kore/sdk/index.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
+test("KORE imports extracted engines only through public package roots", () => {
+	const files = (directory: string): string[] => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+			const path = join(directory, entry.name).replaceAll("\\", "/");
+			return entry.isDirectory() ? files(path) : entry.isFile() && /\.(ts|js|mjs|cjs)$/.test(path) ? [path] : [];
+		});
+	const violations: string[] = [];
+	const importPattern = /(?:from|import\s*\(|require\s*\()\s*["']([^"']+)["']/g;
+	for (const file of [...files("src"), ...files("scripts")]) {
+		const source = readFileSync(file, "utf8");
+		for (const match of source.matchAll(importPattern)) {
+			const specifier = match[1]!;
+			if (/^@coffeemakerstudio\/(?:roast|bean|drip)\/(?:src|dist)(?:\/|$)/.test(specifier)
+				|| /(?:^|\/)node_modules\/@coffeemakerstudio\/(?:roast|bean|drip)(?:\/|$)/.test(specifier)
+				|| /^(?:\.\.?\/)+(?:Roast|Bean|Drip)(?:\/|$)/.test(specifier)
+				|| /^\/home\/eugen\/projekte\/(?:Roast|Bean|Drip)(?:\/|$)/.test(specifier)) {
+				violations.push(`${file}: ${specifier}`);
+			}
+		}
+	}
+	expect(violations).toEqual([]);
+});
+
 test("generic Engine SDK authors JSON worlds without importing KORE", () => {
 	const world = engine.createWorld({ id: "generic-world", worldSize: { x: 320, y: 180 } })
 		.setBackground({ type: "color", value: "#000" })
