@@ -73,9 +73,9 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
-    "@coffeemakerstudio/bean": "git+ssh://git@github.com/coffeemakerstudio/Bean.git#v0.1.0",
-    "@coffeemakerstudio/drip": "git+ssh://git@github.com/coffeemakerstudio/Drip.git#v0.1.0",
-    "@coffeemakerstudio/roast": "git+ssh://git@github.com/coffeemakerstudio/Roast.git#v0.1.0",
+    "@coffeemakerstudio/roast": "^0.1.0",
+    "@coffeemakerstudio/bean": "^0.1.0",
+    "@coffeemakerstudio/drip": "^0.1.1",
     "p5": "^2.3.0"
   },
   "module": "index.ts"
