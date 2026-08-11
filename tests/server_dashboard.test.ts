@@ -245,7 +245,7 @@ test("read-only API tokens authenticate metrics but not operator routes", async 
 	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config, database))!.status).toBe(404);
 	const listed = (await serveDashboard(request(DASHBOARD_API_KEYS_PATH, `Bearer ${secret}`), registry, config, database))!;
 	expect(await listed.json()).toMatchObject({ tokens: [{ id: created.record.id, label: "test-bot" }] });
-	const deleted = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_API_KEYS_PATH}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}`, "content-type": "application/x-www-form-urlencoded" }, body: `id=${encodeURIComponent(created.record.id)}` }), registry, config, database))!;
+	const deleted = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_API_KEYS_PATH}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}`, "content-type": "application/x-www-form-urlencoded" }, body: `id=${encodeURIComponent(` ${created.record.id} `)}` }), registry, config, database))!;
 	expect(deleted.status).toBe(200);
 	expect(database.listDashboardApiTokens()).toHaveLength(0);
 	database.close();
