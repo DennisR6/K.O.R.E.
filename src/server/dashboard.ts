@@ -55,7 +55,8 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
 	if (pathname === DASHBOARD_LOGOUT_PATH) return logout(request, config.operatorSecret, publicBaseUrl);
-	if (!isAuthorized(request, config.operatorSecret) && !(pathname === DASHBOARD_METRICS_PATH && database && isBearerApiToken(request, database))) return notFound();
+	const apiTokenAccess = database && (pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_DATABASE_PATH) && isBearerApiToken(request, database);
+	if (!isAuthorized(request, config.operatorSecret) && !apiTokenAccess) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
 	if (pathname === DASHBOARD_API_TOKENS_PATH || pathname.startsWith(`${DASHBOARD_API_TOKENS_PATH}/`) || pathname === DASHBOARD_API_KEYS_PATH || pathname.startsWith(`${DASHBOARD_API_KEYS_PATH}/`)) return apiTokens(request, database, pathname);
 	if (pathname === DASHBOARD_FEEDBACK_PATH) return operatorFeedback(request, database);

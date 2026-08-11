@@ -1,6 +1,9 @@
 # Browser failure diagnostics (Section 16.5)
 .browser-diagnostics
 
+# Local telemetry investigations (contains player feedback)
+.telemetry/
+
 # Cross-worker browser build lock (browserHarness)
 .browser-build.lock
 

@@ -1,5 +1,8 @@
+import { mkdir, rename } from "node:fs/promises";
+
 const ROOT_ENV_PATH = `${import.meta.dir}/../.env`;
-const METRICS_URL = "https://lupricht.net/kore/operator/dashboard/metrics";
+const DATABASE_URL = "https://lupricht.net/kore/operator/db";
+const DATABASE_PATH = `${import.meta.dir}/../data/kore.db`;
 
 function parseDotEnv(contents: string): Record<string, string> {
 	const values: Record<string, string> = {};
@@ -18,23 +21,29 @@ async function main(): Promise<void> {
 	if (!(await envFile.exists())) throw new Error(`Missing root .env file: ${ROOT_ENV_PATH}`);
 
 	const dotenv = parseDotEnv(await envFile.text());
-	const apiKey = process.env.KORE_API_KEY ?? dotenv.KORE_API_KEY;
-	if (!apiKey) throw new Error("KORE_API_KEY is missing from the environment and root .env");
+	const accessToken = process.env.KORE_API_KEY ?? dotenv.KORE_API_KEY ?? process.env.KORE_DASHBOARD_OPERATOR_SECRET ?? dotenv.KORE_DASHBOARD_OPERATOR_SECRET;
+	if (!accessToken) throw new Error("KORE_API_KEY or KORE_DASHBOARD_OPERATOR_SECRET is required to access /operator/db");
 
-	const response = await fetch(METRICS_URL, {
+	const response = await fetch(DATABASE_URL, {
 		headers: {
-			accept: "application/json",
-			authorization: `Bearer ${apiKey}`,
+			accept: "application/vnd.sqlite3, application/octet-stream",
+			authorization: `Bearer ${accessToken}`,
 		},
 	});
-	const body = await response.text();
-	if (!response.ok) throw new Error(`Telemetry request failed (${response.status} ${response.statusText}): ${body.slice(0, 500)}`);
-
-	try {
-		console.log(JSON.stringify(JSON.parse(body), null, 2));
-	} catch {
-		throw new Error("Telemetry endpoint returned invalid JSON");
+	if (!response.ok) {
+		const body = await response.text();
+		throw new Error(`Database download failed (${response.status} ${response.statusText}): ${body.slice(0, 500)}`);
 	}
+
+	const database = new Uint8Array(await response.arrayBuffer());
+	const sqliteMagic = new TextEncoder().encode("SQLite format 3\0");
+	if (database.length < sqliteMagic.length || sqliteMagic.some((byte, index) => database[index] !== byte)) throw new Error("Downloaded response is not a SQLite database");
+
+	await mkdir(`${import.meta.dir}/../data`, { recursive: true });
+	const temporaryPath = `${DATABASE_PATH}.tmp`;
+	await Bun.write(temporaryPath, database);
+	await rename(temporaryPath, DATABASE_PATH);
+	console.log(`Downloaded ${database.byteLength} bytes to ${DATABASE_PATH}`);
 }
 
 await main();

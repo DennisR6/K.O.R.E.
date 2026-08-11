@@ -234,7 +234,7 @@ test("dashboard routes fail closed and never expose errors", async () => {
 	expect(await serveDashboard(request("/operator/unknown", `Bearer ${secret}`), registry, config)).toBeUndefined();
 });
 
-test("read-only API tokens authenticate metrics but not operator routes", async () => {
+test("read-only API tokens authenticate metrics and database export but not operator routes", async () => {
 	const database = new GameDatabase(":memory:");
 	const created = database.createDashboardApiToken("test-bot");
 	const token = created.token;
@@ -242,6 +242,9 @@ test("read-only API tokens authenticate metrics but not operator routes", async 
 	const registry = { getMetrics: () => ({ allTime: 0, offlineMatches: 0, offlineModes: [], playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0, mapUsage: [], mostPlayedMap: null, measuredAt: 1, consistency: "now is scoped to this server process's resident registry cache" }) } as unknown as GameRegistry;
 	const metrics = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${token}`), registry, config, database))!;
 	expect(metrics.status).toBe(200);
+	const databaseExport = (await serveDashboard(request(DASHBOARD_DATABASE_PATH, `Bearer ${token}`), registry, config, database))!;
+	expect(databaseExport.status).toBe(200);
+	expect(databaseExport.headers.get("content-type")).toContain("application/vnd.sqlite3");
 	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config, database))!.status).toBe(404);
 	const listed = (await serveDashboard(request(DASHBOARD_API_KEYS_PATH, `Bearer ${secret}`), registry, config, database))!;
 	expect(await listed.json()).toMatchObject({ tokens: [{ id: created.record.id, label: "test-bot" }] });
