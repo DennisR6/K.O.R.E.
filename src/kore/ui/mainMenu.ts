@@ -93,16 +93,11 @@ builder.addScreen(
 builder.addScreen(
     ui.screen({
         id: KoreMenuScreen.Main,
-        layout: ui.layout.vertical({
-            gap: 20,
-            justify: "center",
-            align: "center",
-            padding: { top: 0, right: 30, bottom: 40, left: 30 }
-        }),
+        layout: ui.layout.absolute(),
         elements: [
             ui.container({
                 id: "HelpContainer",
-                rect: rect(0, 0, 740, 240),
+                rect: rect(30, 85, 740, 240),
                 style: "HelpContainer",
                 elements: [
                     ui.button({
@@ -275,7 +270,20 @@ builder.addScreen(
                         ]
                     })
                 ]
-            })
+            }),
+            ui.container({
+                id: "MainBottomActions",
+                rect: rect(0, 342, 800, 58),
+                layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
+                elements: [
+                    ui.button({ id: KoreMenuElement.MainAi, text: translate(language, KoreMenuText.Ai), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenAi) }),
+                    ui.button({ id: KoreMenuElement.MainBattle, text: translate(language, KoreMenuText.Battle), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenBattle) }),
+                    ui.button({ id: KoreMenuElement.MainOnline, text: translate(language, KoreMenuText.Online), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenOnline) }),
+                    ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
+                    ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenLocalMaps) }),
+                    ui.button({ id: KoreMenuElement.MainMods, text: translate(language, KoreMenuText.Mods), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenMods) }),
+                ],
+            }),
         ]
     })
 );
@@ -710,7 +718,7 @@ function modsScreen(language: LanguageCatalog) {
 		elements: [
 			ui.text({ id: KoreMenuElement.ModsTitle, text: translate(language, KoreMenuText.ModsTitle), rect: rect(265, 40, 300, 32), style: KoreMenuStyle.MapTitle }),
 			ui.button({ id: KoreMenuElement.ModsLoadFile, text: translate(language, KoreMenuText.ModsLoadFile), rect: rect(250, 95, 300, 42), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModFile) }),
-			ui.button({ id: KoreMenuElement.ModsPaste, text: translate(language, KoreMenuText.ModsPasteJson), rect: rect(250, 150, 300, 42), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModPaste) }),
+			ui.button({ id: KoreMenuElement.ModsPaste, text: translate(language, KoreMenuText.ModsPasteJson), rect: rect(250, 195, 300, 42), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ImportModPaste) }),
 			ui.text({ id: KoreMenuElement.ModsStatus, text: translate(language, KoreMenuText.ModsStatusEmpty), rect: rect(200, 215, 400, 24), style: KoreMenuStyle.MapNote }),
 			ui.button({ id: KoreMenuElement.ModsBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 320, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
@@ -725,8 +733,8 @@ function modImportScreen(language: LanguageCatalog) {
 			ui.text({ id: KoreMenuElement.ModImportTitle, text: translate(language, KoreMenuText.ModImportTitle), rect: rect(240, 30, 320, 32), style: KoreMenuStyle.MapTitle }),
 			ui.text({ id: KoreMenuElement.ModImportHint, text: translate(language, KoreMenuText.ModImportHint), rect: rect(150, 68, 500, 24), style: KoreMenuStyle.MapNote }),
 			ui.textInput({ id: KoreMenuElement.ModImportInput, text: "", rect: rect(150, 100, 500, 180), style: KoreMenuStyle.MapRow }),
-			ui.button({ id: KoreMenuElement.ModImportValidate, text: translate(language, KoreMenuText.ModImportValidate), rect: rect(250, 295, 140, 36), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ValidateMod) }),
-			ui.button({ id: KoreMenuElement.ModImportBack, text: translate(language, KoreMenuText.Back), rect: rect(410, 295, 140, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
+			ui.button({ id: KoreMenuElement.ModImportValidate, text: translate(language, KoreMenuText.ModImportValidate), rect: rect(240, 295, 170, 36), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.ValidateMod) }),
+			ui.button({ id: KoreMenuElement.ModImportBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 330, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
 	});
 }
@@ -738,8 +746,8 @@ function modResultScreen(language: LanguageCatalog) {
 		elements: [
 			ui.text({ id: KoreMenuElement.ModResultTitle, text: translate(language, KoreMenuText.ModResultTitle), rect: rect(240, 30, 320, 32), style: KoreMenuStyle.MapTitle }),
 			ui.text({ id: KoreMenuElement.ModResultSummary, text: "", rect: rect(150, 80, 500, 120), style: KoreMenuStyle.MapNote }),
-			ui.button({ id: KoreMenuElement.ModResult1v1, text: translate(language, KoreMenuText.ModTest1v1), rect: rect(240, 220, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchMod1v1) }),
-			ui.button({ id: KoreMenuElement.ModResultBattle, text: translate(language, KoreMenuText.ModTestBattle), rect: rect(240, 270, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchModAiBattle) }),
+			ui.button({ id: KoreMenuElement.ModResult1v1, text: translate(language, KoreMenuText.ModTest1v1), rect: rect(240, 240, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchMod1v1) }),
+			ui.button({ id: KoreMenuElement.ModResultBattle, text: translate(language, KoreMenuText.ModTestBattle), rect: rect(240, 290, 320, 40), style: KoreMenuStyle.MainButton, enabled: false, action: ui.action.emit(KoreMenuCommand.LaunchModAiBattle) }),
 			ui.button({ id: KoreMenuElement.ModResultBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 330, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
 		],
 	});

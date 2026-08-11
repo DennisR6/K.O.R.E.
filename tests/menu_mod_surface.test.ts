@@ -189,6 +189,7 @@ describe("mod menu surface wiring", () => {
 		menu.drainSoundCommands(); // menu music
 		press(menu, 400, 100);
 		press(menu, 715, 371);
+		menu.drainSoundCommands(); // discard the Mods-navigation confirmation; assert the launch confirmation below
 		menu.importModText(VALID_TEXT, { kind: "file", fileName: "mod.json" });
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.ModResult);
 		press(menu, 260, 266);
