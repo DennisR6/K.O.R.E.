@@ -107,7 +107,6 @@ export class AuthoritativeGameplayRenderer {
 
     renderer.drawImage(player.hoop, position.x - player.size, position.y - player.size, player.size * 2, player.size * 2);
     renderer.drawImage(player.playericon, position.x - player.size, position.y - player.size, player.size * 2, player.size * 2);
-    for (const effect of player.effects) renderer.drawText(effect.type.split(".").pop() ?? effect.type, position.x + player.size + 4, position.y, 10);
     if (player.team.includes(activeTeam)) {
       renderer.setNoFill();
       renderer.setStrokeColor(activeTeam === 0 ? "#38bdf8" : "#fb7185");

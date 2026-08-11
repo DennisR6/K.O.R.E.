@@ -50,7 +50,6 @@ test("gameplay scene renders only current authoritative state, roles, effects, a
 	expect(calls.some(call => call.type === "image" && call.values[1] === 321 - playerSize && call.values[2] === 123 - playerSize)).toBe(true);
 	expect(calls.some(call => call.type === "image" && call.values[0] === "public/items/mystery_box.svg")).toBe(true);
 	expect(calls.some(call => call.type === "text" && call.values[0] === "mystery-box")).toBe(false);
-	expect(calls.some(call => call.type === "text" && call.values[0] === "ModifyMass")).toBe(true);
 	// The explicit containment rectangle is an outline, never a filled obstacle.
 	expect(calls.some(call => call.type === "noFill")).toBe(true);
 	expect(handler.toSettings()).toEqual(before);
