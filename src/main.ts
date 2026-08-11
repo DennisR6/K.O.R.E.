@@ -27,7 +27,7 @@ import { createKoreShareSurface } from "./kore/ui/shareSurface.js";
 import { GameState, type IMouse } from "./engine/types.js";
 import { runtimeNow, summarizeFrameWindow } from "./engine/runtimeLog.js";
 import { kore } from "./kore/sdk/index.js";
-import { browserPrefersGerman, formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, type LanguageCatalog } from "./i18n/language.js";
+import { formatLanguage, isLanguageCode, LANGUAGE_KEYS, loadLanguage, resolveBrowserLanguage, type LanguageCatalog } from "./i18n/language.js";
 import { createKoreStatusSurface } from "./kore/ui/statusSurface.js";
 import { buildPerformanceEndpoint, installMatchPerformanceReport } from "./net/performanceReport.js";
 import { buildMatchReportEndpoint, reportMatchHttp } from "./net/matchReport.js";
@@ -52,8 +52,8 @@ const usersettings = {
 	friendCode: uri.searchParams.get("code") ?? undefined,
 }
 
-if (!uri.searchParams.has("lang") && browserPrefersGerman(navigator.languages?.length ? navigator.languages : [navigator.language])) {
-	uri.searchParams.set("lang", "de_de");
+if (!uri.searchParams.has("lang")) {
+	uri.searchParams.set("lang", resolveBrowserLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]));
 	window.history.replaceState({}, "", uri.toString());
 }
 const requestedLanguage = uri.searchParams.get("lang");

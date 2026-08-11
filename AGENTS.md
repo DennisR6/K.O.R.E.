@@ -629,7 +629,8 @@ qualification scenarios, not a normal completion mode.
   complete `en_en` catalog first and overlays the selected language, so
   missing translations fall back to English. Production UI language is
   selected explicitly with `?lang=en_en` or `?lang=de_de`, or automatically
-  chooses German when the browser advertises a German language.
+  resolves the browser's ordered locale list to the best available normalized
+  pack (`de-DE` -> `de_de`); unsupported locales fall back to `en_en`.
 - `src/kore/ui/statusSurface.ts`, `replayViewerSurface.ts`, and
   `shareSurface.ts`: engine-rendered production status, replay, and share
   overlays. They do not create HTML UI elements.
@@ -766,9 +767,10 @@ controls seek, pause, and resume the embedded deterministic replay; direct
 menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
 is intentionally outside `src/engine/ui-sdk/`.
 `?lang=en_en` or `?lang=de_de` selects the production UI language; an absent
-`lang` parameter automatically selects `de_de` when the browser advertises a
-German language, otherwise English is used. Explicit `lang` values are never
-overridden; English remains the fallback for missing selected-language entries. Production
+`lang` parameter resolves the browser's ordered locale list against the
+available packs (`de-DE` -> `de_de`, with `en_en` as fallback). Explicit `lang`
+values are never overridden; English remains the fallback for missing
+selected-language entries. Production
 loading, replay, share, menu, HUD, and gameplay labels are rendered through
 the engine/UI surfaces rather than HTML overlays.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed

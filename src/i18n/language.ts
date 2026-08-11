@@ -222,9 +222,17 @@ export function isLanguageCode(value: string | null | undefined): value is Langu
 	return typeof value === "string" && (LANGUAGE_CODES as readonly string[]).includes(value);
 }
 
-/** Returns true when the browser advertises German as one of its languages. */
-export function browserPrefersGerman(languages: readonly string[]): boolean {
-	return languages.some(language => /^de(?:-|$)/i.test(language.trim()));
+/** Selects the best supported pack for the browser's ordered language list. */
+export function resolveBrowserLanguage(languages: readonly string[]): LanguageCode {
+	const supported = new Set<LanguageCode>(LANGUAGE_CODES);
+	const normalized = languages.map(language => language.trim().toLowerCase().replace(/-/g, "_"));
+	for (const language of normalized) if (supported.has(language as LanguageCode)) return language as LanguageCode;
+	for (const language of normalized) {
+		const base = language.split("_")[0];
+		const match = LANGUAGE_CODES.find(code => code.split("_")[0] === base);
+		if (match) return match;
+	}
+	return "en_en";
 }
 
 type LanguageDocument = { language?: unknown; strings?: unknown };
