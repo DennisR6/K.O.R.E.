@@ -12,8 +12,19 @@ import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.
  * eventuelle Abweichungen (Drift), die durch physikalische Ungenauigkeiten 
  * entstanden sind.
  */
+export type PlaybackPositionDrift = {
+		id: string;
+		turnStart?: { x: number; y: number };
+		before: { x: number; y: number };
+		expected: { x: number; y: number };
+		delta: { x: number; y: number };
+		distance: number;
+};
+
 export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
 	public readonly systemId = "core.playback";
+	private turnStartState: PlayerSettings[] | undefined;
+	private lastPositionDrift: PlaybackPositionDrift[] = [];
 	/** Anzahl der verbleibenden Frames, bis der Endzustand erzwungen wird. */
 	private remainingFrames = 0;
 	/** True, sobald der Countdown abgelaufen ist und der Sync aussteht. */
@@ -31,8 +42,10 @@ export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
 	 * @param finalState - Die exakten Ziel-Daten (Position/Velocity) am Ende.
 	 * @param cb - (Optional) Aktion nach Abschluss (z.B. UI einblenden).
 	 */
-	public start(frames: number, finalState: PlayerSettings[], cb?: () => void) {
+	public start(frames: number, finalState: PlayerSettings[], cb?: () => void, turnStartState?: PlayerSettings[]) {
 		this.finalState = finalState
+		this.turnStartState = turnStartState ? JSON.parse(JSON.stringify(turnStartState)) : undefined;
+		this.lastPositionDrift = [];
 		this.remainingFrames = frames;
 		this.syncPending = frames === 0;
 		this.cb = cb;
@@ -99,6 +112,17 @@ export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
 	private applyHardSync(entities: EntityManager) {
 		if (!this.finalState) return;
 
+		const before = entities.serialize();
+		const beforeById = new Map(before.map(player => [player.id, player]));
+		const turnStartById = new Map((this.turnStartState ?? []).map(player => [player.id, player]));
+		this.lastPositionDrift = this.finalState.flatMap(expected => {
+			const actual = beforeById.get(expected.id);
+			if (!actual) return [];
+			const delta = { x: actual.position.x - expected.position.x, y: actual.position.y - expected.position.y };
+			const turnStart = turnStartById.get(expected.id)?.position;
+			return [{ id: expected.id, ...(turnStart ? { turnStart: { ...turnStart } } : {}), before: { ...actual.position }, expected: { ...expected.position }, delta, distance: Math.hypot(delta.x, delta.y) }];
+		});
+
 		// The server snapshot owns every mutable entity field, not just movement.
 		entities.applySettings(this.finalState);
 
@@ -122,4 +146,9 @@ export class PlaybackSystem implements ISerializableSystem<SystemSettings> {
 	getRemainingFrames(): number {
 		return this.remainingFrames;
 	}
+
+	/** Position differences measured immediately before the last hard sync. */
+	public getLastPositionDrift(): PlaybackPositionDrift[] { return this.lastPositionDrift.map(entry => ({ ...entry, ...(entry.turnStart ? { turnStart: { ...entry.turnStart } } : {}), before: { ...entry.before }, expected: { ...entry.expected }, delta: { ...entry.delta } })); }
+	/** Snapshot captured when the last playback turn started. */
+	public getTurnStartState(): PlayerSettings[] | undefined { return this.turnStartState ? JSON.parse(JSON.stringify(this.turnStartState)) : undefined; }
 }

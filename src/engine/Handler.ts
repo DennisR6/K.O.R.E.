@@ -363,6 +363,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		this.log("turn.playback.started", { actorId: packet.actorId, frames: packet.durationFrames });
 		this.setState(GameState.Playing)
 
+		const turnStartState = this.entityManager.serialize();
 		const actor = this.entityManager.getEntityById(packet.actorId);
 		if (!actor) throw new Error("actor not found!")
 		this.applyAcceptedForce(actor, packet.input);
@@ -371,6 +372,8 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const playback = this.systems.find(s => s instanceof PlaybackSystem) as PlaybackSystem;
 		if (!playback) throw new Error("playbacksystem not found!")
 		playback.start(packet.durationFrames, packet.finalState, () => {
+			const drift = playback.getLastPositionDrift();
+			if (drift.some(entry => entry.distance > 0)) this.log("turnPacket.pre-sync-drift", { actorId: packet.actorId, drift });
 			const durationMs = runtimeNow() - (this.playbackStartedAt ?? runtimeNow());
 			const team = this.entityManager.getEntityById(packet.actorId)?.getTeam()[0];
 			this.log("turn.playback.completed", { actorId: packet.actorId, team, frames: packet.durationFrames, durationMs, playerVisibleDurationMs: durationMs });
@@ -385,7 +388,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				this.setState(GameState.Playing_done)
 			}
 			onComplete?.()
-		});
+		}, turnStartState);
 	}
 
 
@@ -613,6 +616,10 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 	public getPlaybackFramesRemaining(): number {
 		const playback = this.systems.find(system => system instanceof PlaybackSystem) as PlaybackSystem | undefined;
 		return playback?.getRemainingFrames() ?? 0;
+	}
+	public getLastPositionDrift(): ReturnType<PlaybackSystem["getLastPositionDrift"]> {
+		const playback = this.systems.find(system => system instanceof PlaybackSystem) as PlaybackSystem | undefined;
+		return playback?.getLastPositionDrift() ?? [];
 	}
 	public getPhysics(): PhysicsStrategy { return this.physicsStrategy }
 	public attachFeedbackToPhysics(system: PhysicsSystem): void {

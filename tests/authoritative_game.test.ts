@@ -274,6 +274,7 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 	expect(handler.getEntityManager().getEntities()[0].toSettings()).toEqual(finalState)
 	expect(handler.getContext().currTurn).toBe(3)
 	expect(handler.getRuleState()).toEqual(ruleState)
+	expect(handler.getLogs().some(log => log.type === "turnPacket.pre-sync-drift")).toBe(true)
 
 	const endedPlayers = [createPlayerSettings({ ...finalState, position: { x: 90, y: 100 } })];
 	socket.receive(JSON.stringify({ type: NetworkMessageType.GAME_ENDED, reason: "A player surrendered", players: endedPlayers }));

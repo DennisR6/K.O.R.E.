@@ -321,8 +321,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/systems/UiSystem.ts`: converts mouse drag into actor, angle, and power;
   only permits selection by the active team.
 - `src/systems/Emitter.ts`: sends completed input through an `IInputEmitter`.
-- `src/systems/PlayBackSystem.ts`: counts simulated frames and hard-syncs the
-  final position and velocity.
+- `src/systems/PlayBackSystem.ts`: counts simulated frames, stores the turn-start
+  player positions, measures per-player position deltas immediately before the
+  hard sync, and then hard-syncs the final position and velocity.
 - `src/systems/GameStateManager.ts`: incomplete state transitions.
 - `src/systems/TurnSystem.ts`: client turn-state mapping for controlled teams.
 - `src/systems/RoundSystem.ts`, `WinningSystem.ts`, `BoundarySystem.ts`,

@@ -75,7 +75,7 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 				handler.setState(turn.gameOver ? GameState.Game_over : TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 				const localStateHash = fingerprintAuthoritativeTurn({ players: handler.getEntityManager().serialize(), state: handler.getState(), turnNumber: turn.turnNumber, activeTeam: turn.activeTeam, ruleState: handler.getRuleState(), matchResult: handler.getMatchResult() });
 				const hashMatches = turn.stateHash === undefined || turn.stateHash === localStateHash;
-				handler.log(hashMatches ? "turnPacket.synchronized" : "turnPacket.hash-mismatch", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, actualStateHash: localStateHash, hashMatches });
+				handler.log(hashMatches ? "turnPacket.synchronized" : "turnPacket.hash-mismatch", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, actualStateHash: localStateHash, hashMatches, preSyncDrift: handler.getLastPositionDrift() });
 			})
 		}
 		if (message.type === NetworkMessageType.ITEM_USED) {
