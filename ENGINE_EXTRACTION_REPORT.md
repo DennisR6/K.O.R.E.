@@ -65,8 +65,16 @@ The least disruptive target is a standalone package containing the proven generi
 
 Before any history filtering, the package must compile and test from a directory where all KORE modules are absent. The current repository has not yet passed that gate.
 
+## Validation performed before extraction
+
+- `npx tsc --noEmit`: passed.
+- Generic SDK/contract smoke set (`tests/engine_sdk_architecture.test.ts`, `engine_counter_capability`, `engine_effect_registry`, `engine_system_registry`, `engine_trigger_contract`, `audio_sdk`): 22 passed, 0 failed.
+- These tests validate the existing in-repository SDK boundaries; they do not prove that the source tree or the playable runtime builds without KORE modules.
+
 ## Current verdict
 
 `STANDALONE ENGINE BLOCKED`
 
-This is an inventory/dependency report only. No source code was modified during Phase 1/2.
+The required extraction clone and history filtering were deliberately **not** performed because the standalone gate has not passed. In particular, `src/engine/Handler.ts`, `src/engine/types.ts`, runtime factories, the system registry implementation, physics/entity runtime, and replay player still have reverse dependencies on KORE/game modules. The generated `sdk/*.js` bundles are standalone distribution artifacts, not a standalone source repository, and the original game does not consume them as its engine implementation.
+
+This report is the only change made for Phase 1/2; no source code was modified. The report commit is `d8549f6` (`docs: inventory engine extraction boundaries`).
