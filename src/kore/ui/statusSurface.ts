@@ -20,6 +20,7 @@ export class KoreStatusSurface implements IMouse, IDrawer {
 			elements: [
 				ui.text({ id: KoreStatusElement.Title, text: language.strings[LANGUAGE_KEYS.LoadingJoining], rect: { x: 160, y: 145, width: 480, height: 42 }, style: KoreStatusStyle.Title }),
 				ui.text({ id: KoreStatusElement.Message, text: language.strings[LANGUAGE_KEYS.LoadingConnecting], rect: { x: 100, y: 205, width: 600, height: 36 }, style: KoreStatusStyle.Message }),
+				ui.text({ id: KoreStatusElement.WaitingTime, text: "", rect: { x: 100, y: 238, width: 600, height: 28 }, style: KoreStatusStyle.Message }),
 				ui.button({ id: KoreStatusElement.Retry, text: language.strings[LANGUAGE_KEYS.LoadingRetry], rect: { x: 250, y: 280, width: 140, height: 42 }, style: KoreStatusStyle.Retry, visible: false, action: ui.action.emit(KoreStatusCommand.Retry) }),
 				ui.button({ id: KoreStatusElement.Back, text: language.strings[LANGUAGE_KEYS.LoadingBack], rect: { x: 410, y: 280, width: 140, height: 42 }, style: KoreStatusStyle.Back, visible: false, action: ui.action.emit(KoreStatusCommand.Back) }),
 			],
@@ -29,6 +30,7 @@ export class KoreStatusSurface implements IMouse, IDrawer {
 	public getRuntime(): UiRuntime { return this.runtime; }
 
 	public setMessage(message: string): void { this.runtime.dispatch({ type: "setText", target: KoreStatusElement.Message, text: message }); }
+	public setWaitingTime(message: string): void { this.runtime.dispatch({ type: "setText", target: KoreStatusElement.WaitingTime, text: message }); }
 	public fail(message: string): void {
 		this.failed = true;
 		this.setMessage(message);

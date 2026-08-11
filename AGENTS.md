@@ -87,8 +87,10 @@ After every change, check whether this guide still reflects the implementation a
 - `index.html`: browser shell; loads vendored `public/p5.min.js` and generated `dist/main.js`.
 - `replay.html`: standalone browser replay host with normal HTML playback controls; it embeds the read-only game at `?replay=<id>&embed=1` and controls it through a validated same-origin `postMessage` bridge.
 - `src/main.ts`: browser bootstrap, menu/game selection, accessible online
-  connection/matchmaking loading and recovery UI, p5 setup, render loop, DOM
-  mouse events, keyboard audio controls, and `window.game` debug access.
+  connection/matchmaking loading and recovery UI, including a 20-second
+  connection timeout and five-minute visible queue timer, p5 setup, render
+  loop, DOM mouse events, keyboard audio controls, and `window.game` debug
+  access.
 - `src/engine/startupTelemetry.ts`: bounded browser startup timing and asset
   aggregate observations exposed through `window.game.startup`; it remains
   runtime-only and never enters canonical settings, fingerprints, or replays.

@@ -132,13 +132,37 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	socket = new WebSocket(serverUrl)
 	let started = false
 	let failed = false
+	let connectionTimeout: number | undefined
+	let queueTimeout: number | undefined
+	let queueTimer: number | undefined
+	let queueStartedAt: number | undefined
+	const stopQueueTimers = () => {
+		if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout)
+		if (queueTimeout !== undefined) window.clearTimeout(queueTimeout)
+		if (queueTimer !== undefined) window.clearInterval(queueTimer)
+		connectionTimeout = undefined
+		queueTimeout = undefined
+		queueTimer = undefined
+	}
 	const fail = (message: string) => {
 		if (started || failed) return
 		failed = true
+		stopQueueTimers()
 		loading.fail(message)
 	}
 	socket.addEventListener("open", () => {
+		if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout)
+		queueStartedAt = Date.now()
 		loading.setMessage(language.strings[LANGUAGE_KEYS.LoadingFindingOpponent])
+		const updateQueueTimer = () => {
+			const elapsedSeconds = Math.floor((Date.now() - (queueStartedAt ?? Date.now())) / 1_000)
+			const minutes = Math.floor(elapsedSeconds / 60)
+			const seconds = String(elapsedSeconds % 60).padStart(2, "0")
+			loading.setWaitingTime(formatLanguage(language, LANGUAGE_KEYS.LoadingWaitingTime, { elapsed: `${minutes}:${seconds}` }))
+		}
+		updateQueueTimer()
+		queueTimer = window.setInterval(updateQueueTimer, 1_000)
+		queueTimeout = window.setTimeout(() => fail(language.strings[LANGUAGE_KEYS.LoadingTimedOut]), 5 * 60_000)
 		// Two friend-room tabs can share origin localStorage. Do not reuse the
 		// normal matchmaking identity for either side; the server assigns each
 		// connection a distinct player identity for this room.
@@ -146,7 +170,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	})
 	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
 	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))
-	const timeout = window.setTimeout(() => fail(language.strings[LANGUAGE_KEYS.LoadingTimedOut]), 20_000)
+	connectionTimeout = window.setTimeout(() => fail(language.strings[LANGUAGE_KEYS.LoadingTimedOut]), 20_000)
 	socket.addEventListener("message", event => {
 		let message: UnTypedNetworkMessage
 		try {
@@ -173,7 +197,7 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 		}
 		if (message.type !== NetworkMessageType.INIT || started) return
 		started = true
-		window.clearTimeout(timeout)
+		stopQueueTimers()
 		loadingHandler.dispose()
 		const init = message as NetworkInit
 		if (init.mapId) loading.setMessage(formatLanguage(language, LANGUAGE_KEYS.LoadingStarting, { map: init.mapId }))

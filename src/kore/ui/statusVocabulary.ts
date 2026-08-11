@@ -12,6 +12,7 @@ export enum KoreStatusScreen {
 export enum KoreStatusElement {
 	Title = "status-title",
 	Message = "status-message",
+	WaitingTime = "status-waiting-time",
 	Retry = "status-retry",
 	Back = "status-back",
 }
