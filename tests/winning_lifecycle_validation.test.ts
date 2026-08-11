@@ -6,7 +6,7 @@ import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameState } from "../src/kore/runtime/types.ts";
 import { EffectTrigger, EffectType } from "../src/effects/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { MatchEndReason, MatchStatus } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { WinningSystem, evaluateLastTeamStanding } from "../src/systems/WinningSystem.ts";

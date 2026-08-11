@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { advanceTemporalModifier, createTemporalModifier, validateTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
-import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "../src/engine/sdk/movementCapability.ts";
+import { advanceTemporalModifier, createTemporalModifier, validateTemporalModifier } from "@coffeemakerstudio/roast";
+import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "@coffeemakerstudio/roast";
 
 function modifier(remaining?: number) {
 	return createTemporalModifier({

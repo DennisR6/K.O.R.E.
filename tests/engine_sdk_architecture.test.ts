@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { engine, EngineSystemRegistry } from "../src/engine/sdk/index.ts";
+import { engine, EngineSystemRegistry } from "@coffeemakerstudio/roast";
 import { kore } from "../src/kore/sdk/index.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
@@ -16,7 +16,7 @@ test("generic Engine SDK authors JSON worlds without importing KORE", () => {
 	expect(JSON.parse(engine.buildJson(world))).toEqual(world);
 	expect(() => engine.validate(world)).not.toThrow();
 	expect(world.counters).toEqual([{ schemaVersion: 1, id: "coins", value: 0 }]);
-	for (const file of ["src/engine/sdk/index.ts", "src/engine/sdk/systemRegistry.ts", "src/engine/sdk/worldBuilder.ts"]) {
+	for (const file of ["node_modules/@coffeemakerstudio/roast/src/sdk/index.ts", "node_modules/@coffeemakerstudio/roast/src/sdk/systemRegistry.ts", "node_modules/@coffeemakerstudio/roast/src/sdk/worldBuilder.ts"]) {
 		const source = readFileSync(file, "utf8");
 		expect(source).not.toMatch(/from\s+["'].*(?:kore|settings|rules|item|ai|content|server|ui|menu|scenes)[/"']/);
 	}
@@ -29,7 +29,7 @@ test("generic engine source has no reverse imports into KORE or game domains", (
 		return entry.isDirectory() ? files(path) : entry.isFile() && path.endsWith(".ts") ? [path] : [];
 	});
 	const violations: string[] = [];
-	for (const file of files("src/engine")) {
+	for (const file of [...files("node_modules/@coffeemakerstudio/roast/src"), ...files("node_modules/@coffeemakerstudio/bean/src"), ...files("node_modules/@coffeemakerstudio/drip/src")]) {
 		for (const line of readFileSync(file, "utf8").split("\n")) {
 			const match = /from\s+["']([^"']+)["']/.exec(line);
 			if (match?.[1] && forbidden.test(match[1])) violations.push(`${file}: ${match[1]}`);

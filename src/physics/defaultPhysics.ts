@@ -1,6 +1,6 @@
 import type { EntityManager } from "../entity/EntityManager.js";
 import type { FrictionSettings } from "../settings/settings.js";
-import { forwardVectorFromRotation, getShapeName, isPhysicsParticipant, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "./physics.js";
+import { forwardVectorFromRotation, getShapeName, isPhysicsParticipant, PHYSICS_CONTACT_PERCENT, PHYSICS_CONTACT_SLOP, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "@coffeemakerstudio/bean";
 
 /**
  * Die Standard-Physik-Strategie der Engine.

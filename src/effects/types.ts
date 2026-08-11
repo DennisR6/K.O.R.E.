@@ -1,5 +1,5 @@
 import type { ISettingsSerialize } from "../kore/runtime/types.js";
-import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
+import type { IPhysics, SHAPE, Vector2D } from "@coffeemakerstudio/bean";
 import type { FrictionSettings } from "../settings/settings.js";
 import type { ResolvedEffectTarget } from "../item/resolvedTarget.js";
 

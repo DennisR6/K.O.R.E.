@@ -7,7 +7,7 @@
 // import { IInput, TurnPacket } from "../src/kore/runtime/types.ts"
 // import { EntityManager } from "../src/entity/EntityManager.ts"
 // import assert from "node:assert"
-// import { Vector2D } from "../src/physics/physics.ts"
+// import { Vector2D } from "@coffeemakerstudio/bean"
 //
 // describe("check logs of real games for Errors", async () => {
 //

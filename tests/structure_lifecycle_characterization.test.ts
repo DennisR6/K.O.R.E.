@@ -3,7 +3,7 @@ import { EffectType, EffectTrigger, SettingOperation, type EffectSettings } from
 import { EffectModifyPosition } from "../src/effects/modifyPosition.ts";
 import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { MultiEffect } from "../src/effects/effects.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { FullStructure } from "../src/structures/fullStructure.ts";
 import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";

@@ -13,7 +13,7 @@ import { createDefaultGameSettings } from "../src/settings/settings.js";
 import { WinningSystem } from "../src/systems/WinningSystem.js";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.js";
 import { PlayBackSystem } from "../src/systems/PlayBackSystem.js";
-import type { IPhysics, SHAPE } from "../src/physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { EffectPhysics } from "../src/effects/physics.js";
 import { EffectMove } from "../src/effects/movement.js";
 import { EffectTrigger } from "../src/effects/types.js";

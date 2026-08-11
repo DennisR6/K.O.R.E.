@@ -9,7 +9,7 @@ import {
 	validatePhysicsBody,
 	type PhysicsBodyState,
 	type Vector2D,
-} from "../src/physics/physics.ts";
+} from "@coffeemakerstudio/bean";
 import { StructureRectangle } from "../src/structures/types.js";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 

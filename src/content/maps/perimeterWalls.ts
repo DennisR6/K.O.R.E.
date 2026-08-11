@@ -1,4 +1,4 @@
-import type { Vector2D } from "../../physics/physics.js";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 import type { KoreMapBuilder } from "../../kore/sdk/index.js";
 
 /** Adds a continuous four-sided perimeter for visible puck rebounds. */

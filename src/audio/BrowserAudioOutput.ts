@@ -1,4 +1,4 @@
-import type { AudioCommandBatch, AudioOutputPort } from "../engine/audio-sdk/index.js";
+import type { AudioCommandBatch, AudioOutputPort } from "@coffeemakerstudio/roast";
 import type { AudioManager } from "../menu/AudioManager.js";
 
 /** Browser-only output adapter. Generic runtimes only know the AudioOutputPort. */

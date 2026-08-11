@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { applyActionModifiers, createActionModifier } from "../src/engine/contracts/actionModifier.ts";
+import { applyActionModifiers, createActionModifier } from "@coffeemakerstudio/roast";
 
 test("modifyForce authoring applies one deterministic generic force multiplier", () => {
 	const effect = createActionModifier({ id: "modify-force", action: "force", operation: "scale", factor: 0.5, remainingUses: 1 });

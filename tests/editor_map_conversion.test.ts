@@ -4,7 +4,7 @@ import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import type { MapBoundarySettingsRect } from "../src/settings/settings.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 

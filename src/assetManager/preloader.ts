@@ -1,4 +1,4 @@
-import { collectAssetReferences, type RenderAssetReference } from "../engine/sdk/assetReferences.js";
+import { collectAssetReferences, type RenderAssetReference } from "@coffeemakerstudio/roast";
 import { assetManager, type AssetLoadState } from "./loader.js";
 import { startupMark } from "../kore/runtime/startupTelemetry.js";
 

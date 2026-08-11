@@ -73,7 +73,10 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
-    "p5": "^2.3.0"
+    "p5": "^2.3.0",
+    "@coffeemakerstudio/roast": "file:../engine-repo/packages/roast",
+    "@coffeemakerstudio/bean": "file:../engine-repo/packages/bean",
+    "@coffeemakerstudio/drip": "file:../engine-repo/packages/drip"
   },
   "module": "index.ts"
 }

@@ -1,4 +1,4 @@
-import type { SystemSettings } from "../../engine/contracts/systemSettings.js";
+import type { SystemSettings } from "@coffeemakerstudio/roast";
 import type { EngineSettings } from "./types.js";
 import type { GameSettings } from "../../settings/settings.js";
 import { GameHandler, GameHandlerBuilder } from "./Handler.js";

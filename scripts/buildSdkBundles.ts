@@ -6,10 +6,10 @@ const outputDirectory = join(root, "sdk");
 const declarationDirectory = join("/tmp", `kore-sdk-declarations-${process.pid}`);
 
 const bundles = [
-	{ name: "engine_sdk", entrypoint: join(root, "src/engine/sdk/index.ts") },
-	{ name: "ui_sdk", entrypoint: join(root, "src/engine/ui-sdk/index.ts") },
-	{ name: "audio_sdk", entrypoint: join(root, "src/engine/audio-sdk/index.ts") },
-	{ name: "presentation_sdk", entrypoint: join(root, "src/engine/presentation-sdk/index.ts") },
+	{ name: "engine_sdk", entrypoint: join(root, "node_modules/@coffeemakerstudio/roast/src/sdk/index.ts") },
+	{ name: "ui_sdk", entrypoint: join(root, "node_modules/@coffeemakerstudio/drip/src/ui-sdk/index.ts") },
+	{ name: "audio_sdk", entrypoint: join(root, "node_modules/@coffeemakerstudio/roast/src/audio-sdk/index.ts") },
+	{ name: "presentation_sdk", entrypoint: join(root, "node_modules/@coffeemakerstudio/roast/src/presentation-sdk/index.ts") },
 	{ name: "kore_sdk", entrypoint: join(root, "src/kore/sdk/index.ts") },
 ] as const;
 

@@ -1,11 +1,11 @@
 import { type Effect, type EffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import type { RenderContext } from "../kore/runtime/RenderContext.js"
 import type { ISettingsSerialize } from "../kore/runtime/types.js";
-import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
+import { getShapeName, SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "@coffeemakerstudio/bean"
 import type { MapBoundarySettingsLine } from "../settings/settings.js";
 import type { IStructure } from "./types.js";
 import { deriveStructureId } from "./identity.js";
-import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import type { CollisionCommandBinding } from "@coffeemakerstudio/roast";
 
 /**
  * Repräsentiert ein statisches Liniensegment (z.B. eine Bande oder Mauer).

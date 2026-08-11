@@ -1,5 +1,5 @@
-import { PARTICIPATION_EFFECT_IDS, PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../engine/sdk/participationCapability.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import { PARTICIPATION_EFFECT_IDS, PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
 import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, SystemSettings } from "./types.js";
 
 /** Trusted interpreter for the explicitly supported physics/drawing flags. */

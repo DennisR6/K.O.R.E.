@@ -1,5 +1,5 @@
 import type { MapDocument } from "../contracts/documents.js";
-import type { Vector2D } from "../physics/physics.js";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 import { kore } from "../kore/sdk/index.js";
 import { FRICTION_TABLE } from "./settings.js";
 import { addOpenPerimeterWalls } from "../content/maps/perimeterWalls.js";

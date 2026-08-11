@@ -3,7 +3,7 @@ import { loadMapDocument, validateMapDocument } from "../src/contracts/documents
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createMagmaCradleMap } from "../src/settings/magmaCradleMap.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 
 test("Magma Cradle scales validated force and kill hazards into active collision zones", () => {
 	const map = createMagmaCradleMap({ x: 1200, y: 675 });

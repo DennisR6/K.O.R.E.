@@ -1,4 +1,4 @@
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
+import type { JsonValue } from "@coffeemakerstudio/roast";
 
 export enum KoreInputAction { Aim = "aim", Charge = "charge", Push = "push", ItemUse = "itemUse" }
 export enum KoreInputCommand { PointerDown = "kore.input.pointer-down", PointerMove = "kore.input.pointer-move", PointerUp = "kore.input.pointer-up", ActionPressed = "kore.input.action-pressed", ItemUse = "kore.input.item-use", Menu = "kore.input.menu" }

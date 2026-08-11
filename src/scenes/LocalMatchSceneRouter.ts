@@ -6,7 +6,7 @@ import type { KoreMainMenuSurface } from "../kore/ui/KoreMainMenuSurface.js";
 import { KoreMenuScreen } from "../kore/ui/menuVocabulary.js";
 import { createMainMenuComposition } from "../kore/ui/mainMenu.js";
 import { UiSystem } from "../systems/UiSystem.js";
-import { audio, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { audio, type AudioCommand, type ISoundEmitter } from "@coffeemakerstudio/roast";
 import { koreAudio } from "../kore/audio.js";
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import { installGameplayHud } from "./gameplayHud.js";

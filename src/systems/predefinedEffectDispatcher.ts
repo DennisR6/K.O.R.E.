@@ -1,5 +1,5 @@
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
-import { validateEngineEffectComposition, type EngineEffectComposition } from "../engine/sdk/composition.js";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
+import { validateEngineEffectComposition, type EngineEffectComposition } from "@coffeemakerstudio/roast";
 import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, ISystem } from "./types.js";
 
 /** Dispatches one validated Engine command through exactly one trusted interpreter. */

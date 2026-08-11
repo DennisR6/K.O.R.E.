@@ -1,4 +1,4 @@
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
+import type { JsonValue } from "@coffeemakerstudio/roast";
 import type { ItemTarget } from "../../item/target.js";
 
 /** Stable KORE HUD authoring vocabulary; generic UI remains string-based. */

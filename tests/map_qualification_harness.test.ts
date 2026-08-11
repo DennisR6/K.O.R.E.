@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { MAP_CATALOG } from "../src/content/mapCatalog.js";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.js";
-import { SHAPE } from "../src/physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.js";
 import { createDefaultGameSettings } from "../src/settings/settings.js";
 import { MAP_QUALIFICATION_SEEDS, MAP_PLAYBACK_BOUND, inspectMapSettings, mirrorSettings, qualifyMap, qualifyMapSettings } from "./support/mapQualification.js";

@@ -1,4 +1,4 @@
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { EffectModifyMass } from "./modifyMass.js";
 import { EffectModifyPosition } from "./modifyPosition.js";
 import { EffectModifySize } from "./modifySize.js";

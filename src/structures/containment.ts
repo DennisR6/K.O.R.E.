@@ -1,4 +1,4 @@
-import { SHAPE, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole } from "../physics/physics.js";
+import { SHAPE, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole } from "@coffeemakerstudio/bean";
 
 type MapStructure = IPhysics<SHAPE>;
 type ContainmentBoundary = IPhysics<SHAPE.CIRCLE> | IPhysics<SHAPE.RECTANGLE>;

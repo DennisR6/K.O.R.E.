@@ -6,7 +6,7 @@ import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameState } from "../src/kore/runtime/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { ReplayRecorder } from "../src/replay/recorder.ts";
 import { validateReplayDocument } from "../src/replay/types.ts";

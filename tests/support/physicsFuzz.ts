@@ -2,7 +2,7 @@ import { EntityManager } from "../../src/entity/EntityManager.ts";
 import { Player } from "../../src/entity/Player.ts";
 import { createPlayerSettings } from "../../src/entity/types.ts";
 import { defaultPhysics } from "../../src/physics/defaultPhysics.ts";
-import { SHAPE } from "../../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { StructureRectangle } from "../../src/structures/structureRectangle.ts";
 import { PhysicsSystem } from "../../src/systems/PhysicsSystem.ts";
 import type { IGameContext } from "../../src/systems/types.ts";

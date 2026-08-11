@@ -1,4 +1,4 @@
-import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createScheduleDueTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "../engine/sdk/trigger.js";
+import { EngineTriggerActivationQueue, createCollisionEnterTriggerEvent, createEnvironmentActivationTriggerEvent, createRoundStartTriggerEvent, createScheduleDueTriggerEvent, createTickTriggerEvent, type EngineTriggerEvent } from "@coffeemakerstudio/roast";
 import type { Effect } from "./types.js";
 
 /** Internal bridge from legacy trigger lists to detached, bounded activations. */

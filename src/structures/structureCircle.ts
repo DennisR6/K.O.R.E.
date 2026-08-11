@@ -3,11 +3,11 @@ import { createCollisionEnterEvent, dispatchTriggeredEffects } from "../effects/
 import { EffectTrigger, type Effect, type FullEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
 import type { RenderContext } from "../kore/runtime/RenderContext.js"
 import type { ISettingsSerialize } from "../kore/runtime/types.js";
-import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js"
+import { SHAPE, type IPhysics, type StructureCollisionRole, type Vector2D } from "@coffeemakerstudio/bean"
 import { type MapBoundarySettingsCircle } from "../settings/settings.js";
 import { type Structure } from "./types.js";
 import { deriveStructureId } from "./identity.js";
-import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import type { CollisionCommandBinding } from "@coffeemakerstudio/roast";
 
 /**
  * Repräsentiert ein kreisförmiges, statisches Hindernis auf dem Spielfeld (z.B. einen Pfosten oder Bumper).

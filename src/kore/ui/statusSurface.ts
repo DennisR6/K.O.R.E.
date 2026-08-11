@@ -1,6 +1,6 @@
 import type { IMouse } from "../runtime/types.js";
 import type { IDrawer, RenderContext } from "../runtime/RenderContext.js";
-import { ui, UiRuntime, type UiRenderer } from "../../engine/ui-sdk/index.js";
+import { ui, UiRuntime, type UiRenderer } from "@coffeemakerstudio/drip";
 import { LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 import { KoreStatusCommand, KoreStatusElement, KoreStatusId, KoreStatusScreen, KoreStatusStyle } from "./statusVocabulary.js";
 

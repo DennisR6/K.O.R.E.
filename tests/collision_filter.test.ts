@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { advanceCollisionFilterLifetime, createCollisionFilter, createCollisionFilterLifetime, isCollisionAllowed } from "../src/engine/contracts/collisionFilter.ts";
+import { advanceCollisionFilterLifetime, createCollisionFilter, createCollisionFilterLifetime, isCollisionAllowed } from "@coffeemakerstudio/roast";
 
 test("collision filters reject excluded relations and preserve unfiltered relations", () => {
 	const filter = createCollisionFilter({ id: "filter", excludedCategories: ["entity", "structure"] });

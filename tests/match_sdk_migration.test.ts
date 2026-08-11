@@ -15,8 +15,8 @@ import { TransformSystem } from "../src/systems/TransformSystem.js";
 import { createSystemFromSettings } from "../src/systems/systemSettings.js";
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.js";
-import type { SystemSettings } from "../src/engine/contracts/systemSettings.js";
-import type { EngineFrameworkSettings } from "../src/engine/sdk/index.js";
+import type { SystemSettings } from "@coffeemakerstudio/roast";
+import type { EngineFrameworkSettings } from "@coffeemakerstudio/roast";
 
 const CANONICAL_MATCH_SYSTEM_ORDER = ["core.movement", "core.numeric", "core.participation", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"];
 

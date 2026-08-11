@@ -1,6 +1,6 @@
 import type { UUID } from "crypto";
 import { type AssetKey, AssetList } from "../assetManager/assets/assetRegistry.js";
-import { isStructureCollisionRole, SHAPE, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
+import { isStructureCollisionRole, SHAPE, type StructureCollisionRole, type Vector2D } from "@coffeemakerstudio/bean";
 import { createPlayerSettings, type PlayerSettings } from "../entity/types.js";
 
 
@@ -15,8 +15,8 @@ import { validateAiSettings, type AiDifficulty, type AiSettings } from "../ai/ty
 import { validateEnvironmentalMechanics, type EnvironmentalMechanic } from "../environment/environmental.js";
 import { validateFullEffectSettings } from "../effects/validate.js";
 import { validateTriggerDefinition, type TriggerDefinition } from "../item/triggerDefinitions.js";
-import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
-import { validateCollisionCommandBinding, type CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import { canonicalizeCounterStates, type CounterState } from "@coffeemakerstudio/roast";
+import { validateCollisionCommandBinding, type CollisionCommandBinding } from "@coffeemakerstudio/roast";
 export { arrangeInGrid } from "./gridArrangement.js";
 
 const MAPS = { IceMap }

@@ -1,9 +1,9 @@
-import { canonicalizeCounterStates, type CounterState } from "../engine/contracts/counterState.js";
-import { counterTriggerMatches, validateCounterEffectSettings, type CounterEffectSettings, type CounterTriggerBinding } from "../engine/sdk/counterCapability.js";
-import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
-import { EngineTriggerActivationQueue, createTriggerActivation } from "../engine/sdk/trigger.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
-import { COUNTER_EFFECT_IDS } from "../engine/sdk/counterCapability.js";
+import { canonicalizeCounterStates, type CounterState } from "@coffeemakerstudio/roast";
+import { counterTriggerMatches, validateCounterEffectSettings, type CounterEffectSettings, type CounterTriggerBinding } from "@coffeemakerstudio/roast";
+import type { EngineTriggerEvent } from "@coffeemakerstudio/roast";
+import { EngineTriggerActivationQueue, createTriggerActivation } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
+import { COUNTER_EFFECT_IDS } from "@coffeemakerstudio/roast";
 import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, SystemSettings } from "./types.js";
 
 /** Trusted interpreter for declarative numeric counter mutations. */

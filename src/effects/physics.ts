@@ -1,5 +1,5 @@
 import { defaultPhysics } from "../physics/defaultPhysics.js";
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { type FrictionSettings } from "../settings/settings.js";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
 

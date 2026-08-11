@@ -39,10 +39,10 @@ const PUBLISHED_EXAMPLES = [
 	"08-kore-content-package.ts",
 ] as const;
 const ALLOWED_EXAMPLE_IMPORTS = new Set([
-	"../src/engine/sdk/index.js",
-	"../src/engine/ui-sdk/index.js",
-	"../src/engine/audio-sdk/index.js",
-	"../src/engine/presentation-sdk/index.js",
+	"@coffeemakerstudio/roast",
+	"@coffeemakerstudio/drip",
+	"@coffeemakerstudio/roast",
+	"@coffeemakerstudio/roast",
 	"../src/kore/sdk/index.js",
 ]);
 

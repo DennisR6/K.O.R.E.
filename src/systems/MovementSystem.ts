@@ -1,12 +1,12 @@
 import { EffectType } from "../effects/types.js";
-import { createMovementState } from "../engine/sdk/entityState.js";
+import { createMovementState } from "@coffeemakerstudio/roast";
 import type { IGameContext, SystemSettings } from "./types.js";
 import { createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
-import { MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
-import { applyRadialVelocityDelta } from "../engine/sdk/movementForceField.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import { MOVEMENT_COMMAND_EFFECT_IDS, MOVEMENT_ADD_VELOCITY_EFFECT_ID, MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_SCALE_SPEED_EFFECT_ID, MOVEMENT_SET_VELOCITY_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { applyRadialVelocityDelta } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
 import type { IPredefinedEffectSystem, ResolvedPredefinedTarget } from "./types.js";
-import { isPhysicsParticipant } from "../physics/physics.js";
+import { isPhysicsParticipant } from "@coffeemakerstudio/bean";
 
 /** Applies persistent Movement effects before entity-local physics effects. */
 export class MovementSystem implements IPredefinedEffectSystem {

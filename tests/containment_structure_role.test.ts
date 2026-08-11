@@ -11,7 +11,7 @@ import { FullStructure } from "../src/structures/fullStructure.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { StructureLine } from "../src/structures/structureLine.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { BoundarySystem } from "../src/systems/BoundarySystem.ts";
 
 /**

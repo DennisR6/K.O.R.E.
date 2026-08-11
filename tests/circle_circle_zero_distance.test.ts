@@ -6,7 +6,7 @@ import {
 	PHYSICS_CONTACT_SLOP,
 	SHAPE,
 	type Vector2D,
-} from "../src/physics/physics.ts";
+} from "@coffeemakerstudio/bean";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.ts";
 import { Player } from "../src/entity/Player.ts";

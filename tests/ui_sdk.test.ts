@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { ui, type UiRenderer } from "../src/engine/ui-sdk/index.ts";
+import { ui, type UiRenderer } from "@coffeemakerstudio/drip";
 
 function settings() {
 	return ui.createMenu({ id: "menu", size: { width: 400, height: 300 } })
@@ -161,11 +161,11 @@ test("generic UI SDK is independent from KORE and uses registry-selected determi
 	const framework = ui.createDefaultFramework();
 	expect(framework.systemOrder).toEqual(["ui.visibility", "ui.layout", "ui.input.pointer", "ui.focus", "ui.input.keyboard", "ui.text-input", "ui.button", "ui.navigation", "ui.render"]);
 	expect(() => ui.validate(settings())).not.toThrow();
-	const source = readFileSync("src/engine/ui-sdk/index.ts", "utf8");
+	const source = readFileSync("node_modules/@coffeemakerstudio/drip/src/ui-sdk/index.ts", "utf8");
 	expect(source).not.toMatch(/from\s+["'].*(?:kore|settings|rules|item|ai|content|server|menu|scenes|RenderContext)[/"']/);
 	expect(source).not.toContain("requestAnimationFrame");
 	expect(source).not.toContain("addEventListener");
-	expect(readFileSync("src/engine/sdk/index.ts", "utf8")).not.toContain("ui-sdk");
+	expect(readFileSync("node_modules/@coffeemakerstudio/roast/src/sdk/index.ts", "utf8")).not.toContain("ui-sdk");
 });
 
 test("multiple UI runtimes are independent and the architecture record matches the public model", () => {

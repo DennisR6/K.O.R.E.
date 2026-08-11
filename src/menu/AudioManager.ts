@@ -1,4 +1,4 @@
-import type { AudioCommandBatch, ResolvedAudioCommand } from "../engine/audio-sdk/index.js";
+import type { AudioCommandBatch, ResolvedAudioCommand } from "@coffeemakerstudio/roast";
 import { KORE_AUDIO_ASSETS } from "../kore/audio.js";
 type BrowserVoiceCommand = Extract<ResolvedAudioCommand, { type: "playSound" | "startLoop" | "playMusic" }>;
 

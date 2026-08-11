@@ -36,7 +36,7 @@ import { GameEmitter } from "../../src/emitter/EngineEmitter.js";
 import { GameHandler, GameHandlerBuilder } from "../../src/kore/runtime/Handler.js";
 import { GameState } from "../../src/kore/runtime/types.js";
 import { EffectTrigger, EffectType, SettingOperation } from "../../src/effects/types.js";
-import { SHAPE } from "../../src/physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { ReplayPlayer } from "../../src/replay/player.js";
 import { MatchStatus, RulePhase } from "../../src/rules/types.js";
 import type { GameSettings } from "../../src/settings/settings.js";

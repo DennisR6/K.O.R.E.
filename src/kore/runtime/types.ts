@@ -1,16 +1,16 @@
 import { EntityManager } from "../../entity/EntityManager.js";
 import type { PlayerSettings } from "../../entity/types.js";
-import type { PhysicsStrategy } from "../../physics/physics.js";
+import type { PhysicsStrategy } from "@coffeemakerstudio/bean";
 import { GameSettings } from "../../settings/settings.js";
 import type { IGameContext, ISystem, SystemSettings } from "../../systems/types.js";
 import type { RuleState } from "../../rules/types.js";
 import type { MatchResult } from "../../rules/types.js";
 import type { ItemTarget } from "../../item/target.js";
 import type { ItemPickupState } from "../../item/types.js";
-import type { PhysicsContactState } from "../../physics/physics.js";
-import type { CounterState } from "../../engine/contracts/counterState.js";
-import type { StructureLifecycleSettings } from "../../engine/contracts/structureLifecycle.js";
-import type { DeferredEffectSettings } from "../../engine/contracts/deferredEffect.js";
+import type { PhysicsContactState } from "@coffeemakerstudio/bean";
+import type { CounterState } from "@coffeemakerstudio/roast";
+import type { StructureLifecycleSettings } from "@coffeemakerstudio/roast";
+import type { DeferredEffectSettings } from "@coffeemakerstudio/roast";
 
 /**
  * Das TurnPacket ist das "Ergebnis-Paket" eines Spielzugs.

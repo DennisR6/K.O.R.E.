@@ -1,9 +1,9 @@
 import type { IEntity } from "../entity/Entity.js";
 import { getOuterContainmentBoundaries } from "../structures/containment.js";
-import { isPhysicsParticipant, SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "../physics/physics.js";
+import { isPhysicsParticipant, SHAPE, MAX_CONTACT_SOLVER_ITERATIONS, PHYSICS_CONTACT_SLOP, CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, type IPhysics, type PhysicsContactState, type PhysicsStrategy } from "@coffeemakerstudio/bean";
 import type { Structure } from "../structures/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
-import { isCollisionAllowed } from "../engine/contracts/collisionFilter.js";
+import { isCollisionAllowed } from "@coffeemakerstudio/roast";
 
 /**
  * Das Herzstück der Bewegungs-Logik.

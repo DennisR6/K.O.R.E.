@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { UiRuntime } from "../src/engine/ui-sdk/index.ts";
+import { UiRuntime } from "@coffeemakerstudio/drip";
 import { createReplayViewerComposition, KoreReplayCommand, KoreReplayElement, validateKoreReplayViewerSettings } from "../src/kore/ui/replayViewer.ts";
 
 test("replay viewer controls are authored as validated KORE UI settings", () => {

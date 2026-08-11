@@ -1,5 +1,5 @@
 import { containsCircle, getOuterContainmentBoundaries } from "../structures/containment.js";
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 /** Eliminates active players outside every inferred outer containment boundary. */

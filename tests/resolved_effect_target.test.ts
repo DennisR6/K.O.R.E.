@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createEntityResolvedTarget, createPositionResolvedTarget, validateResolvedEffectTarget } from "../src/item/resolvedTarget.ts";
-import { createDeferredEffect, validateDeferredEffect } from "../src/engine/contracts/deferredEffect.ts";
+import { createDeferredEffect, validateDeferredEffect } from "@coffeemakerstudio/roast";
 
 test("resolved targets are detached, versioned, and strictly validated", () => {
 	const position = { x: 12, y: 34 };

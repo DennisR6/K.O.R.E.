@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineEffectRegistry, TRANSFORM_SWAP_POSITION_EFFECT_ID, registerTransformEffects } from "../src/engine/sdk/index.ts";
+import { EngineEffectRegistry, TRANSFORM_SWAP_POSITION_EFFECT_ID, registerTransformEffects } from "@coffeemakerstudio/roast";
 
 test("transform.swap-position is a JSON-safe stable-ID command", () => {
 	const effects = registerTransformEffects(new EngineEffectRegistry());

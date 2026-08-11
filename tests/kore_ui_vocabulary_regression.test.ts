@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { RenderContext } from "../src/kore/runtime/RenderContext.js";
-import type { JsonValue } from "../src/engine/contracts/systemSettings.js";
-import type { UiElementSettings, UiMenuSettings } from "../src/engine/ui-sdk/index.js";
+import type { JsonValue } from "@coffeemakerstudio/roast";
+import type { UiElementSettings, UiMenuSettings } from "@coffeemakerstudio/drip";
 import { createKoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.js";
 import { KORE_UI_THEME, resolveKoreButtonStyle, resolveKoreButtonTheme } from "../src/kore/ui/koreUiTheme.js";
 import { createMainMenuComposition, koreMenuCommands } from "../src/kore/ui/mainMenu.js";

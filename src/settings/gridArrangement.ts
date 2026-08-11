@@ -1,4 +1,4 @@
-import type { Vector2D } from "../physics/physics.js";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 
 export function arrangeInGrid(
 	players: { position: Vector2D, size: number }[],

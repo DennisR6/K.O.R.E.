@@ -1,5 +1,5 @@
 import type { IEntity } from "../entity/Entity.js";
-import type { Vector2D } from "../physics/physics.js";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 import type { ItemDocument, ItemTargetValidation } from "./types.js";
 import { createEntityResolvedTarget, createPositionResolvedTarget, type ResolvedEffectTarget } from "./resolvedTarget.js";
 

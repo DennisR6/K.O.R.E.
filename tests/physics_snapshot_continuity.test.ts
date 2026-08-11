@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import type { EngineSettings } from "../src/kore/runtime/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 function collisionDamage(damage: number) {

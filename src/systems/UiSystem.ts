@@ -1,6 +1,6 @@
 import type { IDrawer, RenderContext } from "../kore/runtime/RenderContext.js";
 import { GameState, type IMouse } from "../kore/runtime/types.js";
-import type { Vector2D } from "../physics/physics.js";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import { isValidInput } from "../input/validate.js";
 import { KoreInputCommand, type KoreInputMessage, validateKoreInputMessage } from "../kore/sdk/input.js";

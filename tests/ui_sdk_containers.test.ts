@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { ui } from "../src/engine/ui-sdk/index.ts";
+import { ui } from "@coffeemakerstudio/drip";
 
 test("nested containers resolve declaration order, gaps, justification, and cross-axis alignment", () => {
 	const runtime = ui.fromSettings(ui.createMenu({ id: "containers", size: { width: 400, height: 200 } }).addScreen(ui.screen({ id: "main", layout: ui.layout.horizontal({ gap: 10, justify: "start", align: "center" }), elements: [

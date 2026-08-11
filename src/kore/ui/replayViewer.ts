@@ -1,4 +1,4 @@
-import { ui, validateUiSettings, type UiMenuSettings } from "../../engine/ui-sdk/index.js";
+import { ui, validateUiSettings, type UiMenuSettings } from "@coffeemakerstudio/drip";
 import { createEnglishLanguage, translate, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 import { KoreMenuStyle } from "./menuVocabulary.js";
 

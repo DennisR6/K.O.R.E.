@@ -19,7 +19,7 @@ import { installGameplayHud } from "./scenes/gameplayHud.js";
 import { buildReplayShareEndpoint, buildReplayViewerUrl } from "./utils/replayUrls.js";
 import { buildOnlineJoinUrl } from "./utils/onlineConfig.js";
 import { isUiDebugSandboxUrl, startUiDebugSandbox } from "./debug/uiSandbox.js";
-import { ApplicationAudioMixer, AudioRuntime } from "./engine/audio-sdk/index.js";
+import { ApplicationAudioMixer, AudioRuntime } from "@coffeemakerstudio/roast";
 import { BrowserAudioOutput } from "./audio/BrowserAudioOutput.js";
 import { KORE_AUDIO_BUSES, createKoreAudioSettings } from "./kore/audio.js";
 import { createKoreReplayViewerSurface } from "./kore/ui/replayViewerSurface.js";

@@ -1,7 +1,7 @@
-import { audio, type AudioRuntimeSettings, validateAudioSettings } from "../../engine/audio-sdk/index.js";
-import { engine } from "../../engine/sdk/index.js";
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
-import { ui, validateUiSettings, type UiMenuSettings } from "../../engine/ui-sdk/index.js";
+import { audio, type AudioRuntimeSettings, validateAudioSettings } from "@coffeemakerstudio/roast";
+import { engine } from "@coffeemakerstudio/roast";
+import type { JsonValue } from "@coffeemakerstudio/roast";
+import { ui, validateUiSettings, type UiMenuSettings } from "@coffeemakerstudio/drip";
 import { getFinalReleaseMapEntries } from "../../content/mapCatalog.js";
 import { koreAudio, createKoreAudioSettings } from "../audio.js";
 import { KoreMenuCommand, KoreMenuDifficulty, KoreMenuElement, KoreMenuId, KoreMenuMapIntent, KoreMenuScreen, KoreMenuStyle, KoreMenuText, isKoreMenuCommand, koreMenuDifficultyElementId, koreMenuMapBackElementId, koreMenuMapElementId, koreMenuMapScreen, koreMenuMapTitleElementId } from "./menuVocabulary.js";

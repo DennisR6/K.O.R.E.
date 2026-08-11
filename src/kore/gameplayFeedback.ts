@@ -1,6 +1,6 @@
-import { audio, AudioEmitter, type AudioCommand, type ISoundEmitter } from "../engine/audio-sdk/index.js";
-import { presentation, type AnimationSettings, type PresentationFrame, type PresentationOutputPort, type PresentationRuntimeSettings } from "../engine/presentation-sdk/index.js";
-import { assertJsonValue, type JsonValue } from "../engine/contracts/systemSettings.js";
+import { audio, AudioEmitter, type AudioCommand, type ISoundEmitter } from "@coffeemakerstudio/roast";
+import { presentation, type AnimationSettings, type PresentationFrame, type PresentationOutputPort, type PresentationRuntimeSettings } from "@coffeemakerstudio/roast";
+import { assertJsonValue, type JsonValue } from "@coffeemakerstudio/roast";
 import type { IDrawer, ITicker, RenderContext } from "./runtime/RenderContext.js";
 
 export enum KoreGameplayFeedbackType {

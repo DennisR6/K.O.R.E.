@@ -1,7 +1,7 @@
 import { dispatchPredefinedComposition, dispatchPredefinedEffect } from "./predefinedEffectDispatcher.js";
 import type { IGameContext, ISystem } from "./types.js";
-import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
-import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import type { CollisionCommandBinding } from "@coffeemakerstudio/roast";
+import type { EngineEffectComposition } from "@coffeemakerstudio/roast";
 import type { IEntity } from "../entity/Entity.js";
 
 /** Routes relative collision commands through the shared predefined dispatcher. */

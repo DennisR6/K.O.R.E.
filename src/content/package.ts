@@ -1,4 +1,4 @@
-import { validateAnimationSettings, validatePresentationEvent, type AnimationSettings, type PresentationEvent } from "../engine/presentation-sdk/index.js";
+import { validateAnimationSettings, validatePresentationEvent, type AnimationSettings, type PresentationEvent } from "@coffeemakerstudio/roast";
 import { loadMapDocument, validateMapDocument, type MapDocument } from "../contracts/documents.js";
 import { validateItemDocument, type ItemDocument } from "../item/types.js";
 import { ItemValidator } from "../item/validate.js";

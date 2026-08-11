@@ -2,13 +2,13 @@ import { EffectShield } from "../../effects/shield.js";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
 import { ItemEffectType, type ForceInput, type ItemEffectSettings } from "../../effects/types.js";
 import { validateRuntimeItemEffectSettings } from "../../effects/validate.js";
-import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "../../engine/contracts/temporalModifier.js";
-import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "../../engine/contracts/structureLifecycle.js";
-import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "../../engine/contracts/deferredEffect.js";
-import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "../../engine/contracts/actionModifier.js";
+import { createTemporalModifierTemplate, type TemporalModifierTemplate } from "@coffeemakerstudio/roast";
+import { createStructureLifecycleTemplate, type StructureLifecycleTemplate } from "@coffeemakerstudio/roast";
+import { createDeferredEffectTemplate, type DeferredEffectTemplate } from "@coffeemakerstudio/roast";
+import { applyActionModifiers, createActionModifier, createActionModifierTemplate, type ActionModifierTemplate } from "@coffeemakerstudio/roast";
 import { SeededRandom } from "../../utils/random.js";
-import { createCollisionFilterTemplate, type CollisionFilterTemplate } from "../../engine/contracts/collisionFilter.js";
-import { createActorEligibilityConstraintTemplate, type ActorEligibilityConstraintTemplate } from "../../engine/contracts/actorEligibility.js";
+import { createCollisionFilterTemplate, type CollisionFilterTemplate } from "@coffeemakerstudio/roast";
+import { createActorEligibilityConstraintTemplate, type ActorEligibilityConstraintTemplate } from "@coffeemakerstudio/roast";
 
 export type RuntimeItemEffect =
 	| CollisionFilterTemplate

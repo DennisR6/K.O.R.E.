@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { advanceTemporalModifier, createTemporalModifier } from "../src/engine/contracts/temporalModifier.ts";
+import { advanceTemporalModifier, createTemporalModifier } from "@coffeemakerstudio/roast";
 import { EffectGhostMode } from "../src/effects/ghostMode.ts";
 import { EffectShield } from "../src/effects/shield.ts";
 import { MetaEffect, MultiEffect } from "../src/effects/effects.ts";

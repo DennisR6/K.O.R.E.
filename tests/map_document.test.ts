@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { DOCUMENT_SCHEMA_VERSION, type MapDocument, validateMapDocument } from "../src/contracts/documents.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 
 const map: MapDocument = {
 	schemaVersion: DOCUMENT_SCHEMA_VERSION,

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { isUiDebugSandboxUrl, createUiDebugSandboxSettings } from "../src/debug/uiSandbox.ts";
-import { ui } from "../src/engine/ui-sdk/index.ts";
+import { ui } from "@coffeemakerstudio/drip";
 
 test("UI debug route activates only for the explicit query parameter", () => {
 	expect(isUiDebugSandboxUrl(new URL("https://example.test/?debug=ui"))).toBe(true);

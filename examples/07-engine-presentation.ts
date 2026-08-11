@@ -1,4 +1,4 @@
-import { presentation } from "../src/engine/presentation-sdk/index.js";
+import { presentation } from "@coffeemakerstudio/roast";
 
 /** Renderer-neutral deterministic presentation: only semantic output crosses the adapter boundary. */
 export function run(): { tick: number; values: Record<string, unknown>; eventTypes: string[] } {

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { migrateStructureSettings } from "../src/migrations/structures.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 
 test("structure migration assigns identity once and does not change it when geometry moves", () => {
 	const migrated = migrateStructureSettings([{ type: SHAPE.CIRCLE, x: 10, y: 20, r: 5, effects: [] }]);

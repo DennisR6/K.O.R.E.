@@ -2,7 +2,7 @@ import type { EntityManager } from "../entity/EntityManager.js";
 import type { IGameContext, ISerializableSystem, ISimulator, SystemSettings } from "./types.js";
 import type { PhysicsSystem } from "./PhysicsSystem.js";
 import { GameState } from "../kore/runtime/types.js";
-import { isPhysicsParticipant } from "../physics/physics.js";
+import { isPhysicsParticipant } from "@coffeemakerstudio/bean";
 
 /**
  * Der Simulator berechnet Spielzustände unabhängig von der Anzeige.

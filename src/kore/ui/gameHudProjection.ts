@@ -3,7 +3,7 @@ import type { GameHandler } from "../runtime/Handler.js";
 import { MatchStatus, RulePhase, type MatchResult } from "../../rules/types.js";
 import type { UiSystem } from "../../systems/UiSystem.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
-import type { UiComponentSettings } from "../../engine/ui-sdk/index.js";
+import type { UiComponentSettings } from "@coffeemakerstudio/drip";
 import type { ItemTargetType } from "../../item/types.js";
 
 export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }

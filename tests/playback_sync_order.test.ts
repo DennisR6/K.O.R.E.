@@ -3,7 +3,7 @@ import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameState } from "../src/kore/runtime/types.ts";
 import type { PlayerSettings } from "../src/entity/types.ts";
 import { EffectTrigger, EffectType } from "../src/effects/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { PlaybackSystem } from "../src/systems/PlayBackSystem.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 

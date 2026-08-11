@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameState } from "../src/kore/runtime/types.ts";
 import { EffectTrigger, EffectType, SettingOperation } from "../src/effects/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";

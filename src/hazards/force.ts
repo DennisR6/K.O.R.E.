@@ -1,4 +1,4 @@
-import type { IPhysics, PhysicsStrategy, SHAPE } from "../physics/physics.js";
+import type { IPhysics, PhysicsStrategy, SHAPE } from "@coffeemakerstudio/bean";
 
 export interface ForceHazardConfig {
 	angle: number;

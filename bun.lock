@@ -5,6 +5,9 @@
     "": {
       "name": "game",
       "dependencies": {
+        "@coffeemakerstudio/bean": "file:../engine-repo/packages/bean",
+        "@coffeemakerstudio/drip": "file:../engine-repo/packages/drip",
+        "@coffeemakerstudio/roast": "file:../engine-repo/packages/roast",
         "p5": "^2.3.0",
       },
       "devDependencies": {
@@ -25,6 +28,12 @@
   },
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.28.6", "", {}, "sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA=="],
+
+    "@coffeemakerstudio/bean": ["@coffeemakerstudio/bean@file:../engine-repo/packages/bean", {}],
+
+    "@coffeemakerstudio/drip": ["@coffeemakerstudio/drip@file:../engine-repo/packages/drip", {}],
+
+    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@file:../engine-repo/packages/roast", {}],
 
     "@davepagurek/bezier-path": ["@davepagurek/bezier-path@0.0.7", "", {}, "sha512-CVlnCOrV1iy4Z12T756i9l4G6kF7r8uhlnb+xqDemAMmWQB+8Q0b+8VEqIiUfywgZDSiDr18Rm7pZlnA69rE8Q=="],
 

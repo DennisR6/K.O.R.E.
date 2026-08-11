@@ -3,7 +3,7 @@ import { buildMapSettings, getMapCatalogEntry } from "../src/content/mapCatalog.
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
 import { GameState } from "../src/kore/runtime/types.js";
-import { SHAPE } from "../src/physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { RulePhase } from "../src/rules/types.js";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.js";
 import { validateGameSettings } from "../src/settings/settings.js";

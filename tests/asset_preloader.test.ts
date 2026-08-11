@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AssetPreloader, preloadRenderableAssets, type AssetPreloadSource } from "../src/assetManager/preloader.js";
 import { EngineAssetManager } from "../src/assetManager/loader.js";
-import { collectAssetReferences } from "../src/engine/sdk/assetReferences.js";
+import { collectAssetReferences } from "@coffeemakerstudio/roast";
 
 describe("render asset discovery", () => {
 	test("collects explicit render fields and deduplicates them", () => {

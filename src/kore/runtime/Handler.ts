@@ -1,4 +1,4 @@
-import { isPhysicsParticipant, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "../../physics/physics.js";
+import { isPhysicsParticipant, SHAPE, type IPhysics, type PhysicsStrategy, type Vector2D } from "@coffeemakerstudio/bean";
 import { EntityManager } from "../../entity/EntityManager.js";
 import { PlaybackSystem } from "../../systems/PlayBackSystem.js";
 import type { IDrawer, ITicker, RenderContext } from "./RenderContext.js";
@@ -19,7 +19,7 @@ import { EffectTrigger, ItemEffectType, type Effect, type EffectSettings, type F
 import { createRoundStartEvent, createScheduleDueEvent, createTickEvent, dispatchTriggerActivation, dispatchTriggeredEffects } from "../../effects/triggerDispatcher.js";
 import { createRuntimeEffect } from "../../effects/runtimeFactory.js";
 import { migrateGameSettingsEffects } from "../../migrations/effects.js";
-import { canonicalizeCounterStates, type CounterState } from "../../engine/contracts/counterState.js";
+import { canonicalizeCounterStates, type CounterState } from "@coffeemakerstudio/roast";
 
 import { GameStateManager } from "../../systems/GameStateManager.js";
 import { getBackgoundSystem } from "../../ui/Background.js";
@@ -34,14 +34,14 @@ import { addDrawnInventoryItem, consumeInventoryItem, createFixedLoadoutInventor
 import { MapPickupSystem } from "../../item/MapPickupSystem.js";
 import { EnvironmentalSystem } from "../../systems/EnvironmentalSystem.js";
 import { dispatchPredefinedEffect, dispatchPredefinedComposition } from "../../systems/predefinedEffectDispatcher.js";
-import { createTemporalModifier, type TemporalModifierSettings } from "../../engine/contracts/temporalModifier.js";
-import { createActionModifier } from "../../engine/contracts/actionModifier.js";
-import { createCollisionFilter, createCollisionFilterLifetime } from "../../engine/contracts/collisionFilter.js";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "../../engine/contracts/actorEligibility.js";
-import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "../../engine/contracts/structureLifecycle.js";
-import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "../../engine/contracts/deferredEffect.js";
+import { createTemporalModifier, type TemporalModifierSettings } from "@coffeemakerstudio/roast";
+import { createActionModifier } from "@coffeemakerstudio/roast";
+import { createCollisionFilter, createCollisionFilterLifetime } from "@coffeemakerstudio/roast";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "@coffeemakerstudio/roast";
+import { advanceStructureLifecycle, createStructureLifecycle, type StructureLifecycleSettings, type StructureLifecycleTemplate, validateStructureLifecycle } from "@coffeemakerstudio/roast";
+import { advanceDeferredEffect, createDeferredEffect, type DeferredEffectSettings, validateDeferredEffect } from "@coffeemakerstudio/roast";
 import { dispatchCollisionCommands } from "../../systems/collisionCommandHost.js";
-import type { EngineEffectComposition } from "../../engine/sdk/composition.js";
+import type { EngineEffectComposition } from "@coffeemakerstudio/roast";
 import { TransformSystem } from "../../systems/TransformSystem.js";
 import { ParticipationSystem } from "../../systems/ParticipationSystem.js";
 import { NumericSystem } from "../../systems/NumericSystem.js";
@@ -51,10 +51,10 @@ import { resolveEffectTarget, validateItemTarget, type ItemTarget } from "../../
 import { createStructureResolvedTarget, type ResolvedEffectTarget } from "../../item/resolvedTarget.js";
 import { itemOrder, validateItemCombination } from "../../item/interactions.js";
 import { createRuntimeItemEffect, isActionModifierTemplate, isActorEligibilityConstraintTemplate, isCollisionFilterTemplate, isDeferredEffectTemplate, isStructureLifecycleTemplate, isTemporalModifierTemplate, type RuntimeItemEffect } from "../sdk/itemRuntime.js";
-import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../../engine/sdk/movementCapability.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "@coffeemakerstudio/roast";
 import { EffectSpawnTrigger } from "../../effects/spawnTrigger.js";
-import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "../../engine/sdk/transformCapability.js";
-import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../../engine/sdk/participationCapability.js";
+import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "@coffeemakerstudio/roast";
 import { deriveMysteryBoxSeed, grantMysteryBoxReward, hashString, MYSTERY_BOX_ITEM_ID, resolveMysteryBoxReward, type MysteryBoxRewardOptions } from "../../item/officialItems.js";
 import { TriggerDefinitionCatalog, type TriggerDefinition } from "../../item/triggerDefinitions.js";
 import type { AiSettings } from "../../ai/types.js";
@@ -65,7 +65,7 @@ import { HardAi } from "../../ai/hardAi.js";
 import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } from "../../ui/AuthoritativeGameplayRenderer.js";
 import type { LanguageCatalog } from "../../i18n/language.js";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../gameplayFeedback.js";
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
+import type { JsonValue } from "@coffeemakerstudio/roast";
 import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "./runtimeLog.js";
 
 type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };

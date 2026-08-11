@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { createEnglishLanguage } from "../src/i18n/language.js";
 import { createMainMenuComposition } from "../src/kore/ui/mainMenu.js";
 import { KoreMenuCommand, KoreMenuElement, KoreMenuScreen, KoreMenuText, parseKoreMenuCommand } from "../src/kore/ui/menuVocabulary.js";
-import type { UiAction, UiElementSettings, UiMenuSettings, UiScreenSettings } from "../src/engine/ui-sdk/index.js";
+import type { UiAction, UiElementSettings, UiMenuSettings, UiScreenSettings } from "@coffeemakerstudio/drip";
 
 function screenOf(ui: UiMenuSettings, id: string): UiScreenSettings {
 	const screen = ui.screens.find(candidate => candidate.id === id);

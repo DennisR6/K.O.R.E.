@@ -1,7 +1,7 @@
-import { audio, type AudioRuntimeSettings, validateAudioSettings } from "../../engine/audio-sdk/index.js";
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
-import { engine } from "../../engine/sdk/index.js";
-import { ui, type UiMenuSettings, validateUiSettings } from "../../engine/ui-sdk/index.js";
+import { audio, type AudioRuntimeSettings, validateAudioSettings } from "@coffeemakerstudio/roast";
+import type { JsonValue } from "@coffeemakerstudio/roast";
+import { engine } from "@coffeemakerstudio/roast";
+import { ui, type UiMenuSettings, validateUiSettings } from "@coffeemakerstudio/drip";
 import { createKoreAudioSettings, koreAudio } from "../audio.js";
 import { KoreHudCommand, isKoreHudCommand } from "./hudCommands.js";
 import { KORE_HUD_ITEM_SLOTS, KoreHudElement, KoreHudId, KoreHudNamespace, KoreHudScreen, KoreHudStyle, KoreHudText, koreHudItemElementId } from "./hudVocabulary.js";

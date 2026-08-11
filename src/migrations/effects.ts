@@ -2,13 +2,13 @@ import { EffectType, EFFECT_SCHEMA_VERSION, type EffectSettings, type FullEffect
 import type { EngineSettings } from "../kore/runtime/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import { migratePhysicsContactPair, migrateStructureSettings } from "./structures.js";
-import type { EngineEffectComposition } from "../engine/sdk/composition.js";
+import type { EngineEffectComposition } from "@coffeemakerstudio/roast";
 import type { ItemDocument } from "../item/types.js";
-import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "../engine/sdk/movementCapability.js";
-import { createActionModifier } from "../engine/contracts/actionModifier.js";
+import { MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { createActionModifier } from "@coffeemakerstudio/roast";
 import { SeededRandom } from "../utils/random.js";
-import { createCollisionFilter, createCollisionFilterLifetime } from "../engine/contracts/collisionFilter.js";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "../engine/contracts/actorEligibility.js";
+import { createCollisionFilter, createCollisionFilterLifetime } from "@coffeemakerstudio/roast";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "@coffeemakerstudio/roast";
 
 /** Upgrades the repository's historical unversioned core Effect form. */
 export function migrateEffectSettings(value: unknown): EffectSettings {

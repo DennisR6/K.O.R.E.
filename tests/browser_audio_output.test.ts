@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { BrowserAudioOutput } from "../src/audio/BrowserAudioOutput.ts";
-import { type AudioCommandBatch, type ResolvedAudioCommand } from "../src/engine/audio-sdk/index.ts";
+import { type AudioCommandBatch, type ResolvedAudioCommand } from "@coffeemakerstudio/roast";
 import { AudioManager, type BrowserAudioElement } from "../src/menu/AudioManager.ts";
 import { KORE_AUDIO_ASSETS } from "../src/kore/audio.ts";
 
