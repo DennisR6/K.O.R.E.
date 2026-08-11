@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { LANGUAGE_KEYS, loadLanguage, resolveBrowserLanguage } from "../src/i18n/language.js";
 import { createMainMenuComposition } from "../src/kore/ui/mainMenu.js";
+import type { UiElementSettings } from "@coffeemakerstudio/drip";
 
 function response(document: unknown): Response {
 	return new Response(JSON.stringify(document), { status: 200, headers: { "content-type": "application/json" } });
@@ -46,7 +47,16 @@ test("loaded language catalogs provide translated menu labels", async () => {
 	});
 	const settings = createMainMenuComposition(language).build();
 	const main = settings.ui.screens.find(screen => screen.id === "main")!;
-	const actions = main.elements.find(element => element.id === "main-actions");
-	const online = actions?.kind === "container" ? actions.elements.find(element => element.id === "main-online") : undefined;
+	const findElement = (elements: UiElementSettings[], id: string): UiElementSettings | undefined => {
+		for (const element of elements) {
+			if (element.id === id) return element;
+			if (element.kind === "container") {
+				const nested = findElement(element.elements, id);
+				if (nested) return nested;
+			}
+		}
+		return undefined;
+	};
+	const online = findElement(main.elements, "main-online");
 	expect(online?.kind === "button" ? online.text : undefined).toBe("Online spielen");
 });

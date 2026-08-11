@@ -20,6 +20,7 @@ function createRenderer(calls: DrawCall[]): RenderContext {
 		setNoFill() { calls.push({ type: "noFill", values: [] }); },
 		setStrokeColor(...values: string[]) { calls.push({ type: "stroke", values }); },
 		setStroke(...values: number[]) { calls.push({ type: "strokeWeight", values }); },
+		noStroke() { calls.push({ type: "noStroke", values: [] }); },
 		rotate() { }, scale() { }, translate() { },
 		drawImage(...values: unknown[]) { calls.push({ type: "image", values }); },
 		getScreenSize() { return { width: 800, height: 450 }; },

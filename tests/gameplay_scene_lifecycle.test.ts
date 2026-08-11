@@ -7,7 +7,7 @@ import { LocalMatchSceneRouter, createLocalGameplayHandler } from "../src/scenes
 function renderer() {
 	return {
 		WORLD_SIZE_X: 800, WORLD_SIZE_Y: 450,
-		clear() { }, push() { }, pop() { }, setFillColor() { }, setNoFill() { }, setStrokeColor() { }, setStroke() { },
+		clear() { }, push() { }, pop() { }, setFillColor() { }, setNoFill() { }, setStrokeColor() { }, setStroke() { }, noStroke() { },
 		drawCircle() { }, drawRect() { }, drawText() { }, line() { }, rotate() { }, scale() { }, translate() { },
 		drawImage() { }, getScreenSize: () => ({ width: 800, height: 450 }), resizeCanvas() { }, setScaleFactor() { }, getScaleFactor: () => 1,
 		toWorld: (value: number) => value, toPixel: (value: number) => value, windowScale: () => 1, beginClip() { }, endClip() { }, mouseWheel() { },

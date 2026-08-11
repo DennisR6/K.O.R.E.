@@ -26,10 +26,10 @@ test("Magma Cradle scales validated force and kill hazards into active collision
 	expect(settings.mapBoundarys).toHaveLength(map.arenaGeometry.length + map.hazards.length);
 	expect(cornerKillZones).toHaveLength(4);
 	expect(cornerKillZones.map(hazard => hazard.config).sort((left, right) => Number(left.x) - Number(right.x) || Number(left.y) - Number(right.y))).toEqual([
-		{ x: 60, y: 60, r: 27 },
-		{ x: 60, y: 615, r: 27 },
-		{ x: 1140, y: 60, r: 27 },
-		{ x: 1140, y: 615, r: 27 },
+		{ color: "transparent", r: 30, x: 108, y: 85.5 },
+		{ color: "transparent", r: 30, x: 108, y: 585 },
+		{ color: "transparent", r: 30, x: 1092, y: 85.5 },
+		{ color: "transparent", r: 30, x: 1092, y: 585 },
 	]);
 	expect(map.arenaGeometry.filter(structure => structure.role !== "containment" && structure.type === SHAPE.RECTANGLE && (structure.x === 0 || structure.y === 0)).length).toBe(0);
 	expect(killTarget.isDead()).toBe(true);
