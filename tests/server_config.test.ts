@@ -52,7 +52,7 @@ describe("server online-play config", () => {
 		expect(await response.json()).toEqual({
 			baseUrl: "https://example.org/kore",
 			wsUrl: "wss://example.org/kore",
-			buildHash: "7ada95f90f7cf2e4f0af4ed135b99c99afacbc58",
+			buildHash: "2b4df56f98b1fbec403ac77344d734cc06fa391c",
 		});
 	});
 });

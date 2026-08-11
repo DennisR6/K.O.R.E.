@@ -277,8 +277,9 @@ export class GameDatabase {
 	/** Creates a consistent SQLite image for an authenticated operator backup. */
 	exportSnapshot(): Uint8Array {
 		// Bun's serialize() can produce an incomplete image for a live WAL-backed
-		// file database. VACUUM INTO creates a consistent SQLite backup including
-		// all committed schema pages and blobs.
+		// file database. Checkpoint first, then VACUUM INTO creates a consistent
+		// backup including all committed schema pages and blobs.
+		this.db.run("PRAGMA wal_checkpoint(FULL)");
 		const directory = mkdtempSync("/tmp/kore-backup-");
 		const backupPath = `${directory}/backup.sqlite`;
 		try {

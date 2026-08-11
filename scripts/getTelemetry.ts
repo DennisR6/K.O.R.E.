@@ -1,4 +1,6 @@
-import { mkdir, rename } from "node:fs/promises";
+import { mkdir, rename, unlink } from "node:fs/promises";
+import { Database } from "bun:sqlite";
+import { gunzipSync } from "node:zlib";
 
 const ROOT_ENV_PATH = `${import.meta.dir}/../.env`;
 const DATABASE_URL = "https://lupricht.net/kore/operator/db";
@@ -42,6 +44,22 @@ async function main(): Promise<void> {
 	await mkdir(`${import.meta.dir}/../data`, { recursive: true });
 	const temporaryPath = `${DATABASE_PATH}.tmp`;
 	await Bun.write(temporaryPath, database);
+	const check = new Database(temporaryPath, { readonly: true });
+	const integrity = check.query("PRAGMA integrity_check").get() as { integrity_check?: string };
+	check.close();
+	if (integrity.integrity_check !== "ok") {
+		await unlink(temporaryPath).catch(() => undefined);
+		throw new Error(`Downloaded database failed SQLite integrity check: ${integrity.integrity_check ?? "unknown"}`);
+	}
+	const snapshotCheck = new Database(temporaryPath, { readonly: true });
+	try {
+		for (const row of snapshotCheck.query("SELECT snapshot FROM games").all() as Array<{ snapshot: Uint8Array }>) JSON.parse(gunzipSync(row.snapshot).toString());
+	} catch (error) {
+		await unlink(temporaryPath).catch(() => undefined);
+		throw new Error(`Downloaded database contains an unreadable game snapshot: ${error instanceof Error ? error.message : String(error)}`);
+	} finally {
+		snapshotCheck.close();
+	}
 	await rename(temporaryPath, DATABASE_PATH);
 	console.log(`Downloaded ${database.byteLength} bytes to ${DATABASE_PATH}`);
 }

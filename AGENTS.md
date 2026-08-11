@@ -495,8 +495,8 @@ After every change, check whether this guide still reflects the implementation a
   baselines; only `performance:update` does.
 - `scripts/getTelemetry.ts`: operator-authenticated production SQLite backup
   downloader. It loads the root `.env`, uses `KORE_API_KEY` (or the operator
-  secret), validates the SQLite header, and writes the backup to
-  `data/kore.db` for local analysis.
+  secret), validates the SQLite header and `PRAGMA integrity_check`, and writes
+  the backup to `data/kore.db` for local analysis.
 
 ### Networking and utilities
 
