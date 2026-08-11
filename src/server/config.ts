@@ -8,6 +8,8 @@
  * match without hardcoding a client-side server URL.
  */
 export const DEFAULT_KORE_BASE_URL = "https://lupricht.net/kore/";
+/** Deployment marker used to verify that the staging hook has published the expected build. */
+export const DEPLOYMENT_HASH = "9483cdf";
 
 export interface ServerConfig {
 	baseUrl: string;
@@ -47,7 +49,7 @@ export function readServerConfig(env: Record<string, string | undefined> = proce
 /** JSON response for the `/config` endpoint; never cached. */
 export function serveConfig(config: ServerConfig): Response {
 	return Response.json(
-		{ baseUrl: config.baseUrl, wsUrl: config.wsUrl },
+		{ baseUrl: config.baseUrl, wsUrl: config.wsUrl, buildHash: DEPLOYMENT_HASH },
 		{ headers: { "cache-control": "no-store" } },
 	);
 }

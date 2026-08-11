@@ -52,6 +52,7 @@ describe("server online-play config", () => {
 		expect(await response.json()).toEqual({
 			baseUrl: "https://example.org/kore",
 			wsUrl: "wss://example.org/kore",
+			buildHash: "9483cdf",
 		});
 	});
 });
