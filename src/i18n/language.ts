@@ -222,6 +222,11 @@ export function isLanguageCode(value: string | null | undefined): value is Langu
 	return typeof value === "string" && (LANGUAGE_CODES as readonly string[]).includes(value);
 }
 
+/** Returns true when the browser advertises German as one of its languages. */
+export function browserPrefersGerman(languages: readonly string[]): boolean {
+	return languages.some(language => /^de(?:-|$)/i.test(language.trim()));
+}
+
 type LanguageDocument = { language?: unknown; strings?: unknown };
 type JsonFetcher = (url: string) => Promise<Response>;
 

@@ -1,10 +1,16 @@
 import { expect, test } from "bun:test";
-import { LANGUAGE_KEYS, loadLanguage } from "../src/i18n/language.js";
+import { browserPrefersGerman, LANGUAGE_KEYS, loadLanguage } from "../src/i18n/language.js";
 import { createMainMenuComposition } from "../src/kore/ui/mainMenu.js";
 
 function response(document: unknown): Response {
 	return new Response(JSON.stringify(document), { status: 200, headers: { "content-type": "application/json" } });
 }
+
+test("browser language detection selects German only when no explicit language is present", () => {
+	expect(browserPrefersGerman(["de-DE", "en-US"])).toBe(true);
+	expect(browserPrefersGerman(["en-US", "fr-FR"])).toBe(false);
+	expect(browserPrefersGerman(["de-AT"])).toBe(true);
+});
 
 test("language loader loads the selected language and keeps en_en as the fallback", async () => {
 	const documents: Record<string, unknown> = {

@@ -628,7 +628,8 @@ qualification scenarios, not a normal completion mode.
 - `src/i18n/language.ts`: typed JSON language loader. It always loads the
   complete `en_en` catalog first and overlays the selected language, so
   missing translations fall back to English. Production UI language is
-  selected with `?lang=en_en` or `?lang=de_de`.
+  selected explicitly with `?lang=en_en` or `?lang=de_de`, or automatically
+  chooses German when the browser advertises a German language.
 - `src/kore/ui/statusSurface.ts`, `replayViewerSurface.ts`, and
   `shareSurface.ts`: engine-rendered production status, replay, and share
   overlays. They do not create HTML UI elements.
@@ -764,8 +765,10 @@ controls seek, pause, and resume the embedded deterministic replay; direct
 `?debug=ui` opens the standalone generic UI SDK sandbox instead of normal
 menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
 is intentionally outside `src/engine/ui-sdk/`.
-`?lang=en_en` or `?lang=de_de` selects the production UI language; English is
-the default and the fallback for missing selected-language entries. Production
+`?lang=en_en` or `?lang=de_de` selects the production UI language; an absent
+`lang` parameter automatically selects `de_de` when the browser advertises a
+German language, otherwise English is used. Explicit `lang` values are never
+overridden; English remains the fallback for missing selected-language entries. Production
 loading, replay, share, menu, HUD, and gameplay labels are rendered through
 the engine/UI surfaces rather than HTML overlays.
 `url` selects the WebSocket server for network gameplay; `mapbuilder` is parsed
