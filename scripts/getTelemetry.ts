@@ -53,6 +53,10 @@ async function main(): Promise<void> {
 	}
 	const snapshotCheck = new Database(temporaryPath, { readonly: true });
 	try {
+		for (const table of snapshotCheck.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>) {
+			const identifier = `"${table.name.replaceAll('"', '""')}"`;
+			snapshotCheck.query(`SELECT * FROM ${identifier}`).all();
+		}
 		for (const row of snapshotCheck.query("SELECT snapshot FROM games").all() as Array<{ snapshot: Uint8Array }>) JSON.parse(gunzipSync(row.snapshot).toString());
 	} catch (error) {
 		await unlink(temporaryPath).catch(() => undefined);
