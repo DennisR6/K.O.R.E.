@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
-import { DASHBOARD_DATABASE_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
+import { DASHBOARD_DATABASE_PATH, DASHBOARD_FEEDBACK_PATH, DASHBOARD_LOGIN_PATH, DASHBOARD_LOGOUT_PATH, DASHBOARD_METRICS_PATH, DASHBOARD_PATH, DASHBOARD_REPLAYS_PATH, dashboardUrl, metricsResponse, readDashboardConfig, serveDashboard } from "../src/server/dashboard.ts";
 import { servePublicReplayShare } from "../src/server/replayShares.ts";
 import { ReplayViewer } from "../src/menu/replayViewer.ts";
 import { ReplayRecorder } from "../src/replay/recorder.ts";
@@ -46,6 +46,8 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	expect(page).toContain('id="latency-median"');
 	expect(page).toContain("No data");
 	expect(page).toContain("Recent feedback");
+	expect(page).toContain("Add missed feedback");
+	expect(page).toContain(`action="/operator/dashboard/feedback"`);
 	expect(page).toContain("Newest feedback");
 	expect(page).toContain("Older feedback");
 	expect(page.indexOf("Newest feedback")).toBeLessThan(page.indexOf("Older feedback"));
@@ -54,11 +56,15 @@ test.serial("dashboard returns only versioned aggregate metrics and matching vis
 	const mountedPage = await (await serveDashboard(request(DASHBOARD_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database, "https://operator.example/kore"))!.text();
 	expect(mountedPage).toContain('href="https://operator.example/kore/operator/replays"');
 	expect(mountedPage).toContain('href="https://operator.example/kore/operator/db"');
+	expect(mountedPage).toContain('action="https://operator.example/kore/operator/dashboard/feedback"');
 	const jsonDashboard = (await serveDashboard(request(`${DASHBOARD_PATH}?format=json`, `Bearer ${secret}`), registry, { operatorSecret: secret }))!;
 	expect(jsonDashboard.headers.get("content-type")).toContain("application/json");
 	expect(await jsonDashboard.json()).toMatchObject({ schemaVersion: 1, counts: { allTime: 0, playersAllTime: 0, playersOnline: 0, now: 0, paused: 0, sleeping: 0 } });
 	const jsonWithFeedback = (await serveDashboard(request(DASHBOARD_METRICS_PATH, `Bearer ${secret}`), registry, { operatorSecret: secret }, database))!;
 	expect(await jsonWithFeedback.json()).toMatchObject({ feedback: [{ text: "Newest feedback" }, { text: "Older feedback" }] });
+	const manual = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_FEEDBACK_PATH}`, { method: "POST", headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" }, body: JSON.stringify({ mode: "online", mapId: "cue-clash", topic: "bug", text: "The game broke before the end." }) }), registry, { operatorSecret: secret }, database))!;
+	expect(manual.status).toBe(201);
+	expect(database.listFeedback()[0]).toMatchObject({ mode: "online", mapId: "cue-clash", topic: "bug", text: "The game broke before the end." });
 	database.close();
 });
 

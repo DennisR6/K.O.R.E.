@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DashboardPerformanceMetrics, DashboardPerformanceTrendPoint, GameDatabase, OperatorReplaySummary, StoredFeedback } from "./db.js";
+import type { FeedbackSubmission } from "./feedback.js";
+import { validateFeedbackSubmission } from "./feedback.js";
 import type { GameRegistry } from "./gameRegistry.js";
 import type { MatchMetrics } from "./types.js";
 
@@ -9,6 +11,7 @@ export const DASHBOARD_LOGIN_PATH = "/operator/login";
 export const DASHBOARD_LOGOUT_PATH = "/operator/logout";
 export const DASHBOARD_DATABASE_PATH = "/operator/db";
 export const DASHBOARD_API_TOKENS_PATH = "/operator/api-tokens";
+export const DASHBOARD_FEEDBACK_PATH = "/operator/dashboard/feedback";
 export const DASHBOARD_REPLAYS_PATH = "/operator/replays";
 const DASHBOARD_COOKIE = "kore_operator_session";
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
@@ -36,7 +39,7 @@ export function readDashboardConfig(env: Record<string, string | undefined> = pr
 }
 
 export function isDashboardPath(pathname: string): boolean {
-	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH || pathname === DASHBOARD_API_TOKENS_PATH || pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`);
+	return pathname === DASHBOARD_PATH || pathname === DASHBOARD_METRICS_PATH || pathname === DASHBOARD_LOGIN_PATH || pathname === DASHBOARD_LOGOUT_PATH || pathname === DASHBOARD_DATABASE_PATH || pathname === DASHBOARD_API_TOKENS_PATH || pathname === DASHBOARD_FEEDBACK_PATH || pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`);
 }
 
 /**
@@ -46,7 +49,7 @@ export function isDashboardPath(pathname: string): boolean {
  * continue normal routing; disabled or unauthorized dashboard paths are an
  * indistinguishable not-found response to avoid endpoint discovery.
  */
-export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics" | "killGame">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics" | "listFeedback" | "createDashboardApiToken" | "listDashboardApiTokens" | "revokeDashboardApiToken" | "isDashboardApiTokenValid">, publicBaseUrl?: string): Promise<Response | undefined> {
+export async function serveDashboard(request: Request, registry: Pick<GameRegistry, "getMetrics" | "killGame">, config: DashboardConfig, database?: Pick<GameDatabase, "exportSnapshot" | "listOperatorReplays" | "getOperatorReplay" | "createOperatorReplayView" | "getDashboardPerformanceMetrics" | "listFeedback" | "storeFeedback" | "createDashboardApiToken" | "listDashboardApiTokens" | "revokeDashboardApiToken" | "isDashboardApiTokenValid">, publicBaseUrl?: string): Promise<Response | undefined> {
 	const url = new URL(request.url); const pathname = url.pathname;
 	if (!isDashboardPath(pathname)) return undefined;
 	if (pathname === DASHBOARD_LOGIN_PATH) return login(request, config.operatorSecret, publicBaseUrl);
@@ -54,6 +57,7 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 	if (!isAuthorized(request, config.operatorSecret) && !(pathname === DASHBOARD_METRICS_PATH && database && isBearerApiToken(request, database))) return notFound();
 	if (pathname === DASHBOARD_DATABASE_PATH) return databaseDownload(request, database);
 	if (pathname === DASHBOARD_API_TOKENS_PATH || pathname.startsWith(`${DASHBOARD_API_TOKENS_PATH}/`)) return apiTokens(request, database, pathname);
+	if (pathname === DASHBOARD_FEEDBACK_PATH) return operatorFeedback(request, database);
 	if (pathname === DASHBOARD_REPLAYS_PATH || pathname.startsWith(`${DASHBOARD_REPLAYS_PATH}/`)) return operatorReplays(request, registry, database, pathname, url.searchParams.get("id"), publicBaseUrl);
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	try {
@@ -67,6 +71,24 @@ export async function serveDashboard(request: Request, registry: Pick<GameRegist
 		});
 	} catch {
 		return Response.json({ error: "dashboard_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
+	}
+}
+
+async function operatorFeedback(request: Request, database: Pick<GameDatabase, "storeFeedback"> | undefined): Promise<Response> {
+	if (!database) return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
+	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST", "cache-control": "no-store" } });
+	try {
+		const contentType = request.headers.get("content-type") ?? "";
+		const raw = contentType.includes("application/json") ? await request.json() as Record<string, unknown> : Object.fromEntries(await request.formData()) as Record<string, unknown>;
+		const feedback: Record<string, unknown> = { text: raw.text };
+		for (const key of ["gameId", "userId", "mode", "mapId", "topic"] as const) if (typeof raw[key] === "string" && raw[key].trim()) feedback[key] = raw[key];
+		if (raw.rating !== undefined && raw.rating !== "") feedback.rating = typeof raw.rating === "number" ? raw.rating : Number(raw.rating);
+		validateFeedbackSubmission(feedback);
+		const stored = database.storeFeedback(feedback as FeedbackSubmission);
+		if (request.headers.get("hx-request") === "true") return new Response(`<p class="text-sm text-emerald-700">Feedback saved.</p>`, { headers: { "cache-control": "no-store" } });
+		return Response.json({ ok: true, id: stored.id }, { status: 201, headers: { "cache-control": "no-store" } });
+	} catch {
+		return new Response("Invalid feedback", { status: 400, headers: { "cache-control": "no-store" } });
 	}
 }
 
@@ -277,6 +299,7 @@ ${dashboardCard("Offline / KI matches", metrics.counts.offlineMatches, "data-met
 <section class="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Content mix</p><h3 class="mt-2 text-xl font-bold">Map usage</h3></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">${metrics.counts.allTime} total</span></div><div class="mt-5 overflow-hidden rounded-xl border border-slate-100"><table class="w-full text-left text-sm"><caption class="sr-only">Map usage by game count and percentage</caption><thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><th class="px-4 py-3">Map</th><th class="px-4 py-3 text-right">Games</th><th class="px-4 py-3 text-right">Share</th></tr></thead><tbody data-metric="mapUsage">${rows}</tbody></table></div></div><div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Operator signals</p><h3 class="mt-2 text-xl font-bold">Useful at a glance</h3><div class="mt-5 space-y-3"><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Distinct players</span><strong>${metrics.counts.playersAllTime}</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Live player coverage</span><strong>${metrics.counts.allTime ? Math.round((metrics.counts.playersOnline / Math.max(metrics.counts.playersAllTime, 1)) * 100) : 0}%</strong></div><div class="flex items-center justify-between rounded-xl bg-slate-50 p-4"><span class="text-sm text-slate-500">Top map share</span><strong>${metrics.mostPlayedMap?.percentage ?? 0}%</strong></div></div><div class="mt-5 border-t border-slate-100 pt-4"><p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Offline / KI breakdown</p><div class="space-y-2" data-metric="offlineModes">${offlineModeRows}</div></div><a class="mt-5 block text-sm font-semibold text-cyan-600 hover:text-cyan-700" href="${replayUrl}">Inspect replay activity <span aria-hidden="true">-&gt;</span></a></div></section>
   </div>
  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Player voice</p><h3 class="mt-2 text-xl font-bold text-slate-900">Recent feedback</h3><p class="mt-1 text-sm text-slate-500">Newest submissions appear first.</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" data-feedback-count>${metrics.feedback.length} submission${metrics.feedback.length === 1 ? "" : "s"}</span></div><div class="mt-5 space-y-3" data-feedback="list">${feedbackRows}</div></section>
+ <section class="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-xl shadow-slate-950/10"><p class="text-xs font-bold uppercase tracking-[.18em] text-amber-700">Operator entry</p><h3 class="mt-2 text-xl font-bold text-slate-900">Add missed feedback</h3><p class="mt-1 text-sm text-slate-600">Use this when a game broke before the player could submit feedback.</p><form class="mt-5 grid gap-3 sm:grid-cols-2" method="post" action="${dashboardUrl(publicBaseUrl, DASHBOARD_FEEDBACK_PATH)}" hx-post="${dashboardUrl(publicBaseUrl, DASHBOARD_FEEDBACK_PATH)}" hx-target="#manual-feedback-status" hx-swap="innerHTML"><input name="gameId" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" placeholder="Game ID (optional)"><input name="userId" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" placeholder="Player ID (optional)"><input name="mode" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" placeholder="Mode, e.g. online"><input name="mapId" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" placeholder="Map ID (optional)"><select name="topic" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"><option value="">Topic (optional)</option><option value="bug">Bug</option><option value="balance">Balance</option><option value="controls">Controls</option><option value="other">Other</option></select><input name="rating" type="number" min="1" max="5" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" placeholder="Rating 1-5 (optional)"><textarea name="text" required maxlength="2000" class="sm:col-span-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" rows="4" placeholder="What did the player report?"></textarea><div class="sm:col-span-2 flex items-center gap-3"><button type="submit" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600">Save feedback</button><span id="manual-feedback-status" class="text-sm text-slate-600"></span></div></form></section>
  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Bot access</p><h3 class="mt-2 text-xl font-bold text-slate-900">Metrics API tokens</h3><p class="mt-1 text-sm text-slate-500">Create a token once, then revoke it at any time.</p></div><div class="flex flex-wrap gap-2"><input name="label" form="add-api-token" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" value="metrics-bot" aria-label="API key label"><form id="add-api-token" hx-post="${dashboardUrl(publicBaseUrl, DASHBOARD_API_TOKENS_PATH)}" hx-target="#api-token-status" hx-swap="innerHTML"><button type="submit" class="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-white">Add API key</button></form><input name="id" form="remove-api-token" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Token ID" aria-label="Token ID"><form id="remove-api-token" hx-delete="${dashboardUrl(publicBaseUrl, DASHBOARD_API_TOKENS_PATH)}" hx-target="#api-token-status" hx-swap="innerHTML"><button type="submit" class="rounded-lg bg-rose-500 px-3 py-2 text-sm font-semibold text-white">Remove API key</button></form></div></div><p id="api-token-status" class="mt-4 whitespace-pre-wrap break-all text-sm text-slate-600"></p></section>
  <footer class="rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-xs leading-5 text-slate-400"><p data-freshness="metrics">${escapeHtml(metrics.freshness)}</p></footer></main></div>
 <script>(function(){function ms(value){ return value===null?'No data':Number(value.toFixed(2))+'ms'}function selectPeriod(key){const root=document.querySelector('#dashboard-live');if(!root)return;const latency=JSON.parse(root.dataset.latency||'{}');const value=latency[key];if(!value)return;const median=root.querySelector('#latency-median');const p90=root.querySelector('#latency-p90');const average=root.querySelector('#latency-average');const delta=root.querySelector('#latency-delta');if(median)median.textContent=ms(value.median);if(p90)p90.textContent=ms(value.p90);if(average)average.textContent=ms(value.average);if(delta){if(value.median===null||value.previousMedian===null){delta.textContent='No comparison data';delta.className='mt-2 text-xs font-medium text-slate-400'}else{const difference=Math.round(((value.median-value.previousMedian)/value.previousMedian)*100);delta.textContent=difference<=0?Math.abs(difference)+'% faster than comparison period':difference+'% slower than comparison period';delta.className='mt-2 text-xs font-medium '+(difference<=0?'text-emerald-300':'text-rose-300')}}const labels=key==='week'?['6d ago','4d ago','2d ago','Now']:key==='yesterday'?['00:00','06:00','12:00','18:00']:['00:00','06:00','12:00','Now'];root.querySelectorAll('[data-latency-label]').forEach((label,index)=>{label.textContent=labels[index]||''});const points=value.trend||[];const max=Math.max(...points.map(point=>point.value??0),1);root.querySelectorAll('[data-latency-bar]').forEach((bar,index)=>{const point=points[index];const height=point?.value===null||point===undefined?8:Math.max(8,Math.round((point.value/max)*160));bar.style.height=height+'px';bar.title=point?.value===null||point===undefined?'No samples':ms(point.value)});root.querySelectorAll('[data-period]').forEach(tab=>{const active=tab.dataset.period===key;tab.className='rounded-md px-3 py-2 text-xs font-semibold '+(active?'bg-white text-slate-900 shadow-sm':'text-slate-500')})}document.addEventListener('click',event=>{const target=event.target;if(target instanceof Element){const tab=target.closest('[data-period]');if(tab)selectPeriod(tab.getAttribute('data-period')||'today')}});selectPeriod('today')})();</script></body></html>`;
