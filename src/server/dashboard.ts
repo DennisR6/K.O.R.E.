@@ -104,8 +104,10 @@ async function apiTokens(request: Request, database: Pick<GameDatabase, "createD
 	if (request.method === "DELETE") {
 		try {
 			const contentType = request.headers.get("content-type") ?? "";
-			const body = contentType.includes("application/json") ? await request.json() as { id?: unknown } : Object.fromEntries(await request.formData()) as { id?: unknown };
-			const id = typeof body.id === "string" ? body.id.trim() : "";
+			const queryId = new URL(request.url).searchParams.get("id");
+			const body = queryId ? {} : contentType.includes("application/json") ? await request.json() as { id?: unknown } : Object.fromEntries(await request.formData()) as { id?: unknown };
+			const rawId = queryId ?? body.id;
+			const id = typeof rawId === "string" ? rawId.trim() : "";
 			return id && database.revokeDashboardApiToken(id) ? new Response("API key removed.", { headers: { "cache-control": "no-store" } }) : new Response("Token not found.", { status: 404, headers: { "cache-control": "no-store" } });
 		} catch {
 			return new Response("Invalid token request", { status: 400, headers: { "cache-control": "no-store" } });

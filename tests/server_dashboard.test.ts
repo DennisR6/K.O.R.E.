@@ -248,6 +248,10 @@ test("read-only API tokens authenticate metrics but not operator routes", async 
 	const deleted = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_API_KEYS_PATH}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}`, "content-type": "application/x-www-form-urlencoded" }, body: `id=${encodeURIComponent(` ${created.record.id} `)}` }), registry, config, database))!;
 	expect(deleted.status).toBe(200);
 	expect(database.listDashboardApiTokens()).toHaveLength(0);
+	const second = database.createDashboardApiToken("htmx-bot");
+	const htmxDeleted = (await serveDashboard(new Request(`https://operator.example${DASHBOARD_API_KEYS_PATH}?id=${encodeURIComponent(second.record.id)}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}`, "HX-Request": "true" } }), registry, config, database))!;
+	expect(htmxDeleted.status).toBe(200);
+	expect(database.listDashboardApiTokens()).toHaveLength(0);
 	database.close();
 });
 
