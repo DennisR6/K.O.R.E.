@@ -139,10 +139,14 @@ export interface NetworkWaitingRoom { type: NetworkMessageType.WAITINGROOM }
 export interface NetworkFriendRoomCreated { type: NetworkMessageType.FRIEND_ROOM_CREATED; code: string }
 export interface NetworkTurn {
 	type: NetworkMessageType.TURN,
+	gameId?: string,
+	sequence?: number,
 	sim: TurnPacket,
 	turnNumber: number,
 	activeTeam: number,
 	ruleState: RuleState,
+	stateHash?: string,
+	matchResult?: MatchResult,
 	gameOver?: boolean,
 }
 export interface NetworkError {

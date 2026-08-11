@@ -6,6 +6,7 @@ import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, isMapLoadable } f
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
 import { GameState } from "../engine/types.js";
+import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 	import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -226,13 +227,27 @@ export class ServerRuntime {
 		if (!userId) return this.sendError(socket, "Login is required before shooting")
 		const result = this.games.submitTurn(userId, message)
 		if (!result.ok) return this.sendError(socket, result.error)
+		const gameOver = result.record.handler.getState() === GameState.Game_over;
+		const stateHash = fingerprintAuthoritativeTurn({
+			players: result.record.handler.getEntityManager().serialize(),
+			state: result.record.handler.getState(),
+			turnNumber: result.record.turnNumber,
+			activeTeam: result.record.currentTeam,
+			ruleState: result.record.ruleState,
+			matchResult: result.record.handler.getMatchResult(),
+		});
+		result.record.handler.log("turnPacket.authoritative", { gameId: result.record.id, sequence: result.record.turnNumber, stateHash });
 		const packet: NetworkTurn = {
 			type: NetworkMessageType.TURN,
+			gameId: result.record.id,
+			sequence: result.record.turnNumber,
 			sim: result.packet,
 			turnNumber: result.record.turnNumber,
 			activeTeam: result.record.currentTeam,
 			ruleState: result.record.ruleState,
-			gameOver: result.record.handler.getState() === GameState.Game_over,
+			stateHash,
+			matchResult: result.record.handler.getMatchResult(),
+			gameOver,
 		}
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)

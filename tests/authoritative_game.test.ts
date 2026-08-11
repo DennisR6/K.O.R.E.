@@ -80,6 +80,9 @@ test("server accepts only the active user's valid actor and broadcasts one autho
 
 	expect(firstTurn).toEqual(secondTurn)
 	expect(firstTurn.type).toBe(NetworkMessageType.TURN)
+	expect(firstTurn.gameId).toBe(game.id)
+	expect(firstTurn.sequence).toBe(1)
+	expect(firstTurn.stateHash).toMatch(/^[0-9a-f]{8}$/)
 	expect(firstTurn.turnNumber).toBe(1)
 	expect(firstTurn.activeTeam).toBe(1)
 	expect(firstTurn.ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 })
@@ -274,3 +277,18 @@ test("NetworkEmitter sends only shot input and TURN fully reconciles the local e
 	expect(handler.getState()).toBe(GameState.Game_over);
 	expect(handler.getEntityManager().getEntities()[0].toSettings()).toEqual(endedPlayers[0]);
 })
+
+test("NetworkEmitter rejects stale turns and records hash mismatches", () => {
+	const source = createPlayerSettings({ id: "44444444-4444-4444-8444-444444444444", position: { x: 0, y: 0 }, team: [0] });
+	const handler = new GameHandlerBuilder().defaultSystems().setPlayerTeam([0]).addPlayer(new Player(source)).build();
+	const socket = new FakeSocket({ connectionId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" });
+	installTurnReceiver(socket as unknown as WebSocket, handler);
+	const ruleState = { phase: RulePhase.Physics, activeTeam: 1, turnNumber: 1, itemUses: 0 };
+	const finalState = [createPlayerSettings({ ...source, position: { x: 12, y: 13 } })];
+	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sequence: 1, turnNumber: 1, activeTeam: 1, ruleState, stateHash: "00000000", sim: { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState } }));
+	handler.tick();
+	expect(handler.getLogs().some(log => log.type === "turnPacket.hash-mismatch")).toBe(true);
+	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sequence: 1, turnNumber: 1, activeTeam: 1, ruleState, stateHash: "00000000", sim: { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState: [createPlayerSettings({ ...source, position: { x: 99, y: 99 } })] } }));
+	expect(handler.getLogs().some(log => log.type === "turnPacket.stale")).toBe(true);
+	expect(handler.getEntityManager().getEntities()[0].getPos()).toEqual({ x: 12, y: 13 });
+});

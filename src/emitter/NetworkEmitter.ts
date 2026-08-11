@@ -2,6 +2,7 @@ import { GameState, type IInputEmitter } from "../engine/types.js";
 import type { GameHandler } from "../engine/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
+import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
 import type { NetworkGameEnded, NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkSurrenderGame, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
@@ -62,11 +63,20 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		}
 		if (message.type === NetworkMessageType.TURN) {
 			const turn = message as NetworkTurn
+			const sequence = turn.sequence ?? turn.turnNumber;
+			if (sequence <= handler.getTurnNumber()) {
+				handler.log("turnPacket.stale", { gameId: turn.gameId, sequence, currentTurnNumber: handler.getTurnNumber(), stateHash: turn.stateHash });
+				return;
+			}
 			handler.setRuleState(turn.ruleState)
-			handler.log("turnPacket.received", { actorId: turn.sim.actorId, frameCount: turn.sim.durationFrames, playerCount: turn.sim.finalState.length });
+			handler.log("turnPacket.received", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, stateHash: turn.stateHash, actorId: turn.sim.actorId, frameCount: turn.sim.durationFrames, playerCount: turn.sim.finalState.length });
 			handler.playTurn(turn.sim, () => {
+				if (turn.matchResult) handler.setMatchResult(turn.matchResult);
 				handler.setState(turn.gameOver ? GameState.Game_over : TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
-		})
+				const localStateHash = fingerprintAuthoritativeTurn({ players: handler.getEntityManager().serialize(), state: handler.getState(), turnNumber: turn.turnNumber, activeTeam: turn.activeTeam, ruleState: handler.getRuleState(), matchResult: handler.getMatchResult() });
+				const hashMatches = turn.stateHash === undefined || turn.stateHash === localStateHash;
+				handler.log(hashMatches ? "turnPacket.synchronized" : "turnPacket.hash-mismatch", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, actualStateHash: localStateHash, hashMatches });
+			})
 		}
 		if (message.type === NetworkMessageType.ITEM_USED) {
 			const itemUse = message as NetworkItemUsed

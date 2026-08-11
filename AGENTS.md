@@ -567,15 +567,18 @@ After every change, check whether this guide still reflects the implementation a
   completed actions, persistence, metric aggregation, and lazy SQLite
   restoration. `now` metrics are explicitly scoped to this process's cache.
 - `src/server/runtime.ts`: testable WebSocket protocol runtime, login binding,
-  matchmaking, input dispatch, and broadcasts. When configured with a
+  matchmaking, input dispatch, and broadcasts. Authoritative `TURN` packets
+  carry game ID, sequence/turn number, and a deterministic state hash for
+  client reconciliation diagnostics. When configured with a
   `MapRepository`, matchmaking accepts only approved database map UUIDs and
   expands them server-side before match construction.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
   advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
   authoritative `TURN` playback, `ITEM_USED` inventory snapshots, active-team
-  updates, and authoritative player snapshots included with `GAME_ENDED`
-  surrender packets.
+  updates, authoritative player snapshots included with `GAME_ENDED`
+  surrender packets, and diagnostic state-hash comparison with stale-turn
+  rejection for ordered `TURN` packets.
 - `src/emitter/InputEmitter.ts` and `ObjectEmitter.ts`:
   emitter composition and test capture.
 - `src/utils/net.ts`: unguarded JSON wrap/unwrap.
