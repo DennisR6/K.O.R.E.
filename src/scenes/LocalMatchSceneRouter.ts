@@ -20,7 +20,7 @@ import { createModFileInput } from "../mods/browserFileInput.js";
 import type { LoadedContentPackage } from "../content/package.js";
 import { HardAiWorkerHost } from "../ai/worker/host.js";
 import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
-import { startupMark } from "../engine/startupTelemetry.js";
+import { startupMark } from "../kore/runtime/startupTelemetry.js";
 import { AssetPreloader } from "../assetManager/preloader.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;

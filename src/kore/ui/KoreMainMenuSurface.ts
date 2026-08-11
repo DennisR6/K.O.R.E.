@@ -13,7 +13,7 @@ import { importModText } from "../../mods/importMod.js";
 import { createEmptyModState, type ModDocumentState, type ModError, type ModSource } from "../../mods/types.js";
 import type { ReadClipboardResult } from "../../mods/browserClipboard.js";
 import { createEnglishLanguage, formatLanguage, translate, type LanguageCatalog } from "../../i18n/language.js";
-import { startupMark } from "../../engine/startupTelemetry.js";
+import { startupMark } from "../runtime/startupTelemetry.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;

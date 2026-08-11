@@ -13,7 +13,7 @@ import { validateMapDocument, type MapDocument } from "../contracts/documents.js
 import type { OfflineMatchReport } from "./offlineMatchContract.js";
 import type { MatchResult } from "../rules/types.js";
 import { aggregatePerformanceLogs, validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
-import type { RuntimeLogEntry } from "../engine/runtimeLog.js";
+import type { RuntimeLogEntry } from "../kore/runtime/runtimeLog.js";
 import type { FeedbackSubmission } from "./feedback.js";
 
 export type StoredGame = {

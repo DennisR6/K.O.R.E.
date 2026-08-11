@@ -66,7 +66,7 @@ import { AuthoritativeGameplayRenderer, type AuthoritativeGameplaySnapshot } fro
 import type { LanguageCatalog } from "../../i18n/language.js";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackType, type KoreGameplayFeedbackEvent } from "../gameplayFeedback.js";
 import type { JsonValue } from "../../engine/contracts/systemSettings.js";
-import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "../../engine/runtimeLog.js";
+import { isRuntimeLogCategory, LoggerType, runtimeNow, type RuntimeLogEntry } from "./runtimeLog.js";
 
 type EntityForceFieldItemEffect = { type: typeof MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID; typeValue: Record<string, unknown> };
 type EntitySwapPositionItemEffect = { type: typeof TRANSFORM_SWAP_POSITION_EFFECT_ID; typeValue: Record<string, unknown> };

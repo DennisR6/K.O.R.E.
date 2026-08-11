@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
-import { summarizeFrameWindow } from "../src/engine/runtimeLog.ts";
+import { summarizeFrameWindow } from "../src/kore/runtime/runtimeLog.js";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { RulePhase } from "../src/rules/types.ts";
-import { LoggerType } from "../src/engine/runtimeLog.ts";
+import { LoggerType } from "../src/kore/runtime/runtimeLog.js";
 import { HardAiWorkerHost } from "../src/ai/worker/host.ts";
 
 describe("runtime logging", () => {

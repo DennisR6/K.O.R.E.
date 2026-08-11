@@ -1,6 +1,6 @@
 import { collectAssetReferences, type RenderAssetReference } from "../engine/sdk/assetReferences.js";
 import { assetManager, type AssetLoadState } from "./loader.js";
-import { startupMark } from "../engine/startupTelemetry.js";
+import { startupMark } from "../kore/runtime/startupTelemetry.js";
 
 export type AssetPreloadSummary = {
 	references: number;

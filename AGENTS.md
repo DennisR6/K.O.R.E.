@@ -109,15 +109,18 @@ After every change, check whether this guide still reflects the implementation a
 
 ### Engine and gameplay source
 
-- `src/engine/Handler.ts`: central orchestration. `GameHandler` owns context,
-  entities, systems, structures, effects, input forwarding, simulation,
-  playback, active-team/turn progression, serialization, and local rematch.
-  `GameHandlerBuilder` constructs handlers.
-- `src/engine/types.ts`: game states, input, turn packets, engine snapshots,
-  mouse contracts, and settings serialization contracts.
-- `src/engine/RenderContext.ts`: renderer abstraction.
-- `src/engine/drawingEngine.ts`: p5 implementation of `RenderContext` and
-  world-to-pixel scaling.
+- `src/kore/runtime/Handler.ts`: KORE match orchestration. `GameHandler` owns
+  the KORE-configured context, entities, systems, structures, effects, input
+  forwarding, simulation, playback, active-team/turn progression,
+  serialization, and local rematch. `GameHandlerBuilder` constructs handlers.
+- `src/kore/runtime/types.ts`: KORE runtime states, input, turn packets, engine
+  snapshots, mouse contracts, and settings serialization contracts.
+- `src/kore/runtime/RenderContext.ts`: renderer abstraction used by the KORE
+  runtime and UI adapters.
+- `src/kore/runtime/drawingEngine.ts`: p5 implementation of `RenderContext`
+  and world-to-pixel scaling.
+- `src/engine/`: generic Engine SDK, JSON-safe capability contracts, and
+  generic UI/audio/presentation SDKs. It must not import KORE or game domains.
 
 ### Game rules
 
@@ -193,7 +196,7 @@ After every change, check whether this guide still reflects the implementation a
 - `src/item/sdkItemFactory.ts`: leaf-module `createItem`/`composeItemEffects`
   item-document authoring used by both the public KORE SDK and the official
   item catalog. Keeping it outside `kore/sdk/index.ts` breaks the
-  `modeCatalog -> kore/sdk/match -> engine/Handler -> officialItems ->
+  `modeCatalog -> kore/sdk/match -> kore/runtime/Handler -> officialItems ->
   kore/sdk/index` module cycle.
 - `src/item/inventory.ts`: initializes fixed team loadouts and enforces
   per-turn/per-game inventory consumption; player snapshots preserve counters.

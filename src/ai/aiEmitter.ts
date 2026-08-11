@@ -6,7 +6,7 @@ import type { AiSettings } from "./types.js";
 // function, but the AI path must not pull server-only modules into the
 // browser bundle.
 import { isValidInput } from "../input/validate.js";
-import { runtimeNow } from "../engine/runtimeLog.js";
+import { runtimeNow } from "../kore/runtime/runtimeLog.js";
 
 export interface AiDecision {
 	shot?: { actorId: string; angle: number; power: number };
