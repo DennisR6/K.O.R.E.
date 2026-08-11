@@ -4,7 +4,7 @@ import { Player } from "../src/entity/Player.ts"
 import { createPlayerSettings } from "../src/entity/types.ts"
 import { EffectType, SettingOperation } from "../src/effects/types.ts"
 import { EffectNumericAdd } from "../src/effects/numericAdd.ts"
-import { GameHandlerBuilder } from "../src/engine/Handler.ts"
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts"
 
 
 test("we are testing the Damage Effect", () => {

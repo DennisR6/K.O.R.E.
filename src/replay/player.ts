@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState, type EngineSettings } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState, type EngineSettings } from "../kore/runtime/types.js";
 import type { ReplayDocument } from "./types.js";
 import { validateReplayDocument, validateReplayOrigin } from "./types.js";
 import type { PlayerSettings } from "../entity/types.js";

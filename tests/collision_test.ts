@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach } from "bun:test";
-import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.ts"
+import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.ts"
 import { ObjectEmitter } from "../src/emitter/ObjectEmitter.ts"
 import { EmitterSystem } from "../src/systems/Emitter.ts"
 import { UiSystem } from "../src/systems/UiSystem.ts";
@@ -10,7 +10,7 @@ import { EffectPhysics } from "../src/effects/physics.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
-import { IPhysics, SHAPE } from "../src/physics/physics.ts";
+import { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { IStructure } from "../src/structures/types.ts";
 
 

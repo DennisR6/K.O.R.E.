@@ -1,4 +1,4 @@
-import { ui, type UiRenderer } from "../src/engine/ui-sdk/index.js";
+import { ui, type UiRenderer } from "@coffeemakerstudio/drip";
 
 /** Build and drive a UI menu without browser listeners or a render loop. */
 export function run(): Record<string, unknown> {

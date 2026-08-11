@@ -1,5 +1,5 @@
-import type { EngineMovementState, EngineTransformState } from "../engine/sdk/entityState.js";
-import { validateMovementState, validateTransformState } from "../engine/sdk/entityState.js";
+import type { EngineMovementState, EngineTransformState } from "@coffeemakerstudio/roast";
+import { validateMovementState, validateTransformState } from "@coffeemakerstudio/roast";
 import { Player } from "./Player.js";
 
 export interface PlayerEngineState {

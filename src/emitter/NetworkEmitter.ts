@@ -1,5 +1,5 @@
-import { GameState, type IInputEmitter } from "../engine/types.js";
-import type { GameHandler } from "../engine/Handler.js";
+import { GameState, type IInputEmitter } from "../kore/runtime/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
 import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";

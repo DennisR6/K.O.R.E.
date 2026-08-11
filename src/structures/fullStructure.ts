@@ -1,11 +1,11 @@
 import type { EffectSettings } from "../effects/types.js";
-import type { RenderContext } from "../engine/RenderContext.js";
-import { SHAPE, type IdefaultPhysics, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole, type Vector2D } from "../physics/physics.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
+import { SHAPE, type IdefaultPhysics, type IPhysics, type RoleAwarePhysics, type StructureCollisionRole, type Vector2D } from "@coffeemakerstudio/bean";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import { StructureCircle, StructureLine, StructureRectangle } from "./types.js";
 import type { IStructure } from "./types.js";
 import type { SettingKey, SettingValue } from "../effects/types.js";
-import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import type { CollisionCommandBinding } from "@coffeemakerstudio/roast";
 
 export class FullStructure implements IStructure, IdefaultPhysics {
 	str: IStructure & RoleAwarePhysics

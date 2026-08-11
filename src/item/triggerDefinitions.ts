@@ -1,7 +1,7 @@
 import { validateEffectSettings } from "../effects/validate.js";
 import type { EffectSettings } from "../effects/types.js";
-import type { EngineEffectComposition } from "../engine/sdk/composition.js";
-import { validateEngineEffectComposition } from "../engine/sdk/composition.js";
+import type { EngineEffectComposition } from "@coffeemakerstudio/roast";
+import { validateEngineEffectComposition } from "@coffeemakerstudio/roast";
 
 export interface TriggerDefinition {
 	schemaVersion: 1;

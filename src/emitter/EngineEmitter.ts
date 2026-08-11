@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState, type IInputEmitter } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState, type IInputEmitter } from "../kore/runtime/types.js";
 import { currentTurnMode } from "../rules/defaultGameModes.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase, type GameModeSettings, type RuleState } from "../rules/types.js";
@@ -7,7 +7,7 @@ import { TurnSystem } from "../systems/TurnSystem.js";
 import type { ItemTarget } from "../item/target.js";
 import { ReplayRecorder } from "../replay/recorder.js";
 import { isValidInput } from "../input/validate.js";
-import { AudioEmitter, type ISoundEmitter } from "../engine/audio-sdk/index.js";
+import { AudioEmitter, type ISoundEmitter } from "@coffeemakerstudio/roast";
 import { koreAudio } from "../kore/audio.js";
 import type { HardAiWorkerHost } from "../ai/worker/host.js";
 import type { AiSettings } from "../ai/types.js";

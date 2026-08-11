@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineEffectRegistry, EngineSystemRegistry, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_ID, applyRadialVelocityDelta, registerMovementCommands, registerMovementEffect } from "../src/engine/sdk/index.ts";
+import { EngineEffectRegistry, EngineSystemRegistry, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID, MOVEMENT_CAPABILITY, MOVEMENT_EFFECT_ID, applyRadialVelocityDelta, registerMovementCommands, registerMovementEffect } from "@coffeemakerstudio/roast";
 
 test("the movement Effect declares its capability and validates its typed payload", () => {
 	const effects = registerMovementEffect(new EngineEffectRegistry());

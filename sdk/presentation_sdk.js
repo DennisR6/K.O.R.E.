@@ -1,3 +1,4 @@
+// ../engine-repo/packages/roast/contracts/systemSettings.ts
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -18,6 +19,7 @@ function assertJsonValue(value) {
   throw new Error("System settings must contain JSON data only");
 }
 
+// ../engine-repo/packages/roast/presentation-sdk/index.ts
 function validateAnimationSettings(value) {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.id !== "string" || typeof value.channel !== "string" || !positiveInteger(value.durationTicks) || !integer(value.priority) || !INTERRUPTIONS.has(value.interruption) || !Array.isArray(value.tracks))
     throw new Error("Malformed animation settings");

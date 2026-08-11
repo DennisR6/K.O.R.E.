@@ -3,7 +3,7 @@ import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPl
 import { CounterSystem } from "../src/systems/CounterSystem.ts";
 import { MovementSystem } from "../src/systems/MovementSystem.ts";
 import { TransformSystem } from "../src/systems/TransformSystem.ts";
-import { COUNTER_ADD_EFFECT_ID } from "../src/engine/sdk/index.ts";
+import { COUNTER_ADD_EFFECT_ID } from "@coffeemakerstudio/roast";
 
 test("Counter and Movement use the same predefined host and runtime-object APIs", () => {
 	const handler = createCanonicalPlayableMatchHandler();

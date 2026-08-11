@@ -1,6 +1,6 @@
-import type { IDrawer, ITicker, RenderContext } from "../engine/RenderContext";
-import type { IMouse } from "../engine/types";
-import type { Vector2D } from "../physics/physics";
+import type { IDrawer, ITicker, RenderContext } from "../kore/runtime/RenderContext";
+import type { IMouse } from "../kore/runtime/types";
+import type { Vector2D } from "@coffeemakerstudio/bean";
 
 export class Builder implements IDrawer, ITicker, IMouse {
 	position: Vector2D = { x: 0, y: 0 }

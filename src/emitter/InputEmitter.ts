@@ -1,6 +1,6 @@
-import { type IInputEmitter } from "../engine/types.js";
+import { type IInputEmitter } from "../kore/runtime/types.js";
 import type { ItemTarget } from "../item/target.js";
-import type { AudioCommand, ISoundEmitter } from "../engine/audio-sdk/index.js";
+import type { AudioCommand, ISoundEmitter } from "@coffeemakerstudio/roast";
 
 /**
  * Die "Steckerleiste" für Inputs.

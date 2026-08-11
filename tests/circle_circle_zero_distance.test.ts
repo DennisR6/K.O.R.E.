@@ -6,12 +6,12 @@ import {
 	PHYSICS_CONTACT_SLOP,
 	SHAPE,
 	type Vector2D,
-} from "../src/physics/physics.ts";
+} from "@coffeemakerstudio/bean";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 
 /**
  * Section 13.3 - zero-distance circle/circle contacts.

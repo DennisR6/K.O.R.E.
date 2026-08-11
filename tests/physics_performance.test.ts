@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, MAX_CONTACT_SOLVER_ITERATIONS } from "../src/physics/physics.ts";
+import { CCD_MAX_STEP_SIZE, MAX_CCD_SUBSTEPS, MAX_CONTACT_SOLVER_ITERATIONS } from "@coffeemakerstudio/bean";
 import { runPhysicsFuzzCase } from "./support/physicsFuzz.ts";
 
 describe("physics performance budget (13.11)", () => {

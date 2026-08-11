@@ -23,8 +23,8 @@ const REMOVED_LEGACY_FILES = [
 
 /** Production modules that may reference `GameHandlerBuilder` directly. */
 const BUILDER_ALLOWLIST = new Set([
-	"src/engine/Handler.ts",
-	"src/engine/runtimeFactory.ts",
+	"src/kore/runtime/Handler.ts",
+	"src/kore/runtime/runtimeFactory.ts",
 ]);
 
 function sourceFiles(directory: string): string[] {

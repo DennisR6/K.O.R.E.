@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { advanceStructureLifecycle, createStructureLifecycle } from "../src/engine/contracts/structureLifecycle.ts";
+import { advanceStructureLifecycle, createStructureLifecycle } from "@coffeemakerstudio/roast";
 
 test("structure lifecycle advances and expires at the deterministic turn boundary", () => {
 	const lifecycle = createStructureLifecycle({ id: "lifecycle-1", structureId: "wall-1", durationUnit: "turns", duration: 2 });

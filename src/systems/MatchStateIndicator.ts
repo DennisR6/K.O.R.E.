@@ -1,4 +1,4 @@
-import type { IDrawer, RenderContext } from "../engine/RenderContext.js";
+import type { IDrawer, RenderContext } from "../kore/runtime/RenderContext.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 import type { UiSystem } from "./UiSystem.js";
 

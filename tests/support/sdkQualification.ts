@@ -1,4 +1,4 @@
-import { GameHandler, GameHandlerBuilder } from "../../src/engine/Handler.js";
+import { GameHandler, GameHandlerBuilder } from "../../src/kore/runtime/Handler.js";
 import { kore } from "../../src/kore/sdk/index.js";
 import { RulePhase, WinCondition } from "../../src/rules/types.js";
 import type { GameSettings } from "../../src/settings/settings.js";

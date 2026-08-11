@@ -2,7 +2,7 @@ import { test, expect, describe } from "bun:test";
 import { ReplayViewer } from "../src/menu/replayViewer.js";
 import { createDefaultGameSettings } from "../src/settings/settings.js";
 import { DOCUMENT_SCHEMA_VERSION } from "../src/contracts/documents.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 
 describe("Replay Viewer", () => {
 	test("successfully loads and plays valid replay", () => {

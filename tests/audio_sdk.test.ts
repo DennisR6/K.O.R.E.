@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { ApplicationAudioMixer, AudioEmitter, AudioRuntime, audio, createAudioSettings, validateAudioSettings, type AudioOutputPort } from "../src/engine/audio-sdk/index.ts";
+import { ApplicationAudioMixer, AudioEmitter, AudioRuntime, audio, createAudioSettings, validateAudioSettings, type AudioOutputPort } from "@coffeemakerstudio/roast";
 
 const play = (sourceId: string, soundId: string, priority: number = 0, extra: object = {}) => audio.command.play({ sourceId, soundId, bus: "effects", priority, ...extra });
 
@@ -70,9 +70,9 @@ test("validation rejects malformed settings and generic layers remain browser an
 	expect(() => validateAudioSettings(malformed)).toThrow("Invalid audio bus");
 	expect(() => audio.validateCommand({ type: "playSound", sourceId: "bad id", soundId: "sound", bus: "effects" })).toThrow("Invalid audio source ID");
 	expect(() => new AudioEmitter("x").emit(audio.command.play({ sourceId: "x", soundId: "sound", bus: "missing" }))).not.toThrow(); // bus resolution happens in the sound system
-	const source = readFileSync("src/engine/audio-sdk/index.ts", "utf8");
+	const source = readFileSync("node_modules/@coffeemakerstudio/roast/dist/audio-sdk/index.js", "utf8");
 	expect(source).not.toMatch(/from\s+["'].*(?:kore|menu|browser|AudioManager|ui-sdk)["']/);
-	expect(readFileSync("src/engine/sdk/index.ts", "utf8")).not.toContain("audio-sdk");
+	expect(readFileSync("node_modules/@coffeemakerstudio/roast/dist/sdk/index.js", "utf8")).not.toContain("audio-sdk");
 	const port: AudioOutputPort = { apply(batch) { expect(batch.schemaVersion).toBe(1); } };
 	const mixer = new ApplicationAudioMixer("output"); port.apply(mixer.flush());
 });

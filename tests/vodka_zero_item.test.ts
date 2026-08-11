@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { EffectAimVariance } from "../src/effects/aimVariance.ts";
-import { applyActionModifiers, consumeActionModifiers } from "../src/engine/contracts/actionModifier.ts";
+import { applyActionModifiers, consumeActionModifiers } from "@coffeemakerstudio/roast";
 import { ItemEffectType } from "../src/effects/types.ts";
 import { createOfficialItemLoader, createVodkaZero, vodkaZeroItem } from "../src/item/officialItems.ts";
 

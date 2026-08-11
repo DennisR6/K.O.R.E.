@@ -1,7 +1,7 @@
 import type p5Types from "p5";
-import { P5Renderer } from "../engine/drawingEngine.js";
-import type { UiAction, UiInput, UiMenuSettings, UiPoint, UiRenderer, UiRuntime } from "../engine/ui-sdk/index.js";
-import { ui, validateUiSettings } from "../engine/ui-sdk/index.js";
+import { P5Renderer } from "../kore/runtime/drawingEngine.js";
+import type { UiAction, UiInput, UiMenuSettings, UiPoint, UiRenderer, UiRuntime } from "@coffeemakerstudio/drip";
+import { ui, validateUiSettings } from "@coffeemakerstudio/drip";
 
 export const UI_DEBUG_QUERY = "ui";
 export function isUiDebugSandboxUrl(url: URL): boolean { return url.searchParams.get("debug") === UI_DEBUG_QUERY || url.searchParams.get("debugui") === "1"; }

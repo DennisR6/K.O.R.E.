@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { currentTurnMode } from "../src/rules/defaultGameModes.ts";
 import { RuleInterpreter } from "../src/rules/RuleInterpreter.ts";
 import { RulePhase } from "../src/rules/types.ts";

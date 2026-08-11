@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createKoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { KoreMenuElement, KoreMenuScreen } from "../src/kore/ui/menuVocabulary.ts";
-import type { UiMenuSettings, UiScreenSettings, UiElementSettings } from "../src/engine/ui-sdk/index.ts";
+import type { UiMenuSettings, UiScreenSettings, UiElementSettings } from "@coffeemakerstudio/drip";
 import type { ModError } from "../src/mods/types.ts";
 
 const VALID_PACKAGE = {

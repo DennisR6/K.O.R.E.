@@ -1,5 +1,5 @@
 // import test, { beforeEach, describe } from "node:test"
-// import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.js"
+// import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.js"
 // import { GameEmitter } from "../src/emitter/Emitter.js"
 // import { Player } from "../src/entity/Player.js";
 // import assert from "node:assert";

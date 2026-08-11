@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectTrigger } from "../src/effects/types.ts";

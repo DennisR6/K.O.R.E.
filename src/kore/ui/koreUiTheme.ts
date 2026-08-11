@@ -1,4 +1,4 @@
-import type { RenderContext } from "../../engine/RenderContext.js";
+import type { RenderContext } from "../runtime/RenderContext.js";
 import { KoreMenuStyle } from "./menuVocabulary.js";
 
 export type UiElementState = "normal" | "hover" | "active" | "focused" | "disabled";

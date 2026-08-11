@@ -3,7 +3,7 @@ import { Player } from "../src/entity/Player.ts";
 import { EntityManager } from "../src/entity/EntityManager.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS } from "../src/physics/physics.ts";
+import { SHAPE, MAX_CONTACT_SOLVER_ITERATIONS } from "@coffeemakerstudio/bean";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
 import { PhysicsSystem } from "../src/systems/PhysicsSystem.ts";
 import type { IGameContext } from "../src/systems/types.ts";

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { counterSystemDefinition, COUNTER_EFFECT_IDS, movementSystemDefinition, MOVEMENT_COMMAND_EFFECT_IDS } from "../src/engine/sdk/index.ts";
+import { counterSystemDefinition, COUNTER_EFFECT_IDS, movementSystemDefinition, MOVEMENT_COMMAND_EFFECT_IDS } from "@coffeemakerstudio/roast";
 import { CounterSystem } from "../src/systems/CounterSystem.ts";
 import { MovementSystem } from "../src/systems/MovementSystem.ts";
 

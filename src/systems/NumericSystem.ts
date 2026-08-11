@@ -1,6 +1,6 @@
-import { NUMERIC_ADD_EFFECT_ID, NUMERIC_EFFECT_IDS, NUMERIC_RESET_EFFECT_ID, NUMERIC_SET_EFFECT_ID, validateNumericEffectSettings } from "../engine/sdk/numericCapability.js";
-import type { NumericThreshold } from "../engine/contracts/numericState.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import { NUMERIC_ADD_EFFECT_ID, NUMERIC_EFFECT_IDS, NUMERIC_RESET_EFFECT_ID, NUMERIC_SET_EFFECT_ID, validateNumericEffectSettings } from "@coffeemakerstudio/roast";
+import type { NumericThreshold } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
 import type { IGameContext, IPredefinedEffectSystem, ResolvedPredefinedTarget, SystemSettings } from "./types.js";
 
 /** Interprets typed entity-owned numeric mutations and returns crossed effects to the shared dispatcher. */

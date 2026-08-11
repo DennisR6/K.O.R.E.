@@ -3,7 +3,7 @@ import { Player } from "../src/entity/Player.js";
 import { EntityManager } from "../src/entity/EntityManager.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
-import { SHAPE, MAX_CCD_SUBSTEPS } from "../src/physics/physics.js";
+import { SHAPE, MAX_CCD_SUBSTEPS } from "@coffeemakerstudio/bean";
 import { StructureRectangle } from "../src/structures/structureRectangle.js";
 import { StructureLine } from "../src/structures/structureLine.js";
 import { DeadlyObstacleCirle } from "../src/structures/DeadlyObstacleCircle.js";

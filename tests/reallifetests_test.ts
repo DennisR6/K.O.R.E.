@@ -1,13 +1,13 @@
 // import { test, afterEach, beforeEach, describe } from "bun:test"
 // import { createReadStream } from "node:fs"
 // import { createInterface } from "node:readline"
-// import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler"
+// import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler"
 // import { Player } from "../src/entity/Player.ts"
 // import { StructureRectangle } from "../src/structures/structureRectangle.ts"
-// import { IInput, TurnPacket } from "../src/engine/types.ts"
+// import { IInput, TurnPacket } from "../src/kore/runtime/types.ts"
 // import { EntityManager } from "../src/entity/EntityManager.ts"
 // import assert from "node:assert"
-// import { Vector2D } from "../src/physics/physics.ts"
+// import { Vector2D } from "@coffeemakerstudio/bean"
 //
 // describe("check logs of real games for Errors", async () => {
 //

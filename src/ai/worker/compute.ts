@@ -1,4 +1,4 @@
-import { createRuntimeHandler } from "../../engine/runtimeFactory.js";
+import { createRuntimeHandler } from "../../kore/runtime/runtimeFactory.js";
 import { HardAi } from "../hardAi.js";
 import { fingerprintCanonicalSnapshot, type HardAiWorkerRequest, type HardAiWorkerResponse } from "./protocol.js";
 

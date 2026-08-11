@@ -1,9 +1,9 @@
-import type { GameHandler } from "../engine/Handler.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
 import { validateItemTarget } from "../item/target.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import { RuleInterpreter } from "../rules/RuleInterpreter.js";
 import { RulePhase } from "../rules/types.js";
-import type { IInputEmitter } from "../engine/types.js";
+import type { IInputEmitter } from "../kore/runtime/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /** UI helper for managing item phase interactions, available inventory, target validation, and skipping. */

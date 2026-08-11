@@ -1,12 +1,12 @@
-import type { GameHandler } from "../engine/Handler.js";
-import type { IInputEmitter } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import type { IInputEmitter } from "../kore/runtime/types.js";
 import type { ItemTarget } from "../item/target.js";
 import type { AiSettings } from "./types.js";
 // The pure shared input boundary: `server/gameRegistry` re-exports the same
 // function, but the AI path must not pull server-only modules into the
 // browser bundle.
 import { isValidInput } from "../input/validate.js";
-import { runtimeNow } from "../engine/runtimeLog.js";
+import { runtimeNow } from "../kore/runtime/runtimeLog.js";
 
 export interface AiDecision {
 	shot?: { actorId: string; angle: number; power: number };

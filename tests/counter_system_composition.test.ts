@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { createRoundStartTriggerEvent } from "../src/engine/sdk/trigger.ts";
-import { COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID } from "../src/engine/sdk/index.ts";
+import { createRoundStartTriggerEvent } from "@coffeemakerstudio/roast";
+import { COUNTER_ADD_EFFECT_ID, COUNTER_RESET_EFFECT_ID, COUNTER_SET_EFFECT_ID } from "@coffeemakerstudio/roast";
 import { CounterSystem } from "../src/systems/CounterSystem.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
 

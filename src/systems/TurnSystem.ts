@@ -1,4 +1,4 @@
-import { GameState } from "../engine/types.js";
+import { GameState } from "../kore/runtime/types.js";
 
 /** Deterministic turn-order rules shared by local and authoritative game flows. */
 export class TurnSystem {

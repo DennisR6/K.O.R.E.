@@ -1,5 +1,5 @@
 import { AssetList, AssetPaths, type AssetKey } from './assets/assetRegistry.js';
-import { recordStartupAsset } from '../engine/startupTelemetry.js';
+import { recordStartupAsset } from '../kore/runtime/startupTelemetry.js';
 
 type ImageKey = AssetKey | string;
 type LoadedImage = HTMLImageElement | ImageBitmap;

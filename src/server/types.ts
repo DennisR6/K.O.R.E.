@@ -1,5 +1,5 @@
 import type { UUID } from "crypto"
-import type { EngineSettings, IInput, TurnPacket } from "../engine/types.js"
+import type { EngineSettings, IInput, TurnPacket } from "../kore/runtime/types.js"
 import type { MatchResult, RuleState } from "../rules/types.js"
 import type { ItemTarget } from "../item/target.js"
 

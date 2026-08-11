@@ -1,4 +1,4 @@
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import type { ReplayDocument } from "../replay/types.js";
 import { validateReplayDocument } from "../replay/types.js";
 import { ReplayPlayer } from "../replay/player.js";

@@ -1,9 +1,9 @@
-import { engine } from "../src/engine/sdk/index.js";
+import { engine } from "@coffeemakerstudio/roast";
 
 /**
  * Example 01: generic Engine SDK world authoring.
  *
- * The Engine SDK (`src/engine/sdk/index.ts`) is KORE-free. It authors JSON-safe
+ * The Engine SDK (`packages/roast/src/sdk/index.ts`) is KORE-free. It authors JSON-safe
  * worlds, entities, structures, effects, and deterministic system metadata
  * that never reference game or browser code.
  */

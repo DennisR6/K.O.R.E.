@@ -13,10 +13,10 @@ import { run as runPackage } from "../examples/08-kore-content-package.ts";
 
 const root = resolve(import.meta.dir, "..");
 const allowedExampleImports = new Set([
-	"../src/engine/sdk/index.js",
-	"../src/engine/ui-sdk/index.js",
-	"../src/engine/audio-sdk/index.js",
-	"../src/engine/presentation-sdk/index.js",
+	"@coffeemakerstudio/roast",
+	"@coffeemakerstudio/drip",
+	"@coffeemakerstudio/roast",
+	"@coffeemakerstudio/roast",
 	"../src/kore/sdk/index.js",
 ]);
 

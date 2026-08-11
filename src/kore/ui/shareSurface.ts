@@ -1,5 +1,5 @@
-import type { IDrawer, RenderContext } from "../../engine/RenderContext.js";
-import type { IMouse } from "../../engine/types.js";
+import type { IDrawer, RenderContext } from "../runtime/RenderContext.js";
+import type { IMouse } from "../runtime/types.js";
 import { LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 
 export class KoreShareSurface implements IDrawer, IMouse {

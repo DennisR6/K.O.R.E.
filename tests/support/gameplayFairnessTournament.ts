@@ -2,8 +2,8 @@ import { AiTurnEmitter } from "../../src/ai/aiEmitter.js";
 import { HardAi } from "../../src/ai/hardAi.js";
 import type { AiSettings } from "../../src/ai/types.js";
 import { GameEmitter } from "../../src/emitter/EngineEmitter.js";
-import { GameHandler, GameHandlerBuilder } from "../../src/engine/Handler.js";
-import { GameState } from "../../src/engine/types.js";
+import { GameHandler, GameHandlerBuilder } from "../../src/kore/runtime/Handler.js";
+import { GameState } from "../../src/kore/runtime/types.js";
 import { MatchStatus } from "../../src/rules/types.js";
 import { makeAiArena } from "./aiMatchFuzz.ts";
 

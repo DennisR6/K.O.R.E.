@@ -4,7 +4,7 @@ import { diffCanonicalSettings, fingerprintCanonicalSnapshot, fingerprintHardAiR
 import { createMatchHandler } from "../src/scenes/matchPipeline.js";
 import { RulePhase } from "../src/rules/types.js";
 import { AiBattleSystem } from "../src/ai/AiBattleSystem.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { restoreHardAiWorkerHandler } from "../src/ai/worker/compute.js";
 
 class FakeWorker {

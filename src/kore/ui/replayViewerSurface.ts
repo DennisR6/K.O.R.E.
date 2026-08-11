@@ -1,6 +1,6 @@
-import type { IDrawer, RenderContext } from "../../engine/RenderContext.js";
-import type { IMouse } from "../../engine/types.js";
-import { UiRuntime, type UiCommand, type UiRenderer, type UiRuntimeElement, type UiRuntimeNode } from "../../engine/ui-sdk/index.js";
+import type { IDrawer, RenderContext } from "../runtime/RenderContext.js";
+import type { IMouse } from "../runtime/types.js";
+import { UiRuntime, type UiCommand, type UiRenderer, type UiRuntimeElement, type UiRuntimeNode } from "@coffeemakerstudio/drip";
 import { createReplayViewerComposition, KoreReplayCommand, KoreReplayElement, KoreReplayStyle } from "./replayViewer.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../../i18n/language.js";
 

@@ -1,8 +1,8 @@
 import { DOCUMENT_SCHEMA_VERSION, migrateDocument } from "../contracts/documents.js";
 import type { ReplayDocument, ReplayAction } from "../contracts/documents.js";
-import type { EngineSettings } from "../engine/types.js";
+import type { EngineSettings } from "../kore/runtime/types.js";
 import type { MatchResult } from "../rules/types.js";
-import { validateCounterEffectSettings } from "../engine/sdk/counterCapability.js";
+import { validateCounterEffectSettings } from "@coffeemakerstudio/roast";
 
 export type { ReplayDocument, ReplayAction };
 /** Immutable authoritative artifact intentionally separate from a live match. */

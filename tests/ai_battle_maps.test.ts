@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { MAP_CATALOG } from "../src/content/mapCatalog.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { createAiBattleHandler } from "../src/scenes/LocalMatchSceneRouter.js";
 
 /**

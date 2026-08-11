@@ -1,4 +1,4 @@
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { EffectType, type Effect, type EffectSettings, type ModifySettingValue, type SettingKey, type SettingValue } from "./types.js";
 
 interface ISettingMutable {

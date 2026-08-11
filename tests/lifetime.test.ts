@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { advanceLifetime, createLifetime, validateLifetime } from "../src/engine/contracts/lifetime.ts";
+import { advanceLifetime, createLifetime, validateLifetime } from "@coffeemakerstudio/roast";
 
 test("lifetime advances immutably at duration one and two boundaries", () => {
 	const one = createLifetime({ durationUnit: "turns", duration: 1 });

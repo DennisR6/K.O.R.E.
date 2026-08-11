@@ -1,4 +1,4 @@
-import { audio, type AudioBusSettings, type AudioRuntimeSettings, type PlayMusicCommand, type PlaySoundCommand } from "../engine/audio-sdk/index.js";
+import { audio, type AudioBusSettings, type AudioRuntimeSettings, type PlayMusicCommand, type PlaySoundCommand } from "@coffeemakerstudio/roast";
 
 /** KORE-owned semantic IDs and the browser-resolved optional asset manifest. */
 export const KORE_AUDIO_ASSETS = {

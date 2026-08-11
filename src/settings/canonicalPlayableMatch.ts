@@ -1,7 +1,7 @@
-import { GameHandler } from "../engine/Handler.js";
+import { GameHandler } from "../kore/runtime/Handler.js";
 import { RulePhase, WinCondition } from "../rules/types.js";
 import { createDefaultGameSettings, validateGameSettings, type GameSettings } from "./settings.js";
-import { SHAPE } from "../physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { FitWorldCamera } from "../ui/FitWorldCamera.js";
 import {
 	powerDashItem,

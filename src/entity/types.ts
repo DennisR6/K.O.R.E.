@@ -1,14 +1,14 @@
 import type { UUID } from "node:crypto";
 import { AssetList } from "../assetManager/assets/assetRegistry.js";
-import { SHAPE, type Vector2D } from "../physics/physics.js";
+import { SHAPE, type Vector2D } from "@coffeemakerstudio/bean";
 import type { FullEffectSettings } from "../effects/types.js";
 import type { InventoryItem } from "../item/types.js";
 import type { ItemEffectSettings } from "../effects/types.js";
-import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
-import { validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
-import { validateActionModifier, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
-import { validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
-import { validateActorEligibilityState, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
+import { validateNumericThresholdBindings, type NumericThresholdBinding } from "@coffeemakerstudio/roast";
+import { validateTemporalModifier, type TemporalModifierSettings } from "@coffeemakerstudio/roast";
+import { validateActionModifier, type ActionModifierSettings } from "@coffeemakerstudio/roast";
+import { validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "@coffeemakerstudio/roast";
+import { validateActorEligibilityState, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "@coffeemakerstudio/roast";
 
 /**
  * Ein EntitySnapshot repräsentiert den Zustand einer Entity zu einem spezifischen Zeitpunkt.

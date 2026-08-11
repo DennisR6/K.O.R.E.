@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { EngineEffectRegistry, EngineSystemRegistry, TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, TRANSFORM_SWAP_POSITION_EFFECT_ID, registerTransformEffects } from "../src/engine/sdk/index.ts";
+import { EngineEffectRegistry, EngineSystemRegistry, TRANSFORM_CAPABILITY, TRANSFORM_SET_POSITION_EFFECT_ID, TRANSFORM_SET_ROTATION_EFFECT_ID, TRANSFORM_SWAP_POSITION_EFFECT_ID, registerTransformEffects } from "@coffeemakerstudio/roast";
 
 test("transform commands declare a capability and validate typed absolute payloads", () => {
 	const effects = registerTransformEffects(new EngineEffectRegistry());

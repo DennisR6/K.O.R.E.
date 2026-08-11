@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { Player } from "../src/entity/Player.ts";
-import { NUMERIC_ADD_EFFECT_ID, NUMERIC_SET_EFFECT_ID } from "../src/engine/sdk/numericCapability.ts";
-import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../src/engine/sdk/participationCapability.ts";
-import { MOVEMENT_SET_VELOCITY_EFFECT_ID } from "../src/engine/sdk/movementCapability.ts";
-import { NUMERIC_RESET_EFFECT_ID } from "../src/engine/sdk/numericCapability.ts";
-import type { NumericThresholdBinding, NumericThresholdEffect } from "../src/engine/contracts/numericState.ts";
+import { NUMERIC_ADD_EFFECT_ID, NUMERIC_SET_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { MOVEMENT_SET_VELOCITY_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { NUMERIC_RESET_EFFECT_ID } from "@coffeemakerstudio/roast";
+import type { NumericThresholdBinding, NumericThresholdEffect } from "@coffeemakerstudio/roast";
 
 function eliminationThreshold(resetValue?: number): NumericThresholdBinding {
 	const effects: NumericThresholdEffect[] = [

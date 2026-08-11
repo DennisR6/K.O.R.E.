@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { presentation, PresentationRuntime, validateAnimationSettings } from "../src/engine/presentation-sdk/index.ts";
+import { presentation, PresentationRuntime, validateAnimationSettings } from "@coffeemakerstudio/roast";
 
 	const animation = (id: string, priority = 1, interruption: "replace" | "higher-priority" | "ignore" = "higher-priority") => presentation.createAnimation({ id, channel: "hud", durationTicks: 3, priority, interruption, tracks: [{ id: "opacity", keyframes: [{ tick: 0, value: 0 }, { tick: 1, value: 1 }] }] });
 
@@ -27,7 +27,7 @@ test("priority, cancellation, interruption and runtime restoration are explicit"
 });
 
 test("presentation is a visual projection outside canonical engine settings and stays renderer-neutral", () => {
-	const engineSource = readFileSync("src/engine/sdk/index.ts", "utf8"); const presentationSource = readFileSync("src/engine/presentation-sdk/index.ts", "utf8");
+	const engineSource = readFileSync("node_modules/@coffeemakerstudio/roast/dist/sdk/index.js", "utf8"); const presentationSource = readFileSync("node_modules/@coffeemakerstudio/roast/dist/presentation-sdk/index.js", "utf8");
 	expect(engineSource).not.toContain("presentation-sdk"); expect(presentationSource).not.toMatch(/p5|DOM|AudioManager|requestAnimationFrame|addEventListener/);
 	const runtime = presentation.createRuntime("r", { animations: [animation("pulse")] }); runtime.emit(presentation.play("e", "pulse")); const frame = runtime.tick();
 	expect(frame.animations).toHaveLength(1); expect(runtime.toSettings()).not.toHaveProperty("players"); expect(JSON.parse(JSON.stringify(runtime.toSettings()))).toEqual(runtime.toSettings());

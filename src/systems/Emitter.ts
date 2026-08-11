@@ -1,5 +1,5 @@
 import { LogEmitter } from "../emitter/InputEmitter.js";
-import { GameState, type IInputEmitter } from "../engine/types.js";
+import { GameState, type IInputEmitter } from "../kore/runtime/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 export class EmitterSystem implements ISerializableSystem<SystemSettings> {

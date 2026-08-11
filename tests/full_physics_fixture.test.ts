@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectPhysics } from "../src/effects/physics.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { GameSettings } from "../src/settings/settings.ts";
 import { SeededRandom } from "../src/utils/random.ts";
 

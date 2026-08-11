@@ -2,17 +2,17 @@
  * @fileoverview Zentraler Hub für statische Kartenstrukturen.
  */
 
-import type { IPhysics, SHAPE } from "../physics/physics.js";
-import type { ISettingsSerialize } from "../engine/types.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
 import type { SettingKey, SettingValue } from "../effects/types.js";
-import type { CollisionCommandBinding } from "../engine/sdk/collisionCommand.js";
+import type { CollisionCommandBinding } from "@coffeemakerstudio/roast";
 import { StructureCircle } from "./structureCircle.js";
 import { StructureLine } from "./structureLine.js";
 import { StructureRectangle } from "./structureRectangle.js";
 import type { ITicker } from "./types.js";
 import type { IDrawer } from "./types.js";
-export type { IDrawer, ITicker } from "../engine/RenderContext.js";
+export type { IDrawer, ITicker } from "../kore/runtime/RenderContext.js";
 export { StructureCircle } from "./structureCircle.js";
 export { StructureLine } from "./structureLine.js";
 export { StructureRectangle } from "./structureRectangle.js";

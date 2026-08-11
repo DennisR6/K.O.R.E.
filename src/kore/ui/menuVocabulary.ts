@@ -1,4 +1,4 @@
-import type { JsonValue } from "../../engine/contracts/systemSettings.js";
+import type { JsonValue } from "@coffeemakerstudio/roast";
 import type { AiDifficulty } from "../../ai/types.js";
 import { LANGUAGE_KEYS } from "../../i18n/language.js";
 import { getSelectableGameModes } from "../../rules/modeCatalog.js";

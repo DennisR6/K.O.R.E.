@@ -1,8 +1,8 @@
 import { createAiBattleHandler } from "../src/scenes/LocalMatchSceneRouter.js";
 import { HardAi } from "../src/ai/hardAi.js";
 import type { AiSettings } from "../src/ai/types.js";
-import { GameHandler, GameHandlerBuilder } from "../src/engine/Handler.js";
-import { GameState } from "../src/engine/types.js";
+import { GameHandler, GameHandlerBuilder } from "../src/kore/runtime/Handler.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import { WinningSystem } from "../src/systems/WinningSystem.js";
 

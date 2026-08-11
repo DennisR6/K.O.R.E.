@@ -5,7 +5,7 @@ import { parseDiscordInvite } from "../discord/invites.js";
 import { FINAL_RELEASE_MAP_IDS, MAP_CATALOG, buildMapSettings, isMapLoadable } from "../content/mapCatalog.js";
 import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
-import { GameState } from "../engine/types.js";
+import { GameState } from "../kore/runtime/types.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 	import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 

@@ -1,4 +1,4 @@
-import type { IPhysics, SHAPE } from "../physics/physics.js";
+import type { IPhysics, SHAPE } from "@coffeemakerstudio/bean";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
 // Lokales Interface, das genau matcht, was eure Player-Klasse anbietet

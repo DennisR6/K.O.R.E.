@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { RenderContext } from "../src/engine/RenderContext.ts";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 
 test("circle rendering uses the collision center and radius", () => {

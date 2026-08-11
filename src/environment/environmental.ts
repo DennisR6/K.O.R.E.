@@ -1,5 +1,5 @@
 import type { FullEffectSettings } from "../effects/types.js";
-import { SHAPE, type Vector2D } from "../physics/physics.js";
+import { SHAPE, type Vector2D } from "@coffeemakerstudio/bean";
 import type { MapBoundarySettings } from "../settings/settings.js";
 
 export const ENVIRONMENT_SCHEMA_VERSION = 1;

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createAiBattleHandler, LocalMatchSceneRouter } from "../src/scenes/LocalMatchSceneRouter.js";
 import { installGameplayHud } from "../src/scenes/gameplayHud.js";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 
 function click(handler: ReturnType<typeof createAiBattleHandler>, x: number, y: number): void {
 	handler.updateMouse(x, y);

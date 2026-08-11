@@ -36,7 +36,7 @@ AI, content, UI, menus, scenes, networking, or browser adapters.
 | Team numbers, spawn regions, player materialization | `src/kore/sdk/` | KORE SDK | KORE uses numbered teams and `PlayerSettings`; medium risk. |
 | Default map size/friction, containment, game mode | `src/kore/sdk/` | KORE SDK | KORE defaults; medium risk. |
 | KORE effects, assets, map structures | `src/kore/sdk/` | KORE SDK | Depend on KORE effect/player contracts; medium risk. |
-| `GameHandlerBuilder` runtime construction | `src/engine/runtimeFactory.ts` | Runtime factory | Designated handler construction boundary (milestone 28); match authoring composes via KORE match APIs instead. |
+| `GameHandlerBuilder` runtime construction | `src/kore/runtime/runtimeFactory.ts` | KORE runtime factory | Designated handler construction boundary; match authoring composes via KORE match APIs instead. |
 | `GameSettings`, `MapDocument`, system snapshots | existing contracts | Canonical contracts | Stable serialization boundary; do not duplicate. |
 
 ## 4. Engine SDK responsibilities
@@ -98,8 +98,7 @@ system that lacks the required capability.
 `engine.createSystemRegistry()` selects generic framework metadata. KORE's
 `createDefaultFramework()` declares its playback → physics → boundary → game
 state-manager profile through that selector. The current KORE runtime factory
-continues to use `GameHandlerBuilder.defaultSystems()` so existing behavior and
-serialized system contracts remain unchanged.
+continues to use `GameHandlerBuilder.defaultSystems()` in `src/kore/runtime/Handler.ts` so existing behavior and serialized system contracts remain unchanged.
 
 `CounterSystem` and the generic command family interpreted by `MovementSystem`
 are the reference qualification cases for the trusted predefined runtime host.

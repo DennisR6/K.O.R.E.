@@ -1,14 +1,14 @@
 import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { jaegermeisterElixierItem, magnetItem } from "../src/item/officialItems.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "../src/engine/contracts/actorEligibility.ts";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime } from "@coffeemakerstudio/roast";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { AiTurnEmitter, type IAiTurnProducer } from "../src/ai/aiEmitter.ts";
 import { validateItemTarget } from "../src/item/target.ts";

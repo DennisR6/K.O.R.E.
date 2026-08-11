@@ -1,5 +1,5 @@
-import type { IExtendedTicker } from "../engine/RenderContext.js";
-import { GameState } from "../engine/types.js";
+import type { IExtendedTicker } from "../kore/runtime/RenderContext.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { IGameContext, ISerializableSystem, SystemSettings } from "./types.js";
 
 export class EffectSystem implements ISerializableSystem<SystemSettings>, IExtendedTicker {

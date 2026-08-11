@@ -2,11 +2,11 @@ import { EffectMove, EffectMoveInput } from "../src/effects/movement.ts"
 import { describe, expect, test } from "bun:test"
 import { Player } from "../src/entity/Player.ts"
 import { createPlayerSettings } from "../src/entity/types.ts"
-import { Vector2D } from "../src/physics/physics.ts"
+import { Vector2D } from "@coffeemakerstudio/bean"
 import { EffectPhysics } from "../src/effects/physics.ts"
 import { FRICTION_TABLE } from "../src/settings/settings.ts"
 import { EffectTrigger } from "../src/effects/types.ts"
-import { GameHandlerBuilder } from "../src/engine/Handler.ts"
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts"
 
 describe(() => {
 	const movementtest: EffectMoveInput[] = [

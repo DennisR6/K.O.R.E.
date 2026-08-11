@@ -1,4 +1,4 @@
-import type { IInput } from "../engine/types.js";
+import type { IInput } from "../kore/runtime/types.js";
 
 /** Shared boundary for all gameplay shot inputs. */
 export function isValidInput(input: unknown): input is IInput {

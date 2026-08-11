@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameState } from "../src/engine/types.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { GameEmitter } from "../src/emitter/EngineEmitter.js";
 import { ReplayPlayer } from "../src/replay/player.js";
 import { ReplayRecorder } from "../src/replay/recorder.js";

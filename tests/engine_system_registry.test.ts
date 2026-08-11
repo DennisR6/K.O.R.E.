@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { engine, EngineSystemRegistry } from "../src/engine/sdk/index.ts";
+import { engine, EngineSystemRegistry } from "@coffeemakerstudio/roast";
 
 test("generic engine system registry resolves dependencies in deterministic order", () => {
 	const registry = new EngineSystemRegistry()

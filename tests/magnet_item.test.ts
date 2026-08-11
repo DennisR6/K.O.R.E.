@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { magnetItem, createOfficialItemLoader, MAGNET_FORCE, MAGNET_RANGE } from "../src/item/officialItems.ts";
-import { applyRadialVelocityDelta } from "../src/engine/sdk/movementForceField.ts";
+import { applyRadialVelocityDelta } from "@coffeemakerstudio/roast";
 
 test("Magnet is a validated built-in configurable attraction item", () => {
 	const loader = createOfficialItemLoader();

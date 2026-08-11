@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { advanceDeferredEffect, createDeferredEffect } from "../src/engine/contracts/deferredEffect.ts";
+import { advanceDeferredEffect, createDeferredEffect } from "@coffeemakerstudio/roast";
 
 function deferred(remaining?: number) {
 	return createDeferredEffect({

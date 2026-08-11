@@ -12,7 +12,7 @@
 import { createDefaultGameSettings } from "../../src/settings/settings.ts";
 import { GameDatabase } from "../../src/server/db.ts";
 import { GameRegistry } from "../../src/server/gameRegistry.ts";
-import { GameHandlerBuilder } from "../../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../../src/kore/runtime/Handler.ts";
 import { MatchEndReason, MatchStatus } from "../../src/rules/types.ts";
 
 const mode = process.argv[2];

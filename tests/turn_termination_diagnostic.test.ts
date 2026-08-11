@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 test("inactive residual velocity no longer blocks turn settlement", () => {

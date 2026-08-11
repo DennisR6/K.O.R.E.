@@ -1,4 +1,4 @@
-import { audio } from "../src/engine/audio-sdk/index.js";
+import { audio } from "@coffeemakerstudio/roast";
 import { kore } from "../src/kore/sdk/index.js";
 
 /** Emit semantic audio commands through the generic explicit-tick runtime. */

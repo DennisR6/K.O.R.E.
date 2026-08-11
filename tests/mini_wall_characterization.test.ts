@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { miniWallItem, MINI_WALL_DURATION_TURNS, MINI_WALL_HEIGHT, MINI_WALL_WIDTH } from "../src/item/officialItems.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { ReplayPlayer } from "../src/replay/player.ts";

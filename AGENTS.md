@@ -91,7 +91,7 @@ After every change, check whether this guide still reflects the implementation a
   connection timeout and five-minute visible queue timer, p5 setup, render
   loop, DOM mouse events, keyboard audio controls, and `window.game` debug
   access.
-- `src/engine/startupTelemetry.ts`: bounded browser startup timing and asset
+- `src/kore/runtime/startupTelemetry.ts`: bounded browser startup timing and asset
   aggregate observations exposed through `window.game.startup`; it remains
   runtime-only and never enters canonical settings, fingerprints, or replays.
 - `src/debug/uiSandbox.ts`: standalone p5 host for the generic UI SDK debug
@@ -109,15 +109,18 @@ After every change, check whether this guide still reflects the implementation a
 
 ### Engine and gameplay source
 
-- `src/engine/Handler.ts`: central orchestration. `GameHandler` owns context,
-  entities, systems, structures, effects, input forwarding, simulation,
-  playback, active-team/turn progression, serialization, and local rematch.
-  `GameHandlerBuilder` constructs handlers.
-- `src/engine/types.ts`: game states, input, turn packets, engine snapshots,
-  mouse contracts, and settings serialization contracts.
-- `src/engine/RenderContext.ts`: renderer abstraction.
-- `src/engine/drawingEngine.ts`: p5 implementation of `RenderContext` and
-  world-to-pixel scaling.
+- `src/kore/runtime/Handler.ts`: KORE match orchestration. `GameHandler` owns
+  the KORE-configured context, entities, systems, structures, effects, input
+  forwarding, simulation, playback, active-team/turn progression,
+  serialization, and local rematch. `GameHandlerBuilder` constructs handlers.
+- `src/kore/runtime/types.ts`: KORE runtime states, input, turn packets, engine
+  snapshots, mouse contracts, and settings serialization contracts.
+- `src/kore/runtime/RenderContext.ts`: renderer abstraction used by the KORE
+  runtime and UI adapters.
+- `src/kore/runtime/drawingEngine.ts`: p5 implementation of `RenderContext`
+  and world-to-pixel scaling.
+- `../engine-repo/packages/roast/src/`: generic Engine SDK, JSON-safe capability contracts, and
+  generic UI/audio/presentation SDKs. It must not import KORE or game domains.
 
 ### Game rules
 
@@ -160,24 +163,24 @@ After every change, check whether this guide still reflects the implementation a
   with deterministic rotation normalization.
 - `src/effects/spawnTrigger.ts`: serializable turn-counted trigger primitive
   with snapshot restoration state.
-- `src/engine/contracts/deferredEffect.ts`: generic JSON-safe one-shot Engine
+- `../engine-repo/packages/roast/src/contracts/deferredEffect.ts`: generic JSON-safe one-shot Engine
   effect execution state with stable identity and deterministic tick expiry.
-- `src/engine/contracts/lifetime.ts`: shared flat JSON-safe duration/countdown
+- `../engine-repo/packages/roast/src/contracts/lifetime.ts`: shared flat JSON-safe duration/countdown
   mechanics for TemporalModifier, StructureLifecycle, and DeferredEffect. It
   performs pure validation and one-step advancement only; lifecycle owners keep
   their own time boundaries and expiry behavior.
 - `src/effects/shield.ts`: serializable damage-absorbing shield with collision
   blocking and snapshot-safe capacity state.
-- `src/engine/contracts/temporalModifier.ts`: generic JSON-safe persistent
+- `../engine-repo/packages/roast/src/contracts/temporalModifier.ts`: generic JSON-safe persistent
   modifier state with stable entity targets and deterministic turn expiry.
-- `src/engine/contracts/structureLifecycle.ts`: generic JSON-safe timed
+- `../engine-repo/packages/roast/src/contracts/structureLifecycle.ts`: generic JSON-safe timed
   canonical-structure lifecycle with stable IDs, retained dormant structures,
   and deterministic turn expiry.
-- `src/engine/contracts/collisionFilter.ts`: generic JSON-safe entity-owned
+- `../engine-repo/packages/roast/src/contracts/collisionFilter.ts`: generic JSON-safe entity-owned
   collision relation exclusions with separately persisted turn lifetimes and a
   pure pair-eligibility predicate. `PhysicsSystem` applies it before collision
   resolution and entry dispatch; it does not alter boundary elimination.
-- `src/engine/contracts/actorEligibility.ts`: generic JSON-safe entity-owned
+- `../engine-repo/packages/roast/src/contracts/actorEligibility.ts`: generic JSON-safe entity-owned
   actor exclusions with separately persisted turn lifetimes and a pure
   eligibility predicate. `GameHandler.validateActorForAction()` is the shared
   local, AI, replay, and server authority boundary.
@@ -193,7 +196,7 @@ After every change, check whether this guide still reflects the implementation a
 - `src/item/sdkItemFactory.ts`: leaf-module `createItem`/`composeItemEffects`
   item-document authoring used by both the public KORE SDK and the official
   item catalog. Keeping it outside `kore/sdk/index.ts` breaks the
-  `modeCatalog -> kore/sdk/match -> engine/Handler -> officialItems ->
+  `modeCatalog -> kore/sdk/match -> kore/runtime/Handler -> officialItems ->
   kore/sdk/index` module cycle.
 - `src/item/inventory.ts`: initializes fixed team loadouts and enforces
   per-turn/per-game inventory consumption; player snapshots preserve counters.
@@ -282,7 +285,7 @@ After every change, check whether this guide still reflects the implementation a
 
 ### Physics, structures, and systems
 
-- `src/physics/physics.ts`: vector and physics contracts plus numeric `SHAPE`
+- `../engine-repo/packages/bean/src/physics.ts`: vector and physics contracts plus numeric `SHAPE`
   values (`CIRCLE`, `LINE`, `RECTANGLE`).
 - `src/physics/defaultPhysics.ts`: vector operations, friction, impulse,
   stop prediction, collision detection, and collision response.
@@ -336,30 +339,30 @@ After every change, check whether this guide still reflects the implementation a
 
 - `src/settings/settings.ts`: canonical `GameSettings`, friction presets,
   default teams/entities, active settings object, and grid arrangement.
-- `src/engine/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
+- `../engine-repo/packages/roast/src/sdk/index.ts`: generic, KORE-free `engine` SDK entry for
   JSON-safe worlds/entities/structures/effects and deterministic framework
   metadata selection. It must not import KORE/game domains or runtime adapters.
-- `src/engine/sdk/trigger.ts`: generic version-one detached tick and
+- `../engine-repo/packages/roast/src/sdk/trigger.ts`: generic version-one detached tick and
   collision-entry trigger-event contracts with strict payload validation.
-- `src/engine/contracts/counterState.ts` and
-  `src/engine/sdk/counterCapability.ts`: generic version-one world-owned
+- `../engine-repo/packages/roast/src/contracts/counterState.ts` and
+  `../engine-repo/packages/roast/src/sdk/counterCapability.ts`: generic version-one world-owned
   numeric CounterState plus typed `counter.set`, `counter.add`, and
   `counter.reset` commands. Counter IDs are stable targets; score, kills,
   coins, and other meanings remain content-layer semantics.
-- `src/engine/contracts/numericState.ts` and
-  `src/engine/sdk/numericCapability.ts`: generic version-one entity-owned
+- `../engine-repo/packages/roast/src/contracts/numericState.ts` and
+  `../engine-repo/packages/roast/src/sdk/numericCapability.ts`: generic version-one entity-owned
   numeric targets with declarative threshold crossings and typed
   `numeric.set`, `numeric.add`, and empty-payload `numeric.reset` commands.
   Reset values belong to canonical per-state bindings and are never carried
   in reset Effect payloads.
-- `src/engine/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
+- `../engine-repo/packages/drip/src/ui-sdk/index.ts`: generic `ui` SDK built on the Engine SDK. Its
   menu runtime has explicit `tick(input, dt)` and `draw(renderer)` calls, owns
   no browser loop/listeners, and must not import KORE/game or browser domains.
-- `src/engine/audio-sdk/index.ts`: generic `audio` SDK built on the Engine SDK.
+- `../engine-repo/packages/roast/src/audio-sdk/index.ts`: generic `audio` SDK built on the Engine SDK.
   It owns JSON-safe semantic commands, narrow emitter capabilities,
   deterministic aggregation, persistent intent, framework metadata, and an
   output port; it must not import KORE, UI, browser, or audio-device APIs.
-- `src/engine/presentation-sdk/index.ts`: generic `presentation` SDK for
+- `../engine-repo/packages/roast/src/presentation-sdk/index.ts`: generic `presentation` SDK for
   versioned JSON-safe animation tracks, semantic event ordering, priority,
   interruption/cancellation, deterministic tick projection, and visual-only
   runtime restoration. It must not import KORE, UI, browser, or device APIs.
@@ -765,7 +768,7 @@ controls seek, pause, and resume the embedded deterministic replay; direct
 `skipmenu` is truthy only for the values `1` and `true` in `src/main.ts`.
 `?debug=ui` opens the standalone generic UI SDK sandbox instead of normal
 menu/game startup; `?debugui=1` remains its diagnostic alias. Its browser host
-is intentionally outside `src/engine/ui-sdk/`.
+is intentionally outside `../engine-repo/packages/drip/src/ui-sdk/`.
 `?lang=en_en` or `?lang=de_de` selects the production UI language; an absent
 `lang` parameter resolves the browser's ordered locale list against the
 available packs (`de-DE` -> `de_de`, with `en_en` as fallback). Explicit `lang`

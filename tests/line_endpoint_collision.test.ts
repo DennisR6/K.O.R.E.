@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { defaultPhysics } from "../src/physics/defaultPhysics.ts";
-import { SHAPE, type Vector2D } from "../src/physics/physics.ts";
+import { SHAPE, type Vector2D } from "@coffeemakerstudio/bean";
 import { StructureLine } from "../src/structures/structureLine.ts";
 import { StructureRectangle } from "../src/structures/types.js";
 

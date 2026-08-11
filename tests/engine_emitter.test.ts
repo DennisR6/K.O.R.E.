@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import type { GameHandler } from "../src/engine/Handler.ts";
-import { GameState, type TurnPacket } from "../src/engine/types.ts";
+import type { GameHandler } from "../src/kore/runtime/Handler.ts";
+import { GameState, type TurnPacket } from "../src/kore/runtime/types.ts";
 import { RulePhase } from "../src/rules/types.ts";
 
 test("GameEmitter advances local hotseat turns through the rule interpreter", () => {

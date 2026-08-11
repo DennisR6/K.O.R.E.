@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState } from "../kore/runtime/types.js";
 import { aggregatePerformanceLogs, type MatchPerformanceReport, type PerformanceClientMetadata } from "../performance/matchPerformance.js";
 
 export function buildPerformanceEndpoint(baseUrl: string, gameId: string): string {

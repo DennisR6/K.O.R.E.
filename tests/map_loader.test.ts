@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { DOCUMENT_SCHEMA_VERSION, loadMapDocument, type MapDocument } from "../src/contracts/documents.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 const map: MapDocument = {

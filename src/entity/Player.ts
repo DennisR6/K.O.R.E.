@@ -1,6 +1,6 @@
 import type { UUID } from "crypto";
-import type { RenderContext } from "../engine/RenderContext.js";
-import { SHAPE, type IPhysics, type Vector2D } from "../physics/physics.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
+import { SHAPE, type IPhysics, type Vector2D } from "@coffeemakerstudio/bean";
 import type { IEntity } from "./Entity.js";
 import { createDefaultNumericThresholdBindings, createPlayerSettings, validatePlayerMass, type PlayerSettings } from "./types.js";
 import { EffectTrigger, EffectType, type Effect, type FullEffectSettings, type ItemEffectSettings, type SettingKey, type SettingValue } from "../effects/types.js";
@@ -9,18 +9,18 @@ import { validateRuntimeItemEffectSettings } from "../effects/validate.js";
 import { orderInstalledEffects } from "../effects/ordering.js";
 import { advanceRuntimeItemEffectTurn } from "../kore/sdk/itemRuntime.js";
 import { createCollisionEnterEvent, createTickEvent, dispatchTriggeredEffects } from "../effects/triggerDispatcher.js";
-import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
+import type { EngineTriggerEvent } from "@coffeemakerstudio/roast";
 
 import { consumeInventoryItem, resetInventoryTurnUses } from "../item/inventory.js";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
-import { validateNumericThresholdBindings, type NumericThresholdBinding } from "../engine/contracts/numericState.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
-import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
-import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "../engine/contracts/actionModifier.js";
-import { advanceLifetime } from "../engine/contracts/lifetime.js";
-import { advanceCollisionFilterLifetime, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
-import { advanceActorEligibilityConstraintLifetime, isActorEligible, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, validateActorEligibilityState, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
+import { validateNumericThresholdBindings, type NumericThresholdBinding } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
+import { advanceTemporalModifier, validateTemporalModifier, type TemporalModifierSettings } from "@coffeemakerstudio/roast";
+import { applyActionModifiers, consumeActionModifiers, validateActionModifier, type AcceptedForceInput, type ActionModifierSettings } from "@coffeemakerstudio/roast";
+import { advanceLifetime } from "@coffeemakerstudio/roast";
+import { advanceCollisionFilterLifetime, validateCollisionFilter, validateCollisionFilterLifetime, validateCollisionFilterState, type CollisionFilterLifetimeSettings, type CollisionFilterSettings } from "@coffeemakerstudio/roast";
+import { advanceActorEligibilityConstraintLifetime, isActorEligible, validateActorEligibilityConstraint, validateActorEligibilityConstraintLifetime, validateActorEligibilityState, type ActorEligibilityConstraintLifetimeSettings, type ActorEligibilityConstraintSettings } from "@coffeemakerstudio/roast";
 
 
 /**

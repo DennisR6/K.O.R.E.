@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { kore } from "../src/kore/sdk/index.js";
 import { KORE_MATCH_DEFINITION_VERSION, createGameMode, createMatchDefinition, createMatchSystemProfile, validateKoreMatchDefinition } from "../src/kore/sdk/match.js";
-import { createRuntimeHandler } from "../src/engine/runtimeFactory.js";
-import { GameState } from "../src/engine/types.js";
+import { createRuntimeHandler } from "../src/kore/runtime/runtimeFactory.js";
+import { GameState } from "../src/kore/runtime/types.js";
 import { RulePhase, WinCondition, type GameModeSettings } from "../src/rules/types.js";
 import { BoundarySystem } from "../src/systems/BoundarySystem.js";
 import { GameStateManager } from "../src/systems/GameStateManager.js";
@@ -15,8 +15,8 @@ import { TransformSystem } from "../src/systems/TransformSystem.js";
 import { createSystemFromSettings } from "../src/systems/systemSettings.js";
 import { defaultPhysics } from "../src/physics/defaultPhysics.js";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.js";
-import type { SystemSettings } from "../src/engine/contracts/systemSettings.js";
-import type { EngineFrameworkSettings } from "../src/engine/sdk/index.js";
+import type { SystemSettings } from "@coffeemakerstudio/roast";
+import type { EngineFrameworkSettings } from "@coffeemakerstudio/roast";
 
 const CANONICAL_MATCH_SYSTEM_ORDER = ["core.movement", "core.numeric", "core.participation", "core.transform", "core.playback", "core.physics", "core.boundary", "core.game-state-manager", "core.winning"];
 
@@ -141,11 +141,11 @@ test("handler construction is confined to the runtime factory boundary", () => {
 	expect(matchSource).not.toMatch(/GameHandlerBuilder/);
 	expect(matchSource).not.toMatch(/from\s+["'].*engine\/Handler["']/);
 	// The designated boundary is the only production construction site.
-	const factorySource = readFileSync("src/engine/runtimeFactory.ts", "utf8");
+	const factorySource = readFileSync("src/kore/runtime/runtimeFactory.ts", "utf8");
 	expect(factorySource).toMatch(/new GameHandlerBuilder/);
 	// Every production module stays classified (milestone 27 inventory).
 	const inventory = readFileSync("src/sdkMigration/inventory.ts", "utf8");
-	expect(inventory).toContain("src/engine/runtimeFactory.ts");
+	expect(inventory).toContain("src/kore/runtime/runtimeFactory.ts");
 	expect(inventory).toContain("Handler runtime factory");
 });
 

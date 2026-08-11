@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { GameplayFeedbackTrace, KoreGameplayFeedbackSurface, KoreGameplayFeedbackType } from "../src/kore/gameplayFeedback.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 
 test("the KORE feedback pack declares every authoritative gameplay event", () => {

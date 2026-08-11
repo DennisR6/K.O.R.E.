@@ -3,8 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
-import type { EngineSettings } from "../engine/types.js";
-import { GameState } from "../engine/types.js";
+import type { EngineSettings } from "../kore/runtime/types.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { GameSettings } from "../settings/settings.js";
 import type { FrozenReplayDocument, ReplayAction, ReplayDocument } from "../replay/types.js";
 import { validateFrozenReplayDocument, validateReplayDocument, validateReplayOrigin } from "../replay/types.js";
@@ -13,7 +13,7 @@ import { validateMapDocument, type MapDocument } from "../contracts/documents.js
 import type { OfflineMatchReport } from "./offlineMatchContract.js";
 import type { MatchResult } from "../rules/types.js";
 import { aggregatePerformanceLogs, validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
-import type { RuntimeLogEntry } from "../engine/runtimeLog.js";
+import type { RuntimeLogEntry } from "../kore/runtime/runtimeLog.js";
 import type { FeedbackSubmission } from "./feedback.js";
 
 export type StoredGame = {

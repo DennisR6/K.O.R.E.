@@ -4,7 +4,7 @@ import { createRuntimePlayer } from "../src/entity/runtimeFactory.js";
 import { Player } from "../src/entity/Player.js";
 import { createPlayerSettings } from "../src/entity/types.js";
 import { AssetList } from "../src/assetManager/assets/assetRegistry.js";
-import { SHAPE } from "../src/physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 
 describe("Player SDK Authoring & Migration Parity", () => {
 

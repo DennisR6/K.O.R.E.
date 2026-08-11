@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { CombiEmitter } from "../src/emitter/InputEmitter.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
-import { GameState } from "../src/engine/types.ts";
-import type { RenderContext } from "../src/engine/RenderContext.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
+import type { RenderContext } from "../src/kore/runtime/RenderContext.ts";
 import { ItemPhaseUI } from "../src/ui/ItemPhaseUI.ts";
 import { LocalMatchSceneRouter } from "../src/scenes/LocalMatchSceneRouter.ts";
 import { RulePhase } from "../src/rules/types.ts";

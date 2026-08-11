@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime, isActorEligible, advanceActorEligibilityConstraintLifetime, validateActorEligibilityState } from "../src/engine/contracts/actorEligibility.ts";
+import { createActorEligibilityConstraint, createActorEligibilityConstraintLifetime, isActorEligible, advanceActorEligibilityConstraintLifetime, validateActorEligibilityState } from "@coffeemakerstudio/roast";
 
 test("actor eligibility constraints exclude only acting entities", () => {
 	const constraint = createActorEligibilityConstraint({ id: "lock", mode: "excluded" });

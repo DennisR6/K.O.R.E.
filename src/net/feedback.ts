@@ -1,5 +1,5 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { FeedbackMode } from "../server/feedback.js";
 
 export type FeedbackContext = { gameId?: string; userId?: string; mode: FeedbackMode; mapId?: string };

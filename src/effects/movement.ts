@@ -1,4 +1,4 @@
-import { forwardVectorFromRotation, type IPhysics, SHAPE, type Vector2D } from "../physics/physics.js";
+import { forwardVectorFromRotation, type IPhysics, SHAPE, type Vector2D } from "@coffeemakerstudio/bean";
 import { EffectType, type Effect, type EffectSettings } from "./types.js";
 
 export type EffectMoveInput = { deltaTime: number } & Vector2D

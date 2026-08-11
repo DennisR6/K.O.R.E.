@@ -4,12 +4,12 @@ import { ReplayRecorder } from "../src/replay/recorder.ts";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 import { createLocalGameplayHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
 import { createAiBattleHandler, createHumanVsAiHandler } from "../src/scenes/LocalMatchSceneRouter.ts";
-import type { GameHandler } from "../src/engine/Handler.ts";
+import type { GameHandler } from "../src/kore/runtime/Handler.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { validateOfflineMatchReport } from "../src/server/offlineMatchContract.ts";
 import { serveOfflineMatchReport } from "../src/server/offlineMatches.ts";
 import { buildOfflineMatchEndpoint, collectOfflineMatchRecord, installOfflineMatchReport, reportOfflineMatch, type OfflineMatchRecordPayload } from "../src/net/offlineMatchReport.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 
 function validReport(): OfflineMatchRecordPayload {
 	return {

@@ -1,3 +1,4 @@
+// ../engine-repo/packages/roast/contracts/systemSettings.ts
 function assertJsonValue(value) {
   if (value === null || typeof value === "string" || typeof value === "boolean")
     return;
@@ -18,6 +19,7 @@ function assertJsonValue(value) {
   throw new Error("System settings must contain JSON data only");
 }
 
+// ../engine-repo/packages/roast/sdk/systemRegistry.ts
 class EngineSystemRegistry {
   definitions = new Map;
   register(definition) {
@@ -166,6 +168,7 @@ function clone(value) {
   return structuredClone(value);
 }
 
+// ../engine-repo/packages/roast/contracts/counterState.ts
 var COUNTER_SCHEMA_VERSION = 1;
 function createCounterState(input) {
   const state = {
@@ -202,6 +205,7 @@ function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// ../engine-repo/packages/roast/sdk/worldBuilder.ts
 class EngineWorldBuilder {
   id;
   worldSize;
@@ -259,6 +263,7 @@ function clone2(value) {
   return structuredClone(value);
 }
 
+// ../engine-repo/packages/roast/sdk/effectRegistry.ts
 class EngineEffectRegistry {
   definitions = new Map;
   register(definition) {
@@ -312,6 +317,7 @@ function validateDefinition2(definition) {
     throw new Error(`Invalid effect target validator for '${definition.id}'`);
 }
 
+// ../engine-repo/packages/roast/sdk/entityState.ts
 function createTransformState(input) {
   const state = { schemaVersion: 1, position: { ...input.position }, rotation: input.rotation ?? 0 };
   validateTransformState(state);
@@ -365,6 +371,7 @@ function finite(value, label) {
     throw new Error(`${label} must be finite`);
 }
 
+// ../engine-repo/packages/roast/sdk/movementCapability.ts
 var MOVEMENT_CAPABILITY = "movement.state";
 var MOVEMENT_EFFECT_ID = "movement.integrate";
 var MOVEMENT_SET_VELOCITY_EFFECT_ID = "movement.set-velocity";
@@ -478,6 +485,7 @@ function exactKeys2(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
+// ../engine-repo/packages/roast/sdk/movementForceField.ts
 function calculateRadialVelocityDelta(origin, target, field) {
   validateVector2(origin, "Movement force origin");
   validateVector2(target, "Movement force target");
@@ -510,6 +518,7 @@ function validateVector2(value, label) {
 function normalizeZero(value) {
   return Object.is(value, -0) ? 0 : value;
 }
+// ../engine-repo/packages/roast/sdk/transformCapability.ts
 var TRANSFORM_CAPABILITY = "transform.state";
 var TRANSFORM_SET_POSITION_EFFECT_ID = "transform.set-position";
 var TRANSFORM_SET_ROTATION_EFFECT_ID = "transform.set-rotation";
@@ -589,6 +598,7 @@ function finite2(value, label) {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${label} must be finite`);
 }
+// ../engine-repo/packages/roast/sdk/trigger.ts
 class EngineTriggerActivationQueue {
   maxActivations;
   pending = [];
@@ -756,6 +766,7 @@ function finiteNonNegative(value, label) {
     throw new Error(`${label} must be a finite non-negative number`);
 }
 
+// ../engine-repo/packages/roast/sdk/counterCapability.ts
 var COUNTER_CAPABILITY = "counter.state";
 var COUNTER_SET_EFFECT_ID = "counter.set";
 var COUNTER_ADD_EFFECT_ID = "counter.add";
@@ -827,6 +838,7 @@ function exactKeys5(value, keys, label) {
     if (!(key in value))
       throw new Error(`${label} is missing '${key}'`);
 }
+// ../engine-repo/packages/roast/sdk/participationCapability.ts
 var PARTICIPATION_CAPABILITY = "participation.state";
 var PARTICIPATION_SET_PHYSICS_EFFECT_ID = "participation.set-physics";
 var PARTICIPATION_SET_DRAWING_EFFECT_ID = "participation.set-drawing";
@@ -847,6 +859,7 @@ function validateParticipationPayload(payload) {
   if (Object.keys(value).length !== 1 || typeof value.enabled !== "boolean")
     throw new Error("Participation payload requires only boolean enabled");
 }
+// ../engine-repo/packages/roast/sdk/numericCapability.ts
 var NUMERIC_CAPABILITY = "numeric.state";
 var NUMERIC_SET_EFFECT_ID = "numeric.set";
 var NUMERIC_ADD_EFFECT_ID = "numeric.add";
@@ -903,6 +916,7 @@ function exactKeys6(value, keys, label) {
   if (Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
+// ../engine-repo/packages/roast/sdk/composition.ts
 var ENGINE_EFFECT_COMPOSITION_SCHEMA_VERSION = 1;
 var ENGINE_EFFECT_COMPOSITION_TYPE = "effect.composition";
 function createEngineEffectComposition(effects) {
@@ -924,6 +938,7 @@ function validateEngineEffectComposition(value) {
       throw new Error("Composition children must be Engine effects");
   });
 }
+// ../engine-repo/packages/roast/sdk/collisionCommand.ts
 var COLLISION_COMMAND_SCHEMA_VERSION = 1;
 var COLLISION_COMMAND_TYPE = "collision.command";
 function createCollisionCommandBinding(effect) {
@@ -963,6 +978,7 @@ function validateRelativeEffect(value) {
     throw new Error("Collision command must be a target-relative Engine effect");
   assertJsonValue(effect.typeValue);
 }
+// ../engine-repo/packages/roast/contracts/numericState.ts
 var NUMERIC_STATE_SCHEMA_VERSION = 1;
 var NUMERIC_THRESHOLD_COMPARATORS = ["below", "below-or-equal", "above", "above-or-equal"];
 function validateNumericThresholdBindings(value) {
@@ -1027,6 +1043,46 @@ function knownKeys(value, keys, label) {
   if (Object.keys(value).some((key) => !keys.includes(key)))
     throw new Error(`${label} contains unexpected fields`);
 }
+// ../engine-repo/packages/roast/sdk/assetReferences.ts
+function collectAssetReferences(settings) {
+  const references = new Set;
+  const add = (value) => {
+    if (typeof value === "string" && value.length > 0 || typeof value === "number" && Number.isFinite(value))
+      references.add(value);
+  };
+  const record8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value) ? value : undefined;
+  const root = record8(settings);
+  if (!root)
+    return [];
+  const background = record8(root.background);
+  if (background?.type === "image")
+    add(background.url);
+  if (Array.isArray(root.players))
+    for (const player of root.players) {
+      const value = record8(player);
+      add(value?.playericon);
+      add(value?.hoop);
+    }
+  const visitUiNode = (value) => {
+    const node = record8(value);
+    if (!node)
+      return;
+    if (node.kind === "image")
+      add(node.source);
+    if (Array.isArray(node.elements))
+      for (const child of node.elements)
+        visitUiNode(child);
+  };
+  if (Array.isArray(root.screens))
+    for (const screen of root.screens) {
+      const value = record8(screen);
+      if (Array.isArray(value?.elements))
+        for (const child of value.elements)
+          visitUiNode(child);
+    }
+  return [...references];
+}
+// ../engine-repo/packages/roast/contracts/lifetime.ts
 var LIFETIME_DURATION_UNITS = ["turns", "ticks"];
 function createLifetime(input) {
   const lifetime = {
@@ -1055,6 +1111,7 @@ function validateLifetime(value) {
     throw new Error("Lifetime remaining duration is invalid");
 }
 
+// ../engine-repo/packages/roast/contracts/temporalModifier.ts
 var TEMPORAL_MODIFIER_SCHEMA_VERSION = 1;
 var TEMPORAL_DURATION_UNITS = ["turns"];
 function createTemporalModifierTemplate(input) {
@@ -1117,6 +1174,7 @@ function validateTemporalModifier(value) {
 function lifetimeOf(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
+// ../engine-repo/packages/roast/contracts/structureLifecycle.ts
 var STRUCTURE_LIFECYCLE_SCHEMA_VERSION = 1;
 var STRUCTURE_LIFECYCLE_DURATION_UNITS = ["turns"];
 function createStructureLifecycleTemplate(input) {
@@ -1187,6 +1245,7 @@ function validateStructureLifecycle(value) {
 function lifetimeOf2(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
+// ../engine-repo/packages/roast/contracts/deferredEffect.ts
 var DEFERRED_EFFECT_SCHEMA_VERSION = 1;
 var DEFERRED_EFFECT_DURATION_UNITS = ["ticks"];
 function createDeferredEffectTemplate(input) {
@@ -1254,6 +1313,7 @@ function validateEngineEffect(value) {
 function lifetimeOf3(value) {
   return { durationUnit: value.durationUnit, duration: value.duration, remaining: value.remaining };
 }
+// ../engine-repo/packages/roast/random.ts
 class SeededRandom {
   state;
   constructor(seed) {
@@ -1287,6 +1347,7 @@ class SeededRandom {
   }
 }
 
+// ../engine-repo/packages/roast/contracts/actionModifier.ts
 var ACTION_MODIFIER_SCHEMA_VERSION = 1;
 function createActionModifierTemplate(input) {
   const template = structuredClone(input);
@@ -1386,6 +1447,7 @@ function compareModifiers(first, second) {
 function normalizeAngle(angle) {
   return (angle % 360 + 360) % 360;
 }
+// ../engine-repo/packages/roast/contracts/collisionFilter.ts
 var COLLISION_FILTER_SCHEMA_VERSION = 1;
 var COLLISION_FILTER_LIFETIME_SCHEMA_VERSION = 1;
 var COLLISION_CATEGORIES = ["entity", "structure"];
@@ -1501,6 +1563,7 @@ function compareFilterOrder(first, second) {
 function compareLifetimeOrder(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
+// ../engine-repo/packages/roast/contracts/actorEligibility.ts
 var ACTOR_ELIGIBILITY_SCHEMA_VERSION = 1;
 var ACTOR_ELIGIBILITY_LIFETIME_SCHEMA_VERSION = 1;
 function createActorEligibilityConstraint(input) {
@@ -1602,6 +1665,7 @@ function compareLifetimeOrder2(first, second) {
   return (first.sourceOrder ?? 0) - (second.sourceOrder ?? 0) || first.id.localeCompare(second.id);
 }
 
+// ../engine-repo/packages/roast/sdk/index.ts
 var engine = {
   createWorld(options) {
     return new EngineWorldBuilder(options.id, options.worldSize);
@@ -1712,6 +1776,7 @@ export {
   counterTriggerMatches,
   counterSystemDefinition,
   consumeActionModifiers,
+  collectAssetReferences,
   canonicalizeCounterStates,
   calculateRadialVelocityDelta,
   applyRadialVelocityDelta,

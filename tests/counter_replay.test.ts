@@ -3,7 +3,7 @@ import { CounterSystem } from "../src/systems/CounterSystem.ts";
 import { createCanonicalPlayableMatchHandler } from "../src/settings/canonicalPlayableMatch.ts";
 import { ReplayPlayer } from "../src/replay/player.ts";
 import { validateReplayDocument } from "../src/replay/types.ts";
-import { COUNTER_ADD_EFFECT_ID } from "../src/engine/sdk/index.ts";
+import { COUNTER_ADD_EFFECT_ID } from "@coffeemakerstudio/roast";
 
 test("counter replay actions reproduce canonical state without system-local storage", () => {
 	const origin = createCanonicalPlayableMatchHandler();

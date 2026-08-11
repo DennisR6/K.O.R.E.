@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { applyActionModifiers, consumeActionModifiers, createActionModifier } from "../src/engine/contracts/actionModifier.ts";
+import { applyActionModifiers, consumeActionModifiers, createActionModifier } from "@coffeemakerstudio/roast";
 
 test("accepted action modifiers apply deterministic force scaling in explicit order", () => {
 	const modifiers = [

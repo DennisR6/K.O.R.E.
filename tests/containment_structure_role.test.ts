@@ -4,14 +4,14 @@ import { createPlayerSettings } from "../src/entity/types.ts";
 import { EffectMove } from "../src/effects/movement.ts";
 import { EffectPhysics } from "../src/effects/physics.ts";
 import { EffectTrigger } from "../src/effects/types.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { GameSettings, validateGameSettings } from "../src/settings/settings.ts";
 import { getOuterContainmentBoundaries } from "../src/structures/containment.ts";
 import { FullStructure } from "../src/structures/fullStructure.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import { StructureLine } from "../src/structures/structureLine.ts";
 import { StructureRectangle } from "../src/structures/structureRectangle.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import { BoundarySystem } from "../src/systems/BoundarySystem.ts";
 
 /**

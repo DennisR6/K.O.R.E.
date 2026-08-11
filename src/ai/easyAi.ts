@@ -1,4 +1,4 @@
-import type { GameHandler } from "../engine/Handler.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
 import { SeededRandom } from "../utils/random.js";
 import type { AiDecision, IAiTurnProducer } from "./aiEmitter.js";
 import type { AiSettings } from "./types.js";

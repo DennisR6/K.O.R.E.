@@ -73,6 +73,9 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
+    "@coffeemakerstudio/roast": "^0.1.0",
+    "@coffeemakerstudio/bean": "^0.1.0",
+    "@coffeemakerstudio/drip": "^0.1.1",
     "p5": "^2.3.0"
   },
   "module": "index.ts"

@@ -1,18 +1,18 @@
 import type { UUID } from "node:crypto";
 import type { AssetList } from "../assetManager/assets/assetRegistry.js";
-import type { IDrawer, ITicker } from "../engine/RenderContext.js";
-import type { ISettingsSerialize } from "../engine/types.js";
-import type { IPhysics, SHAPE, Vector2D } from "../physics/physics.js";
+import type { IDrawer, ITicker } from "../kore/runtime/RenderContext.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
+import type { IPhysics, SHAPE, Vector2D } from "@coffeemakerstudio/bean";
 import type { IKillable, PlayerSettings } from "./types.js";
 import type { Effect, ItemEffectSettings } from "../effects/types.js";
-import type { EngineTriggerEvent } from "../engine/sdk/trigger.js";
+import type { EngineTriggerEvent } from "@coffeemakerstudio/roast";
 import type { InventoryItem, ItemDocument } from "../item/types.js";
-import type { NumericStateOwner } from "../engine/contracts/numericState.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
-import type { TemporalModifierSettings } from "../engine/contracts/temporalModifier.js";
-import type { AcceptedForceInput, ActionModifierSettings } from "../engine/contracts/actionModifier.js";
-import type { CollisionFilterLifetimeSettings, CollisionFilterSettings } from "../engine/contracts/collisionFilter.js";
-import type { ActorEligibilityConstraintLifetimeSettings, ActorEligibilityConstraintSettings } from "../engine/contracts/actorEligibility.js";
+import type { NumericStateOwner } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
+import type { TemporalModifierSettings } from "@coffeemakerstudio/roast";
+import type { AcceptedForceInput, ActionModifierSettings } from "@coffeemakerstudio/roast";
+import type { CollisionFilterLifetimeSettings, CollisionFilterSettings } from "@coffeemakerstudio/roast";
+import type { ActorEligibilityConstraintLifetimeSettings, ActorEligibilityConstraintSettings } from "@coffeemakerstudio/roast";
 
 /**
  * Das Basis-Interface für alle Spielobjekte (Entities).

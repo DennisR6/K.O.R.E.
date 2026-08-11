@@ -2,15 +2,15 @@ import { expect, test } from "bun:test";
 import { EffectModifySetting } from "../src/effects/modifySetting.ts";
 import { MetaEffect } from "../src/effects/effects.ts";
 import { EffectType, SettingOperation } from "../src/effects/types.ts";
-import { createCollisionCommandBinding } from "../src/engine/sdk/collisionCommand.ts";
-import { createEngineEffectComposition } from "../src/engine/sdk/composition.ts";
-import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "../src/engine/sdk/participationCapability.ts";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
+import { createCollisionCommandBinding } from "@coffeemakerstudio/roast";
+import { createEngineEffectComposition } from "@coffeemakerstudio/roast";
+import { PARTICIPATION_SET_DRAWING_EFFECT_ID, PARTICIPATION_SET_PHYSICS_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { Player } from "../src/entity/Player.ts";
 import { createPlayerSettings } from "../src/entity/types.ts";
 import { StructureCircle } from "../src/structures/structureCircle.ts";
 import IceMap from "../src/settings/iceMap.ts";
-import { SHAPE } from "../src/physics/physics.ts";
+import { SHAPE } from "@coffeemakerstudio/bean";
 
 test("setting effects mutate and serialize set, add, and remove operations", () => {
 	const player = new Player(createPlayerSettings({ hp: 30, position: { x: 0, y: 0 } }))

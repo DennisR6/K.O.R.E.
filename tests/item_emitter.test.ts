@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { GameEmitter } from "../src/emitter/EngineEmitter.ts";
 import { NetworkEmitter, installTurnReceiver } from "../src/emitter/NetworkEmitter.ts";
 import { EmitterSystem } from "../src/systems/Emitter.ts";

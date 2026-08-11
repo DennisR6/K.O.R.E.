@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { GameState } from "../src/engine/types.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
 import { createKoreMainMenuSurface, type KoreMainMenuSurface } from "../src/kore/ui/KoreMainMenuSurface.ts";
 import { RulePhase } from "../src/rules/types.ts";
 import { createHumanVsAiHandler } from "../src/scenes/LocalMatchSceneRouter.ts";

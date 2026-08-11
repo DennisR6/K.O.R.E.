@@ -1,4 +1,4 @@
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import { BackgroundColorSystem } from "./Background.js";
 
 export class CustomDrawableBackground extends BackgroundColorSystem {

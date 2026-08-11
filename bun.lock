@@ -5,6 +5,9 @@
     "": {
       "name": "game",
       "dependencies": {
+        "@coffeemakerstudio/bean": "^0.1.0",
+        "@coffeemakerstudio/drip": "^0.1.1",
+        "@coffeemakerstudio/roast": "^0.1.0",
         "p5": "^2.3.0",
       },
       "devDependencies": {
@@ -25,6 +28,12 @@
   },
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.28.6", "", {}, "sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA=="],
+
+    "@coffeemakerstudio/bean": ["@coffeemakerstudio/bean@0.1.0", "", { "peerDependencies": { "@coffeemakerstudio/roast": "^0.1.0" }, "optionalPeers": ["@coffeemakerstudio/roast"] }, "sha512-XDe1efFe0drsrEMCme3hRjhVKpOoloD+F/k2o+cDu9BxWqg/p9n3sMyd8ISOM3J4gUXIwU2G5d+BrZ6zHSu0dQ=="],
+
+    "@coffeemakerstudio/drip": ["@coffeemakerstudio/drip@0.1.1", "", { "peerDependencies": { "@coffeemakerstudio/roast": "^0.1.0" }, "optionalPeers": ["@coffeemakerstudio/roast"] }, "sha512-oDnlBZZvD7gxHCLU3yWTP+HEBBAfxaZ4cMBcAUq67G0wR85nHkrzKWUXPro8aE09kP69nbTwNKkZvO2GF70cLA=="],
+
+    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@0.1.0", "", {}, "sha512-QUX7apKFRlLPay6eLYCv1Igwd/lNmc7oAMuxV3leVQ3Frm2rURZx1Mf1B95fvvMjtJGqO8EPTdUTjdh7joOjQg=="],
 
     "@davepagurek/bezier-path": ["@davepagurek/bezier-path@0.0.7", "", {}, "sha512-CVlnCOrV1iy4Z12T756i9l4G6kF7r8uhlnb+xqDemAMmWQB+8Q0b+8VEqIiUfywgZDSiDr18Rm7pZlnA69rE8Q=="],
 

@@ -1,4 +1,4 @@
-import type { UiComponentSettings } from "../engine/ui-sdk/index.js";
+import type { UiComponentSettings } from "@coffeemakerstudio/drip";
 
 export type ItemTargetType = "self" | "entity" | "position" | "zone";
 export type DurationType = "instant" | "turns" | "rounds";

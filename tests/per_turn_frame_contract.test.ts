@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState } from "../src/engine/types.ts";
-import type { TurnPacket } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState } from "../src/kore/runtime/types.ts";
+import type { TurnPacket } from "../src/kore/runtime/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
 
 /**

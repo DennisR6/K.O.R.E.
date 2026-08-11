@@ -1,11 +1,11 @@
-import type { GameHandler } from "../engine/Handler.js";
-import { GameState } from "../engine/types.js";
+import type { GameHandler } from "../kore/runtime/Handler.js";
+import { GameState } from "../kore/runtime/types.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
 import type { CombiEmitter } from "../emitter/InputEmitter.js";
 import type { MatchResult } from "../rules/types.js";
 import type { MatchMode } from "../scenes/matchPipeline.js";
 import type { ReplayDocument } from "../replay/types.js";
-import { LoggerType } from "../engine/runtimeLog.js";
+import { LoggerType } from "../kore/runtime/runtimeLog.js";
 import { DEFAULT_KORE_BASE_URL } from "../server/config.js";
 import { fetchOnlineServerConfig } from "../utils/onlineConfig.js";
 

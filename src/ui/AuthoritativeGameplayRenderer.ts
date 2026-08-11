@@ -1,9 +1,9 @@
-import type { RenderContext } from "../engine/RenderContext.js";
-import { GameState } from "../engine/types.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
+import { GameState } from "../kore/runtime/types.js";
 import type { ItemDocument, ItemPickup, ItemPickupState } from "../item/types.js";
 import { type MatchResult, type RuleState } from "../rules/types.js";
 import type { MapBoundarySettings } from "../settings/settings.js";
-import { SHAPE } from "../physics/physics.js";
+import { SHAPE } from "@coffeemakerstudio/bean";
 import type { PlayerSettings } from "../entity/types.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
 

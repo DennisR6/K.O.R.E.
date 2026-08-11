@@ -1,5 +1,5 @@
 import type { FullEffectSettings } from "../effects/types.js";
-import type { RenderContext } from "../engine/RenderContext.js";
+import type { RenderContext } from "../kore/runtime/RenderContext.js";
 import type { IEntity } from "../entity/Entity.js";
 import { Player } from "../entity/Player.js";
 import { StructureCircle } from "./structureCircle.js";

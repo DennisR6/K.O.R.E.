@@ -1,14 +1,14 @@
-import type { GameState, IInput, TurnPacket } from "../engine/types.js";
+import type { GameState, IInput, TurnPacket } from "../kore/runtime/types.js";
 import type { EntityManager } from "../entity/EntityManager.js";
-import type { PhysicsStrategy, Vector2D } from "../physics/physics.js";
+import type { PhysicsStrategy, Vector2D } from "@coffeemakerstudio/bean";
 import type { MatchResult } from "../rules/types.js";
-import type { ISettingsSerialize } from "../engine/types.js";
-import type { SystemSettings as CanonicalSystemSettings } from "../engine/contracts/systemSettings.js";
-import type { CounterState } from "../engine/contracts/counterState.js";
-import type { EngineEffectSettings } from "../engine/sdk/effectRegistry.js";
+import type { ISettingsSerialize } from "../kore/runtime/types.js";
+import type { SystemSettings as CanonicalSystemSettings } from "@coffeemakerstudio/roast";
+import type { CounterState } from "@coffeemakerstudio/roast";
+import type { EngineEffectSettings } from "@coffeemakerstudio/roast";
 import type { IEntity } from "../entity/Entity.js";
 import type { IStructure } from "../structures/types.js";
-export type { SystemSettings } from "../engine/contracts/systemSettings.js";
+export type { SystemSettings } from "@coffeemakerstudio/roast";
 
 export type ResolvedPredefinedTarget =
 	| { type: "counter"; counter: CounterState }

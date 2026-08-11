@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { GameHandlerBuilder } from "../src/engine/Handler.ts";
-import { GameState, type IInputEmitter } from "../src/engine/types.ts";
+import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
+import { GameState, type IInputEmitter } from "../src/kore/runtime/types.ts";
 import { UiSystem } from "../src/systems/UiSystem.ts";
 import { EmitterSystem } from "../src/systems/Emitter.ts";
 import { MatchEndReason, MatchStatus, RulePhase } from "../src/rules/types.ts";

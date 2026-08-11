@@ -1,4 +1,4 @@
-import type { RuntimeLogEntry } from "../engine/runtimeLog.js";
+import type { RuntimeLogEntry } from "../kore/runtime/runtimeLog.js";
 
 export const PERFORMANCE_SCHEMA_VERSION = 1 as const;
 
