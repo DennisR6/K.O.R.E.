@@ -21,6 +21,17 @@ test("English is a complete language document", async () => {
 	await expect(loadLanguage("en_en", "./languages", async () => response({ language: "en_en", strings: {} }))).rejects.toThrow(/missing/);
 });
 
+test("checked-in language packs match the complete language key contract", async () => {
+	const required = new Set(Object.values(LANGUAGE_KEYS));
+	for (const code of ["en_en", "de_de"] as const) {
+		const document = await Bun.file(`public/i18n/${code}.json`).json() as { language?: unknown; strings?: Record<string, unknown> };
+		expect(document.language).toBe(code);
+		expect(document.strings && typeof document.strings).toBe("object");
+		const strings = document.strings ?? {};
+		for (const key of required) expect(Object.prototype.hasOwnProperty.call(strings, key)).toBe(true);
+	}
+});
+
 test("loaded language catalogs provide translated menu labels", async () => {
 	const language = await loadLanguage("de_de", "./public/i18n", async url => {
 		const file = url.endsWith("de_de.json") ? { language: "de_de", strings: { [LANGUAGE_KEYS.MenuOnlineButton]: "Online spielen" } } : { language: "en_en", strings: Object.fromEntries(Object.values(LANGUAGE_KEYS).map(key => [key, key])) };
