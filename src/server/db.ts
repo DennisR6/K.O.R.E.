@@ -276,6 +276,9 @@ export class GameDatabase {
 
 	/** Creates a consistent SQLite image for an authenticated operator backup. */
 	exportSnapshot(): Uint8Array {
+		// Bun's serialize() does not include unapplied WAL pages. Checkpoint the
+		// live database first so backups contain the complete schema and blobs.
+		this.db.run("PRAGMA wal_checkpoint(TRUNCATE)");
 		return this.db.serialize();
 	}
 

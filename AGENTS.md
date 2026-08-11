@@ -493,6 +493,10 @@ After every change, check whether this guide still reflects the implementation a
 - `scripts/performanceBaseline.ts`: explicit committed-baseline checker and
   updater backed by the aggregate profiler. `test:performance` never updates
   baselines; only `performance:update` does.
+- `scripts/getTelemetry.ts`: operator-authenticated production SQLite backup
+  downloader. It loads the root `.env`, uses `KORE_API_KEY` (or the operator
+  secret), validates the SQLite header, and writes the backup to
+  `data/kore.db` for local analysis.
 
 ### Networking and utilities
 
@@ -526,7 +530,11 @@ After every change, check whether this guide still reflects the implementation a
   HttpOnly, Secure, SameSite=Strict eight-hour cookie accepted by the dashboard
   routes; `POST /operator/logout` expires it. Authenticated `GET /operator/db`
   downloads a consistent SQLite backup and is never available through public
-  static-file routing.
+  static-file routing. Read-only dashboard API tokens may access only
+  `/operator/dashboard/metrics` and `/operator/db`; `/operator/db` checkpoints
+  the SQLite WAL before serializing so exported game snapshots and settings are
+  complete. `/config` publishes a deployment `buildHash` used to verify that a
+  pushed staging build has been redeployed.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
 	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
