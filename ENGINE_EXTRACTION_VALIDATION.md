@@ -51,15 +51,40 @@ Browser tests were not run because the focused integration lane is not green and
 4. **Game-shaped generic contracts — resolved at engine boundary.** The game-shaped Handler/settings/render contracts moved with KORE runtime. Generic SDK contracts remain JSON-safe and capability-oriented.
 5. **Replay reconstruction — resolved by ownership boundary, not redesign.** Replay remains a KORE application adapter and is no longer part of the generic engine directory; replay documents and deterministic behavior were unchanged.
 
+## Baseline comparison
+
+Baseline commit: `7b6383c` (the commit immediately before boundary cleanup).
+
+| Lane | Baseline | Current | Comparison |
+|---|---|---|---|
+| `bun run test:fast` | 764 passed, 3 skipped, 16 failed | 766 passed, 3 skipped, 15 failed | 15 unchanged failures; 1 baseline-only Tauri packaging failure; no new failures |
+| `bun run test:integration:fast` | 147 passed, 13 failed | 147 passed, 13 failed | All 13 failures unchanged |
+
+The unchanged failures are content-package validation, menu pilot/language, Magma Cradle, mod-menu surface, SDK example execution, menu routing, renderer stubs, and offline-report UI coverage. The baseline-only Tauri packaging failure was not reproduced on the current branch. No failure has a new semantic signature attributable to commits `dfebae9`, `844b472`, or `dd80d8a`.
+
+## Standalone packaging dry run
+
+A temporary isolated package was created at `/tmp/kore-engine-dry` containing:
+
+- `src/engine/**`
+- the generic `src/physics/physics.ts` contract
+- the generic random helper required by engine contracts
+- standalone TypeScript/build configuration
+- copied generic engine tests and a headless SDK smoke test
+
+It passed:
+
+- isolated TypeScript check
+- isolated ESM build of Engine, UI, Audio, and Presentation SDK entry points
+- 19 generic engine tests plus standalone smoke test
+- source scan for KORE/game imports: zero matches
+
+The dry run did not resolve any `src/kore/**` source files. The current source tree was also updated so the generic physics contract no longer imports KORE runtime types.
+
 ## Readiness
 
-The source boundary is clean, but a separately packaged standalone engine has not yet been built and the complete repository validation lanes are not green. History filtering and the extraction clone remain intentionally deferred.
+Unchanged red game/content tests are not extraction-induced regressions. The standalone boundary and independent generic test/build proof pass. Git history filtering and creation of the final extraction clone remain intentionally deferred to the next phase.
 
 ```text
-ENGINE EXTRACTION STILL BLOCKED
+ENGINE READY FOR REPOSITORY EXTRACTION
 ```
-
-Concrete remaining blockers:
-
-- Package the generic `src/engine` SDK/contracts together with its generic physics dependency and standalone tests.
-- Resolve the pre-existing failing unit/integration content and UI tests before claiming full consumer validation.
