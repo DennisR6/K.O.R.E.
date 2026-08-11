@@ -1,6 +1,18 @@
-import type { ISettingsSerialize } from "../kore/runtime/types.js";
-import type { EntityManager } from "../entity/EntityManager.js";
-import type { FrictionSettings } from "../settings/settings.js";
+/** Generic serializable physics settings; game maps may extend this shape. */
+export interface PhysicsSettings {
+	friction: number;
+	linearDrag: number;
+	stopThreshold: number;
+}
+
+export interface SettingsSerializable<TSettings> {
+	toSettings(): TSettings;
+}
+
+/** Collection boundary used only to determine whether physical bodies are settled. */
+export interface PhysicsEntityCollection {
+	getEntities(): Iterable<{ isDead(): boolean; physicsEnabled(): boolean; getVel(): Vector2D }>;
+}
 
 /**
  * Ein Punkt oder eine Richtung im 2D-Raum.
@@ -154,7 +166,7 @@ export type RoleAwarePhysics = IPhysics<SHAPE> & { getCollisionRole(): Structure
  * Dieses Interface erzwingt, dass jede Physik-Implementierung (z.B. Arcade, Realistic)
  * sowohl die Rechenlogik (Vektoren) als auch die physikalischen Regeln (Kollision) definiert.
  */
-export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
+export interface PhysicsStrategy extends SettingsSerializable<PhysicsSettings> {
 	/** Berechnet den Abprall-Vektor (wie ein Ball an der Wand). */
 	calculateBounce(vel: Vector2D, normal: Vector2D): Vector2D;
 
@@ -225,7 +237,7 @@ export interface PhysicsStrategy extends ISettingsSerialize<FrictionSettings> {
 	// --- DEBUG ---
 	/** Schreibt die aktuellen Einstellungen der Physik-Engine in die Konsole. */
 	printSettings(who?: string): void;
-	isStatic(entity: EntityManager): boolean;
+	isStatic(entity: PhysicsEntityCollection): boolean;
 }
 /** 
  * Die physikalischen Grundeigenschaften für jedes Objekt im Spiel.
