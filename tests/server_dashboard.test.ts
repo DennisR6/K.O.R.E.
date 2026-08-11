@@ -245,6 +245,7 @@ test("read-only API tokens authenticate metrics and database export but not oper
 	const databaseExport = (await serveDashboard(request(DASHBOARD_DATABASE_PATH, `Bearer ${token}`), registry, config, database))!;
 	expect(databaseExport.status).toBe(200);
 	expect(databaseExport.headers.get("content-type")).toContain("application/vnd.sqlite3");
+	expect((await databaseExport.arrayBuffer()).byteLength).toBe(database.exportSnapshot().byteLength);
 	expect((await serveDashboard(request(DASHBOARD_PATH, `Bearer ${token}`), registry, config, database))!.status).toBe(404);
 	const listed = (await serveDashboard(request(DASHBOARD_API_KEYS_PATH, `Bearer ${secret}`), registry, config, database))!;
 	expect(await listed.json()).toMatchObject({ tokens: [{ id: created.record.id, label: "test-bot" }] });

@@ -164,7 +164,8 @@ function databaseDownload(request: Request, database: Pick<GameDatabase, "export
 	if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET", "cache-control": "no-store" } });
 	if (!database) return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
 	try {
-		return new Response(database.exportSnapshot().buffer as ArrayBuffer, { headers: { "content-type": "application/vnd.sqlite3", "content-disposition": "attachment; filename=\"kore-backup.sqlite3\"", "cache-control": "no-store" } });
+		const snapshot = database.exportSnapshot();
+		return new Response(new Blob([snapshot as unknown as BlobPart]), { headers: { "content-type": "application/vnd.sqlite3", "content-disposition": "attachment; filename=\"kore-backup.sqlite3\"", "cache-control": "no-store" } });
 	} catch {
 		return new Response("dashboard_unavailable", { status: 503, headers: { "cache-control": "no-store" } });
 	}
