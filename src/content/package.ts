@@ -64,7 +64,7 @@ export function validateContentPackage(value: unknown): asserts value is Content
 	const items = arrayOf(pkg.items, "items");
 	const modes = arrayOf(pkg.modes, "modes");
 	const ids = new Set<string>();
-	for (const map of maps) { validateMapDocument(map); assertKeys(map as unknown as Record<string, unknown>, ["schemaVersion", "metadata", "worldSize", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map"); assertKeys(map.metadata as unknown as Record<string, unknown>, ["id", "name", "description"], "map metadata"); unique(ids, map.metadata.id, "map"); }
+	for (const map of maps) { validateMapDocument(map); assertKeys(map as unknown as Record<string, unknown>, ["schemaVersion", "metadata", "worldSize", "background", "friction", "drift", "arenaGeometry", "spawnRegions", "hazards", "environmentalMechanics"], "map"); assertKeys(map.metadata as unknown as Record<string, unknown>, ["id", "name", "description"], "map metadata"); unique(ids, map.metadata.id, "map"); }
 	const itemValidator = new ItemValidator();
 	for (const effect of ITEM_EFFECTS) itemValidator.registerEffectType(effect);
 	for (const item of items) { validateItemDocument(item); assertKeys(item as unknown as Record<string, unknown>, ["schemaVersion", "id", "name", "description", "type", "effects", "targetType", "duration", "useLimit", "targetValidation", "cooldown", "interaction", "ui"], "item"); itemValidator.validate(item); unique(ids, item.id, "item"); }
