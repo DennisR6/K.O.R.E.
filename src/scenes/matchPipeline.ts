@@ -1,7 +1,7 @@
 import { CombiEmitter } from "../emitter/InputEmitter.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
 import { RulePhase } from "../rules/types.js";
-import { falltuerStructure } from "../item/officialItems.js";
+import { falltuerStructure, falltuerTriggerDefinitions } from "../item/officialItems.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
@@ -50,7 +50,10 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const settings = modMap ? loadMapDocument(modMap, baseSettings) : buildMapSettings(config.mapId, baseSettings);
 	// Falltür needs its dormant canonical slot on every playable map before its
 	// position trigger can activate it.
-	if (settings.items?.some(item => item.id === "falltuer") && !settings.mapBoundarys.some(boundary => boundary.id === falltuerStructure.id)) settings.mapBoundarys.push(structuredClone(falltuerStructure));
+	if (settings.items?.some(item => item.id === "falltuer")) {
+		if (!settings.mapBoundarys.some(boundary => boundary.id === falltuerStructure.id)) settings.mapBoundarys.push(structuredClone(falltuerStructure));
+		settings.triggerDefinitions = [...(settings.triggerDefinitions ?? []), ...falltuerTriggerDefinitions.map(definition => structuredClone(definition))];
+	}
 	if (config.mod) {
 		if (config.mod.package.items) settings.items = structuredClone(config.mod.package.items);
 		const modMode = config.mod.package.modes?.[0];

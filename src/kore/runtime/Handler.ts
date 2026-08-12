@@ -1055,7 +1055,13 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 				if (!resolvedItemTarget) throw new Error("spawnTrigger requires a resolved target");
 				const triggerSettings = effect.toSettings();
 				const resolvedTarget = effect.structureId === undefined ? resolvedItemTarget : createStructureResolvedTarget(effect.structureId);
-				actor.addItemEffect({ ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } }, { itemId: item.id, order: itemOrder(item) });
+				const scheduled = { ...triggerSettings, typeValue: { ...triggerSettings.typeValue, resolvedTarget, ...(resolvedItemTarget.type === "position" ? { resolvedPosition: { ...resolvedItemTarget.position } } : {}) } };
+				// Zero-delay triggers are immediate actions: activate the trap now so
+				// its visual and collision state is available in the same phase.
+				if (Number((triggerSettings.typeValue as { delayTurns?: number }).delayTurns) === 0) {
+					this.executeDueSpawnTrigger(actor, scheduled);
+					actor.addItemEffect({ ...scheduled, typeValue: { ...scheduled.typeValue, remainingTurns: 0, fired: true } }, { itemId: item.id, order: itemOrder(item) });
+				} else actor.addItemEffect(scheduled, { itemId: item.id, order: itemOrder(item) });
 			}
 			else if (isStructureLifecycleTemplate(effect)) {
 				if (target.type !== "position") throw new Error("Structure lifecycles require a position target");

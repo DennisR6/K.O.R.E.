@@ -71,7 +71,7 @@ export class MapPickupSystem implements ISystem {
 			const item = this.items.get(pickup.itemId)!;
 			// Mystery boxes are neutral map objects: either team may collect one
 			// when its figure enters the region, regardless of whose turn it is.
-			const neutralPickup = item.id === "mystery-box";
+			const neutralPickup = item.id === "mystery-box" || item.id === "magnet";
 			const entitiesInRegion = ctx.entities.getEntities().filter(entity => this.canCollect(entity, pickup, ctx.activeTeam, neutralPickup));
 			const occupants = new Set(entitiesInRegion.map(entity => entity.getId()));
 			const limit = pickup.maxPickupsPerTurn ?? 1;
