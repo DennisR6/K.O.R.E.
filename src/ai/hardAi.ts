@@ -92,12 +92,30 @@ export class HardAi implements IAiTurnProducer {
 						try {
 							const sim = handler.simulateTurn(aiActor.getId(), candidate.angle, power, { maxTicks: HARD_AI_SPECULATIVE_MAX_TICKS });
 
-							// Evaluate finalState from simulation
+							// Score both terminal outcomes and actual tactical progress.
+							// A death-only score leaves every harmless shot tied at zero,
+							// which lets Hard AI repeat no-op actions indefinitely.
+							const finalActor = sim.finalState.find(snapshot => snapshot.id === aiActor.getId());
+							const actorStart = aiActor.getPos();
+							if (finalActor) {
+								const actorMotion = Math.hypot(finalActor.position.x - actorStart.x, finalActor.position.y - actorStart.y);
+								// Reward bounded movement, while strongly preferring survival.
+								score += Math.min(actorMotion, 100) * 0.1;
+								if (!finalActor.isPhysicsEnabled || !finalActor.isDrawingEnabled) score -= 10000;
+							}
+							// Keep direct enemy approaches ahead of equally safe wandering shots.
+							if (candidate.aimedAtEnemy) score += 10;
+							const initialNearestEnemy = Math.min(...enemyActors.map(enemy => distanceBetween(actorStart, enemy.getPos())));
+							const finalEnemyPositions = sim.finalState.filter(snapshot => !snapshot.team.includes(aiSettings.team) && snapshot.isPhysicsEnabled && snapshot.isDrawingEnabled);
+							if (finalEnemyPositions.length > 0) {
+								const finalNearestEnemy = Math.min(...finalEnemyPositions.map(enemy => distanceBetween(finalActor?.position ?? actorStart, enemy.position)));
+								// Closing on an enemy is useful even when no collision occurred.
+								score += (initialNearestEnemy - finalNearestEnemy) * 2;
+							}
 							for (const pSnapshot of sim.finalState) {
-								if (pSnapshot.team.includes(aiSettings.team)) {
-									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score -= 10000; // Penalize AI elimination
-								} else {
-									if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) score += 5000; // Reward enemy elimination
+								if (!pSnapshot.isPhysicsEnabled || !pSnapshot.isDrawingEnabled) {
+									if (pSnapshot.team.includes(aiSettings.team)) score -= 10000;
+									else score += 5000;
 								}
 							}
 						} catch {
@@ -185,6 +203,10 @@ function scoreItem(item: ItemDocument, target: ItemTarget, actor: IEntity, enemi
 	if (target.type === "position") score += 1;
 	if (item.targetType === "self" && enemies.length > 0) score += Math.max(0, 1 - distance(actor, enemies[0]!) / 800);
 	return score;
+}
+
+function distanceBetween(first: { x: number; y: number }, second: { x: number; y: number }): number {
+	return Math.hypot(first.x - second.x, first.y - second.y);
 }
 
 function distance(first: { getPos(): { x: number; y: number } }, second: { getPos(): { x: number; y: number } }): number {

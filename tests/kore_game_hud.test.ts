@@ -22,16 +22,23 @@ test("HUD projection is idempotent, draw is pure, and item command routes throug
 	hud.applyProjection(projection()); const before = hud.toSettings(); hud.applyProjection(projection());
 	hud.getRuntime().draw({ drawText() {}, drawButton() {}, drawTextInput() {}, drawImage() {} });
 	expect(hud.toSettings()).toEqual(before);
-	hud.updateMouse(530, 85); hud.handleMousePressed();
+	hud.updateMouse(20, 410); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "freeze-shot", target: { type: "self" } } }]);
 	expect(hud.drainSoundCommands()).toMatchObject([{ type: "playSound", soundId: "kore.ui.confirm" }]);
+});
+
+test("item cards expose the description and target type so the picker is understandable", () => {
+	const hud = createKoreGameHudSurface({ handle() {} });
+	hud.applyProjection(projection({ inventory: [{ itemId: "magnet", name: "Magnet", description: "Pull a nearby opponent", targetType: "entity", remainingUses: 1, enabled: true, showLabel: true }] }));
+	const element = hud.getRuntime().toSettings().screens[0]?.elements.find(candidate => candidate.id === "hud-item-0");
+	expect(element && "component" in element ? element.component?.source : "").toBe("public/items/placeholder.svg");
 });
 
 test("targeted item cards select first and use the next world click as the target", () => {
 	const commands: unknown[] = [];
 	const hud = createKoreGameHudSurface({ handle: command => commands.push(command) }, undefined, undefined, {}, undefined, (_itemId, point) => ({ type: "entity", entityId: `${point.x}:${point.y}` }));
 	hud.applyProjection(projection({ inventory: [{ itemId: "magnet", name: "Magnet", targetType: "entity", remainingUses: 1, enabled: true, showLabel: true }] }));
-	hud.updateMouse(530, 85); hud.handleMousePressed();
+	hud.updateMouse(20, 410); hud.handleMousePressed();
 	expect(commands).toEqual([]);
 	hud.updateMouse(120, 140); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "magnet", target: { type: "entity", entityId: "120:140" } } }]);
@@ -43,7 +50,7 @@ test("item-phase skip button remains clickable while gameplay input is locked", 
 	hud.applyProjection(projection({ match: { inputLocked: true, waiting: true, paused: false } }));
 	const element = hud.getRuntime().toSettings().screens[0]?.elements.find(candidate => candidate.id === KoreHudElement.SkipItem);
 	expect(element?.enabled).toBe(true);
-	hud.updateMouse(600, 320);
+	hud.updateMouse(650, 415);
 	hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.SkipItemPhase, payload: undefined }]);
 });
@@ -52,7 +59,7 @@ test("item phase explains that dragging skips item use", () => {
 	const hud = createKoreGameHudSurface({ handle() {} });
 	hud.applyProjection(projection());
 	const title = hud.getRuntime().toSettings().screens[0]?.elements.find(element => element.id === KoreHudElement.ItemsTitle);
-	expect(title && "text" in title ? title.text : "").toContain("drag to skip");
+	expect(title && "text" in title ? title.text : "").toContain("press an icon");
 });
 
 test("HUD command parser rejects unknown and malformed generic UI commands", () => {
@@ -75,7 +82,7 @@ test("host capabilities hide unavailable network controls and suppress unconfirm
 	const elements = hud.getRuntime().toSettings().screens[0]!.elements;
 	expect(elements.find(element => element.id === KoreHudElement.SkipItem)?.visible).toBe(false);
 	expect(elements.find(element => element.id === KoreHudElement.Pause)?.visible).toBe(false);
-	hud.updateMouse(530, 85); hud.handleMousePressed();
+	hud.updateMouse(20, 410); hud.handleMousePressed();
 	expect(commands).toEqual([{ type: KoreHudCommand.UseItem, payload: { itemId: "freeze-shot", target: { type: "self" } } }]);
 	expect(hud.drainSoundCommands()).toEqual([]);
 });

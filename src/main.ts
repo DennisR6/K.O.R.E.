@@ -36,6 +36,7 @@ import { flushStartupTelemetry, getStartupTelemetry, startupMark } from "./kore/
 import { buildFeedbackEndpoint, installDesyncFeedbackReporter, installFeedbackPrompt } from "./net/feedback.js";
 import { ActionManager, GameAction } from "./input/actions.js";
 import { ControllerInput } from "./input/controller.js";
+import { createDebugItemSandboxHandler } from "./scenes/matchPipeline.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -48,6 +49,7 @@ const usersettings = {
 	autoRestart: ["1", "true"].includes(uri.searchParams.get("autorestart") ?? ""),
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 	modePreference: uri.searchParams.get("mode") ?? undefined,
+	debugGame: uri.searchParams.get("debug") === "game",
 	friendRole: uri.searchParams.get("friend") as "create" | "join" | null,
 	friendCode: uri.searchParams.get("code") ?? undefined,
 }
@@ -79,6 +81,12 @@ let handler: GameHandler
 let router: LocalMatchSceneRouter | undefined
 if (isUiDebugSandboxUrl(uri)) {
 	startUiDebugSandbox()
+} else if (usersettings.debugGame) {
+	startupMark("scene.init.started", { scene: "debug-game" });
+	handler = createDebugItemSandboxHandler(usersettings.mapPreference ?? "ice-map-v1");
+	handler.setLanguage(activeLanguage!);
+	installGameplayHud(handler, { language: activeLanguage!, onReturnToMenu: () => window.location.assign(window.location.pathname) });
+	startGame(handler);
 } else if (usersettings.replayToken) {
 	// The read-only replay page has no server socket or in-game error channel;
 	// every step of the load sequence is logged so failures are visible in the

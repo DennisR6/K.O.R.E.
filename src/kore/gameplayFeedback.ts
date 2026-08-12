@@ -5,7 +5,7 @@ import type { IDrawer, ITicker, RenderContext } from "./runtime/RenderContext.js
 
 export enum KoreGameplayFeedbackType {
 	Shot = "shot", Collision = "collision", Damage = "damage", Shield = "shield", Item = "item",
-	Hazard = "hazard", Elimination = "elimination", Turn = "turn", Result = "result",
+	Hazard = "hazard", Elimination = "elimination", Turn = "turn", Result = "result", Message = "message",
 }
 
 export type KoreGameplayFeedbackEvent = {
@@ -54,7 +54,7 @@ function animation(type: KoreGameplayFeedbackType): AnimationSettings {
 export const KORE_FEEDBACK_ANIMATIONS = ANIMATION_TYPES.map(animation);
 export const KORE_FEEDBACK_AUDIO: Record<KoreGameplayFeedbackType, string> = {
 	shot: "kore.game.shot", collision: "kore.game.collision", damage: "kore.game.damage", shield: "kore.game.shield",
-	item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result",
+	item: "kore.game.item", hazard: "kore.game.hazard", elimination: "kore.game.elimination", turn: "kore.game.turn", result: "kore.game.result", message: "kore.ui.message",
 };
 
 /** Renderer-independent adapter. Unsupported presentation/audio output is non-fatal. */
@@ -83,6 +83,7 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 		renderer.push();
 		renderer.setOpacity(opacity);
 		renderer.setFillColor("white");
+		if (last.type === KoreGameplayFeedbackType.Item) renderer.drawImage("public/items/placeholder.svg", renderer.WORLD_SIZE_X / 2 - 92, 8, 32, 32);
 		renderer.drawText(feedbackLabel(last), renderer.WORLD_SIZE_X / 2 - 70, 32, 16);
 		renderer.pop();
 	}
@@ -93,6 +94,8 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 
 function feedbackLabel(event: KoreGameplayFeedbackEvent): string {
 	if (event.type === KoreGameplayFeedbackType.Result) return "Match complete";
+	if (event.type === KoreGameplayFeedbackType.Message && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.message === "string") return event.data.message;
+	if (event.type === KoreGameplayFeedbackType.Item && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.itemId === "string") return `Item activated: ${event.data.itemId}`;
 	if (event.type === KoreGameplayFeedbackType.Item && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.rewardName === "string") return `Mystery Box: ${event.data.rewardName}`;
 	return event.type[0]!.toUpperCase() + event.type.slice(1);
 }

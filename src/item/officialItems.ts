@@ -188,13 +188,13 @@ export const freezeShotItem: ItemDocument = createItem({
 export const switchItem: ItemDocument = createItem({
 	id: "switch",
 	name: "Switch",
-	description: "Swaps the active figure's position with a targeted ally.",
+	description: "Swaps the active figure's position with a targeted ally or enemy.",
 	type: "utility",
 	effects: [{ type: TRANSFORM_SWAP_POSITION_EFFECT_ID, value: {} }],
 	targetType: "entity",
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 1 },
-	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: false, maxRange: SWITCH_RANGE },
+	targetValidation: { allowSelf: false, allowAlly: true, allowEnemy: true, maxRange: SWITCH_RANGE },
 });
 
 export const jaegermeisterElixierItem: ItemDocument = createItem({

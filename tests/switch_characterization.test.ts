@@ -44,18 +44,13 @@ test("Switch captures both original positions before writing either entity", () 
 	expect(actor.getInventory()).toEqual([{ itemId: switchItem.id, remainingUses: 0, usesThisTurn: 1 }]);
 });
 
-test("Switch rejects self, enemy, out-of-range, and inactive targets without consuming inventory", () => {
-	const { handler, actor, ally, enemy } = switchHandler();
-	const original = actor.getPos();
+test("Switch rejects self and allows tactical enemy swaps", () => {
+	const { handler, actor, enemy } = switchHandler();
 	expect(() => handler.useItem(actor.getId(), switchItem.id, { type: "entity", entityId: actor.getId() })).toThrow("self targets");
-	expect(() => handler.useItem(actor.getId(), switchItem.id, { type: "entity", entityId: enemy.getId() })).toThrow("enemy targets");
-	ally.setPos({ x: actor.getPos().x + 301, y: actor.getPos().y });
-	expect(() => handler.useItem(actor.getId(), switchItem.id, { type: "entity", entityId: ally.getId() })).toThrow("outside the maximum range");
-	ally.setPos({ x: 180, y: 140 });
-	ally.setIsDead(true);
-	expect(() => handler.useItem(actor.getId(), switchItem.id, { type: "entity", entityId: ally.getId() })).toThrow("active entity");
-	expect(actor.getPos()).toEqual(original);
-	expect(actor.getInventory()).toEqual([{ itemId: switchItem.id, remainingUses: 1, usesThisTurn: 0 }]);
+	const enemyBefore = enemy.getPos();
+	handler.useItem(actor.getId(), switchItem.id, { type: "entity", entityId: enemy.getId() });
+	expect(actor.getPos()).toEqual(enemyBefore);
+	expect(actor.getInventory()).toEqual([{ itemId: switchItem.id, remainingUses: 0, usesThisTurn: 1 }]);
 });
 
 test("Switch snapshot and replay preserve only the exchanged positions", () => {

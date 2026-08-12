@@ -1,5 +1,7 @@
 import { CombiEmitter } from "../emitter/InputEmitter.js";
 import { GameEmitter } from "../emitter/EngineEmitter.js";
+import { RulePhase } from "../rules/types.js";
+import { falltuerStructure } from "../item/officialItems.js";
 import { AiBattleSystem } from "../ai/AiBattleSystem.js";
 import { AiOpponentSystem } from "../ai/AiOpponentSystem.js";
 import type { AiDifficulty, AiSettings } from "../ai/types.js";
@@ -30,6 +32,8 @@ export type MatchPipelineConfig = {
 	gameModeId?: string;
 	mod?: LoadedContentPackage;
 	aiWorkerHost?: HardAiWorkerHost;
+	/** Debug-only sandbox override: grants every declared item to both teams. */
+	allItemsOverride?: boolean;
 };
 
 /**
@@ -44,11 +48,24 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	const baseSettings = createCanonicalPlayableMatchSettings();
 	const modMap = config.mod?.package.maps?.[0];
 	const settings = modMap ? loadMapDocument(modMap, baseSettings) : buildMapSettings(config.mapId, baseSettings);
+	// Falltür needs its dormant canonical slot on every playable map before its
+	// position trigger can activate it.
+	if (settings.items?.some(item => item.id === "falltuer") && !settings.mapBoundarys.some(boundary => boundary.id === falltuerStructure.id)) settings.mapBoundarys.push(structuredClone(falltuerStructure));
 	if (config.mod) {
 		if (config.mod.package.items) settings.items = structuredClone(config.mod.package.items);
 		const modMode = config.mod.package.modes?.[0];
 		if (modMode) settings.gameMode = kore.createGameMode(modMode);
 	} else if (config.gameModeId) applyGameMode(settings, config.gameModeId);
+	if (config.allItemsOverride) {
+		const uses = settings.items?.map(item => ({ itemId: item.id, uses: 2 })) ?? [];
+		settings.gameMode = kore.createGameMode({
+			...settings.gameMode!,
+			id: "debug-item-sandbox",
+			phases: [RulePhase.Item, RulePhase.Physics],
+			maxItemsPerTurn: 1,
+			itemEconomy: { fixedLoadouts: [{ team: 0, items: uses }, { team: 1, items: uses }], mapPickups: [] },
+		});
+	}
 	validateGameSettings(settings);
 	const difficulty = config.difficulty ?? "medium";
 	const header = config.mode === "human-vs-ai"
@@ -93,4 +110,9 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 		}
 	}
 	return handler;
+}
+
+/** Starts a local all-items item sandbox for browser/debug tooling. */
+export function createDebugItemSandboxHandler(mapId = "ice-map-v1"): GameHandler {
+	return createMatchHandler({ mode: "hotseat", mapId, allItemsOverride: true });
 }

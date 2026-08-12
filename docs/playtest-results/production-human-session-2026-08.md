@@ -50,8 +50,20 @@ A duplicate production record for `structure-control` with the same seed and
   `itemUse` actions ranging from 1 to 10.
 - No crash, rejected-start, or unresolved production blocker is represented in
   the stored match records.
-- One feedback entry exists for the latest human-vs-AI production activity;
-  its text is retained only as stored and contains no identifying information.
+- Latest human-vs-AI feedback was rated **5/5**. The tester praised the
+  challenge; the note that the AI “does not forgive” is interpreted as positive
+  difficulty feedback, not a request to weaken the AI.
+- Item use was technically recorded, but the tester feedback identifies the item
+  flow as bad and unintuitive. This is a confirmed usability blocker for item
+  gameplay qualification, despite successful `itemUse` replay actions.
+
+## Qualitative playtest interpretation
+
+The latest production feedback is accepted as the available playtest evidence:
+AI difficulty is perceived as strong and enjoyable, while item selection, timing,
+and intended use are not understandable enough. Do not make the AI more
+forgiving based on this note; prioritize making item availability, target
+requirements, timing, and resulting effects clear.
 
 ## Evidence limits
 
@@ -65,6 +77,9 @@ sessions are recorded.
 
 - Confirmed technical blockers in this record: none
 - Confirmed deterministic blockers in this record: none
-- Human qualitative ratings: not available in `data/kore.db`
-- Item use: observed in completed human-controlled replay records
+- Human qualitative ratings: latest human-vs-AI feedback is 5/5; broader
+  questionnaire data remains unavailable.
+- AI difficulty: positive feedback; no difficulty reduction requested.
+- Item use: observed in completed human-controlled replay records, but item UX
+  is a confirmed blocker.
 - Map-level human qualification: pending separate map-playtest evidence

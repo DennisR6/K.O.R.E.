@@ -38,11 +38,14 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.setText(KoreHudElement.Aim, `${formatLanguage(this.language, LANGUAGE_KEYS.HudActor, { actor: turn.selectedActorId ?? this.language.strings[LANGUAGE_KEYS.HudNone] })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudAim, { aim: turn.aimAngle === null ? this.language.strings[LANGUAGE_KEYS.HudNone] : `${turn.aimAngle.toFixed(1)}°` })} | ${formatLanguage(this.language, LANGUAGE_KEYS.HudPower, { power: Math.round(turn.power * 10) / 10 })}`);
 		this.runtime.setElementVisible(KoreHudElement.Tutorial, projection.tutorial === true);
 		const itemsVisible = turn.phase === RulePhase.Item && !projection.match.result;
-		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible); this.setText(KoreHudElement.ItemsTitle, this.selectedItemId ? `Select a target for ${this.itemName(this.selectedItemId)}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: choose one or drag to skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
+		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible);
+		const selectedItem = projection.inventory.find(item => item.itemId === this.selectedItemId);
+		this.setText(KoreHudElement.ItemsTitle, selectedItem ? `Select a target for ${this.itemName(this.selectedItemId!)}${selectedItem.description ? `: ${selectedItem.description}` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: press an icon for details, then choose a target or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
-			this.setText(id, item?.showLabel === false ? "" : item ? `${item.itemId === this.selectedItemId ? "> " : ""}${item.name ?? item.itemId} x${item.remainingUses}${item.targetType && item.targetType !== "self" ? ` [${item.targetType}]` : ""}` : "");
-			this.runtime.setElementComponent(id, item?.component);
+			// Item controls are deliberately icon-only so they never cover the arena.
+			this.setText(id, "");
+			this.runtime.setElementComponent(id, item ? (item.component ?? { type: "image", source: "public/items/placeholder.svg" }) : undefined);
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;
@@ -69,7 +72,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.runtime.tick({ pointer: { ...this.mouse, pressed: true, justPressed: true } }); const hit = this.runtime.getPressedTargetId(); this.route(this.runtime.drainCommands());
 		if (!hit && this.selectedItemId && this.projection?.turn.phase === RulePhase.Item && this.resolveItemTarget) {
 			const target = this.resolveItemTarget(this.selectedItemId, this.mouse);
-			if (!target) { this.rejection = "Choose a valid target in the arena"; return; }
+			if (!target) { this.rejection = "Wrong position: choose a valid target in the arena"; return; }
 			try {
 				this.dispatch({ type: KoreHudCommand.UseItem, payload: { itemId: this.selectedItemId, target } });
 				this.selectedItemId = undefined;
@@ -91,7 +94,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 				? { type: KoreHudCommand.SubmitReport as const, payload: { category: this.reportCategory, text: this.runtime.getElementValue(KoreHudElement.ReportText) ?? "" } }
 				: parseKoreHudCommand(raw.command, raw.payload);
 			if (!command) { this.rejection = `Unknown HUD command '${raw.command}'`; continue; }
-			try { this.handle(command); } catch (error) { this.rejection = error instanceof Error ? error.message : "HUD action rejected"; }
+			try { this.handle(command); } catch (error) {
+				this.rejection = error instanceof Error ? error.message : "HUD action rejected";
+				if (command.type === KoreHudCommand.UseItem) this.portMessage(this.rejection);
+			}
 		}
 	}
 	private handle(command: KoreHudCommandMessage): void {
@@ -111,6 +117,10 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			case KoreHudCommand.Rematch: case KoreHudCommand.Replay: case KoreHudCommand.Share: case KoreHudCommand.ReplayShare: case KoreHudCommand.ReturnToMenu: this.dispatch(command); return;
 			default: return assertNeverHudCommand(command);
 		}
+	}
+	private portMessage(message: string): void {
+		const handler = this.port as KoreHudCommandPort & { recordPlayerMessage?: (message: string) => void };
+		handler.recordPlayerMessage?.(message.replace(/[\r\n]+/g, " ").slice(0, 160));
 	}
 	private dispatch(command: KoreHudCommandMessage): void { if (this.port.handle(command) !== false) this.confirm(); }
 	private setPauseControls(paused: boolean, resultVisible = !!this.projection?.match.result): void {
@@ -145,7 +155,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 class KoreHudRenderer implements UiRenderer {
 	public constructor(private readonly renderer: RenderContext) { }
 	public drawText(element: Parameters<UiRenderer["drawText"]>[0]): void { if (!element.text) return; this.renderer.setFillColor(element.style === KoreHudStyle.Rejection ? KoreHudColor.Danger : KoreHudColor.Ink); this.renderer.drawText(element.text, element.rect.x, element.rect.y + (element.style === KoreHudStyle.ResultTitle ? 32 : 16), element.style === KoreHudStyle.Status ? 16 : element.style === KoreHudStyle.ResultTitle ? 28 : 14); }
-	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; const imageSize = Math.min(30, element.rect.height); if (element.component) { this.renderer.drawImage(element.component.source, element.rect.x, element.rect.y, imageSize, imageSize); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + imageSize + 8, element.rect.y + Math.min(23, element.rect.height - 8), 14); } return; } this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.focused) { this.renderer.setNoFill(); this.renderer.setStrokeColor("#fbbf24"); this.renderer.setStroke(3); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); this.renderer.setStroke(0); } if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
+	public drawButton(element: Parameters<UiRenderer["drawButton"]>[0]): void { const style = element.style; const imageSize = Math.min(30, element.rect.height); if (element.component && typeof this.renderer.drawImage === "function") { this.renderer.drawImage(element.component.source, element.rect.x, element.rect.y, imageSize, imageSize); if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + imageSize + 8, element.rect.y + Math.min(23, element.rect.height - 8), 14); } return; } this.renderer.setFillColor(style === KoreHudStyle.ResultPanel ? KoreHudColor.Panel : style === KoreHudStyle.ResultAction || style === KoreHudStyle.ResultSecondary || style === KoreHudStyle.Skip ? KoreHudColor.Action : style === KoreHudStyle.Pause ? KoreHudColor.Pause : KoreHudColor.DefaultButton); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); if (element.focused) { this.renderer.setNoFill(); this.renderer.setStrokeColor("#fbbf24"); this.renderer.setStroke(3); this.renderer.drawRect(element.rect.x, element.rect.y, element.rect.width, element.rect.height); this.renderer.setStroke(0); } if (element.text) { this.renderer.setFillColor(KoreHudColor.Text); this.renderer.drawText(element.text, element.rect.x + 10, element.rect.y + Math.min(23, element.rect.height - 8), 14); } }
   public drawTextInput(element: Parameters<UiRenderer["drawTextInput"]>[0]): void { this.drawButton(element); }
   public drawImage(element: Parameters<UiRenderer["drawImage"]>[0]): void { if (element.source) this.renderer.drawImage(element.source, element.rect.x, element.rect.y, element.rect.width, element.rect.height); }
 }
