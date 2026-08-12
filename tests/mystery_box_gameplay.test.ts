@@ -385,6 +385,15 @@ describe("Mystery Box helpers", () => {
 		expect(deriveMysteryBoxSeed({ actorId: "a", turnNumber: 0, activeTeam: 0, baseSeed: baseSeed + 1 })).not.toBe(first);
 	});
 
+	test("neutral mystery-box pickups can be collected by a non-active team", () => {
+		const active = createRuntimePlayer(kore.createPlayer({ id: "active", teamNr: 0, position: { x: 300, y: 300 }, radius: 20 }));
+		const waiting = createRuntimePlayer(kore.createPlayer({ id: "waiting", teamNr: 1, position: { x: 100, y: 100 }, radius: 20 }));
+		const system = new MapPickupSystem();
+		system.configure([{ id: "box", itemId: MYSTERY_BOX_ITEM_ID, spawnRegion: { x: 90, y: 90, w: 40, h: 40 }, activationType: "collision" }], officialItems());
+		system.ticker({ entities: { getEntities: () => [active, waiting] }, activeTeam: 0, currTurn: 0 } as any, 0, 0);
+		expect(inventoryOf(waiting)).toEqual([{ itemId: MYSTERY_BOX_ITEM_ID, remainingUses: 1, usesThisTurn: 0 }]);
+	});
+
 	test("MapPickupSystem still collects pickups configured for any declared item", () => {
 		const player = createRuntimePlayer(
 			kore.createPlayer({ id: "hero-1", teamNr: 0, position: { x: 100, y: 100 }, radius: 20 })

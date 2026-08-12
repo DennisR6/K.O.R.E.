@@ -68,9 +68,12 @@ export class MapPickupSystem implements ISystem {
 			const pickup = this.pickups[pickupIndex];
 			const pickupState = this.state.pickups[pickupIndex];
 			if (pickupState.respawnCountdown !== undefined) continue;
-			const entitiesInRegion = ctx.entities.getEntities().filter(entity => this.canCollect(entity, pickup, ctx.activeTeam));
-			const occupants = new Set(entitiesInRegion.map(entity => entity.getId()));
 			const item = this.items.get(pickup.itemId)!;
+			// Mystery boxes are neutral map objects: either team may collect one
+			// when its figure enters the region, regardless of whose turn it is.
+			const neutralPickup = item.id === "mystery-box";
+			const entitiesInRegion = ctx.entities.getEntities().filter(entity => this.canCollect(entity, pickup, ctx.activeTeam, neutralPickup));
+			const occupants = new Set(entitiesInRegion.map(entity => entity.getId()));
 			const limit = pickup.maxPickupsPerTurn ?? 1;
 			for (const entity of entitiesInRegion) {
 				if (pickupState.collected >= limit || pickupState.occupants.includes(entity.getId())) continue;
@@ -110,8 +113,8 @@ export class MapPickupSystem implements ISystem {
 		this.state.turnNumber = turnNumber;
 	}
 
-	private canCollect(entity: IEntity, pickup: ItemPickup, activeTeam: number): boolean {
-		if (entity.isDead() || !entity.getTeam().includes(activeTeam)) return false;
+	private canCollect(entity: IEntity, pickup: ItemPickup, activeTeam: number, neutralPickup = false): boolean {
+		if (entity.isDead() || (!neutralPickup && !entity.getTeam().includes(activeTeam))) return false;
 		const position = entity.getPos();
 		const radius = entity.getSize().x;
 		const nearestX = Math.max(pickup.spawnRegion.x, Math.min(position.x, pickup.spawnRegion.x + pickup.spawnRegion.w));
