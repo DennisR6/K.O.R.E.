@@ -7,7 +7,7 @@
       "dependencies": {
         "@coffeemakerstudio/bean": "^0.2.0",
         "@coffeemakerstudio/drip": "^0.1.2",
-        "@coffeemakerstudio/roast": "^0.2.0",
+        "@coffeemakerstudio/roast": "^0.4.0",
         "p5": "^2.3.0",
       },
       "devDependencies": {
@@ -33,7 +33,7 @@
 
     "@coffeemakerstudio/drip": ["@coffeemakerstudio/drip@0.1.2", "", { "peerDependencies": { "@coffeemakerstudio/roast": "^0.1.0 || ^0.2.0" }, "optionalPeers": ["@coffeemakerstudio/roast"] }, "sha512-Tv1IuGkssQhC1YuPSN+OjRfdT4eTzUaP1ytiDBQ2fyTGlQ8CAlzhDuol2nNwSel4F/v3VKFBJSW40V6RKd/3UQ=="],
 
-    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@0.2.0", "", {}, "sha512-kBC2ZU0+RPdZ4KZjtcub+PgqTnXTRsAFUpXR6HxbqmddxiFZuLnsQLV6Ol8BJ/it/30CD+Z5WRxlsPWSPPShWg=="],
+    "@coffeemakerstudio/roast": ["@coffeemakerstudio/roast@0.4.0", "", {}, "sha512-i4Tus9Oc8EGZifIQPagQQDuigeGUlzRQHqbBDtu8ysrbOteBl5Sly3iJOiU8aJIBU00qfaFKy+iRLuccvgpm4Q=="],
 
     "@davepagurek/bezier-path": ["@davepagurek/bezier-path@0.0.7", "", {}, "sha512-CVlnCOrV1iy4Z12T756i9l4G6kF7r8uhlnb+xqDemAMmWQB+8Q0b+8VEqIiUfywgZDSiDr18Rm7pZlnA69rE8Q=="],
 

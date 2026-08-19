@@ -7,11 +7,12 @@ import type { MapRepository } from "./mapRepository.js";
 import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js";
 import { GameState } from "../kore/runtime/types.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
-	import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
+import { encodeKorePackedInit } from "../net/roastPackedInit.js";
+import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
 	data: WebSocketData;
-	send(message: string): unknown;
+	send(message: string | Uint8Array): unknown;
 }
 
 export class ServerRuntime {
@@ -20,7 +21,9 @@ export class ServerRuntime {
 	private connectionByUser = new Map<string, string>();
 	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string; friendCode?: string }> = [];
 
-	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository) { }
+	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1") { }
+
+	private sendInit(socket: ServerSocket, record: import("./gameRegistry.js").GameRecord, userId: string, mapId?: string, modeId?: string): void { const settings = this.games.settingsForUser(record, userId); if (this.packedInit) socket.send(encodeKorePackedInit(settings, { gameId: record.id, mapId, modeId, ruleState: record.ruleState })); else socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings, ruleState: record.ruleState, mapId, modeId })); }
 
 	public open(socket: ServerSocket): void {
 		this.sockets.set(socket.data.connectionId, socket)
@@ -107,7 +110,7 @@ export class ServerRuntime {
 			for (const user of users) {
 				this.games.connectUser(user)
 				const socket = this.socketForUser(user)
-				if (socket) socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, user), ruleState: record.ruleState, mapId, modeId: record.handler.getSettings()?.gameMode?.id }))
+				if (socket) this.sendInit(socket, record, user, mapId, record.handler.getSettings()?.gameMode?.id)
 			}
 		}
 	}
@@ -156,7 +159,7 @@ export class ServerRuntime {
 				return this.sendError(socket, "Game not found or expired")
 			}
 			this.games.connectUser(userId)
-			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			this.sendInit(socket, record, userId, undefined, record.handler.getSettings()?.gameMode?.id)
 		} catch (error) {
 			this.sendError(socket, error instanceof Error ? error.message : "Invalid invite payload")
 		}
@@ -174,7 +177,7 @@ export class ServerRuntime {
 		if (requestedUserId === undefined) socket.send(wrap<NetworkNewUser>({ type: NetworkMessageType.NEWUSER, userid: userId as NetworkNewUser["userid"] }))
 		const record = this.games.connectUser(userId)
 		if (record) {
-			socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings: this.games.settingsForUser(record, userId), ruleState: record.ruleState, modeId: record.handler.getSettings()?.gameMode?.id }))
+			this.sendInit(socket, record, userId, undefined, record.handler.getSettings()?.gameMode?.id)
 			return
 		}
 		const preference = this.validateMapPreference(mapPreference)
@@ -292,7 +295,7 @@ export class ServerRuntime {
 		if (!result.ok) return this.sendError(socket, result.error)
 		for (const user of result.record.users) {
 			const recipient = this.socketForUser(user)
-			if (recipient) recipient.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: result.record.id, settings: this.games.settingsForUser(result.record, user), ruleState: result.record.ruleState, modeId: result.record.handler.getSettings()?.gameMode?.id }))
+			if (recipient) this.sendInit(recipient, result.record, user, undefined, result.record.handler.getSettings()?.gameMode?.id)
 		}
 	}
 

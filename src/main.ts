@@ -12,6 +12,7 @@ import { NetworkEmitter, installTurnReceiver } from "./emitter/NetworkEmitter.js
 import { getUserUUUID, setUserUUUID } from "./utils/id.js";
 import { wrap } from "./utils/net.js";
 import { NetworkMessageType, type NetworkInit, type NetworkLogin, type NetworkNewUser, type UnTypedNetworkMessage } from "./server/types.js";
+import { decodeKorePackedInit } from "./net/roastPackedInit.js";
 import { adaptCanvasSizeForViewport } from "./ui/layout.js";
 import { ReplayViewer } from "./menu/replayViewer.js";
 import { LocalMatchSceneRouter } from "./scenes/LocalMatchSceneRouter.js";
@@ -187,10 +188,10 @@ function startNetworkGame(serverUrl: string, language: LanguageCatalog) {
 	socket.addEventListener("error", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectFailed]))
 	socket.addEventListener("close", () => fail(language.strings[LANGUAGE_KEYS.LoadingConnectionClosed]))
 	connectionTimeout = window.setTimeout(() => fail(language.strings[LANGUAGE_KEYS.LoadingTimedOut]), 20_000)
-	socket.addEventListener("message", event => {
+	socket.addEventListener("message", async event => {
 		let message: UnTypedNetworkMessage
 		try {
-			message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
+			if (event.data instanceof ArrayBuffer || event.data instanceof Blob) { const bytes = event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : new Uint8Array(await event.data.arrayBuffer()); const packed = decodeKorePackedInit(bytes); message = { type: NetworkMessageType.INIT, settings: packed.settings, ruleState: packed.ruleState, gameId: packed.gameId, mapId: packed.mapId, modeId: packed.modeId } as NetworkInit; } else message = JSON.parse(String(event.data)) as UnTypedNetworkMessage
 		} catch {
 			console.warn("Ignoring malformed server packet")
 			return

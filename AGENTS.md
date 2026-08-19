@@ -588,6 +588,10 @@ After every change, check whether this guide still reflects the implementation a
   client reconciliation diagnostics. When configured with a
   `MapRepository`, matchmaking accepts only approved database map UUIDs and
   expands them server-side before match construction.
+- `src/net/roastPackedSnapshot.ts`, `roastPackedInit.ts`, and `koreBinary.ts`:
+  opt-in Roast binary snapshot/INIT adapters. `KORE_ROAST_PACKED_INIT=1`
+  makes the server send packed binary INIT frames; the browser restores them
+  while the default JSON protocol remains unchanged.
 - `src/emitter/EngineEmitter.ts`: local hotseat input path; simulates, plays,
   advances its data-defined rule state, and then advances the active team.
 - `src/emitter/NetworkEmitter.ts`: sends shot requests and applies
