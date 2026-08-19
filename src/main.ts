@@ -609,7 +609,7 @@ function flushBrowserAudio(active: GameHandler): void {
 }
 
 const customCursor = document.getElementById('my-cursor')!;
-window.addEventListener('mousemove', (e) => {
+if (customCursor) window.addEventListener('mousemove', (e) => {
 	customCursor.style.left = e.clientX + 'px';
 	customCursor.style.top = e.clientY + 'px';
 });

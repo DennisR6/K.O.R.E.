@@ -6,6 +6,7 @@ type AssetRow = { path: string; override: boolean; url: string };
 export async function startAssetDebugPanel(): Promise<void> {
 	const root = document.createElement("main");
 	root.style.cssText = "font:16px system-ui;max-width:1000px;margin:2rem auto;padding:1rem;color:#172033";
+	document.body.style.cursor = "auto";
 	document.body.replaceChildren(root);
 	root.innerHTML = `<h1>KORE debug assets</h1><p>Overrides are isolated from production assets.</p><form id="login"><label>Debug asset API key <input name="key" type="password" required autocomplete="off"></label> <button>Unlock</button></form><p id="status"></p><section id="assets"></section>`;
 	const status = root.querySelector("#status")!;
