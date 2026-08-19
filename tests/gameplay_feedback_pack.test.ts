@@ -9,8 +9,8 @@ test("the KORE feedback pack declares every authoritative gameplay event", () =>
 	const surface = new KoreGameplayFeedbackSurface();
 	for (const event of trace.list()) surface.accept(event);
 	surface.tick(1);
-	expect(surface.getFrame().events.map(event => event.eventId)).toHaveLength(9);
-	expect(surface.drainSoundCommands()).toHaveLength(9);
+	expect(surface.getFrame().events.map(event => event.eventId)).toHaveLength(Object.values(KoreGameplayFeedbackType).length);
+	expect(surface.drainSoundCommands()).toHaveLength(Object.values(KoreGameplayFeedbackType).length);
 });
 
 test("feedback trace and presentation restoration are deterministic and outside engine state", () => {

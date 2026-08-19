@@ -41,7 +41,7 @@ describe("Section 15.10 human playtest evidence", () => {
 		expect(completed).toContain("Record status: **COMPLETED / VERIFIED FROM PRODUCTION DATA**");
 		expect(completed).toContain("data/kore.db");
 		expect(completed).toContain("Human-controlled matches completed: 7 unique replay records.");
-		expect(completed).toContain("Human qualitative ratings: not available");
+		expect(completed).toContain("Latest human-vs-AI feedback was rated **5/5**");
 		const pending = read("docs/playtest-results/pending-external-session.md");
 		expect(pending).toContain("Record status: **SUPERSEDED / PENDING AT RECORD CREATION**");
 		expect(pending).toContain("superseded by `production-human-session-2026-08.md`");

@@ -6,7 +6,7 @@ test("Switch is a validated ally-targeted built-in item", () => {
 	expect(loader.getSource("switch")).toBe("built-in");
 	expect(loader.get("switch")).toEqual(switchItem);
 	expect(switchItem.effects).toEqual([{ type: "transform.swap-position", value: {} }]);
-	expect(switchItem.targetValidation).toEqual({ allowSelf: false, allowAlly: true, allowEnemy: false, maxRange: 300 });
+	expect(switchItem.targetValidation).toEqual({ allowSelf: false, allowAlly: true, allowEnemy: true, maxRange: 300 });
 });
 
 test("Switch remains instant, ally-targeted, and game-limited", () => {

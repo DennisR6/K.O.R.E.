@@ -16,6 +16,8 @@ import {
 	switchItem,
 	jaegermeisterElixierItem,
 	mysteryBoxItem,
+	falltuerStructure,
+	falltuerTriggerDefinitions,
 	generateRandomMapPickupPosition,
 } from "../item/officialItems.js";
 import { createItemPickup } from "../item/types.js";
@@ -50,6 +52,7 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 	// items, and game mode are authored through the KORE match SDK.
 	base.mapBoundarys = base.mapBoundarys.map(boundary => ({ ...boundary, role: "solid", color: boundary.color ?? "#315b7d", physicsEnabled: boundary.physicsEnabled ?? true, drawingEnabled: boundary.drawingEnabled ?? true }));
 	base.mapBoundarys.unshift({ id: "ice.arena.containment", type: SHAPE.RECTANGLE, x: 0, y: 0, w: 800, h: 450, effects: [], role: "containment", physicsEnabled: true, drawingEnabled: true });
+	base.mapBoundarys.push(structuredClone(falltuerStructure));
 	const settings = kore.authorMatchSettings(base, {
 		matchId: CANONICAL_MATCH_ID,
 		myTeam: [0, 1],
@@ -75,6 +78,7 @@ export function createCanonicalPlayableMatchSettings(): GameSettings {
 			},
 		}),
 	});
+	settings.triggerDefinitions = [...(settings.triggerDefinitions ?? []), ...falltuerTriggerDefinitions.map(definition => structuredClone(definition))];
 	validateGameSettings(settings);
 	validateReferenceMapSettings(settings);
 	validateReferenceSpawnAndCamera(settings);
@@ -87,6 +91,7 @@ export function validateReferenceMapSettings(settings: GameSettings): void {
 	const containment = settings.mapBoundarys.filter(structure => structure.role === "containment");
 	if (containment.length !== 1 || settings.mapBoundarys.some(structure => structure.role === "both")) throw new Error("reference map requires exactly one containment boundary");
 	for (const structure of settings.mapBoundarys) {
+		if (structure.physicsEnabled === false && structure.drawingEnabled === false) continue;
 		if (structure.type === SHAPE.RECTANGLE && (!(structure.w > 0) || !(structure.h > 0) || structure.x < 0 || structure.y < 0 || structure.x + structure.w > width || structure.y + structure.h > height)) throw new Error("reference map has invalid rectangle");
 		if (structure.type === SHAPE.CIRCLE && (!(structure.r > 0) || structure.x - structure.r < 0 || structure.y - structure.r < 0 || structure.x + structure.r > width || structure.y + structure.r > height)) throw new Error("reference map has invalid circle");
 		if (structure.role === "solid" && !structure.color) throw new Error("reference map solid is not visible");

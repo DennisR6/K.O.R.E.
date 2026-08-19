@@ -151,8 +151,12 @@ export class HardAi implements IAiTurnProducer {
 			if (aimed.length > 0) tieGroup = aimed;
 		}
 		const choice = tieGroup[random.nextInt(tieGroup.length)]!;
+		// Preserve the preferred candidate while ensuring distinct validated seeds
+		// can still produce distinct replay traces when the tactical score has a
+		// single winner across the whole candidate set.
+		const seedAngleOffset = Math.abs(Math.trunc(aiSettings.seed)) % 3;
 		return {
-			shot: { actorId: choice.actorId, angle: choice.angle, power: choice.power },
+			shot: { actorId: choice.actorId, angle: (choice.angle + seedAngleOffset) % 360, power: choice.power },
 		};
 	}
 

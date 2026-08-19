@@ -47,7 +47,7 @@ function mode(item: ItemDocument, economy: Economy): GameModeSettings {
 function targetFor(item: ItemDocument, valid: boolean): ItemTarget {
 	if (item.targetType === "self") return valid ? { type: "self" } : { type: "entity", entityId: ENEMY_ID } as ItemTarget;
 	if (item.targetType === "entity") {
-		if (item.id === "switch") return valid ? { type: "entity", entityId: ALLY_ID } : { type: "entity", entityId: ENEMY_ID };
+		if (item.id === "switch") return valid ? { type: "entity", entityId: ALLY_ID } : { type: "self" };
 		return valid ? { type: "entity", entityId: ENEMY_ID } : { type: "self" } as ItemTarget;
 	}
 	return valid

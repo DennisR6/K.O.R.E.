@@ -4,6 +4,7 @@ import {
 	nextTestPort,
 	startTestServer,
 } from "./browser/browserHarness.ts";
+import { DEPLOYMENT_HASH } from "../src/server/config.ts";
 
 /**
  * Section 18: the real Bun server publishes the `KORE_BASE_URL` environment
@@ -23,9 +24,10 @@ describe("Section 18 server /config endpoint integration", () => {
 			const response = await fetch(`${server.url}/config`);
 			expect(response.status).toBe(200);
 			expect(response.headers.get("cache-control")).toBe("no-store");
-			expect(await response.json()).toEqual({
+				expect(await response.json()).toEqual({
 				baseUrl: "https://example.org/kore",
 				wsUrl: "wss://example.org/kore",
+				buildHash: DEPLOYMENT_HASH,
 			});
 		} finally {
 			await server.stop();
@@ -40,9 +42,10 @@ describe("Section 18 server /config endpoint integration", () => {
 		try {
 			const response = await fetch(`${server.url}/config`);
 			expect(response.status).toBe(200);
-			expect(await response.json()).toEqual({
+				expect(await response.json()).toEqual({
 				baseUrl: "https://lupricht.net/kore/",
 				wsUrl: "wss://lupricht.net/kore/",
+				buildHash: DEPLOYMENT_HASH,
 			});
 		} finally {
 			await server.stop();

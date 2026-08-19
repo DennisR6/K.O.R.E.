@@ -324,7 +324,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			const joinedUrl = new URL(pageA.url());
 			expect(joinedUrl.searchParams.get("skipmenu")).toBe("1");
 			expect(joinedUrl.searchParams.get("url")).toBe(`ws://localhost:${port}/`);
-			expect(joinedUrl.searchParams.get("map")).toBe("ice-map-v1");
+			expect(joinedUrl.searchParams.get("map")).toBe("magma-cradle");
 			await waitFor(async () => await pageA.evaluate(() => !!(window as any).game?.handler), 10_000, 100, "online loading or match handler");
 
 			// Tab B joins the same match from a fresh incognito context.

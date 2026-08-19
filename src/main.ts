@@ -578,7 +578,11 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			active.handleKeyPressed?.(e);
 		});
 
-		p.windowResized = () => ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight)
+		p.windowResized = () => {
+			const next = adaptCanvasSizeForViewport(window.window.innerWidth, window.window.innerHeight, GameSettings.screenResolution.x, GameSettings.screenResolution.y);
+			p.resizeCanvas(next.width, next.height);
+			ctx.resizeCanvas(window.window.innerWidth, window.window.innerHeight);
+		};
 	};
 
 	//@ts-ignore

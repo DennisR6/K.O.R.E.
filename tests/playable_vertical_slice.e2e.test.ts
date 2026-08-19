@@ -74,7 +74,7 @@ test("menu to canonical match to result and back through the application surface
 	expect(router.isLocalMatch()).toBe(false);
 	const mainMenuText: string[] = [];
 	router.getHandler().drawWorld(renderer(mainMenuText));
-	expect(mainMenuText).toEqual(expect.arrayContaining(["Play", "Local", "Game"]));
+	expect(mainMenuText).toEqual(expect.arrayContaining(["1 vs AI", "AI vs AI", "Play Online", "Play Offline", "Choose Map", "Mods"]));
 	click(router, 463, 368);
 
 	const match = router.getHandler();

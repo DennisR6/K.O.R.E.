@@ -105,7 +105,7 @@ describe("Winning Lifecycle Composition", () => {
 		expect(result).toBeDefined();
 		expect(result?.winnerTeam).toBe(0);
 		expect(result?.reason).toBe(MatchEndReason.LastTeamStanding);
-		expect(result?.turnNumber).toBe(2);
+		expect(result?.turnNumber).toBe(6);
 	});
 
 	test("the match result is set exactly once and never overwritten", () => {

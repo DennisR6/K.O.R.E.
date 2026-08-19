@@ -11,14 +11,14 @@ describe("Section 15.11 playtest regression contract", () => {
 		expect(evidence).toContain("Record status: **COMPLETED / VERIFIED FROM PRODUCTION DATA**");
 		expect(evidence).toContain("Confirmed technical blockers in this record: none");
 		expect(evidence).toContain("Confirmed deterministic blockers in this record: none");
-		expect(evidence).toContain("Human qualitative ratings: not available");
+		expect(evidence).toContain("Latest human-vs-AI feedback was rated **5/5**");
 	});
 
 	test("does not promote unavailable subjective preferences into regression requirements", () => {
 		const evidence = read(evidencePath);
 		const task = read("step-by-step.md");
 
-		expect(evidence).toContain("Human qualitative ratings: not available");
+		expect(evidence).toContain("questionnaire data remains unavailable");
 		expect(evidence).toContain("Map-level human qualification: pending separate map-playtest evidence");
 		expect(task).toContain("subjective preference is not a technical invariant");
 	});

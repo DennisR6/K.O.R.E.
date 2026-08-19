@@ -52,7 +52,8 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 	// position trigger can activate it.
 	if (settings.items?.some(item => item.id === "falltuer")) {
 		if (!settings.mapBoundarys.some(boundary => boundary.id === falltuerStructure.id)) settings.mapBoundarys.push(structuredClone(falltuerStructure));
-		settings.triggerDefinitions = [...(settings.triggerDefinitions ?? []), ...falltuerTriggerDefinitions.map(definition => structuredClone(definition))];
+		const existingTriggerIds = new Set((settings.triggerDefinitions ?? []).map(definition => definition.id));
+		settings.triggerDefinitions = [...(settings.triggerDefinitions ?? []), ...falltuerTriggerDefinitions.filter(definition => !existingTriggerIds.has(definition.id)).map(definition => structuredClone(definition))];
 	}
 	if (config.mod) {
 		if (config.mod.package.items) settings.items = structuredClone(config.mod.package.items);
