@@ -1,4 +1,5 @@
 import type { UiComponentSettings } from "@coffeemakerstudio/drip";
+import { isAssetKeySource } from "../assetManager/assets/assetRegistry.js";
 
 export type ItemTargetType = "self" | "entity" | "position" | "zone";
 export type DurationType = "instant" | "turns" | "rounds";
@@ -134,7 +135,7 @@ export function validateItemDocument(document: unknown): asserts document is Ite
 		if (Object.keys(ui).some(key => key !== "component" && key !== "showLabel")) throw new Error("Item ui contains an unknown field");
 		if (ui.component !== undefined) {
 			const component = ui.component as Record<string, unknown>;
-			if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0 || Object.keys(component).some(key => key !== "type" && key !== "source")) throw new Error("Item ui component must be a non-empty image source");
+			if (component.type !== "image" || typeof component.source !== "string" || !isAssetKeySource(component.source) || Object.keys(component).some(key => key !== "type" && key !== "source")) throw new Error("Item ui component must use a registered asset key source");
 		}
 		if (ui.showLabel !== undefined && typeof ui.showLabel !== "boolean") throw new Error("Item ui showLabel must be a boolean");
 	}

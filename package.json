@@ -54,6 +54,7 @@
     "test:browser": "bun run test:browser:full",
     "bench:physics": "bun test tests/physics_performance.test.ts",
     "createAssets": "bun run scripts/createAssetPack.ts",
+    "createAllAssets": "bun run scripts/createAssetPack.ts",
     "desktop": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri dev",
     "desktop:build": "PKG_CONFIG_PATH=./src-tauri/.pkgconfig:$PKG_CONFIG_PATH tauri build",
     "docs": "typedoc"

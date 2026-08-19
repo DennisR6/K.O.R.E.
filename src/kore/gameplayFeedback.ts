@@ -2,6 +2,7 @@ import { audio, AudioEmitter, type AudioCommand, type ISoundEmitter } from "@cof
 import { presentation, type AnimationSettings, type PresentationFrame, type PresentationOutputPort, type PresentationRuntimeSettings } from "@coffeemakerstudio/roast";
 import { assertJsonValue, type JsonValue } from "@coffeemakerstudio/roast";
 import type { IDrawer, ITicker, RenderContext } from "./runtime/RenderContext.js";
+import { AssetList, assetKeySource } from "../assetManager/assets/assetRegistry.js";
 
 export enum KoreGameplayFeedbackType {
 	Shot = "shot", Collision = "collision", Damage = "damage", Shield = "shield", Item = "item",
@@ -83,7 +84,7 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 		renderer.push();
 		renderer.setOpacity(opacity);
 		renderer.setFillColor("white");
-		if (last.type === KoreGameplayFeedbackType.Item) renderer.drawImage("public/items/placeholder.svg", renderer.WORLD_SIZE_X / 2 - 92, 8, 32, 32);
+		if (last.type === KoreGameplayFeedbackType.Item) renderer.drawImage(assetKeySource(AssetList.itemsPlaceholderSVG), renderer.WORLD_SIZE_X / 2 - 92, 8, 32, 32);
 		renderer.drawText(feedbackLabel(last), renderer.WORLD_SIZE_X / 2 - 70, 32, 16);
 		renderer.pop();
 	}

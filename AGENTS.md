@@ -546,8 +546,9 @@ After every change, check whether this guide still reflects the implementation a
 - `src/server/debugAssets.ts`: isolated debug-asset API. A dashboard-created
   key exchanges once for an HttpOnly debug-session cookie, after which the
   `/?debug=assets` browser surface can list, upload, preview, and remove
-  overrides stored under `data/debug-assets/`. It never writes `public/` or
-  changes the generated asset registry.
+  overrides stored under `data/debug-assets/`; item picture assignments are
+  stored as registered `AssetKey` sources in `item-overrides.json`. It never
+  writes `public/` or changes the generated asset registry.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
 	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
@@ -694,7 +695,8 @@ bun run start               # run Bun HTTP/WebSocket server
 bun run dev            # server plus TypeScript watch compiler
 bun run watch:ts       # compile src continuously
 bun run serve          # live-server only; no WebSocket backend
-bun run createAssets   # intentionally regenerate registry and asset packs
+ bun run createAssets   # intentionally regenerate registry and asset packs
+ bun run createAllAssets # alias for createAssets
 ```
 
 There is no lint or formatting script. CI runs `bun install --frozen-lockfile`,

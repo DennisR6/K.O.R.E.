@@ -10,6 +10,7 @@ import { KORE_HUD_ITEM_SLOTS, KoreHudColor, KoreHudElement, KoreHudId, KoreHudSt
 import { RulePhase } from "../../rules/types.js";
 import type { ItemTarget } from "../../item/target.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
+import { AssetList, assetKeySource } from "../../assetManager/assets/assetRegistry.js";
 
 export interface KoreHudCommandPort { handle(command: KoreHudCommandMessage): boolean | void; }
 export interface KoreGameHudCapabilities { canSkipItemPhase?: boolean; canPause?: boolean; canReport?: boolean; }
@@ -45,7 +46,7 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
 			// Item controls are deliberately icon-only so they never cover the arena.
 			this.setText(id, "");
-			this.runtime.setElementComponent(id, item ? (item.component ?? { type: "image", source: "public/items/placeholder.svg" }) : undefined);
+			this.runtime.setElementComponent(id, item ? (item.component ?? { type: "image", source: assetKeySource(AssetList.itemsPlaceholderSVG) }) : undefined);
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;

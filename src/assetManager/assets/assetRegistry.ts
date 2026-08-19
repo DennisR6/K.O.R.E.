@@ -47,7 +47,22 @@ export enum AssetList {
 	picturePolarBearPolarBearStarsFrame1WEBP,
 	picturePolarBearPolarBearIdleFrame1WEBP,
 	picturePolarBearPolarBearIdleFrame1SVG,
-	picturePolarBearPolarBearHurtFrame1WEBP
+	picturePolarBearPolarBearHurtFrame1WEBP,
+	itemsMysteryboxSVG,
+	itemsPlaceholderSVG,
+	pictureMenuiconsSettingsSVG,
+	pictureMenuiconsHandshakeSVG,
+	pictureMenuiconsUsersSVG,
+	pictureMenuiconsBotmessagesquareSVG,
+	pictureMenuiconsGamepad2SVG,
+	pictureMenuiconsBotSVG,
+	pictureMenuiconsHandfistSVG,
+	pictureMenuiconsUsersroundSVG,
+	pictureMenuiconsHeadphonesSVG,
+	pictureMenuiconsTally1SVG,
+	pictureMenuiconsButtontrennerSVG,
+	pictureMenuiconsLogoutSVG,
+	pictureMenuiconsCirclestarSVG
 }
 
 export const AssetPaths: Record<AssetList, string> = {
@@ -99,7 +114,30 @@ export const AssetPaths: Record<AssetList, string> = {
 	[AssetList.picturePolarBearPolarBearStarsFrame1WEBP]: "picture/Polar_Bear/Polar_Bear_Stars_Frame_1.webp",
 	[AssetList.picturePolarBearPolarBearIdleFrame1WEBP]: "picture/Polar_Bear/Polar_Bear_Idle_Frame_1.webp",
 	[AssetList.picturePolarBearPolarBearIdleFrame1SVG]: "picture/Polar_Bear/Polar_Bear_Idle_Frame_1.svg",
-	[AssetList.picturePolarBearPolarBearHurtFrame1WEBP]: "picture/Polar_Bear/Polar_Bear_Hurt_Frame_1.webp"
+	[AssetList.picturePolarBearPolarBearHurtFrame1WEBP]: "picture/Polar_Bear/Polar_Bear_Hurt_Frame_1.webp",
+	[AssetList.itemsMysteryboxSVG]: "items/mystery_box.svg",
+	[AssetList.itemsPlaceholderSVG]: "items/placeholder.svg",
+	[AssetList.pictureMenuiconsSettingsSVG]: "picture/menuicons/settings.svg",
+	[AssetList.pictureMenuiconsHandshakeSVG]: "picture/menuicons/handshake.svg",
+	[AssetList.pictureMenuiconsUsersSVG]: "picture/menuicons/users.svg",
+	[AssetList.pictureMenuiconsBotmessagesquareSVG]: "picture/menuicons/bot-message-square.svg",
+	[AssetList.pictureMenuiconsGamepad2SVG]: "picture/menuicons/gamepad-2.svg",
+	[AssetList.pictureMenuiconsBotSVG]: "picture/menuicons/bot.svg",
+	[AssetList.pictureMenuiconsHandfistSVG]: "picture/menuicons/hand-fist.svg",
+	[AssetList.pictureMenuiconsUsersroundSVG]: "picture/menuicons/users-round.svg",
+	[AssetList.pictureMenuiconsHeadphonesSVG]: "picture/menuicons/headphones.svg",
+	[AssetList.pictureMenuiconsTally1SVG]: "picture/menuicons/tally-1.svg",
+	[AssetList.pictureMenuiconsButtontrennerSVG]: "picture/menuicons/button-trenner.svg",
+	[AssetList.pictureMenuiconsLogoutSVG]: "picture/menuicons/log-out.svg",
+	[AssetList.pictureMenuiconsCirclestarSVG]: "picture/menuicons/circle-star.svg"
 };
 
 export type AssetKey = AssetList;
+
+export function assetKeySource(key: AssetKey): string {
+	return `public/${AssetPaths[key]}`;
+}
+
+export function isAssetKeySource(source: string): boolean {
+	return Object.values(AssetPaths).some(path => source === `public/${path}`);
+}

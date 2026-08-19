@@ -38,7 +38,7 @@ import { buildFeedbackEndpoint, installDesyncFeedbackReporter, installFeedbackPr
 import { ActionManager, GameAction } from "./input/actions.js";
 import { ControllerInput } from "./input/controller.js";
 import { createDebugItemSandboxHandler } from "./scenes/matchPipeline.js";
-import { startAssetDebugPanel } from "./debug/assets.js";
+import { applyDebugItemOverrides, loadDebugAssetOverrides, loadDebugItemOverrides, startAssetDebugPanel } from "./debug/assets.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -53,6 +53,7 @@ const usersettings = {
 	modePreference: uri.searchParams.get("mode") ?? undefined,
 	debugGame: uri.searchParams.get("debug") === "game",
 	debugAssets: uri.searchParams.get("debug") === "assets",
+	assetOverrides: ["1", "true"].includes(uri.searchParams.get("assets") ?? ""),
 	friendRole: uri.searchParams.get("friend") as "create" | "join" | null,
 	friendCode: uri.searchParams.get("code") ?? undefined,
 }
@@ -68,6 +69,7 @@ const activeLanguage: LanguageCatalog | undefined = !isUiDebugSandboxUrl(uri)
 	? await loadLanguage(isLanguageCode(requestedLanguage) ? requestedLanguage : "en_en")
 	: undefined;
 startupMark("assets.load.completed", { category: "json/config" });
+if (usersettings.assetOverrides && !usersettings.debugAssets && !await loadDebugAssetOverrides()) console.warn("Debug asset session unavailable; using production assets");
 void flushOfflineMatchReports();
 window.addEventListener("online", () => { void flushOfflineMatchReports(); });
 
@@ -89,6 +91,7 @@ if (isUiDebugSandboxUrl(uri)) {
 } else if (usersettings.debugGame) {
 	startupMark("scene.init.started", { scene: "debug-game" });
 	handler = createDebugItemSandboxHandler(usersettings.mapPreference ?? "ice-map-v1");
+	if (usersettings.assetOverrides) applyDebugItemOverrides(handler, await loadDebugItemOverrides());
 	handler.setLanguage(activeLanguage!);
 	installGameplayHud(handler, { language: activeLanguage!, onReturnToMenu: () => window.location.assign(window.location.pathname) });
 	startGame(handler);

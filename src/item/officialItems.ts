@@ -13,6 +13,7 @@ import { createCollisionCommandBinding } from "@coffeemakerstudio/roast";
 import { MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, MOVEMENT_APPLY_FORCE_TO_ENTITY_EFFECT_ID } from "@coffeemakerstudio/roast";
 import { MOVEMENT_SCALE_SPEED_EFFECT_ID } from "@coffeemakerstudio/roast";
 import { TRANSFORM_SWAP_POSITION_EFFECT_ID } from "@coffeemakerstudio/roast";
+import { AssetList, assetKeySource } from "../assetManager/assets/assetRegistry.js";
 export * from "./officialItemHelpers.js";
 
 export const ANKER_FORCE_FACTOR = 0.5;
@@ -231,7 +232,7 @@ export const mysteryBoxItem: ItemDocument = createItem({
 	duration: { type: "instant", value: 0 },
 	useLimit: { perTurn: 1, perGame: 3 },
 	targetValidation: { allowSelf: true, allowAlly: false, allowEnemy: false },
-	ui: { component: { type: "image", source: "public/items/mystery_box.svg" }, showLabel: true },
+	ui: { component: { type: "image", source: assetKeySource(AssetList.itemsMysteryboxSVG) }, showLabel: true },
 });
 
 export interface MysteryBoxRewardOptions {

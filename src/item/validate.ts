@@ -1,5 +1,6 @@
 import { validateItemDocument } from "./types.js";
 import type { ItemDocument } from "./types.js";
+import { isAssetKeySource } from "../assetManager/assets/assetRegistry.js";
 
 const ITEM_FIELDS = new Set([
 	"schemaVersion",
@@ -187,7 +188,7 @@ export class ItemValidator {
 			const ui = assertKnownObject(item.ui, "item.ui", ITEM_UI_FIELDS);
 			if (ui.component !== undefined) {
 				const component = assertKnownObject(ui.component, "item.ui.component", new Set(["type", "source"]));
-				if (component.type !== "image" || typeof component.source !== "string" || component.source.length === 0) throw new Error("item.ui.component must be an image with a non-empty source");
+				if (component.type !== "image" || typeof component.source !== "string" || !isAssetKeySource(component.source)) throw new Error("item.ui.component must be an image with a registered asset key source");
 			}
 			if (ui.showLabel !== undefined && typeof ui.showLabel !== "boolean") throw new Error("item.ui.showLabel must be a boolean");
 		}

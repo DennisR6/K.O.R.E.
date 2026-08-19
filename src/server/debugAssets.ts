@@ -1,14 +1,16 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdirSync, readdirSync, unlinkSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { AssetPaths } from "../assetManager/assets/assetRegistry.js";
+import { AssetPaths, isAssetKeySource } from "../assetManager/assets/assetRegistry.js";
 import type { GameDatabase } from "./db.js";
+import { createOfficialItemLoader } from "../item/officialItems.js";
 
 export const DEBUG_ASSETS_PATH = "/debug-assets";
 export const DEBUG_ASSET_SESSION_PATH = "/debug-assets/session";
 const COOKIE = "kore_debug_asset_session";
 const MAX_BYTES = 8 * 1024 * 1024;
 const EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+const ITEM_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
 
 type AssetDatabase = Pick<GameDatabase, "isDebugAssetTokenValid">;
 
@@ -24,6 +26,8 @@ export async function serveDebugAssets(request: Request, database: AssetDatabase
 	if (!isSession(request, secret)) return notFound();
 	mkdirSync(root, { recursive: true });
 	if (url.pathname === DEBUG_ASSETS_PATH && request.method === "GET") return listAssets(root);
+	if (url.pathname === `${DEBUG_ASSETS_PATH}/items` && request.method === "GET") return listItemAssets(root);
+	if (url.pathname.startsWith(`${DEBUG_ASSETS_PATH}/items/`)) return itemAsset(request, root, decodeURIComponent(url.pathname.slice(`${DEBUG_ASSETS_PATH}/items/`.length)));
 	const asset = decodeURIComponent(url.pathname.slice(`${DEBUG_ASSETS_PATH}/`.length));
 	const fileAsset = asset.endsWith("/file") ? asset.slice(0, -5) : asset;
 	if (!fileAsset || !assetNameAllowed(fileAsset)) return notFound();
@@ -64,6 +68,26 @@ function listAssets(root: string): Response {
 	const assets = Object.values(AssetPaths).map(path => ({ path, override: overrides.has(path), url: overrides.has(path) ? `${DEBUG_ASSETS_PATH}/${encodeURIComponent(path)}/file` : `/public/${path}` }));
 	return Response.json({ schemaVersion: 1, assets }, { headers: { "cache-control": "no-store" } });
 }
+
+function itemOverridesFile(root: string): string { return join(root, "item-overrides.json"); }
+function readItemOverrides(root: string): Record<string, string> { try { return JSON.parse(readFileSync(itemOverridesFile(root), "utf8")) as Record<string, string>; } catch { return {}; } }
+function writeItemOverrides(root: string, values: Record<string, string>): void { writeFileSync(itemOverridesFile(root), JSON.stringify(values, null, 2)); }
+function listItemAssets(root: string): Response {
+	const overrides = readItemOverrides(root);
+	const items = createOfficialItemLoader().getAll().map(item => ({ itemId: item.id, override: overrides[item.id] !== undefined, source: overrides[item.id] }));
+	return Response.json({ schemaVersion: 1, items }, { headers: { "cache-control": "no-store" } });
+}
+async function itemAsset(request: Request, root: string, itemId: string): Promise<Response> {
+	const id = itemId;
+	if (!ITEM_ID.test(id) || !createOfficialItemLoader().get(id)) return notFound();
+	const overrides = readItemOverrides(root);
+	if (request.method === "GET") return Response.json({ itemId: id, source: overrides[id] }, { headers: { "cache-control": "no-store" } });
+	if (request.method === "DELETE") { delete overrides[id]; writeItemOverrides(root, overrides); return Response.json({ ok: true }); }
+	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "GET, POST, DELETE" } });
+	try { const body = await request.json() as { source?: unknown }; if (typeof body.source !== "string" || !isRegisteredAssetSource(body.source)) return new Response("Item pictures must use a registered asset key", { status: 400 }); overrides[id] = body.source; writeItemOverrides(root, overrides); return Response.json({ ok: true, itemId: id, source: body.source }); } catch { return new Response("Invalid item asset selection", { status: 400 }); }
+}
+
+function isRegisteredAssetSource(source: string): boolean { return isAssetKeySource(source); }
 
 async function upload(request: Request, asset: string, root: string): Promise<Response> {
 	const body = await request.arrayBuffer();

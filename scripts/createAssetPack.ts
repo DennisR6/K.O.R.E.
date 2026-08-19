@@ -86,10 +86,12 @@ function generateAssetPacks() {
 			writeFileSync(path.join(DIST_JSON_OUTPUT_DIR, `${cleanKey}.json`), jsonString);
 		}
 	});
+	const previousRegistry = readFileSync(path.join(OUTPUT_KEYS, 'assetRegistry.ts'), 'utf8').match(/^\s+([A-Za-z][A-Za-z0-9]*),$/gm)?.map(entry => entry.trim().slice(0, -1)) ?? [];
+	const orderedRegistry = [...previousRegistry.filter(key => assetManifest[key]), ...assetRegistry.filter(key => !previousRegistry.includes(key))];
 
-	const enumContent = assetRegistry.join(",\n\t");
+	const enumContent = orderedRegistry.join(",\n\t");
 
-	const registryEntries = assetRegistry.map(key =>
+	const registryEntries = orderedRegistry.map(key =>
 		`\t[AssetList.${key}]: "${assetManifest[key]}"`
 	).join(',\n');
 
@@ -102,6 +104,14 @@ ${registryEntries}
 };
 
 export type AssetKey = AssetList;
+
+export function assetKeySource(key: AssetKey): string {
+	return \`public/\${AssetPaths[key]}\`;
+}
+
+export function isAssetKeySource(source: string): boolean {
+	return Object.values(AssetPaths).some(path => source === \`public/\${path}\`);
+}
 `;
 
 	writeFileSync(path.join(OUTPUT_KEYS, 'assetRegistry.ts'), typeContent);
@@ -109,4 +119,3 @@ export type AssetKey = AssetList;
 }
 
 generateAssetPacks();
-
