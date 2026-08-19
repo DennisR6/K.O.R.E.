@@ -23,8 +23,8 @@ describe("main menu KI vs KI battle map selection", () => {
 		const recorder = { local: [] as string[], battle: [] as string[], online: 0 };
 		const menu = menuWithCallbacks(recorder);
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		// KI vs KI is the second button in the centered bottom action row.
-		pressAt(menu, 249, 368);
+		pressAt(menu, 400, 220); // Play Offline
+		pressAt(menu, 400, 280); // KI vs KI
 		expect(recorder.battle).toEqual([]);
 		// The first map row starts the battle on the chosen map.
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y);
@@ -37,8 +37,7 @@ describe("main menu KI vs KI battle map selection", () => {
 		const recorder = { local: [] as string[], battle: [] as string[], online: 0 };
 		const menu = menuWithCallbacks(recorder);
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		// Choose Map is the fifth button in the centered bottom action row.
-		pressAt(menu, 589, 368);
+		pressAt(menu, 400, 340); // Choose Map
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y);
 		expect(recorder.local).toEqual([firstMapId]);
 		expect(recorder.battle).toEqual([]);
@@ -48,9 +47,11 @@ describe("main menu KI vs KI battle map selection", () => {
 		const recorder = { local: [] as string[], battle: [] as string[], online: 0 };
 		const menu = menuWithCallbacks(recorder);
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		pressAt(menu, 249, 368); // KI vs KI opens the map page (pending battle)
+		pressAt(menu, 400, 220); // Play Offline
+		pressAt(menu, 400, 280); // KI vs KI opens the map page (pending battle)
 		pressAt(menu, BATTLE_BACK.x, BATTLE_BACK.y); // Back -> main menu, pending intent cleared
-		pressAt(menu, 589, 368); // Choose Map now opens the map page (pending local)
+		pressAt(menu, 400, 340); // Local submenu back -> main menu
+		pressAt(menu, 400, 340); // Choose Map now opens the map page (pending local)
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y);
 		expect(recorder.local).toEqual([firstMapId]);
 		expect(recorder.battle).toEqual([]);
@@ -65,7 +66,8 @@ describe("main menu KI vs KI battle map selection", () => {
 		// because the page stays active after a selection in this unit setup.
 		const picked: string[] = [];
 		for (let index = 0; index < battleMaps.length; index++) {
-		pressAt(menu, 249, 368); // KI vs KI (battle mode)
+		pressAt(menu, 400, 220); // Play Offline
+		pressAt(menu, 400, 280); // KI vs KI (battle mode)
 			pressAt(menu, 400, 100 + index * 36);
 			picked.push(recorder.battle[recorder.battle.length - 1]!);
 			pressAt(menu, BATTLE_BACK.x, BATTLE_BACK.y); // back to the menu
@@ -74,8 +76,8 @@ describe("main menu KI vs KI battle map selection", () => {
 		expect(recorder.local).toEqual([]);
 		// Non-terminating maps (e.g. symmetric-duel) stay selectable for
 		// human local play on the local path.
-		pressAt(menu, 400, 100); // landing -> menu
-		pressAt(menu, 589, 368); // Choose Map (local mode, one visible production row)
+		pressAt(menu, 400, 340); // local submenu back -> main
+		pressAt(menu, 400, 340); // Choose Map (local mode, one visible production row)
 		pressAt(menu, 400, 100); // first row: ice-map-v1
 		expect(recorder.local).toEqual([firstMapId]);
 	});
@@ -95,7 +97,8 @@ describe("main menu KI vs KI battle map selection", () => {
 	test("is a no-op when no callbacks are configured", () => {
 		const menu = createKoreMainMenuSurface();
 		pressAt(menu, 400, 100); // landing page -> main menu page
-		pressAt(menu, 249, 368); // KI vs KI opens the map page
+		pressAt(menu, 400, 220); // Play Offline
+		pressAt(menu, 400, 280); // KI vs KI opens the map page
 		pressAt(menu, MAP_ROW.x, MAP_ROW.y); // no battle callback
 		pressAt(menu, BATTLE_BACK.x, BATTLE_BACK.y); // back to the menu
 		// No throw and no navigation stub: the presses are simply ignored.

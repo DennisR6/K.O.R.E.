@@ -57,6 +57,6 @@ test("loaded language catalogs provide translated menu labels", async () => {
 		}
 		return undefined;
 	};
-	const online = findElement(main.elements, "main-online");
-	expect(online?.kind === "button" ? online.text : undefined).toBe("Online spielen");
+	const online = findElement(main.elements, "label-online");
+	expect(online?.kind === "text" ? online.text : undefined).toBe("Online spielen");
 });

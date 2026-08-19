@@ -196,6 +196,22 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
                   ]
                 }),
 
+                ui.button({
+                  id: "main-mods-vertical",
+                  text: translate(language, KoreMenuText.Mods),
+                  rect: { x: 0, y: 0, width: 220, height: 50 },
+                  style: KoreMenuStyle.MainButton,
+                  action: ui.action.emit(KoreMenuCommand.OpenMods),
+                }),
+
+                ui.button({
+                  id: "main-maps-vertical",
+                  text: translate(language, KoreMenuText.ChooseMap),
+                  rect: { x: 0, y: 0, width: 220, height: 50 },
+                  style: KoreMenuStyle.MainButton,
+                  action: ui.action.emit(KoreMenuCommand.OpenLocalMaps),
+                }),
+
                 // Settings Button
                 ui.container({
                   id: "image-text-button-settings",
@@ -270,19 +286,6 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
               ]
             })
           ]
-        }),
-        ui.container({
-            id: "MainBottomActions",
-            rect: rect(0, 342, 800, 58),
-            layout: ui.layout.horizontal({ gap: 16, justify: "center", align: "center" }),
-            elements: [
-                ui.button({ id: KoreMenuElement.MainAi, text: translate(language, KoreMenuText.Ai), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenAi) }),
-                ui.button({ id: KoreMenuElement.MainBattle, text: translate(language, KoreMenuText.Battle), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenBattle) }),
-                ui.button({ id: KoreMenuElement.MainOnline, text: translate(language, KoreMenuText.Online), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenOnline) }),
-                ui.button({ id: KoreMenuElement.MainLocal, text: translate(language, KoreMenuText.Local), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartLocal) }),
-                ui.button({ id: KoreMenuElement.MainMaps, text: translate(language, KoreMenuText.ChooseMap), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenLocalMaps) }),
-                ui.button({ id: KoreMenuElement.MainMods, text: translate(language, KoreMenuText.Mods), rect: rect(0, 0, 110, 58), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.OpenMods) }),
-            ],
         }),
       ]
     })

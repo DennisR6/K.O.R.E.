@@ -16,7 +16,8 @@ test("1 vs KI menu selects difficulty before starting the selected map", () => {
 	const starts: Array<{ difficulty: string; mapId: string }> = [];
 	const menu = createKoreMainMenuSurface({ onPlayAiOpponent: (difficulty, mapId) => starts.push({ difficulty, mapId }) });
 	press(menu, 400, 100); // landing -> main menu
-	press(menu, 99, 371); // 1 vs KI: first button in the centered bottom action row (38..170, 342..400)
+	press(menu, 400, 220); // Play Offline
+	press(menu, 400, 220); // vs KI
 	press(menu, 400, 214); // medium KI
 	press(menu, 400, 100); // first map
 	expect(starts).toEqual([{ difficulty: "medium", mapId: firstMapId }]);

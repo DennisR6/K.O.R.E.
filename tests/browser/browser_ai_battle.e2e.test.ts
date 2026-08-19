@@ -46,7 +46,7 @@ test.describe("browser KI vs KI battle", () => {
 			// Landing page -> main menu -> "KI vs KI" in the centered bottom action row
 			// opens the Choose Map page; the first row (Ice Map) starts the battle.
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 368);
+			await clickWorld(page, 400, 220); await clickWorld(page, 400, 280);
 			await clickWorld(page, 400, 100);
 
 			// The battle handler boots the canonical arena.
@@ -57,7 +57,7 @@ test.describe("browser KI vs KI battle", () => {
 				"KI vs KI battle start",
 			);
 			// The selected map is the one that was picked on the map page.
-			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("magma-cradle");
 			const matchInfo = await page.evaluate(() => {
 				const handler = (window as any).game.handler;
 				const overlay = handler?.getMouseHandler?.();
@@ -98,7 +98,7 @@ test("autonomous AI battle progresses without a player pause surface", async () 
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 368);
+			await clickWorld(page, 400, 220); await clickWorld(page, 400, 280);
 			await clickWorld(page, 400, 100);
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");
@@ -125,7 +125,7 @@ test("production Easy AI worker keeps battle turns responsive", async () => {
 		const page = await openPage(browser, server.url);
 		await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 		await clickWorld(page, 400, 100);
-		await clickWorld(page, 249, 368);
+		await clickWorld(page, 400, 220); await clickWorld(page, 400, 280);
 		await clickWorld(page, 400, 100);
 		await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 		await page.evaluate(() => {
@@ -181,7 +181,7 @@ test("autonomous AI battle ignores menu coordinates while it is running", async 
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100);
-			await clickWorld(page, 249, 368);
+		await clickWorld(page, 400, 220); await clickWorld(page, 400, 280);
 			await clickWorld(page, 400, 100);
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "KI vs KI battle start");
 			await waitFor(async () => (await readMatchState(page)).state === "GameState.Playing", 60_000, 100, "active AI playback");
@@ -189,7 +189,7 @@ test("autonomous AI battle ignores menu coordinates while it is running", async 
 			await clickWorld(page, 482, 324);
 			expect((await readMatchState(page)).paused).toBe(false);
 			expect(await activeGameModeId(page)).toBe("local-ice-duel-v1");
-			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("magma-cradle");
 		} finally {
 			await closeBrowser(browser);
 			await server.stop();
@@ -206,11 +206,11 @@ test("autonomous AI battle ignores menu coordinates while it is running", async 
 			const page = await openPage(browser, server.url);
 			await waitFor(async () => (await canvasGeometry(page)).width > 0, 10_000, 100, "game canvas");
 			await clickWorld(page, 400, 100); // landing -> main menu
-		await clickWorld(page, 99, 368); // 1 vs KI
+			await clickWorld(page, 400, 220); await clickWorld(page, 400, 220); // Play Offline -> vs KI
 			await clickWorld(page, 400, 214); // Medium KI
 			await clickWorld(page, 400, 100); // Ice Map
 			await waitFor(async () => (await page.evaluate(() => (window as any).game?.handler?.getSettings?.()?.ai?.difficulty ?? null)) === "medium", 10_000, 100, "human-vs-KI start");
-			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("ice-map-v1");
+			expect(await page.evaluate(() => (window as any).game?.mapId ?? null)).toBe("magma-cradle");
 		expect(await page.evaluate(() => (window as any).game?.handler?.getTeam?.() ?? null)).toEqual([0]);
 		} finally {
 			await closeBrowser(browser);

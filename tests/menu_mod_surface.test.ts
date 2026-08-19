@@ -90,7 +90,7 @@ describe("mod menu surface wiring", () => {
 	test("keyboard typing flows into the focused import input", () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100); // landing -> main
-		press(menu, 715, 371); // Mods
+		press(menu, 400, 280); // Mods
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Mods);
 		press(menu, 400, 215); // Paste JSON -> import screen
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.ModImport);
@@ -104,7 +104,7 @@ describe("mod menu surface wiring", () => {
 	test("paste writes the clipboard text into the import input", async () => {
 		const menu = createKoreMainMenuSurface({ onReadModClipboard: async () => ({ ok: true, text: VALID_TEXT }) });
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		await flush();
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.ModImport);
@@ -115,7 +115,7 @@ describe("mod menu surface wiring", () => {
 		const error: ModError = { category: "io", message: "Clipboard access was denied." };
 		const menu = createKoreMainMenuSurface({ onReadModClipboard: async () => ({ ok: false, error }) });
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		await flush();
 		expect(textOf(menu.toSettings().ui, KoreMenuScreen.ModImport, KoreMenuElement.ModImportHint)).toMatch(/Clipboard access was denied/);
@@ -124,7 +124,7 @@ describe("mod menu surface wiring", () => {
 	test("a host without clipboard support still reports an error", async () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		await flush();
 		expect(textOf(menu.toSettings().ui, KoreMenuScreen.ModImport, KoreMenuElement.ModImportHint)).toMatch(/Clipboard unavailable/);
@@ -134,7 +134,7 @@ describe("mod menu surface wiring", () => {
 		const menu = createKoreMainMenuSurface();
 		menu.drainSoundCommands(); // menu music
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		press(menu, 400, 180); // focus the input
 		for (const char of VALID_TEXT) type(menu, char);
@@ -153,7 +153,7 @@ describe("mod menu surface wiring", () => {
 	test("invalid JSON shows an error summary and disables the test launches", () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		press(menu, 400, 180);
 		for (const char of '{"broken":') type(menu, char);
@@ -172,7 +172,7 @@ describe("mod menu surface wiring", () => {
 			onLaunchModAiBattle: () => { launchedBattle++; },
 		});
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215);
 		press(menu, 400, 180);
 		for (const char of '{"broken":') type(menu, char);
@@ -188,7 +188,7 @@ describe("mod menu surface wiring", () => {
 		const menu = createKoreMainMenuSurface({ onLaunchMod1v1: mod => { received = mod; } });
 		menu.drainSoundCommands(); // menu music
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		menu.drainSoundCommands(); // discard the Mods-navigation confirmation; assert the launch confirmation below
 		menu.importModText(VALID_TEXT, { kind: "file", fileName: "mod.json" });
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.ModResult);
@@ -202,7 +202,7 @@ describe("mod menu surface wiring", () => {
 	test("file import updates the mods status and host io errors render as mod errors", () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		menu.importModText(VALID_TEXT, { kind: "file", fileName: "mod.json" });
 		press(menu, 400, 356); // back -> mods screen
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.Mods);
@@ -215,7 +215,7 @@ describe("mod menu surface wiring", () => {
 	test("the mod back chain returns through import to the mods screen", () => {
 		const menu = createKoreMainMenuSurface();
 		press(menu, 400, 100);
-		press(menu, 715, 371);
+		press(menu, 400, 280);
 		press(menu, 400, 215); // mods -> import
 		menu.importModText(VALID_TEXT, { kind: "paste" });
 		expect(menu.getRuntime().getActiveScreen()).toBe(KoreMenuScreen.ModResult);

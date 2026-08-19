@@ -50,7 +50,7 @@ import { KoreMenuElement, KoreMenuMapIntent, koreMenuMapElementId } from "../../
  */
 
 /** World-coordinate centers of the visible browser controls. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
+const SKIP_BUTTON_WORLD = { x: 620, y: 398 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 

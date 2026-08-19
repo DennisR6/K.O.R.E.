@@ -229,7 +229,7 @@ test.describe("Section 16.2 browser boot and menu rendering", () => {
 			// Landing page: any press advances to the main menu page.
 			await clickWorld(page, 400, 100);
 			// Main menu page exposes "Play Local Game" in the centered bottom action row.
-			await clickWorld(page, 463, 368);
+			await clickWorld(page, 400, 220); await clickWorld(page, 400, 160);
 
 			// The local-play action starts exactly one canonical match.
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");

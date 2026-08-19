@@ -28,7 +28,7 @@ import {
  */
 
 /** World-coordinate center of the SDK HUD "Skip phase" button. */
-const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
+const SKIP_BUTTON_WORLD = { x: 620, y: 398 };
 
 test.describe("Section 16.3 local turn through browser input", () => {
 	test.afterAll(() => {
@@ -46,7 +46,7 @@ test.describe("Section 16.3 local turn through browser input", () => {
 
 			// Enter local play through the visible menu first.
 			await clickWorld(page, 400, 100); // landing page
-			await clickWorld(page, 463, 368); // "Play Local Game"
+			await clickWorld(page, 400, 220); await clickWorld(page, 400, 160); // Play Offline -> vs Player
 			await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 
 			// The canonical match starts in the item phase with twelve live figures.

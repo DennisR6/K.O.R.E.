@@ -33,7 +33,7 @@ import {
 
 /** World-coordinate centers of the visible browser controls. */
 const ITEM_BUTTON_WORLD = { x: 645, y: 81 };
-const SKIP_BUTTON_WORLD = { x: 660, y: 327 };
+const SKIP_BUTTON_WORLD = { x: 620, y: 398 };
 const REMATCH_BUTTON_WORLD = { x: 317.5, y: 324 };
 const MENU_BUTTON_WORLD = { x: 482.5, y: 324 };
 
@@ -76,7 +76,7 @@ async function readMatchResult(page: import("playwright").Page): Promise<{
 
 async function enterLocalMatch(page: import("playwright").Page): Promise<void> {
 	await clickWorld(page, 400, 100); // landing page
-	await clickWorld(page, 463, 368); // "Play Local Game"
+	await clickWorld(page, 400, 220); await clickWorld(page, 400, 160); // Play Offline -> vs Player
 	await waitFor(async () => (await activeGameModeId(page)) === "local-ice-duel-v1", 10_000, 100, "canonical local match");
 	const state = await readMatchState(page);
 	expect(state.state).toBe("GameState.Your_turn");
