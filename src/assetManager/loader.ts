@@ -13,9 +13,23 @@ export class EngineAssetManager {
 	private errorCount: Map<ImageKey, number> = new Map();
 	private MAX_RETRIES = 2;
 	private inFlight: Map<ImageKey, Promise<LoadedImage | null>> = new Map();
+	private overrides: Map<ImageKey, string> = new Map();
 	public constructor(options: { fetchImpl?: FetchImplementation; imageFactory?: () => HTMLImageElement } = {}) {
 		this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
 		this.imageFactory = options.imageFactory ?? (() => new Image());
+	}
+
+	/** Installs browser-only debug URLs without changing canonical asset settings. */
+	setOverride(key: ImageKey, url: string): void {
+		this.overrides.set(key, url);
+		this.cache.delete(key);
+		this.errorCount.delete(key);
+	}
+
+	clearOverride(key: ImageKey): void {
+		this.overrides.delete(key);
+		this.cache.delete(key);
+		this.errorCount.delete(key);
 	}
 
 	get(key: ImageKey): LoadedImage | null {
@@ -52,7 +66,8 @@ export class EngineAssetManager {
 
 		const startedAt = performance.now();
 		try {
-			const rawUrl = typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`;
+			const override = this.overrides.get(key);
+			const rawUrl = override ?? (typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`);
 			const fetchUrl = (typeof key === "string" && key.startsWith("/public/")) ? `.${key}` : rawUrl;
 			const response = await this.fetchImpl(fetchUrl);
 			if (!response.ok) throw new Error("Netzwerkfehler");

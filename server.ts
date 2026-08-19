@@ -8,6 +8,8 @@ import { serveOfflineMatchReport } from "./src/server/offlineMatches.ts";
 import { servePerformanceReport } from "./src/server/performanceReports.ts";
 import { serveMatchReport } from "./src/server/matchReports.ts";
 import { serveFeedback } from "./src/server/feedbackRoute.ts";
+import { serveDebugAssets } from "./src/server/debugAssets.ts";
+import { join } from "node:path";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -19,6 +21,7 @@ const dashboardConfig = readDashboardConfig(process.env);
 const databasePath = resolveGameDatabasePath(process.env, import.meta.dir);
 const database = new GameDatabase(databasePath);
 const runtime = new ServerRuntime(new GameRegistry(database));
+const debugAssetRoot = join(import.meta.dir, "data", "debug-assets");
 
 Bun.serve<WebSocketData>({
   port: PORT,
@@ -29,6 +32,8 @@ Bun.serve<WebSocketData>({
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		const dashboard = await serveDashboard(req, runtime.getRegistry(), dashboardConfig, database, serverConfig.baseUrl);
 		if (dashboard) return dashboard;
+		const debugAssets = await serveDebugAssets(req, database, dashboardConfig.operatorSecret, debugAssetRoot);
+		if (debugAssets) return debugAssets;
 		const replay = servePublicReplayShare(req, runtime.getRegistry());
 		if (replay) return replay;
 		const offline = await serveOfflineMatchReport(req, database);

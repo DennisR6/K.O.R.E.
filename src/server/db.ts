@@ -47,6 +47,7 @@ export type DashboardPerformancePeriod = { samples: number; average: number | nu
 export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; yesterday: DashboardPerformancePeriod; week: DashboardPerformancePeriod };
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
 export type StoredDashboardApiToken = { id: string; label: string; createdAt: number; lastUsedAt: number | null };
+export type StoredDebugAssetToken = StoredDashboardApiToken;
 const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 type PerformanceSample = { createdAt: number; value: number };
@@ -105,6 +106,15 @@ export class GameDatabase {
 		this.db.run("PRAGMA foreign_keys = ON");
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS dashboard_api_tokens (
+				id TEXT PRIMARY KEY,
+				token_hash TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				last_used_at INTEGER
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS debug_asset_tokens (
 				id TEXT PRIMARY KEY,
 				token_hash TEXT NOT NULL UNIQUE,
 				label TEXT NOT NULL,
@@ -777,6 +787,25 @@ export class GameDatabase {
 		const row = this.db.query("SELECT id FROM dashboard_api_tokens WHERE token_hash = ?1").get(hash) as { id: string } | null;
 		if (!row) return false;
 		this.db.query("UPDATE dashboard_api_tokens SET last_used_at = ?2 WHERE id = ?1").run(row.id, Date.now());
+		return true;
+	}
+	public createDebugAssetToken(label: string): { token: string; record: StoredDebugAssetToken } {
+		const normalized = label.trim().slice(0, 80) || "designer";
+		const token = `kore_asset_${randomBytes(32).toString("base64url")}`;
+		const id = crypto.randomUUID();
+		const createdAt = Date.now();
+		this.db.query("INSERT INTO debug_asset_tokens (id, token_hash, label, created_at) VALUES (?1, ?2, ?3, ?4)").run(id, createHash("sha256").update(token).digest("hex"), normalized, createdAt);
+		return { token, record: { id, label: normalized, createdAt, lastUsedAt: null } };
+	}
+	public listDebugAssetTokens(): StoredDebugAssetToken[] {
+		return this.db.query("SELECT id, label, created_at, last_used_at FROM debug_asset_tokens ORDER BY created_at DESC").all().map(row => { const value = row as { id: string; label: string; created_at: number; last_used_at: number | null }; return { id: value.id, label: value.label, createdAt: value.created_at, lastUsedAt: value.last_used_at }; });
+	}
+	public revokeDebugAssetToken(id: string): boolean { return this.db.query("DELETE FROM debug_asset_tokens WHERE id = ?1").run(id).changes > 0; }
+	public isDebugAssetTokenValid(token: string): boolean {
+		const hash = createHash("sha256").update(token).digest("hex");
+		const row = this.db.query("SELECT id FROM debug_asset_tokens WHERE token_hash = ?1").get(hash) as { id: string } | null;
+		if (!row) return false;
+		this.db.query("UPDATE debug_asset_tokens SET last_used_at = ?2 WHERE id = ?1").run(row.id, Date.now());
 		return true;
 	}
 

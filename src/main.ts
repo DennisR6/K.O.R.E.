@@ -37,6 +37,7 @@ import { buildFeedbackEndpoint, installDesyncFeedbackReporter, installFeedbackPr
 import { ActionManager, GameAction } from "./input/actions.js";
 import { ControllerInput } from "./input/controller.js";
 import { createDebugItemSandboxHandler } from "./scenes/matchPipeline.js";
+import { startAssetDebugPanel } from "./debug/assets.js";
 
 const uri = new URL(window.location.href)
 const REPLAY_TOKEN = /^[a-f0-9]{32}$/;
@@ -50,6 +51,7 @@ const usersettings = {
 	mapPreference: uri.searchParams.get("map") ?? undefined,
 	modePreference: uri.searchParams.get("mode") ?? undefined,
 	debugGame: uri.searchParams.get("debug") === "game",
+	debugAssets: uri.searchParams.get("debug") === "assets",
 	friendRole: uri.searchParams.get("friend") as "create" | "join" | null,
 	friendCode: uri.searchParams.get("code") ?? undefined,
 }
@@ -81,6 +83,8 @@ let handler: GameHandler
 let router: LocalMatchSceneRouter | undefined
 if (isUiDebugSandboxUrl(uri)) {
 	startUiDebugSandbox()
+} else if (usersettings.debugAssets) {
+	await startAssetDebugPanel();
 } else if (usersettings.debugGame) {
 	startupMark("scene.init.started", { scene: "debug-game" });
 	handler = createDebugItemSandboxHandler(usersettings.mapPreference ?? "ice-map-v1");

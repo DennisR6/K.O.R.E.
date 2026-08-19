@@ -478,7 +478,7 @@ After every change, check whether this guide still reflects the implementation a
 - `src/assetManager/assets/assetRegistry.ts`: generated numeric asset enum and
   path map, but tracked because source code imports it.
 - `src/assetManager/loader.ts`: lazy browser image fetch/cache with a working
-  `public/assets/json/` fallback path.
+  `public/assets/json/` fallback path and browser-only debug override mappings.
 - `scripts/createAssetPack.ts`: scans public images, rewrites the asset
   registry, and emits base64 JSON packs under `public/assets/json/` with
   proper MIME types.
@@ -540,7 +540,14 @@ After every change, check whether this guide still reflects the implementation a
   `/operator/dashboard/metrics` and `/operator/db`; `/operator/db` checkpoints
   the SQLite WAL before serializing so exported game snapshots and settings are
   complete. `/config` publishes a deployment `buildHash` used to verify that a
-  pushed staging build has been redeployed.
+  pushed staging build has been redeployed. The dashboard also creates and
+  revokes separate debug-asset API keys; these keys have no dashboard or
+  production-data permissions.
+- `src/server/debugAssets.ts`: isolated debug-asset API. A dashboard-created
+  key exchanges once for an HttpOnly debug-session cookie, after which the
+  `/?debug=assets` browser surface can list, upload, preview, and remove
+  overrides stored under `data/debug-assets/`. It never writes `public/` or
+  changes the generated asset registry.
 - `src/server/server.ts`: login helpers.
 - `src/server/db.ts`: explicit SQLite game store. It gzip-compresses complete
 	`EngineSettings` snapshots plus immutable replay-origin settings/actions,
