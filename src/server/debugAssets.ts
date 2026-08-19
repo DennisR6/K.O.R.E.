@@ -16,11 +16,11 @@ export function isDebugAssetsPath(pathname: string): boolean {
 	return pathname === DEBUG_ASSETS_PATH || pathname === DEBUG_ASSET_SESSION_PATH || pathname.startsWith(`${DEBUG_ASSETS_PATH}/`);
 }
 
-export async function serveDebugAssets(request: Request, database: AssetDatabase, secret: string | undefined, root: string): Promise<Response | undefined> {
+export async function serveDebugAssets(request: Request, database: AssetDatabase, secret: string | undefined, root: string, publicBaseUrl?: string): Promise<Response | undefined> {
 	const url = new URL(request.url);
 	if (!isDebugAssetsPath(url.pathname)) return undefined;
 	if (!secret) return notFound();
-	if (url.pathname === DEBUG_ASSET_SESSION_PATH) return createSession(request, database, secret);
+	if (url.pathname === DEBUG_ASSET_SESSION_PATH) return createSession(request, database, secret, publicBaseUrl);
 	if (!isSession(request, secret)) return notFound();
 	mkdirSync(root, { recursive: true });
 	if (url.pathname === DEBUG_ASSETS_PATH && request.method === "GET") return listAssets(root);
@@ -33,7 +33,7 @@ export async function serveDebugAssets(request: Request, database: AssetDatabase
 	return new Response("Method not allowed", { status: 405, headers: { allow: "POST, DELETE" } });
 }
 
-async function createSession(request: Request, database: AssetDatabase, secret: string): Promise<Response> {
+async function createSession(request: Request, database: AssetDatabase, secret: string, publicBaseUrl?: string): Promise<Response> {
 	if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
 	const authorization = request.headers.get("authorization");
 	const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
@@ -41,7 +41,7 @@ async function createSession(request: Request, database: AssetDatabase, secret: 
 	const expires = Math.floor(Date.now() / 1000) + 8 * 60 * 60;
 	const payload = `kore-debug-assets-v1.${expires}`;
 	const signature = createHmac("sha256", secret).update(payload).digest("base64url");
-	return Response.json({ ok: true }, { headers: { "set-cookie": `${COOKIE}=${expires}.${signature}; Path=${DEBUG_ASSETS_PATH}; HttpOnly; Secure; SameSite=Strict; Max-Age=28800`, "cache-control": "no-store" } });
+	return Response.json({ ok: true }, { headers: { "set-cookie": `${COOKIE}=${expires}.${signature}; Path=${debugCookiePath(publicBaseUrl)}; HttpOnly; Secure; SameSite=Strict; Max-Age=28800`, "cache-control": "no-store" } });
 }
 
 function isSession(request: Request, secret: string): boolean {
@@ -86,6 +86,13 @@ function remove(asset: string, root: string): Response {
 	const path = assetFile(asset, root);
 	try { unlinkSync(path); } catch { return notFound(); }
 	return Response.json({ ok: true }, { headers: { "cache-control": "no-store" } });
+}
+
+function debugCookiePath(publicBaseUrl?: string): string {
+	if (!publicBaseUrl) return DEBUG_ASSETS_PATH;
+	const base = new URL(publicBaseUrl);
+	if (!base.pathname.endsWith("/")) base.pathname += "/";
+	return new URL(DEBUG_ASSETS_PATH.slice(1), base).pathname;
 }
 
 function notFound(): Response { return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } }); }

@@ -32,7 +32,7 @@ Bun.serve<WebSocketData>({
 		if (url.pathname.includes(".db") || url.pathname.includes("..")) return new Response("Forbidden", { status: 403 });
 		const dashboard = await serveDashboard(req, runtime.getRegistry(), dashboardConfig, database, serverConfig.baseUrl);
 		if (dashboard) return dashboard;
-		const debugAssets = await serveDebugAssets(req, database, dashboardConfig.operatorSecret, debugAssetRoot);
+		const debugAssets = await serveDebugAssets(req, database, dashboardConfig.operatorSecret, debugAssetRoot, serverConfig.baseUrl);
 		if (debugAssets) return debugAssets;
 		const replay = servePublicReplayShare(req, runtime.getRegistry());
 		if (replay) return replay;
