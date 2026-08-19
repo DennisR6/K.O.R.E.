@@ -196,22 +196,6 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
                   ]
                 }),
 
-                ui.button({
-                  id: "main-mods-vertical",
-                  text: translate(language, KoreMenuText.Mods),
-                  rect: { x: 0, y: 0, width: 220, height: 50 },
-                  style: KoreMenuStyle.MainButton,
-                  action: ui.action.emit(KoreMenuCommand.OpenMods),
-                }),
-
-                ui.button({
-                  id: "main-maps-vertical",
-                  text: translate(language, KoreMenuText.ChooseMap),
-                  rect: { x: 0, y: 0, width: 220, height: 50 },
-                  style: KoreMenuStyle.MainButton,
-                  action: ui.action.emit(KoreMenuCommand.OpenLocalMaps),
-                }),
-
                 // Settings Button
                 ui.container({
                   id: "image-text-button-settings",
