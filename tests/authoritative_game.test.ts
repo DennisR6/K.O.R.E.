@@ -45,6 +45,17 @@ function connectMatchedRuntime(): { runtime: ServerRuntime; first: FakeSocket; s
 	return { runtime, first, second }
 }
 
+test("network emitter exposes ranked queue commands with normalized regions", () => {
+	const sent: string[] = [];
+	const emitter = new NetworkEmitter({ send: (message: string) => sent.push(message) } as unknown as WebSocket);
+	emitter.joinRankedQueue("EU");
+	emitter.cancelRankedQueue();
+	expect(JSON.parse(sent[0]!).type).toBe(NetworkMessageType.RANKED_QUEUE_JOIN);
+	expect(JSON.parse(sent[0]!).region).toBe("eu");
+	expect(JSON.parse(sent[1]!).type).toBe(NetworkMessageType.RANKED_QUEUE_CANCEL);
+	expect(() => emitter.joinRankedQueue("bad region")).toThrow();
+});
+
 test("server can require and verify signed player sessions for ranked-capable login", () => {
 	const runtime = new ServerRuntime(new GameRegistry(new GameDatabase(":memory:")), undefined, false, "session-secret");
 	const socket = new FakeSocket({ connectionId: "99999999-9999-4999-8999-999999999999" });

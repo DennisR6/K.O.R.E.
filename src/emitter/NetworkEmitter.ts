@@ -4,7 +4,7 @@ import { TurnSystem } from "../systems/TurnSystem.js";
 import { wrap } from "../utils/net.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 import { NetworkMessageType, type NetworkCreateReplayShare, type NetworkShoot, type NetworkTurn, type UnTypedNetworkMessage } from "../server/types.js";
-import type { NetworkGameEnded, NetworkItemUsed, NetworkPhaseChanged, NetworkReportMatch, NetworkSkipPhase, NetworkSurrenderGame, NetworkUseItem } from "../server/types.js";
+import type { NetworkGameEnded, NetworkItemUsed, NetworkPhaseChanged, NetworkRankedQueueJoin, NetworkRankedQueueCancel, NetworkReportMatch, NetworkSkipPhase, NetworkSurrenderGame, NetworkUseItem } from "../server/types.js";
 import type { ItemTarget } from "../item/target.js";
 
 /**
@@ -30,6 +30,12 @@ export class NetworkEmitter implements IInputEmitter {
 	sendShot(actorId: string, angle: number, power: number): void {
 		this.socket.send(wrap<NetworkShoot>({ type: NetworkMessageType.SHOOT, actorId, angle, power }))
 	}
+
+	joinRankedQueue(region: string): void {
+		if (!/^[a-z]{2,12}$/i.test(region)) throw new Error("Invalid ranked region");
+		this.socket.send(wrap<NetworkRankedQueueJoin>({ type: NetworkMessageType.RANKED_QUEUE_JOIN, region: region.toLowerCase() }));
+	}
+	cancelRankedQueue(): void { this.socket.send(wrap<NetworkRankedQueueCancel>({ type: NetworkMessageType.RANKED_QUEUE_CANCEL })); }
 
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
 		this.socket.send(wrap<NetworkUseItem>({ type: NetworkMessageType.USE_ITEM, actorId, itemId, target }))
@@ -97,6 +103,10 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		if (message.type === NetworkMessageType.PHASE_CHANGED) {
 			handler.setRuleState((message as NetworkPhaseChanged).ruleState)
 			handler.setState(TurnSystem.stateForTeam((message as NetworkPhaseChanged).ruleState.activeTeam, handler.getTeam()))
+		}
+		if (message.type === NetworkMessageType.RANKED_QUEUE_STATUS) {
+			const status = message as { type: NetworkMessageType.RANKED_QUEUE_STATUS; queued: boolean; size: number };
+			handler.log("ranked.queue.status", { queued: status.queued, size: status.size });
 		}
 		if (message.type === NetworkMessageType.ERROR) {
 			console.warn("Server rejected input:", message.message)
