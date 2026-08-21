@@ -51,9 +51,9 @@ export class GameplayFeedbackTrace {
 const ANIMATION_TYPES = Object.values(KoreGameplayFeedbackType);
 function animation(type: KoreGameplayFeedbackType): AnimationSettings {
 	const result = type === KoreGameplayFeedbackType.Result;
-	return presentation.createAnimation({ id: `kore.feedback.${type}`, channel: `feedback.${type}`, durationTicks: result ? 12 : 6, priority: result ? 100 : 20, interruption: "replace", tracks: [
-		{ id: "opacity", keyframes: [{ tick: 0, value: 1 }, { tick: result ? 8 : 3, value: 0 }] },
-		{ id: "scale", keyframes: [{ tick: 0, value: type === KoreGameplayFeedbackType.Shot ? 0.7 : 0.8 }, { tick: result ? 12 : 6, value: result ? 1.25 : 1.15 }] },
+	return presentation.createAnimation({ id: `kore.feedback.${type}`, channel: `feedback.${type}`, durationTicks: result ? 36 : 24, priority: result ? 100 : 20, interruption: "replace", tracks: [
+		{ id: "opacity", keyframes: [{ tick: 0, value: 1 }, { tick: result ? 28 : 18, value: 0 }] },
+		{ id: "scale", keyframes: [{ tick: 0, value: type === KoreGameplayFeedbackType.Shot ? 0.7 : 0.8 }, { tick: result ? 32 : 20, value: result ? 1.25 : 1.15 }] },
 	] });
 }
 

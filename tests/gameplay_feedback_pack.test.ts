@@ -41,13 +41,9 @@ test("feedback rendering applies animated opacity until the presentation expires
 	surface.accept({ schemaVersion: 1, sequence: 0, turnNumber: 0, type: KoreGameplayFeedbackType.Shot });
 	surface.tick(1);
 	surface.draw(renderer);
-	surface.tick(1);
-	surface.tick(1);
-	surface.tick(1);
+	for (let tick = 0; tick < 18; tick++) surface.tick(1);
 	surface.draw(renderer);
-	surface.tick(1);
-	surface.tick(1);
-	surface.tick(1);
+	for (let tick = 0; tick < 7; tick++) surface.tick(1);
 	surface.draw(renderer);
 
 	expect(opacity).toEqual([1, 0]);
