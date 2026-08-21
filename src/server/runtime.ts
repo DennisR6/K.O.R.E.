@@ -46,7 +46,7 @@ export class ServerRuntime {
 	public message(socket: ServerSocket, rawMessage: string): void {
 		const message = parseMessage(rawMessage)
 		if (!message) return this.sendError(socket, "Malformed network packet")
-		const limit = this.packetLimiter.consume(socket.data.connectionId, Date.now());
+		const limit = this.packetLimiter.consume(this.userByConnection.get(socket.data.connectionId) ?? socket.data.connectionId, Date.now());
 		if (!limit.allowed) return this.sendError(socket, `Rate limit exceeded; retry in ${limit.retryAfterMs}ms`);
 
 		switch (message.type) {
