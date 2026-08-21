@@ -9,6 +9,7 @@ import { GameState } from "../kore/runtime/types.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 import { encodeKorePackedInit } from "../net/roastPackedInit.js";
 import { RateLimiter } from "./rateLimiter.js";
+import { verifyPlayerSession } from "./playerSession.js";
 import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -23,7 +24,7 @@ export class ServerRuntime {
 	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string; friendCode?: string }> = [];
 	private readonly packetLimiter = new RateLimiter(120, 60);
 
-	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1") { }
+	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1", private readonly playerSessionSecret = process.env.KORE_PLAYER_SESSION_SECRET) { }
 
 	private sendInit(socket: ServerSocket, record: import("./gameRegistry.js").GameRecord, userId: string, mapId?: string, modeId?: string): void { const settings = this.games.settingsForUser(record, userId); if (this.packedInit) socket.send(encodeKorePackedInit(settings, { gameId: record.id, mapId, modeId, ruleState: record.ruleState })); else socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings, ruleState: record.ruleState, mapId, modeId })); }
 
@@ -51,7 +52,7 @@ export class ServerRuntime {
 
 		switch (message.type) {
 			case NetworkMessageType.LOGIN:
-				this.login(socket, message.userid, message.mapPreference, message.modePreference, message.friendRole, message.friendCode)
+				this.login(socket, message.userid, message.sessionToken, message.mapPreference, message.modePreference, message.friendRole, message.friendCode)
 				return
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
@@ -169,10 +170,13 @@ export class ServerRuntime {
 		}
 	}
 
-	private login(socket: ServerSocket, requestedUserId: unknown, mapPreference?: unknown, modePreference?: unknown, friendRole?: unknown, friendCode?: unknown): void {
-		const userId = typeof requestedUserId === "string" && requestedUserId.length > 0
+	private login(socket: ServerSocket, requestedUserId: unknown, sessionToken?: unknown, mapPreference?: unknown, modePreference?: unknown, friendRole?: unknown, friendCode?: unknown): void {
+		const session = this.playerSessionSecret && typeof sessionToken === "string" ? verifyPlayerSession(sessionToken, this.playerSessionSecret, Date.now()) : undefined;
+		if (this.playerSessionSecret && !session) return this.sendError(socket, "A valid player session is required");
+		if (session && requestedUserId !== undefined && requestedUserId !== session.userId) return this.sendError(socket, "Player session identity does not match login identity");
+		const userId = session?.userId ?? (typeof requestedUserId === "string" && requestedUserId.length > 0
 			? requestedUserId
-			: crypto.randomUUID()
+			: crypto.randomUUID())
 		const connectionId = socket.data.connectionId
 		const oldConnection = this.connectionByUser.get(userId)
 		if (oldConnection && oldConnection !== connectionId) this.sockets.delete(oldConnection)

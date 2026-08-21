@@ -127,6 +127,7 @@ export interface NetworkShoot extends IInput {
 export interface NetworkLogin {
 	type: NetworkMessageType.LOGIN,
 	userid: UUID | undefined,
+	sessionToken?: string,
 	mapPreference?: string,
 	modePreference?: string,
 	friendRole?: "create" | "join",

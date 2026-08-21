@@ -12,6 +12,7 @@ import { ServerRuntime, type ServerSocket } from "../src/server/runtime.ts";
 import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { NetworkMessageType, type WebSocketData } from "../src/server/types.ts";
+import { issuePlayerSession } from "../src/server/playerSession.ts";
 
 const userOne = "11111111-1111-4111-8111-111111111111";
 const userTwo = "22222222-2222-4222-8222-222222222222";
@@ -43,6 +44,17 @@ function connectMatchedRuntime(): { runtime: ServerRuntime; first: FakeSocket; s
 	expect(packet(first).ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 	return { runtime, first, second }
 }
+
+test("server can require and verify signed player sessions for ranked-capable login", () => {
+	const runtime = new ServerRuntime(new GameRegistry(new GameDatabase(":memory:")), undefined, false, "session-secret");
+	const socket = new FakeSocket({ connectionId: "99999999-9999-4999-8999-999999999999" });
+	runtime.open(socket);
+	runtime.message(socket, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne }));
+	expect(packet(socket).type).toBe(NetworkMessageType.ERROR);
+	const token = issuePlayerSession(userOne, "session-secret", Date.now());
+	runtime.message(socket, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne, sessionToken: token }));
+	expect(packet(socket).type).toBe(NetworkMessageType.WAITINGROOM);
+});
 
 test("Player settings round-trip all mutable state", () => {
 	const settings = createPlayerSettings({
