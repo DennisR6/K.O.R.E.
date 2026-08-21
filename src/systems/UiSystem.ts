@@ -10,6 +10,7 @@ export interface IUiSystem extends ISerializableSystem, IDrawer, IMouse { }
 export class UiSystem implements IUiSystem {
 	public readonly systemId = "ui.pointer-input";
 	private static readonly MIN_DRAG_DISTANCE = 8
+	private static readonly SELECTION_PADDING = 6
 	start: Vector2D | null = null
 	end: Vector2D | null = null
 	currentMouse: Vector2D = { x: 0, y: 0 }
@@ -101,7 +102,7 @@ export class UiSystem implements IUiSystem {
 		}
 
 		if (!this.start) return
-		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y)
+		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y, UiSystem.SELECTION_PADDING)
 		if (!actor || actor.isDead() || !actor.isActorEligible() || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
 			this.clearInput()
 			return

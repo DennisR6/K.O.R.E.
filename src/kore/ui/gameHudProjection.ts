@@ -27,7 +27,7 @@ export interface KoreHudProjection {
 /** Pure, detached gameplay-to-HUD projection boundary. */
 export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, rejection?: string): KoreHudProjection {
 	const rule = handler.getRuleState(); const state = handler.getState();
-	const selectedActorId = input?.selectedActorId ?? (input?.start ? handler.getEntityManager().getEntityAt(input.start.x, input.start.y)?.getId() ?? null : null);
+	const selectedActorId = input?.selectedActorId ?? (input?.start ? handler.getEntityManager().getEntityAt(input.start.x, input.start.y, 6)?.getId() ?? null : null);
 	const activeActors = handler.getEntityManager().getEntities().filter(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(rule.activeTeam));
 	const dx = input?.start ? input.currentMouse.x - input.start.x : 0; const dy = input?.start ? input.currentMouse.y - input.start.y : 0;
 	const length = Math.hypot(dx, dy);
@@ -69,7 +69,7 @@ function projectTeamInventory(handler: GameHandler, actors: IEntity[], enabled: 
 /** Converts the active pointer drag into immutable world-space arrow geometry. */
 function createAimPreview(handler: GameHandler, input: UiSystem | undefined): KoreHudWorldGuidance["aimPreview"] {
 	if (handler.getState() !== GameState.Your_turn || !input?.start || input.end) return undefined;
-	const actor = handler.getEntityManager().getEntityAt(input.start.x, input.start.y);
+	const actor = handler.getEntityManager().getEntityAt(input.start.x, input.start.y, 6);
 	if (!actor || actor.isDead() || !actor.getTeam().includes(handler.getActiveTeam())) return undefined;
 	const dx = input.start.x - input.currentMouse.x; const dy = input.start.y - input.currentMouse.y;
 	const length = Math.hypot(dx, dy);
