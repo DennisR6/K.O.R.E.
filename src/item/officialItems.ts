@@ -153,7 +153,7 @@ export const powerDashItem: ItemDocument = createItem({
 export const verzoegerteMineItem: ItemDocument = createItem({
 	id: "verzoegerte-mine",
 	name: "Verzögerte Mine",
-	description: "Creates a delayed repelling force explosion at a selected position.",
+	description: "Arms at a selected position, then detonates after 3 physics ticks with a repelling blast in a 60-unit radius.",
 	type: "trap",
 	effects: [{ type: "deferredEffect", value: { durationUnit: "ticks", duration: DELAYED_MINE_DELAY_TICKS, effect: { schemaVersion: 1, type: MOVEMENT_APPLY_FORCE_FIELD_EFFECT_ID, typeValue: { mode: "repel", force: DELAYED_MINE_FORCE, range: DELAYED_MINE_RADIUS } } } }],
 	targetType: "position",
@@ -165,7 +165,7 @@ export const verzoegerteMineItem: ItemDocument = createItem({
 export const miniWallItem: ItemDocument = createItem({
 	id: "mini-wall",
 	name: "Mini-Wall",
-	description: "Spawns a temporary portable wall at a selected position.",
+	description: "Creates a solid portable wall at a selected position for 3 turns.",
 	type: "defensive",
 	effects: [{ type: "structureLifecycle", value: { durationUnit: "turns", duration: MINI_WALL_DURATION_TURNS, structure: { type: "rectangle", w: MINI_WALL_WIDTH, h: MINI_WALL_HEIGHT, role: "solid" } } }],
 	targetType: "position",
