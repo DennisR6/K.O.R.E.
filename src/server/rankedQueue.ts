@@ -1,4 +1,5 @@
 import { RANKED_RULESET_VERSION } from "./ranked.js";
+import { rankedMapForMatch } from "./rankedRuleset.js";
 
 export type RankedQueueEntry = {
 	playerId: string;
@@ -12,6 +13,7 @@ export type RankedQueueMatch = {
 	first: RankedQueueEntry;
 	second: RankedQueueEntry;
 	rulesetVersion: typeof RANKED_RULESET_VERSION;
+	mapId: string;
 };
 
 /** Deterministic in-memory ranked queue; persistence/authentication remains a server boundary. */
@@ -28,7 +30,7 @@ export class RankedQueue {
 	public has(playerId: string): boolean { return this.entries.has(playerId); }
 	public size(): number { return this.entries.size; }
 
-	public match(now: number, initialRange = 100, expansionPerSecond = 50): RankedQueueMatch | undefined {
+	public match(now: number, initialRange = 100, expansionPerSecond = 50, matchOrdinal = 0): RankedQueueMatch | undefined {
 		const candidates = [...this.entries.values()].sort((a, b) => a.joinedAt - b.joinedAt || a.playerId.localeCompare(b.playerId));
 		for (const first of candidates) {
 			const waitSeconds = Math.max(0, Math.floor((now - first.joinedAt) / 1000));
@@ -36,7 +38,7 @@ export class RankedQueue {
 			const second = candidates.find(candidate => candidate.playerId !== first.playerId && candidate.seasonId === first.seasonId && candidate.region === first.region && Math.abs(candidate.rating - first.rating) <= range);
 			if (!second) continue;
 			this.entries.delete(first.playerId); this.entries.delete(second.playerId);
-			return { first: structuredClone(first), second: structuredClone(second), rulesetVersion: RANKED_RULESET_VERSION };
+			return { first: structuredClone(first), second: structuredClone(second), rulesetVersion: RANKED_RULESET_VERSION, mapId: rankedMapForMatch(first.seasonId, matchOrdinal) };
 		}
 		return undefined;
 	}

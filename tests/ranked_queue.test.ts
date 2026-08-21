@@ -5,7 +5,9 @@ test("ranked queue pairs compatible players by wait time and rating range", () =
 	const queue = new RankedQueue();
 	queue.enqueue({ playerId: "a", seasonId: "s1", rating: 1000, region: "eu", joinedAt: 0 });
 	queue.enqueue({ playerId: "b", seasonId: "s1", rating: 1080, region: "eu", joinedAt: 100 });
-	expect(queue.match(1_000, 50, 50)?.first.playerId).toBe("a");
+	const match = queue.match(1_000, 50, 50);
+	expect(match?.first.playerId).toBe("a");
+	expect(match?.mapId).toBe("magma-cradle");
 	expect(queue.size()).toBe(0);
 });
 
