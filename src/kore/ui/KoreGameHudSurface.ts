@@ -46,7 +46,8 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		const hoveredItem = projection.inventory.find(item => item.itemId === hoveredItemId);
 		const inventorySummary = projection.inventory.map(item => `${item.name ?? item.itemId} (${item.remainingUses})`).join(", ");
 		const titleItem = hoveredItem ?? selectedItem;
-		this.setText(KoreHudElement.ItemsTitle, titleItem ? `${titleItem.name ?? titleItem.itemId}${titleItem.description ? `: ${titleItem.description}` : ""}${titleItem.timing ? ` (${titleItem.timing})` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: ${inventorySummary || "none"}. Hover an icon for details or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
+		const targetHint = titleItem?.targetType ? ` Target: ${titleItem.targetType}.` : "";
+		this.setText(KoreHudElement.ItemsTitle, titleItem ? `${titleItem.name ?? titleItem.itemId}${titleItem.description ? `: ${titleItem.description}` : ""}${titleItem.timing ? ` (${titleItem.timing})` : ""}${targetHint}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: ${inventorySummary || "none"}. Hover an icon for details or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
 			// Item controls are deliberately icon-only so they never cover the arena.
