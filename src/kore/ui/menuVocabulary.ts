@@ -34,6 +34,8 @@ export enum KoreMenuCommand {
 	SelectMap = "kore.menu.select-map",
 	OpenAiMaps = "kore.menu.open-ai-maps",
 	OpenMods = "kore.menu.open-mods",
+	OpenPlaytest = "kore.menu.open-playtest",
+	StartPlaytest = "kore.menu.start-playtest",
 	ImportModFile = "kore.menu.import-mod-file",
 	ImportModPaste = "kore.menu.import-mod-paste",
 	ValidateMod = "kore.menu.validate-mod",
@@ -56,6 +58,7 @@ export enum KoreMenuScreen {
 	MapAiMedium = "map-ai-medium",
 	MapAiHard = "map-ai-hard",
 	Mods = "mods",
+	Playtest = "playtest",
 	ModImport = "mod-import",
 	ModResult = "mod-result",
 }
@@ -76,6 +79,7 @@ export enum KoreMenuElement {
 	OnlineSubTitle = "online-sub-title",
 	LocalSubTitle = "local-sub-title",
 	MainMods = "main-mods",
+	MainPlaytest = "main-playtest",
 	MapOnlineNote = "map-online-note",
 	DifficultyTitle = "difficulty-title",
 	DifficultyBack = "difficulty-back",
@@ -94,6 +98,10 @@ export enum KoreMenuElement {
 	ModResult1v1 = "mod-result-1v1",
 	ModResultBattle = "mod-result-battle",
 	ModResultBack = "mod-result-back",
+	PlaytestTitle = "playtest-title",
+	PlaytestInstructions = "playtest-instructions",
+	PlaytestStart = "playtest-start",
+	PlaytestBack = "playtest-back",
 }
 
 export enum KoreMenuStyle {
@@ -138,6 +146,10 @@ export const KoreMenuText = {
 	Ki: LANGUAGE_KEYS.MenuKiLabel,
 	Matchmaking: LANGUAGE_KEYS.MenuMatchmakingLabel,
 	Mods: LANGUAGE_KEYS.ModsButton,
+	Playtest: LANGUAGE_KEYS.MenuPlaytestButton,
+	PlaytestTitle: LANGUAGE_KEYS.MenuPlaytestTitle,
+	PlaytestInstructions: LANGUAGE_KEYS.MenuPlaytestInstructions,
+	PlaytestStart: LANGUAGE_KEYS.MenuPlaytestStart,
 	ModsTitle: LANGUAGE_KEYS.ModsTitle,
 	ModsLoadFile: LANGUAGE_KEYS.ModsLoadFile,
 	ModsPasteJson: LANGUAGE_KEYS.ModsPasteJson,
@@ -167,6 +179,8 @@ export type KoreMenuCommandMessage =
 	| { type: KoreMenuCommand.OpenLocalMaps; payload: undefined }
 	| { type: KoreMenuCommand.OpenAiMaps; payload: { difficulty: KoreMenuDifficulty } }
 	| { type: KoreMenuCommand.OpenMods; payload: undefined }
+	| { type: KoreMenuCommand.OpenPlaytest; payload: undefined }
+	| { type: KoreMenuCommand.StartPlaytest; payload: undefined }
 	| { type: KoreMenuCommand.ImportModFile; payload: undefined }
 	| { type: KoreMenuCommand.ImportModPaste; payload: undefined }
 	| { type: KoreMenuCommand.ValidateMod; payload: undefined }

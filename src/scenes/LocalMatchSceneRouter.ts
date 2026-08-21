@@ -273,6 +273,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.menuPreview = preview;
 		return createKoreMainMenuSurface({
 			onPlayLocal: () => this.startLocalMatch(),
+			onStartPlaytest: () => this.startLocalMatch("magma-cradle"),
 			onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId),
 			getStartError: () => this.error,
 			onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId),

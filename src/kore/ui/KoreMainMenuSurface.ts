@@ -17,6 +17,7 @@ import { startupMark } from "../runtime/startupTelemetry.js";
 
 export interface KoreMainMenuCallbacks {
 	onPlayLocal?: () => void;
+	onStartPlaytest?: () => void;
 	onSelectMap?: (mapId: string, modeId?: string) => void;
 	getStartError?: () => string | undefined;
 	onPlayOnline?: (mapId?: string, modeId?: string) => void;
@@ -108,6 +109,8 @@ export class KoreMainMenuSurface implements IMouse, ISoundEmitter {
 			case KoreMenuCommand.OpenAiMaps: this.runtime.dispatch({ type: "navigate", target: koreMenuMapScreen(KoreMenuMapIntent.Ai, command.payload.difficulty) }); return;
 			case KoreMenuCommand.SelectMap: this.selectMap(command.payload); return;
 			case KoreMenuCommand.OpenMods: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Mods }); return;
+			case KoreMenuCommand.OpenPlaytest: this.confirm(command.type); this.runtime.dispatch({ type: "navigate", target: KoreMenuScreen.Playtest }); return;
+			case KoreMenuCommand.StartPlaytest: this.confirm(command.type); startupMark("game.start.requested", { mode: "human-playtest" }); this.callbacks.onStartPlaytest?.(); return;
 			case KoreMenuCommand.ImportModFile: this.confirm(command.type); this.callbacks.onImportModFile?.(); return;
 			case KoreMenuCommand.ImportModPaste: this.confirm(command.type); this.handleModPaste(); return;
 			case KoreMenuCommand.ValidateMod: this.confirm(command.type); this.validateImportedText(); return;

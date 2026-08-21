@@ -9,10 +9,11 @@ test("central KORE main-menu composition builds validated JSON-safe UI and persi
 	expect(() => validateKoreMainMenuSettings(settings)).not.toThrow();
 	expect(JSON.parse(composition.buildJson())).toEqual(settings);
 	expect(settings.ui.activeScreen).toBe(KoreMenuScreen.Landing);
-	expect(settings.ui.screens.map(screen => screen.id)).toEqual([KoreMenuScreen.Landing, KoreMenuScreen.Main, KoreMenuScreen.OnlineSub, KoreMenuScreen.LocalSub, KoreMenuScreen.Settings, KoreMenuScreen.Credits, KoreMenuScreen.MapLocal, KoreMenuScreen.MapOnline, KoreMenuScreen.MapBattle, KoreMenuScreen.Difficulty, KoreMenuScreen.MapAiEasy, KoreMenuScreen.MapAiMedium, KoreMenuScreen.MapAiHard, KoreMenuScreen.Mods, KoreMenuScreen.ModImport, KoreMenuScreen.ModResult]);
+	expect(settings.ui.screens.map(screen => screen.id)).toEqual([KoreMenuScreen.Landing, KoreMenuScreen.Main, KoreMenuScreen.Playtest, KoreMenuScreen.OnlineSub, KoreMenuScreen.LocalSub, KoreMenuScreen.Settings, KoreMenuScreen.Credits, KoreMenuScreen.MapLocal, KoreMenuScreen.MapOnline, KoreMenuScreen.MapBattle, KoreMenuScreen.Difficulty, KoreMenuScreen.MapAiEasy, KoreMenuScreen.MapAiMedium, KoreMenuScreen.MapAiHard, KoreMenuScreen.Mods, KoreMenuScreen.ModImport, KoreMenuScreen.ModResult]);
 	expect(settings.audio.persistentSources).toMatchObject([{ sourceId: KoreMenuId.AudioSource, command: { type: "playMusic", soundId: "kore.music.menu" } }]);
 	expect(settings.metadata.confirmationSoundId).toBe("kore.ui.confirm");
 	expect(settings.metadata.confirmationCommands).toContain(KoreMenuCommand.StartLocal);
+	expect(settings.metadata.confirmationCommands).toContain(KoreMenuCommand.StartPlaytest);
 });
 
 test("SDK menu surface uses explicit ticks, pure draws, semantic transitions, and snapshot reconstruction", () => {

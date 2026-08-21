@@ -40,7 +40,7 @@ export class KoreMainMenuComposition {
       id: KoreMenuId.Composition,
       ui: buildUiSettings(this.language),
       audio: { ...audioSettings, framework: audio.createDefaultFramework(), persistentSources: [{ sourceId: KoreMenuId.AudioSource, command: menuMusic }] },
-      metadata: { schemaVersion: 1, title: MENU_TITLE, worldSize: { ...SIZE }, confirmationCommands: [KoreMenuCommand.OpenAi, KoreMenuCommand.OpenBattle, KoreMenuCommand.OpenOnline, KoreMenuCommand.OpenOnlineFriends, KoreMenuCommand.OpenLocalMaps, KoreMenuCommand.OpenAiMaps, KoreMenuCommand.SelectMap, KoreMenuCommand.StartLocal, KoreMenuCommand.OpenMods, KoreMenuCommand.ImportModFile, KoreMenuCommand.ImportModPaste, KoreMenuCommand.ValidateMod, KoreMenuCommand.LaunchMod1v1, KoreMenuCommand.LaunchModAiBattle], confirmationSoundId: koreAudio.sounds.uiConfirm },
+      metadata: { schemaVersion: 1, title: MENU_TITLE, worldSize: { ...SIZE }, confirmationCommands: [KoreMenuCommand.OpenAi, KoreMenuCommand.OpenBattle, KoreMenuCommand.OpenOnline, KoreMenuCommand.OpenOnlineFriends, KoreMenuCommand.OpenLocalMaps, KoreMenuCommand.OpenAiMaps, KoreMenuCommand.SelectMap, KoreMenuCommand.StartLocal, KoreMenuCommand.OpenMods, KoreMenuCommand.OpenPlaytest, KoreMenuCommand.StartPlaytest, KoreMenuCommand.ImportModFile, KoreMenuCommand.ImportModPaste, KoreMenuCommand.ValidateMod, KoreMenuCommand.LaunchMod1v1, KoreMenuCommand.LaunchModAiBattle], confirmationSoundId: koreAudio.sounds.uiConfirm },
     };
     validateKoreMainMenuSettings(settings);
     return structuredClone(settings);
@@ -123,6 +123,13 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
                   text: translate(language, KoreMenuText.Title),
                   rect: rect(0, 0, 60, 48),
                   style: KoreMenuStyle.MapTitle
+                }),
+                ui.button({
+                  id: KoreMenuElement.MainPlaytest,
+                  text: translate(language, KoreMenuText.Playtest),
+                  rect: rect(0, 0, 220, 42),
+                  style: KoreMenuStyle.MainButton,
+                  action: ui.action.emit(KoreMenuCommand.OpenPlaytest),
                 }),
 
                 // Online Button
@@ -276,7 +283,19 @@ function buildUiSettings(language: LanguageCatalog): UiMenuSettings {
     })
   );
 
-  // 2. ONLINE AND LOCAL SUBMENUS
+  // 2. HUMAN PLAYTEST
+  builder.addScreen(ui.screen({
+    id: KoreMenuScreen.Playtest,
+    layout: ui.layout.absolute(),
+    elements: [
+      ui.text({ id: KoreMenuElement.PlaytestTitle, text: translate(language, KoreMenuText.PlaytestTitle), rect: rect(150, 55, 500, 40), style: KoreMenuStyle.MapTitle }),
+      ui.text({ id: KoreMenuElement.PlaytestInstructions, text: translate(language, KoreMenuText.PlaytestInstructions), rect: rect(125, 125, 550, 100), style: KoreMenuStyle.MapNote }),
+      ui.button({ id: KoreMenuElement.PlaytestStart, text: translate(language, KoreMenuText.PlaytestStart), rect: rect(250, 275, 300, 48), style: KoreMenuStyle.MainButton, action: ui.action.emit(KoreMenuCommand.StartPlaytest) }),
+      ui.button({ id: KoreMenuElement.PlaytestBack, text: translate(language, KoreMenuText.Back), rect: rect(270, 350, 260, 36), style: KoreMenuStyle.DifficultyBack, action: ui.action.back() }),
+    ],
+  }));
+
+  // 3. ONLINE AND LOCAL SUBMENUS
   builder.addScreen(
     ui.screen({
       id: KoreMenuScreen.OnlineSub,
