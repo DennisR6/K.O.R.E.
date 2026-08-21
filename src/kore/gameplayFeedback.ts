@@ -123,6 +123,15 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 		} else {
 			const radius = (event.type === KoreGameplayFeedbackType.Elimination ? 24 : event.type === KoreGameplayFeedbackType.Shield ? 20 : 14) * scale;
 			renderer.drawCircle(position.x, position.y, radius);
+			// Procedural sparks use only the immutable feedback sequence, so the
+			// burst is identical in live play, restore, and replay.
+			const seedAngle = (event.sequence * 0.61803398875) % (Math.PI * 2);
+			for (let index = 0; index < 6; index++) {
+				const angle = seedAngle + index * Math.PI / 3;
+				const inner = radius * 0.8;
+				const outer = radius * (1.35 + (index % 2) * 0.25);
+				renderer.line(position.x + Math.cos(angle) * inner, position.y + Math.sin(angle) * inner, position.x + Math.cos(angle) * outer, position.y + Math.sin(angle) * outer);
+			}
 			if (event.type === KoreGameplayFeedbackType.Elimination) {
 				const arm = 12 * scale;
 				renderer.line(position.x - arm, position.y - arm, position.x + arm, position.y + arm);
