@@ -7,7 +7,7 @@ import { KoreHudCommand, type KoreHudCommandMessage, type KoreReportCategory } f
 import { createKoreHudProjection } from "../kore/ui/gameHudProjection.js";
 import type { ItemTarget } from "../item/target.js";
 import { createEnglishLanguage, type LanguageCatalog } from "../i18n/language.js";
-import { KoreGameplayFeedbackSurface } from "../kore/gameplayFeedback.js";
+import { KoreGameplayFeedbackSurface, KoreGameplayFeedbackType } from "../kore/gameplayFeedback.js";
 
 /**
  * Semantic HUD actions. Callbacks that return `false` signal external handling
@@ -53,10 +53,18 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 		return entity?.getPos();
 	});
 	let feedbackCursor = 0;
+	let chargeKey: string | undefined;
 	handler.setMouseHandler(hud);
 	const sync = () => createKoreHudProjection(handler, uiSystem, rejection);
 	hud.applyProjection(sync());
 	handler.addPostTicker({ tick: (_ctx, dt) => {
+		if (uiSystem?.selectedActorId && uiSystem.aimAngle !== null && uiSystem.chargePower !== null) {
+			const nextChargeKey = `${uiSystem.selectedActorId}:${uiSystem.aimAngle}:${uiSystem.chargePower}`;
+			if (nextChargeKey !== chargeKey) {
+				handler.recordFeedback(KoreGameplayFeedbackType.Charge, { actorId: uiSystem.selectedActorId, data: { angle: uiSystem.aimAngle, power: uiSystem.chargePower } });
+				chargeKey = nextChargeKey;
+			}
+		} else chargeKey = undefined;
 		const events = handler.getFeedbackTrace(feedbackCursor);
 		for (const event of events) feedback.accept(event);
 		feedbackCursor += events.length;
