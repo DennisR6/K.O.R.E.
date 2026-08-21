@@ -50,6 +50,9 @@ export const enum NetworkMessageType {
 	GAME = "GAME",
 	SHOOT = "SHOOT",
 	LOGIN = "LOGIN",
+	RANKED_QUEUE_JOIN = "RANKED_QUEUE_JOIN",
+	RANKED_QUEUE_CANCEL = "RANKED_QUEUE_CANCEL",
+	RANKED_QUEUE_STATUS = "RANKED_QUEUE_STATUS",
 	NEWUSER = "NEWUSER",
 	WAITINGROOM = "WAITINGROOM",
 	FRIEND_ROOM_CREATED = "FRIEND_ROOM_CREATED",
@@ -95,7 +98,7 @@ export type UnTypedNetworkMessage =
 	NetworkPong |
 	NetworkInit |
 	NetworkShoot |
-	NetworkLogin |
+	NetworkLogin | NetworkRankedQueueJoin | NetworkRankedQueueCancel | NetworkRankedQueueStatus |
 	NetworkGame |
 	NetworkWaitingRoom |
 	NetworkFriendRoomCreated |
@@ -124,6 +127,10 @@ export interface NetworkInit { type: NetworkMessageType.INIT, settings: EngineSe
 export interface NetworkShoot extends IInput {
 	type: NetworkMessageType.SHOOT
 }
+export interface NetworkRankedQueueJoin { type: NetworkMessageType.RANKED_QUEUE_JOIN, region: string }
+export interface NetworkRankedQueueCancel { type: NetworkMessageType.RANKED_QUEUE_CANCEL }
+export interface NetworkRankedQueueStatus { type: NetworkMessageType.RANKED_QUEUE_STATUS, queued: boolean, size: number }
+
 export interface NetworkLogin {
 	type: NetworkMessageType.LOGIN,
 	userid: UUID | undefined,

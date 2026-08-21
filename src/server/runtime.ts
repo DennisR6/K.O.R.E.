@@ -10,6 +10,7 @@ import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 import { encodeKorePackedInit } from "../net/roastPackedInit.js";
 import { RateLimiter } from "./rateLimiter.js";
 import { verifyPlayerSession } from "./playerSession.js";
+import type { RankedService } from "./rankedService.js";
 import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -23,8 +24,9 @@ export class ServerRuntime {
 	private connectionByUser = new Map<string, string>();
 	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string; friendCode?: string }> = [];
 	private readonly packetLimiter = new RateLimiter(120, 60);
+	private rankedMatchOrdinal = 0;
 
-	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1", private readonly playerSessionSecret = process.env.KORE_PLAYER_SESSION_SECRET) { }
+	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1", private readonly playerSessionSecret = process.env.KORE_PLAYER_SESSION_SECRET, private readonly rankedService?: RankedService) { }
 
 	private sendInit(socket: ServerSocket, record: import("./gameRegistry.js").GameRecord, userId: string, mapId?: string, modeId?: string): void { const settings = this.games.settingsForUser(record, userId); if (this.packedInit) socket.send(encodeKorePackedInit(settings, { gameId: record.id, mapId, modeId, ruleState: record.ruleState })); else socket.send(wrap<NetworkInit>({ type: NetworkMessageType.INIT, gameId: record.id, settings, ruleState: record.ruleState, mapId, modeId })); }
 
@@ -40,6 +42,7 @@ export class ServerRuntime {
 		if (userId) {
 			if (this.connectionByUser.get(userId) === connectionId) this.connectionByUser.delete(userId)
 			this.waitingUsers = this.waitingUsers.filter(waiting => waiting.userId !== userId)
+			this.rankedService?.queue.cancel(userId)
 			this.games.disconnectUser(userId)
 		}
 	}
@@ -53,6 +56,12 @@ export class ServerRuntime {
 		switch (message.type) {
 			case NetworkMessageType.LOGIN:
 				this.login(socket, message.userid, message.sessionToken, message.mapPreference, message.modePreference, message.friendRole, message.friendCode)
+				return
+			case NetworkMessageType.RANKED_QUEUE_JOIN:
+				this.joinRankedQueue(socket, message.region)
+				return
+			case NetworkMessageType.RANKED_QUEUE_CANCEL:
+				this.cancelRankedQueue(socket)
 				return
 			case NetworkMessageType.SHOOT:
 				this.shoot(socket, message)
@@ -97,6 +106,20 @@ export class ServerRuntime {
 
 	public matchmakeOnce(): void {
 		this.games.evictInactive()
+		if (this.rankedService) {
+			const rankedMatch = this.rankedService.matchmake(Date.now(), this.rankedMatchOrdinal++);
+			if (rankedMatch) {
+				const users = [rankedMatch.first.playerId, rankedMatch.second.playerId];
+				const record = this.maps
+					? this.games.createRankedFromApprovedMap(this.maps, rankedMatch.mapId, withMode(GameSettings, "quick-slip-v1"), users, rankedMatch.first.seasonId, rankedMatch.rulesetVersion)
+					: this.games.createRanked(withMode(buildMapSettings(rankedMatch.mapId, GameSettings), "quick-slip-v1"), users, rankedMatch.mapId, rankedMatch.first.seasonId, rankedMatch.rulesetVersion);
+				for (const user of users) {
+					this.games.connectUser(user);
+					const socket = this.socketForUser(user);
+					if (socket) this.sendInit(socket, record, user, rankedMatch.mapId, record.handler.getSettings()?.gameMode?.id);
+				}
+			}
+		}
 		while (this.waitingUsers.length >= 2) {
 			const first = this.waitingUsers[0]!;
 			const secondIndex = first.friendCode
@@ -168,6 +191,28 @@ export class ServerRuntime {
 		} catch (error) {
 			this.sendError(socket, error instanceof Error ? error.message : "Invalid invite payload")
 		}
+	}
+
+	private joinRankedQueue(socket: ServerSocket, region: unknown): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId) return this.sendError(socket, "Login is required before ranked matchmaking");
+		if (!this.playerSessionSecret) return this.sendError(socket, "Ranked matchmaking requires configured player sessions");
+		if (!this.rankedService || typeof region !== "string" || !/^[a-z]{2,12}$/i.test(region)) return this.sendError(socket, "Ranked matchmaking is unavailable or the region is invalid");
+		try {
+			this.rankedService.enqueue(userId, this.rankedService.getRating(userId), region.toLowerCase(), Date.now());
+			this.sendRankedStatus(socket, true);
+		} catch (error) { this.sendError(socket, error instanceof Error ? error.message : "Unable to join ranked queue"); }
+	}
+
+	private cancelRankedQueue(socket: ServerSocket): void {
+		const userId = this.userByConnection.get(socket.data.connectionId);
+		if (!userId || !this.rankedService) return this.sendRankedStatus(socket, false);
+		this.rankedService.queue.cancel(userId);
+		this.sendRankedStatus(socket, false);
+	}
+
+	private sendRankedStatus(socket: ServerSocket, queued: boolean): void {
+		socket.send(wrap({ type: NetworkMessageType.RANKED_QUEUE_STATUS, queued, size: this.rankedService?.queue.size() ?? 0 }));
 	}
 
 	private login(socket: ServerSocket, requestedUserId: unknown, sessionToken?: unknown, mapPreference?: unknown, modePreference?: unknown, friendRole?: unknown, friendCode?: unknown): void {
