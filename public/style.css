@@ -10,9 +10,10 @@ body {
 
 }
 body {
-    cursor: none;
+    cursor: default;
 }
 #my-cursor {
+    display: none;
     position: absolute;
     width: 32px;
     height: 32px;
