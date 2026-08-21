@@ -626,9 +626,12 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		system.onCollision = (a, b) => {
 			const ids = [a, b].filter((value): value is IEntity & IPhysics<SHAPE> => typeof (value as IEntity).getId === "function").map(value => value.getId())
 			this.recordFeedback(KoreGameplayFeedbackType.Collision, { ...(ids[0] ? { actorId: ids[0] } : {}), ...(ids.length > 1 ? { targetIds: ids.slice(1) } : {}) })
-			if (ids.length === 1) this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true } })
 			const structure = [a, b].find(value => typeof (value as IStructure).getCollisionCommands === "function") as IStructure | undefined;
 			const entity = [a, b].find(value => typeof (value as IEntity).getId === "function" && typeof (value as IEntity).getTeam === "function") as IEntity | undefined;
+			if (ids.length === 1) {
+				const vector = structure ? collisionVelocityVector(structure.getCollisionCommands()) : undefined;
+				this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true, ...(vector ? { vectorX: vector.x, vectorY: vector.y } : {}) } });
+			}
 			if (structure && entity) dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
 		}
 	}
@@ -1271,6 +1274,24 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			if (!this.items.some(item => item.id === itemId)) throw new Error(`Seeded item draw references unknown item '${itemId}'`)
 		}
 	}
+}
+
+function collisionVelocityVector(commands: readonly unknown[]): { x: number; y: number } | undefined {
+	for (const command of commands) {
+		if (!command || typeof command !== "object") continue;
+		const effect = (command as { effect?: unknown }).effect;
+		if (!effect || typeof effect !== "object") continue;
+		const value = effect as { type?: unknown; typeValue?: unknown; effects?: unknown[] };
+		if (value.type === "effect.composition" && Array.isArray(value.effects)) {
+			const nested = collisionVelocityVector(value.effects);
+			if (nested) return nested;
+		}
+		if (value.type === "movement.add-velocity" && value.typeValue && typeof value.typeValue === "object") {
+			const vector = value.typeValue as { x?: unknown; y?: unknown };
+			if (typeof vector.x === "number" && typeof vector.y === "number" && Number.isFinite(vector.x) && Number.isFinite(vector.y)) return { x: vector.x, y: vector.y };
+		}
+	}
+	return undefined;
 }
 
 function isEntityForceFieldItemEffect(effect: LoweredItemEffect): effect is EntityForceFieldItemEffect {
