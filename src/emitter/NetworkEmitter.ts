@@ -74,8 +74,18 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 				if (turn.matchResult) handler.setMatchResult(turn.matchResult);
 				handler.setState(turn.gameOver ? GameState.Game_over : TurnSystem.stateForTeam(turn.activeTeam, handler.getTeam()))
 				const localStateHash = fingerprintAuthoritativeTurn({ players: handler.getEntityManager().serialize(), state: handler.getState(), turnNumber: turn.turnNumber, activeTeam: turn.activeTeam, ruleState: handler.getRuleState(), matchResult: handler.getMatchResult() });
+				let synchronizedHash = localStateHash;
 				const hashMatches = turn.stateHash === undefined || turn.stateHash === localStateHash;
-				handler.log(hashMatches ? "turnPacket.synchronized" : "turnPacket.hash-mismatch", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, actualStateHash: localStateHash, hashMatches, preSyncDrift: handler.getLastPositionDrift() });
+				if (!hashMatches) {
+					// The server's final player state is authoritative. Playback normally
+					// reaches it through the hard-sync path, but explicitly restoring it
+					// here repairs drift caused by a missed local effect or old client
+					// build instead of leaving the client in a divergent match.
+					handler.getEntityManager().applySettings(turn.sim.finalState);
+					synchronizedHash = fingerprintAuthoritativeTurn({ players: handler.getEntityManager().serialize(), state: handler.getState(), turnNumber: turn.turnNumber, activeTeam: turn.activeTeam, ruleState: handler.getRuleState(), matchResult: handler.getMatchResult() });
+					handler.log("turnPacket.resynchronized", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, repairedStateHash: synchronizedHash, preSyncDrift: handler.getLastPositionDrift() });
+				}
+				handler.log(hashMatches ? "turnPacket.synchronized" : "turnPacket.hash-mismatch", { gameId: turn.gameId, sequence, turnNumber: turn.turnNumber, expectedStateHash: turn.stateHash, actualStateHash: synchronizedHash, hashMatches: turn.stateHash === undefined || turn.stateHash === synchronizedHash, preSyncDrift: handler.getLastPositionDrift() });
 			})
 		}
 		if (message.type === NetworkMessageType.ITEM_USED) {

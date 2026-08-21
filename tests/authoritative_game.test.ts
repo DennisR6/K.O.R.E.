@@ -292,6 +292,7 @@ test("NetworkEmitter rejects stale turns and records hash mismatches", () => {
 	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sequence: 1, turnNumber: 1, activeTeam: 1, ruleState, stateHash: "00000000", sim: { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState } }));
 	handler.tick();
 	expect(handler.getLogs().some(log => log.type === "turnPacket.hash-mismatch")).toBe(true);
+	expect(handler.getLogs().some(log => log.type === "turnPacket.resynchronized")).toBe(true);
 	socket.receive(JSON.stringify({ type: NetworkMessageType.TURN, sequence: 1, turnNumber: 1, activeTeam: 1, ruleState, stateHash: "00000000", sim: { actorId: source.id, input: { angle: 0, power: 1 }, durationFrames: 0, finalState: [createPlayerSettings({ ...source, position: { x: 99, y: 99 } })] } }));
 	expect(handler.getLogs().some(log => log.type === "turnPacket.stale")).toBe(true);
 	expect(handler.getEntityManager().getEntities()[0].getPos()).toEqual({ x: 12, y: 13 });

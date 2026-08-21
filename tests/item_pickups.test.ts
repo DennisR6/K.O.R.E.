@@ -3,6 +3,7 @@ import { GameHandlerBuilder } from "../src/kore/runtime/Handler.ts";
 import { createItemDocument } from "../src/item/types.ts";
 import { RulePhase, WinCondition } from "../src/rules/types.ts";
 import { createDefaultGameSettings } from "../src/settings/settings.ts";
+import { KoreGameplayFeedbackType } from "../src/kore/gameplayFeedback.ts";
 
 test("map pickups collect deterministically for live entities on the active team and restore their turn limit", () => {
 	const item = createItemDocument({ id: "dash", useLimit: { perTurn: 5, perGame: 3 } });
@@ -34,6 +35,7 @@ test("map pickups collect deterministically for live entities on the active team
 	expect(deadActive.getInventory()).toEqual([]);
 	expect(active.getInventory()).toEqual([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);
 	expect(enemy.getInventory()).toEqual([]);
+	expect(handler.getFeedbackTrace().some(event => event.type === KoreGameplayFeedbackType.Item && event.actorId === active.getId() && event.data && typeof event.data === "object" && !Array.isArray(event.data) && event.data.source === "map-pickup")).toBe(true);
 	handler.tick();
 	expect(active.getInventory()).toEqual([{ itemId: item.id, remainingUses: 1, usesThisTurn: 0 }]);
 

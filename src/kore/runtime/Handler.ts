@@ -891,6 +891,9 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 		const inventory = entity.getInventory();
 		addDrawnInventoryItem(inventory, item);
 		entity.setInventory(inventory);
+		// Pickup feedback is presentation-only, but recording it here makes the
+		// inventory change observable in the same authoritative tick as collection.
+		this.feedback.record(KoreGameplayFeedbackType.Item, this.getTurnNumber(), { actorId: String(entity.getId()), data: { itemId: item.id, source: "map-pickup" } });
 	}
 	private unwrapMysteryBoxPickup(actor: IEntity): void {
 		const options = this.mysteryBoxRewardOptions(actor.getId())
