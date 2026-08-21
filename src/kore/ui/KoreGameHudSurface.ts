@@ -9,6 +9,7 @@ import { hudResultText, hudStateText, type KoreHudProjection } from "./gameHudPr
 import { KORE_HUD_ITEM_SLOTS, KoreHudColor, KoreHudElement, KoreHudId, KoreHudStyle, koreHudItemElementId } from "./hudVocabulary.js";
 import { RulePhase } from "../../rules/types.js";
 import type { ItemTarget } from "../../item/target.js";
+import { itemIconSource } from "../../item/itemIcons.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 import { AssetList, assetKeySource } from "../../assetManager/assets/assetRegistry.js";
 
@@ -41,13 +42,16 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		const itemsVisible = turn.phase === RulePhase.Item && !projection.match.result;
 		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible);
 		const selectedItem = projection.inventory.find(item => item.itemId === this.selectedItemId);
+		const hoveredItemId = this.hoveredItemId();
+		const hoveredItem = projection.inventory.find(item => item.itemId === hoveredItemId);
 		const inventorySummary = projection.inventory.map(item => `${item.name ?? item.itemId} (${item.remainingUses})`).join(", ");
-		this.setText(KoreHudElement.ItemsTitle, selectedItem ? `Select a target for ${this.itemName(this.selectedItemId!)}${selectedItem.description ? `: ${selectedItem.description}` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: ${inventorySummary || "none"}. Choose an icon or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
+		const titleItem = hoveredItem ?? selectedItem;
+		this.setText(KoreHudElement.ItemsTitle, titleItem ? `${titleItem.name ?? titleItem.itemId}${titleItem.description ? `: ${titleItem.description}` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: ${inventorySummary || "none"}. Hover an icon for details or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
 			// Item controls are deliberately icon-only so they never cover the arena.
 			this.setText(id, "");
-			this.runtime.setElementComponent(id, item ? (item.component ?? { type: "image", source: assetKeySource(AssetList.itemsPlaceholderSVG) }) : undefined);
+			this.runtime.setElementComponent(id, item ? (item.component ?? { type: "image", source: itemIconSource(item.itemId) ?? assetKeySource(AssetList.itemsPlaceholderSVG) }) : undefined);
 			this.runtime.setElementAction(id, item ? { type: "emit", command: KoreHudCommand.UseItem, payload: { itemId: item.itemId, target: { type: "self" } } } : undefined);
 		}
 		const resultVisible = !!projection.match.result;
@@ -69,7 +73,12 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		this.route(this.runtime.drainCommands());
 	}
 	public draw(renderer: RenderContext): void { this.drawWorldGuidance(renderer); this.runtime.draw(new KoreHudRenderer(renderer)); }
-	public updateMouse(x: number, y: number): void { this.mouse = { x, y }; this.gameplayInput?.updateMouse(x, y); }
+	public updateMouse(x: number, y: number): void {
+		this.mouse = { x, y };
+		this.runtime.tick({ pointer: { x, y } });
+		this.route(this.runtime.drainCommands());
+		this.gameplayInput?.updateMouse(x, y);
+	}
 	public handleMousePressed(): void {
 		this.runtime.tick({ pointer: { ...this.mouse, pressed: true, justPressed: true } }); const hit = this.runtime.getPressedTargetId(); this.route(this.runtime.drainCommands());
 		if (!hit && this.selectedItemId && this.projection?.turn.phase === RulePhase.Item && this.resolveItemTarget) {
@@ -90,6 +99,14 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	public handleMouseCancelled(): void { (this.gameplayInput as (IMouse & { cancelInput?: () => void }) | undefined)?.cancelInput?.(); }
 	public handleMouseWheel(event: WheelEvent): void { if (!this.paused && !this.projection?.match.result) this.gameplayInput?.handleMouseWheel(event); }
 	public reset(): void { this.gameplayInput?.reset?.(); }
+	private hoveredItemId(): string | undefined {
+		const hovered = this.runtime.getHoveredElementId();
+		const prefix = "hud-item-";
+		if (!hovered?.startsWith(prefix)) return undefined;
+		const slot = Number(hovered.slice(prefix.length));
+		return Number.isInteger(slot) ? this.projection?.inventory[slot]?.itemId : undefined;
+	}
+
 	private route(commands: UiCommand[]): void {
 		for (const raw of commands) {
 			const command = raw.command === KoreHudCommand.SubmitReport && raw.payload === undefined
@@ -135,7 +152,6 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 	}
 	private confirm(): void { this.sounds.emit(koreAudio.command.uiConfirm(this.soundSourceId)); }
 	private setText(id: KoreHudElement | string, text: string): void { this.runtime.dispatch({ type: "setText", target: id, text }); }
-	private itemName(itemId: string): string { return this.projection?.inventory.find(item => item.itemId === itemId)?.name ?? itemId; }
 	/** Renders only immutable projection geometry; gameplay input and state stay outside the surface. */
 	private drawWorldGuidance(renderer: RenderContext): void {
 		const projection = this.projection;
