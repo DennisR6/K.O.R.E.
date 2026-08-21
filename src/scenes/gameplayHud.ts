@@ -48,7 +48,10 @@ export function installGameplayHud(handler: GameHandler, actions: GameplayHudAct
 	const hud = createKoreGameHudSurface({
 		handle: command => handleHudCommand(command, handler, { ...actions, itemUi }),
 	}, gameplayInput, undefined, { canSkipItemPhase: actions.canSkipItemPhase ?? true, canPause: actions.canPause ?? true, canReport: !!actions.onReport }, actions.language ?? createEnglishLanguage(), (itemId, point) => resolveItemTarget(handler, uiSystem, itemId, point));
-	const feedback = new KoreGameplayFeedbackSurface();
+	const feedback = new KoreGameplayFeedbackSurface(undefined, undefined, entityId => {
+		const entity = handler.getEntityManager().getEntityById(entityId);
+		return entity?.getPos();
+	});
 	let feedbackCursor = 0;
 	handler.setMouseHandler(hud);
 	const sync = () => createKoreHudProjection(handler, uiSystem, rejection);
