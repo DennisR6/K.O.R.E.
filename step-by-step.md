@@ -1117,3 +1117,110 @@ unfinished runtime work:
 There is currently no safe next implementation item. Reopen either item only
 when a concrete consumer supplies the missing canonical contract; otherwise the
 next work would be speculative architecture.
+
+# Database Feedback And Ranked Mode Plan
+
+This section consolidates the downloaded-database analysis and ranked-mode
+readiness plan into this roadmap. Source: read-only `data/kore.db`, analyzed
+2026-08-21.
+
+## Database evidence summary
+
+- 17 user-feedback records; 12 include ratings: 3x rating 3, 7x rating 4, 2x rating 5 (average 3.92/5).
+- 104 offline matches: 38 human-vs-AI, 45 hotseat, and 21 AI-vs-AI.
+- Map coverage is heavily skewed: Magma Cradle has 75/104 matches; Ice Map has 13; every other map has 5 or fewer.
+- Human-vs-AI wins favor the AI 24–14. AI-vs-AI favors team 1 13–8. This is a balance signal, not proof of unfairness because map, team, and seed distributions are uncontrolled.
+- Reported median frame time is approximately 17.1 ms and p95 frame time is at or below 18 ms. Median turn time is about 4.8 seconds, with some turns exceeding 13 seconds.
+- Several hotseat records end at turn 1 with zero replay actions and must be classified as aborted/test records before balance analysis.
+- No map revisions or structured match reports are present in this export.
+
+## Implementation status audit
+
+| Finding | Status | Already present | Remaining work |
+|---|---|---|---|
+| Inventory refresh after pickup | Mostly implemented | `MapPickupSystem` mutates canonical inventory; HUD reprojects post-tick; pickup/HUD tests exist. | Browser regression for immediate visible card update; investigate stale-build/scene-refresh cause. |
+| Online desync/premature completion | Partially implemented | Server completion authority, TURN hashes, stale/hash diagnostics, reconnect and authority tests. | Hash mismatch is logged but not repaired in `NetworkEmitter`; add authoritative resync/voiding and browser coverage. |
+| Hazard force inconsistency | Partially implemented | Degree validation, shared degree-based impulse, deterministic hazard tests. | Direction/strength preview and tests for collision angle, mass, and map conversion. |
+| Item timing/comprehension | Partially implemented | Descriptions, target types, item validation, delayed effects, and inventory tests. | Explain arming/trigger/timing and define post-shot defensive-item windows. |
+| Mobile layout/input | Partially implemented | Shared touch/pointer validation, layout tests, native cursor. | Landscape-first behavior, portrait prompt, drag-radius tuning, real-device evidence. |
+| Animation visibility | Implemented in source, not human-qualified | Deterministic presentation, feedback events, focused tests, browser builds. | Verify in production browser and add procedural particles if too subtle. |
+| AI forgiveness/balance | Partially implemented | AI fuzz/tournament infrastructure and deterministic difficulty settings. | Controlled human-facing experiments with recovery, kill, and comeback metrics. |
+| Team/map fairness | Infrastructure exists, evidence incomplete | Map qualification and mirrored matrix helpers. | Exclude aborted fixtures, run balanced tournaments, publish thresholds. |
+| Telemetry quality | Partially implemented | Playtest marker, ratings/topics, performance/replay persistence, bug diagnostics. | Explicit completed/aborted state and structured item/hazard/desync counters. |
+
+## Database action list
+
+### Priority 0 — fix before broader playtesting
+
+1. **Inventory refresh after pickup.** Refresh HUD state immediately after a pickup, preserve it across selection/playback/death/rematch/reconnect, and add a same-frame browser regression.
+2. **Online desynchronization.** Compare hashes on every accepted turn, reject stale packets, resynchronize from authoritative final state, and test reconnect during playback, duplicate TURN packets, mismatched snapshots, and server-authoritative completion.
+3. **Hazard force consistency.** Display direction and magnitude, confirm degree/coordinate conventions, test angle/mass/map conversion, and explain whether force is additive, mass-scaled, or normal-based.
+
+### Priority 1 — comprehension and control
+
+4. **Item usability/timing.** Show this-phase/next-phase/next-turn timing, target/range/team/duration, previews, delayed-mine arming and trigger radius, and an explicit post-shot defensive-item rule. Test delayed mine, Anchor, Mini-Wall, and pickup-to-inventory behavior.
+5. **Mobile UX.** Prefer landscape with a portrait rotation prompt; enlarge the initial drag target; show selected actor, origin, power, and release preview; test pointer capture, cancellation, safe areas, and low-resolution landscape layouts.
+6. **Feedback/animation visibility.** Keep procedural effects visible for readable durations, add deterministic particle bursts and directional hazard indicators, and add browser/replay assertions that events reach the presentation surface and draw.
+
+### Priority 2 — balance/content
+
+7. **AI difficulty/forgiveness.** Run equal-map/team/seed tournaments; tune Easy for recovery, Medium for pressure, and Hard for agency without unavoidable kills; report survival after non-kill turns, first-kill advantage, kill rate, average turns, and comeback rate.
+8. **Map/team fairness.** Run mirrored starts and balanced map rotations; check spawns, hazards, pickups, and first-shot geometry; publish map thresholds. Do not use the turn-1 hotseat fixtures as balance evidence.
+
+### Priority 3 — telemetry/playtesting
+
+9. **Telemetry quality.** Add completed/aborted/quit status, automated/browser/human markers, structured pickup/use/rejected-action/hazard/desync/rematch counters, and privacy-safe map/mode/seed/team/difficulty dimensions. Preserve hashes and replay references for bugs.
+10. **Playtest coverage.** Require every release map, desktop and mobile landscape, an item-focused session, an online reconnect session, and structured ratings for controls, items, hazards, fairness, performance, and enjoyment.
+
+Recommended order: inventory/timing, online desync recovery, hazard instrumentation, mobile UX, procedural feedback, controlled balance tournaments, telemetry status/counters, then renewed external playtests.
+
+## Ranked mode readiness
+
+### Current conclusion
+
+The game has a usable authoritative casual online foundation but is **not ready
+for ranked play**. It has server-side shot validation, authoritative simulation
+and completion, lifecycle/replay persistence, reconnect restoration, state-hash
+diagnostics, and telemetry. It does not yet have authenticated identities, a
+rating ledger, ranked matchmaking, competitive result finalization, abuse
+controls, or a leaderboard.
+
+### Reusable foundations
+
+- Native WebSocket server and authoritative `GameRegistry`.
+- Server-approved maps and server-side settings expansion.
+- Durable SQLite lifecycle and player membership.
+- Reconnect restoration and surrender handling.
+- Authoritative turn validation, replays, results, and performance telemetry.
+- Deterministic maps, rules, snapshots, and replay audit data.
+
+### Blocking ranked requirements
+
+1. **Identity/authentication.** Current LOGIN accepts a client-provided user ID. Add server-issued sessions, durable player profiles, immutable IDs, display names, ban state, reconnect binding, and login/account rate limits. Anonymous IDs may remain for casual play only.
+2. **Rating ledger.** Add append-only season, ranked-player, ranked-match, rating-event, and penalty records. Use Elo or Glicko-2 with provisional games. Finalize both players transactionally and idempotently with a unique match/result key.
+3. **Ranked queue.** Use authenticated queue entries, compatible ruleset/region pools, rating windows with controlled expansion, duplicate/active-match prevention, cancellation, disconnect expiry, server-selected maps, and optional ready-check. No friend codes or custom map preferences.
+4. **Frozen ruleset.** Version approved map rotation and content hashes, spawn/team order, item economy/catalog, AI-disabled mode, pause/rematch policy, turn/simulation limits, surrender/AFK/disconnect/draw rules, and retain ruleset/map hashes in every replay/result.
+5. **Completion/abuse policy.** Define normal win/loss, surrender, disconnect grace, abandonment, voided server error, draw, and operator termination. Only the server finalizes ranked results; hash mismatch must resynchronize or void, never produce a client rating decision.
+6. **Anti-cheat/protocol hardening.** Add packet/rate validation, account/IP throttles, server-owned seed/map/mode/result/rating values, action/replay audit retention, abnormal timing/reconnect/collusion detection, and admin suspend/void/correction tools with an audit trail.
+7. **Ranked UX/leaderboard.** Add rating/tier/provisional status, season dates, queue status, ready countdown, rules preview, disconnect consequences, result/rating explanation, privacy-safe paginated leaderboard, match history, and replay links.
+
+### Ranked implementation order
+
+1. Fix/verify online hash mismatch recovery and authoritative completion.
+2. Add authenticated accounts while preserving anonymous casual login.
+3. Add season/ruleset/map-rotation documents and ranked-only validation.
+4. Add ranked queue, ready/cancel, and disconnect lifecycle.
+5. Add transactional result finalization and rating events.
+6. Add penalties, rate limits, moderation, and audit tools.
+7. Add ranked UI, leaderboard, history, and replay links.
+8. Run fairness tournaments and external ranked playtests before public enablement.
+
+### Ranked release gates
+
+- 100+ deterministic server simulations with no invalid result/rating event.
+- Reconnect, duplicate packet, timeout, surrender, and server-failure integration tests pass.
+- Exactly one finalized result and one rating event per player for every ranked match.
+- Documented map/team first-turn and win-rate fairness thresholds pass.
+- Abuse and rate-limit tests pass.
+- At least two independent players complete multiple sessions without unresolved desync, control, item, or result complaints.
+- Operators can inspect and void a match without mutating rating history directly.
