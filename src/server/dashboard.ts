@@ -24,10 +24,11 @@ export type DashboardConfig = { operatorSecret: string | undefined };
 export type DashboardMetricsResponse = {
 	schemaVersion: 1;
 	measuredAt: number;
-	counts: Pick<MatchMetrics, "allTime" | "offlineMatches" | "playersAllTime" | "playersOnline" | "now" | "paused" | "sleeping">;
+	counts: Pick<MatchMetrics, "allTime" | "offlineMatches" | "playtestMatches" | "playersAllTime" | "playersOnline" | "now" | "paused" | "sleeping">;
 	offlineModes: MatchMetrics["offlineModes"];
 	performance: DashboardPerformanceMetrics;
 	feedback: StoredFeedback[];
+	playtest: { matches: number; feedback: number; averageRating: number | null; topics: Record<string, number> };
 	mapUsage: MatchMetrics["mapUsage"];
 	mostPlayedMap: MatchMetrics["mostPlayedMap"];
 	freshness: typeof FRESHNESS;
@@ -198,12 +199,16 @@ function wantsJson(request: Request): boolean {
 }
 
 export function metricsResponse(metrics: MatchMetrics, performance: DashboardPerformanceMetrics = emptyPerformanceMetrics(), feedback: StoredFeedback[] = []): DashboardMetricsResponse {
+	const playtestFeedback = feedback.filter(entry => entry.playtest === true);
+	const ratings = playtestFeedback.flatMap(entry => entry.rating === undefined ? [] : [entry.rating]);
+	const topics = playtestFeedback.reduce<Record<string, number>>((counts, entry) => { const topic = entry.topic ?? "unclassified"; counts[topic] = (counts[topic] ?? 0) + 1; return counts; }, {});
 	return {
 		schemaVersion: 1,
 		measuredAt: metrics.measuredAt,
 		counts: {
 			allTime: metrics.allTime,
 			offlineMatches: metrics.offlineMatches,
+			playtestMatches: metrics.playtestMatches,
 			playersAllTime: metrics.playersAllTime,
 			playersOnline: metrics.playersOnline,
 			now: metrics.now,
@@ -213,6 +218,7 @@ export function metricsResponse(metrics: MatchMetrics, performance: DashboardPer
 		offlineModes: metrics.offlineModes.map(metric => ({ ...metric })),
 		performance,
 		feedback: feedback.map(entry => structuredClone(entry)),
+		playtest: { matches: metrics.playtestMatches, feedback: playtestFeedback.length, averageRating: ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : null, topics },
 		mapUsage: metrics.mapUsage.map(metric => ({ ...metric })),
 		mostPlayedMap: metrics.mostPlayedMap && { ...metrics.mostPlayedMap },
 		freshness: FRESHNESS,
@@ -321,7 +327,7 @@ ${dashboardCard("All-time matches", metrics.counts.allTime, "data-metric=\"allTi
 ${dashboardCard("Players online", metrics.counts.playersOnline, "data-metric=\"playersOnline\"", "Across non-sleeping games", "emerald")}
 ${dashboardCard("Matches now", metrics.counts.now, "data-metric=\"now\"", "Resident in this process", "violet")}
 ${dashboardCard("All-time players", metrics.counts.playersAllTime, "data-metric=\"playersAllTime\"", "Distinct player identities", "amber")}
-${dashboardCard("Offline / KI matches", metrics.counts.offlineMatches, "data-metric=\"offlineMatches\"", "Reported from production clients", "rose")}
+${dashboardCard("Offline / KI matches", metrics.counts.offlineMatches, "data-metric=\"offlineMatches\"", "Reported from production clients", "rose")}${dashboardCard("Human playtests", metrics.counts.playtestMatches ?? 0, "data-metric=\"playtestMatches\"", "Matches started from the Human Playtest flow", "violet")}
 </section>
 <section class="grid gap-6 xl:grid-cols-[1.4fr_.8fr]">
 <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/10"><div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Response time</p><h3 class="mt-2 text-xl font-bold text-slate-900">Latency comparison</h3><p class="mt-1 text-sm text-slate-500">Computed from persisted online reports and offline performance logs.</p></div><div id="latency-tabs" class="flex rounded-lg bg-slate-100 p-1"><button data-period="today" class="rounded-md bg-white px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm">Today</button><button data-period="yesterday" class="rounded-md px-3 py-2 text-xs font-semibold text-slate-500">Yesterday</button><button data-period="week" class="rounded-md px-3 py-2 text-xs font-semibold text-slate-500">Last 7 days</button></div></div>

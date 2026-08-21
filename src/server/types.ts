@@ -27,6 +27,7 @@ export type MatchMetrics = {
 	allTime: number;
 	/** Completed offline, hotseat, and AI matches reported by the production clients. */
 	offlineMatches: number;
+	playtestMatches: number;
 	offlineModes: OfflineModeMetric[];
 	/** Distinct durable player identities across every stored match. */
 	playersAllTime: number;

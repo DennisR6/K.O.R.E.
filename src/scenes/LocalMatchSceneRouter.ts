@@ -190,7 +190,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 				// do not require the browser `window` global just to install the
 				// optional post-match feedback prompt.
 				const feedbackBaseUrl = typeof window !== "undefined" ? window.location.href : "http://localhost/";
-				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "magma-cradle" }, buildFeedbackEndpoint(feedbackBaseUrl));
+				installFeedbackPrompt(next, { mode: this.mode, mapId: mapId ?? "magma-cradle", ...(this.playtest ? { playtest: true } : {}) }, buildFeedbackEndpoint(feedbackBaseUrl));
 			}
 			this.installResultOverlay(next);
 			startupMark("game.scene.init.completed", { scene: this.mode ?? "game" });

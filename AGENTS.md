@@ -531,7 +531,8 @@ After every change, check whether this guide still reflects the implementation a
   document, so unfinished matches can be replayed without public listing.
   `GET /operator/dashboard?format=json` returns the same complete aggregate
   dashboard payload as JSON; `/operator/dashboard/metrics` remains its JSON
-  metrics alias. `GET /operator/login` serves a minimal password form and
+  metrics alias; it also exposes Human Playtest match counts and structured
+  playtest feedback aggregates. `GET /operator/login` serves a minimal password form and
   `POST /operator/login` accepts the operator secret and issues a signed,
   HttpOnly, Secure, SameSite=Strict eight-hour cookie accepted by the dashboard
   routes; `POST /operator/logout` expires it. Authenticated `GET /operator/db`

@@ -2,7 +2,7 @@ import type { GameHandler } from "../kore/runtime/Handler.js";
 import { GameState } from "../kore/runtime/types.js";
 import type { FeedbackMode } from "../server/feedback.js";
 
-export type FeedbackContext = { gameId?: string; userId?: string; mode: FeedbackMode; mapId?: string };
+export type FeedbackContext = { gameId?: string; userId?: string; mode: FeedbackMode; mapId?: string; playtest?: boolean };
 export type FeedbackPrompt = (message?: string, defaultValue?: string) => string | null;
 export type FeedbackTopic = "bug" | "balance" | "controls" | "other";
 

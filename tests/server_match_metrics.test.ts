@@ -18,6 +18,7 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 	expect(registry.getMetrics(10)).toEqual({
 		allTime: 0,
 		offlineMatches: 0,
+		playtestMatches: 0,
 		offlineModes: [],
 		playersAllTime: 0,
 		playersOnline: 0,
@@ -50,6 +51,7 @@ test.serial("dashboard metrics are mutually exclusive across resident, paused, s
 	expect(registry.getMetrics(30)).toEqual({
 		allTime: 4,
 		offlineMatches: 0,
+		playtestMatches: 0,
 		offlineModes: [],
 		playersAllTime: 8,
 		playersOnline: 4,
