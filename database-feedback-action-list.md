@@ -12,6 +12,20 @@ Analysis source: downloaded `data/kore.db` (read-only), analyzed 2026-08-21.
 - Several hotseat records end at turn 1 with zero replay actions. These appear to be aborted/test records and should be excluded from balance conclusions.
 - No map revisions or structured match reports are present in this database export.
 
+## Implementation status audit
+
+| Finding | Current status | Evidence in source/tests | Remaining work |
+|---|---|---|---|
+| Inventory refresh after pickup | **Mostly implemented** | `MapPickupSystem` mutates canonical inventory; HUD reprojects every post-tick; pickup and HUD tests exist. | Add a real browser regression proving the visible card updates immediately after collection. Investigate the historical report as a stale-build or scene-refresh regression. |
+| Online desync/premature completion | **Partially implemented** | Server owns completion; TURN packets carry state hashes; stale/hash-mismatch logs and diagnostic feedback exist; reconnect and authority tests exist. | A hash mismatch is logged but not repaired in `NetworkEmitter`; add authoritative resync/recovery and a browser reconnect/desync test. |
+| Hazard force inconsistency | **Partially implemented** | Force hazards validate degrees and use the shared degree-based impulse path; deterministic hazard tests exist. | Add player-facing direction/strength preview and tests covering collision angle, mass, and map conversion. |
+| Item timing and comprehension | **Partially implemented** | Cards show descriptions/target types; item phases, validation, delayed effects, and inventory are tested. | Explain timing/arming/trigger conditions and define post-shot defensive-item windows explicitly. |
+| Mobile layout/input | **Partially implemented** | Touch input shares pointer validation; mobile layout tests and native cursor work exist. | Landscape-first behavior, portrait prompt, drag-radius tuning, and real-device/browser evidence remain. |
+| Gameplay animation visibility | **Implemented in source, not yet human-qualified** | Deterministic presentation surface, feedback events, focused tests, and browser builds pass. | Verify in a production browser scene and add stronger procedural particles if effects remain too subtle. |
+| AI forgiveness/balance | **Partially implemented** | AI fuzz/tournament infrastructure, deterministic difficulty settings, and termination tests exist. | Run controlled human-facing balance experiments; current database results are confounded by map/team/seed selection. |
+| Team/map fairness | **Infrastructure exists, evidence incomplete** | Map qualification and mirrored matrix helpers exist. | Exclude aborted fixtures, run balanced team/map tournaments, and publish thresholds. |
+| Telemetry quality | **Partially implemented** | Playtest marker, ratings/topics, performance reports, replay/performance persistence, and bug diagnostics exist. | Add explicit aborted/completed status and structured item/hazard/desync counters. |
+
 ## Priority 0 — fix before broader playtesting
 
 ### 1. Item inventory refresh after pickup
