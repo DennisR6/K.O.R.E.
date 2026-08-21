@@ -13,6 +13,7 @@ import { GameDatabase } from "../src/server/db.ts";
 import { GameRegistry } from "../src/server/gameRegistry.ts";
 import { NetworkMessageType, type WebSocketData } from "../src/server/types.ts";
 import { issuePlayerSession } from "../src/server/playerSession.ts";
+import { RankedService } from "../src/server/rankedService.ts";
 
 const userOne = "11111111-1111-4111-8111-111111111111";
 const userTwo = "22222222-2222-4222-8222-222222222222";
@@ -44,6 +45,25 @@ function connectMatchedRuntime(): { runtime: ServerRuntime; first: FakeSocket; s
 	expect(packet(first).ruleState).toEqual({ phase: RulePhase.Physics, activeTeam: 0, turnNumber: 0, itemUses: 0 })
 	return { runtime, first, second }
 }
+
+test("signed players can join ranked queue and receive an authoritative ranked match", () => {
+	const database = new GameDatabase(":memory:");
+	const ranked = new RankedService(database, { id: "season", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" });
+	const runtime = new ServerRuntime(new GameRegistry(database, 60_000, ranked), undefined, false, "session-secret", ranked);
+	const first = new FakeSocket({ connectionId: "12121212-1212-4121-8121-121212121212" });
+	const second = new FakeSocket({ connectionId: "13131313-1313-4131-8131-131313131313" });
+	runtime.open(first); runtime.open(second);
+	const firstToken = issuePlayerSession(userOne, "session-secret", Date.now());
+	const secondToken = issuePlayerSession(userTwo, "session-secret", Date.now());
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userOne, sessionToken: firstToken }));
+	runtime.message(second, JSON.stringify({ type: NetworkMessageType.LOGIN, userid: userTwo, sessionToken: secondToken }));
+	runtime.message(first, JSON.stringify({ type: NetworkMessageType.RANKED_QUEUE_JOIN, region: "EU" }));
+	runtime.message(second, JSON.stringify({ type: NetworkMessageType.RANKED_QUEUE_JOIN, region: "EU" }));
+	runtime.matchmakeOnce();
+	expect(packet(first).type).toBe(NetworkMessageType.INIT);
+	expect(packet(first).modeId).toBe("quick-slip-v1");
+	expect(packet(second).mapId).toBe("magma-cradle");
+});
 
 test("network emitter exposes ranked queue commands with normalized regions", () => {
 	const sent: string[] = [];
