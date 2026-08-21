@@ -7,11 +7,13 @@ import type { IGameContext, ISerializableSystem, SystemSettings } from "../syste
 import { koreAi } from "../kore/ai.js";
 import type { HardAiWorkerHost } from "./worker/host.js";
 import { isValidInput } from "../input/validate.js";
+import { KoreGameplayFeedbackType } from "../kore/gameplayFeedback.js";
 
 /** Drives one AI-controlled team while leaving the other team available to UI input. */
 export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 	public readonly systemId = "ai.opponent";
 	private readonly emitter: AiTurnEmitter;
+	private thinkingAnnounced = false;
 
 	public constructor(
 		private readonly handler: GameHandler | undefined,
@@ -33,7 +35,10 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 	}
 
 	public ticker(ctx: IGameContext, _dt: number, _friction: number): void {
-		if (!this.handler || !this.targetEmitter || (ctx.state !== GameState.Your_turn && ctx.state !== GameState.Opponents_turn) || this.handler.getActiveTeam() !== this.settings.team) return;
+		if (!this.handler || !this.targetEmitter || (ctx.state !== GameState.Your_turn && ctx.state !== GameState.Opponents_turn) || this.handler.getActiveTeam() !== this.settings.team) {
+			this.thinkingAnnounced = false;
+			return;
+		}
 		const rule = this.handler.getRuleState();
 		if (rule.phase === RulePhase.Item) {
 			const maxItems = this.handler.getSettings()?.gameMode?.maxItemsPerTurn ?? 0;
@@ -41,12 +46,17 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 			this.targetEmitter.skipPhase?.();
 			return;
 		}
-		if (rule.phase !== RulePhase.Physics) return;
+		if (rule.phase !== RulePhase.Physics) { this.thinkingAnnounced = false; return; }
+		if (!this.thinkingAnnounced) {
+			this.handler.recordFeedback(KoreGameplayFeedbackType.Message, { data: { message: "AI is thinking…", kind: "ai-thinking", team: this.settings.team } });
+			this.thinkingAnnounced = true;
+		}
 		if (this.workerHost?.getState() === "starting") return;
 		if (this.workerHost?.isAvailable()) {
 			const prepared = this.workerHost.consumePreparedAction();
 			if (prepared && isValidInput(prepared) && this.handler.isActorEligibleForAction(prepared.actorId) && this.handler.getEntityManager().getEntityById(prepared.actorId)?.getTeam().includes(this.settings.team)) {
 				this.targetEmitter.sendShot(prepared.actorId, prepared.angle, prepared.power);
+				this.thinkingAnnounced = false;
 				return;
 			}
 			if (this.workerHost.isThinking()) return;
@@ -55,13 +65,13 @@ export class AiOpponentSystem implements ISerializableSystem<SystemSettings> {
 			const reason = this.workerHost.getFallbackReason();
 			const start = this.workerHost.beginSynchronousFallback(reason, this.settings.team);
 			try {
-				if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
+				if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) { this.thinkingAnnounced = false; return; }
 			} finally {
 				this.workerHost.completeSynchronousFallback(reason, this.settings.team, start);
 			}
-		} else if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) return;
+		} else if (this.emitter.executeTurn(this.handler, this.settings, this.targetEmitter)) { this.thinkingAnnounced = false; return; }
 		const actor = this.handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(this.settings.team) && this.handler!.isActorEligibleForAction(entity.getId()));
-		if (actor) this.targetEmitter.sendShot(actor.getId(), 0, 4);
+		if (actor) { this.targetEmitter.sendShot(actor.getId(), 0, 4); this.thinkingAnnounced = false; }
 	}
 	public isAiThinking(): boolean { return this.workerHost?.isThinking() ?? false; }
 }

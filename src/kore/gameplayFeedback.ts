@@ -102,6 +102,8 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 		}
 		if (position && [KoreGameplayFeedbackType.Shot, KoreGameplayFeedbackType.Charge, KoreGameplayFeedbackType.Collision, KoreGameplayFeedbackType.Shield, KoreGameplayFeedbackType.Item, KoreGameplayFeedbackType.Hazard, KoreGameplayFeedbackType.Damage, KoreGameplayFeedbackType.Elimination].includes(last.type)) this.drawWorldEffect(renderer, last, position, data, scale);
 		if (last.type === KoreGameplayFeedbackType.Result) this.drawResultEffect(renderer, scale);
+		if (last.type === KoreGameplayFeedbackType.Turn) this.drawTurnEffect(renderer, scale);
+		if (last.type === KoreGameplayFeedbackType.Message && data?.kind === "ai-thinking") this.drawThinkingEffect(renderer, scale);
 		renderer.drawText(feedbackLabel(last), renderer.WORLD_SIZE_X / 2 - 70, 32, 16);
 		renderer.pop();
 	}
@@ -129,6 +131,23 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 			if (event.type === KoreGameplayFeedbackType.Item) renderer.drawCircle(position.x, position.y, 5 * scale);
 		}
 		renderer.setStroke(0);
+	}
+
+	private drawTurnEffect(renderer: RenderContext, scale: number): void {
+		const x = renderer.WORLD_SIZE_X / 2;
+		const y = renderer.WORLD_SIZE_Y / 2;
+		renderer.setStrokeColor("#93c5fd"); renderer.setStroke(3); renderer.setNoFill();
+		renderer.line(x - 46 * scale, y, x + 46 * scale, y);
+		renderer.line(x + 46 * scale, y, x + 34 * scale, y - 10 * scale);
+		renderer.line(x + 46 * scale, y, x + 34 * scale, y + 10 * scale);
+		renderer.setStroke(0);
+	}
+
+	private drawThinkingEffect(renderer: RenderContext, scale: number): void {
+		const x = renderer.WORLD_SIZE_X / 2 - 18;
+		const y = renderer.WORLD_SIZE_Y / 2;
+		renderer.setFillColor("#c4b5fd");
+		for (let index = 0; index < 3; index++) renderer.drawCircle(x + index * 18, y, (4 + index * 2) * scale);
 	}
 
 	private drawResultEffect(renderer: RenderContext, scale: number): void {
