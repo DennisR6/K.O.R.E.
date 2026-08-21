@@ -1,6 +1,18 @@
 import { expect, test } from "bun:test";
 import { GameDatabase } from "../src/server/db.ts";
+import { GameRegistry } from "../src/server/gameRegistry.ts";
+import { createDefaultGameSettings } from "../src/settings/settings.ts";
 import { RankedService } from "../src/server/rankedService.ts";
+
+test("ranked game metadata survives authoritative persistence", () => {
+	const database = new GameDatabase(":memory:");
+	const service = new RankedService(database, { id: "season", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" });
+	const registry = new GameRegistry(database, 1, service);
+	const record = registry.createRanked(createDefaultGameSettings(2, 1), ["a", "b"], "ice-map-v1", "season", "ranked-v1");
+	expect(record.ranked).toEqual({ seasonId: "season", rulesetVersion: "ranked-v1" });
+	registry.evictInactive(Date.now() + 10);
+	expect(registry.get(record.id)?.ranked).toEqual(record.ranked);
+});
 
 test("ranked service composes season, queue, and finalization boundaries", () => {
 	const service = new RankedService(new GameDatabase(":memory:"), { id: "season", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" });

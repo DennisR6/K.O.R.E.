@@ -988,7 +988,7 @@ function compress(data: { settings: EngineSettings; initialSettings?: GameSettin
 function decompress(snapshot: Uint8Array): { settings: EngineSettings; initialSettings?: GameSettings; actions: ReplayAction[]; ranked?: { seasonId: string; rulesetVersion: string } } {
 	const parsed = JSON.parse(gunzipSync(snapshot).toString());
 	if (parsed && typeof parsed === "object" && "settings" in parsed) {
-		return { settings: parsed.settings as EngineSettings, initialSettings: parsed.initialSettings as GameSettings | undefined, actions: (parsed.actions ?? []) as ReplayAction[] };
+		return { settings: parsed.settings as EngineSettings, initialSettings: parsed.initialSettings as GameSettings | undefined, actions: (parsed.actions ?? []) as ReplayAction[], ranked: parsed.ranked as { seasonId: string; rulesetVersion: string } | undefined };
 	}
 	return { settings: parsed as EngineSettings, actions: [] };
 }
