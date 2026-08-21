@@ -16,7 +16,7 @@ body {
     position: absolute;
     width: 32px;
     height: 32px;
-    background-image: url('../public/pointer_toon_b.png');
+    background-image: url('./pointer_toon_b.png');
     pointer-events: none; 
     z-index: 9999;
 }
