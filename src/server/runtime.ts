@@ -8,6 +8,7 @@ import { applyGameMode, getGameModeCatalogEntry } from "../rules/modeCatalog.js"
 import { GameState } from "../kore/runtime/types.js";
 import { fingerprintAuthoritativeTurn } from "../net/turnStateHash.js";
 import { encodeKorePackedInit } from "../net/roastPackedInit.js";
+import { RateLimiter } from "./rateLimiter.js";
 import { NetworkMessageType, type NetworkError, type NetworkGameEnded, type NetworkInit, type NetworkItemUsed, type NetworkNewUser, type NetworkPauseRequest, type NetworkPauseState, type NetworkPhaseChanged, type NetworkReportMatch, type NetworkReportSubmitted, type NetworkReplayShareCreated, type NetworkShoot, type NetworkSurrendered, type NetworkTurn, type NetworkUseItem, type NetworkWaitingRoom, type UnTypedNetworkMessage, type WebSocketData } from "./types.js";
 
 export interface ServerSocket {
@@ -20,6 +21,7 @@ export class ServerRuntime {
 	private userByConnection = new Map<string, string>();
 	private connectionByUser = new Map<string, string>();
 	private waitingUsers: Array<{ userId: string; mapPreference?: string; modePreference?: string; friendCode?: string }> = [];
+	private readonly packetLimiter = new RateLimiter(120, 60);
 
 	constructor(private readonly games = new GameRegistry(), private readonly maps?: MapRepository, private readonly packedInit = process.env.KORE_ROAST_PACKED_INIT === "1") { }
 
@@ -44,6 +46,8 @@ export class ServerRuntime {
 	public message(socket: ServerSocket, rawMessage: string): void {
 		const message = parseMessage(rawMessage)
 		if (!message) return this.sendError(socket, "Malformed network packet")
+		const limit = this.packetLimiter.consume(socket.data.connectionId, Date.now());
+		if (!limit.allowed) return this.sendError(socket, `Rate limit exceeded; retry in ${limit.retryAfterMs}ms`);
 
 		switch (message.type) {
 			case NetworkMessageType.LOGIN:
