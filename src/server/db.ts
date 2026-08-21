@@ -51,6 +51,8 @@ export type StoredDashboardApiToken = { id: string; label: string; createdAt: nu
 export type StoredDebugAssetToken = StoredDashboardApiToken;
 export type StoredRankedRatingEvent = { id: string; matchId: string; seasonId: string; playerId: string; beforeRating: number; afterRating: number; delta: number; createdAt: number };
 export type RankedFinalization = { matchId: string; seasonId: string; result: MatchResult; events: StoredRankedRatingEvent[] };
+export type RankedSeason = { id: string; rulesetVersion: string; startsAt: number; endsAt: number | null; status: "scheduled" | "active" | "closed" };
+export type RankedLeaderboardEntry = { playerId: string; rating: number; games: number; provisional: boolean };
 const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 type PerformanceSample = { createdAt: number; value: number };
@@ -271,6 +273,15 @@ export class GameDatabase {
 				cache_key TEXT PRIMARY KEY NOT NULL,
 				calculated_at INTEGER NOT NULL,
 				metrics_json TEXT NOT NULL
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS ranked_seasons (
+				id TEXT PRIMARY KEY NOT NULL,
+				ruleset_version TEXT NOT NULL,
+				starts_at INTEGER NOT NULL,
+				ends_at INTEGER,
+				status TEXT NOT NULL CHECK (status IN ('scheduled', 'active', 'closed'))
 			)
 		`);
 		this.db.run(`
@@ -601,6 +612,23 @@ export class GameDatabase {
 		const bounded = Math.max(1, Math.min(1_000, Math.trunc(limit)));
 		const rows = this.db.query("SELECT id, game_id, user_id, mode, map_id, topic, rating, playtest, text, created_at FROM user_feedback ORDER BY created_at DESC, id ASC LIMIT ?1").all(bounded) as Array<{ id: string; game_id: string | null; user_id: string | null; mode: FeedbackSubmission["mode"] | null; map_id: string | null; topic: FeedbackSubmission["topic"] | null; rating: number | null; playtest: number; text: string; created_at: number }>;
 		return rows.map(row => ({ id: row.id, ...(row.game_id ? { gameId: row.game_id } : {}), ...(row.user_id ? { userId: row.user_id } : {}), ...(row.mode ? { mode: row.mode } : {}), ...(row.map_id ? { mapId: row.map_id } : {}), ...(row.topic ? { topic: row.topic } : {}), ...(row.rating === null ? {} : { rating: row.rating }), ...(row.playtest ? { playtest: true } : {}), text: row.text, createdAt: row.created_at }));
+	}
+
+	public createRankedSeason(season: RankedSeason): RankedSeason {
+		if (!season.id || !season.rulesetVersion || !Number.isSafeInteger(season.startsAt) || (season.endsAt !== null && !Number.isSafeInteger(season.endsAt))) throw new Error("Malformed ranked season");
+		this.db.query("INSERT INTO ranked_seasons (id, ruleset_version, starts_at, ends_at, status) VALUES (?1, ?2, ?3, ?4, ?5)").run(season.id, season.rulesetVersion, season.startsAt, season.endsAt, season.status);
+		return structuredClone(season);
+	}
+
+	public getRankedSeason(seasonId: string): RankedSeason | undefined {
+		const row = this.db.query("SELECT id, ruleset_version, starts_at, ends_at, status FROM ranked_seasons WHERE id = ?1").get(seasonId) as { id: string; ruleset_version: string; starts_at: number; ends_at: number | null; status: RankedSeason["status"] } | null;
+		return row ? { id: row.id, rulesetVersion: row.ruleset_version, startsAt: row.starts_at, endsAt: row.ends_at, status: row.status } : undefined;
+	}
+
+	public listRankedLeaderboard(seasonId: string, limit = 100): RankedLeaderboardEntry[] {
+		const bounded = Math.max(1, Math.min(500, Math.trunc(limit)));
+		const rows = this.db.query("SELECT player_id, rating, games, provisional FROM ranked_players WHERE season_id = ?1 ORDER BY rating DESC, games DESC, player_id ASC LIMIT ?2").all(seasonId, bounded) as Array<{ player_id: string; rating: number; games: number; provisional: number }>;
+		return rows.map(row => ({ playerId: row.player_id, rating: row.rating, games: row.games, provisional: row.provisional !== 0 }));
 	}
 
 	public getRankedRating(seasonId: string, playerId: string): RankedRating {

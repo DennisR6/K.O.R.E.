@@ -1,6 +1,14 @@
 import { expect, test } from "bun:test";
 import { GameDatabase } from "../src/server/db.ts";
 
+test("ranked seasons and leaderboard entries persist in deterministic order", () => {
+	const database = new GameDatabase(":memory:");
+	database.createRankedSeason({ id: "season-1", rulesetVersion: "ranked-v1", startsAt: 1, endsAt: null, status: "active" });
+	expect(database.getRankedSeason("season-1")).toEqual({ id: "season-1", rulesetVersion: "ranked-v1", startsAt: 1, endsAt: null, status: "active" });
+	database.finalizeRankedMatch({ matchId: "leaderboard-match", seasonId: "season-1", result: { status: "winner", winnerTeam: 0, reason: "last-team-standing", turnNumber: 2 }, players: [{ playerId: "lower", team: 0 }, { playerId: "higher", team: 1 }], now: 2 });
+	expect(database.listRankedLeaderboard("season-1").map(entry => entry.playerId)).toEqual(["lower", "higher"]);
+});
+
 test("ranked result finalization is transactional and idempotent", () => {
 	const database = new GameDatabase(":memory:");
 	const result = { status: "winner" as const, winnerTeam: 0, reason: "last-team-standing" as const, turnNumber: 8 };
