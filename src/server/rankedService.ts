@@ -11,6 +11,9 @@ export class RankedService {
 		if (!database.getRankedSeason(season.id)) database.createRankedSeason(season);
 	}
 
+	public getSeason(): RankedSeason { return structuredClone(this.season); }
+	public getRating(playerId: string): number { return this.database.getRankedRating(this.season.id, playerId).rating; }
+
 	public enqueue(playerId: string, rating: number, region: string, now: number): void {
 		if (this.season.endsAt !== null && now >= this.season.endsAt) throw new Error("Ranked season has ended");
 		this.queue.enqueue({ playerId, seasonId: this.season.id, rating, region, joinedAt: now });

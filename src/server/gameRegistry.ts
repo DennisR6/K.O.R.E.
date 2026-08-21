@@ -94,6 +94,11 @@ export class GameRegistry {
 		return this.create(settings, users, map.id);
 	}
 
+	public createRankedFromApprovedMap(repository: MapRepository, mapId: string, template: GameSettings, users: string[], seasonId: string, rulesetVersion: string): GameRecord {
+		const { map, settings } = repository.buildSettings(mapId, template);
+		return this.createRanked(settings, users, map.id, seasonId, rulesetVersion);
+	}
+
 	public get(gameId: string): GameRecord | undefined {
 		const cached = this.games.get(gameId)
 		if (cached) return this.touch(cached)
