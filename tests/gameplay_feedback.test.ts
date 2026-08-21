@@ -6,6 +6,7 @@ import { EmitterSystem } from "../src/systems/Emitter.ts";
 import { MatchEndReason, MatchStatus, RulePhase } from "../src/rules/types.ts";
 import { createCanonicalPlayableMatchSettings } from "../src/settings/canonicalPlayableMatch.ts";
 import { createKoreHudProjection, hudResultText } from "../src/kore/ui/gameHudProjection.ts";
+import { selectActiveItemActor } from "../src/scenes/gameplayHud.ts";
 
 function renderer(labels: string[]) {
 	return {
@@ -38,6 +39,22 @@ test("HUD projection exposes authoritative turn, selection, aim, power, and item
 	expect(state.tutorial).toBeUndefined();
 	handler.setRuleState({ ...handler.getRuleState(), phase: RulePhase.Physics });
 	expect(createKoreHudProjection(handler, ui).tutorial).toBe(true);
+});
+
+test("HUD keeps collected items visible when the collecting figure is not selected", () => {
+	const handler = new GameHandlerBuilder().defaultSystems().fromSettings(createCanonicalPlayableMatchSettings()).build();
+	const actors = handler.getEntityManager().getEntities().filter(entity => entity.getTeam().includes(0));
+	const selected = actors[0]!;
+	const owner = actors[1]!;
+	selected.setInventory([]);
+	owner.setInventory([{ itemId: "power-dash", remainingUses: 1, usesThisTurn: 0 }]);
+	const ui = new UiSystem();
+	ui.selectedActorId = selected.getId();
+	const projection = createKoreHudProjection(handler, ui);
+
+	expect(projection.inventory).toHaveLength(1);
+	expect(projection.inventory[0]?.itemId).toBe("power-dash");
+	expect(selectActiveItemActor(handler, "power-dash", ui)?.getId()).toBe(owner.getId());
 });
 
 test("HUD projection marks playback as locked and clears results after rematch", () => {

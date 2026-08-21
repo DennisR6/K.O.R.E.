@@ -68,7 +68,7 @@ type HudCommandDeps = GameplayHudActions & { itemUi?: ItemPhaseUI };
 function handleHudCommand(command: KoreHudCommandMessage, handler: GameHandler, deps: HudCommandDeps): boolean | void {
 	switch (command.type) {
 		case KoreHudCommand.UseItem: {
-			const actor = selectedActiveActor(handler, handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined);
+			const actor = selectActiveItemActor(handler, command.payload.itemId, handler.getSystems().find(system => system instanceof UiSystem) as UiSystem | undefined);
 			if (!actor || !deps.itemUi) throw new Error("Items are unavailable");
 			if (deps.onUseItem) return deps.onUseItem(actor.getId(), command.payload.itemId, command.payload.target);
 			deps.itemUi.use(actor.getId(), command.payload.itemId, command.payload.target);
@@ -119,9 +119,16 @@ function selectedActiveActor(handler: GameHandler, uiSystem?: UiSystem) {
 	return handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(handler.getActiveTeam()));
 }
 
+/** Resolves a team-inventory item to the active figure that actually owns it. */
+export function selectActiveItemActor(handler: GameHandler, itemId: string, uiSystem?: UiSystem) {
+	const selected = selectedActiveActor(handler, uiSystem);
+	if (selected?.getInventory().some(item => item.itemId === itemId && item.remainingUses > 0)) return selected;
+	return handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(handler.getActiveTeam()) && entity.getInventory().some(item => item.itemId === itemId && item.remainingUses > 0));
+}
+
 function resolveItemTarget(handler: GameHandler, uiSystem: UiSystem | undefined, itemId: string, point: { x: number; y: number }): ItemTarget | undefined {
 	const item = handler.getSettings()?.items?.find(candidate => candidate.id === itemId);
-	const actor = selectedActiveActor(handler, uiSystem);
+	const actor = selectActiveItemActor(handler, itemId, uiSystem);
 	if (!item || !actor) return undefined;
 	if (item.targetType === "entity") {
 		const target = handler.getEntityManager().getEntityAt(point.x, point.y);

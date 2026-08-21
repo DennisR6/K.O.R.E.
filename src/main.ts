@@ -612,7 +612,9 @@ function flushBrowserAudio(active: GameHandler): void {
 }
 
 const customCursor = document.getElementById('my-cursor')!;
-if (customCursor) window.addEventListener('mousemove', (e) => {
+const isTouchViewport = typeof window !== "undefined" && (window.matchMedia?.("(pointer: coarse)").matches || navigator.maxTouchPoints > 0);
+if (customCursor && isTouchViewport) customCursor.style.display = "none";
+if (customCursor && !isTouchViewport) window.addEventListener('mousemove', (e) => {
 	customCursor.style.left = e.clientX + 'px';
 	customCursor.style.top = e.clientY + 'px';
 });

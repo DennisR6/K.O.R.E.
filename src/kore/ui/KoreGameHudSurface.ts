@@ -41,7 +41,8 @@ export class KoreGameHudSurface implements IMouse, IDrawer, ISoundEmitter {
 		const itemsVisible = turn.phase === RulePhase.Item && !projection.match.result;
 		this.runtime.setElementVisible(KoreHudElement.ItemsTitle, itemsVisible);
 		const selectedItem = projection.inventory.find(item => item.itemId === this.selectedItemId);
-		this.setText(KoreHudElement.ItemsTitle, selectedItem ? `Select a target for ${this.itemName(this.selectedItemId!)}${selectedItem.description ? `: ${selectedItem.description}` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: press an icon for details, then choose a target or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
+		const inventorySummary = projection.inventory.map(item => `${item.name ?? item.itemId} (${item.remainingUses})`).join(", ");
+		this.setText(KoreHudElement.ItemsTitle, selectedItem ? `Select a target for ${this.itemName(this.selectedItemId!)}${selectedItem.description ? `: ${selectedItem.description}` : ""}` : `${this.language.strings[LANGUAGE_KEYS.HudItems]}: ${inventorySummary || "none"}. Choose an icon or skip`); this.runtime.setElementVisible(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase); this.runtime.setElementEnabled(KoreHudElement.SkipItem, itemsVisible && this.capabilities.canSkipItemPhase);
 		for (const slot of KORE_HUD_ITEM_SLOTS) {
 			const item = projection.inventory[slot]; const id = koreHudItemElementId(slot); this.runtime.setElementVisible(id, !!item && itemsVisible); this.runtime.setElementEnabled(id, !!item?.enabled);
 			// Item controls are deliberately icon-only so they never cover the arena.

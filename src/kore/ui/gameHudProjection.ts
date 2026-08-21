@@ -5,6 +5,7 @@ import type { UiSystem } from "../../systems/UiSystem.js";
 import { createEnglishLanguage, formatLanguage, LANGUAGE_KEYS, type LanguageCatalog } from "../../i18n/language.js";
 import type { UiComponentSettings } from "@coffeemakerstudio/drip";
 import type { ItemTargetType } from "../../item/types.js";
+import type { IEntity } from "../../entity/Entity.js";
 
 export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
 export interface KoreHudWorldPoint { x: number; y: number }
@@ -27,7 +28,7 @@ export interface KoreHudProjection {
 export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, rejection?: string): KoreHudProjection {
 	const rule = handler.getRuleState(); const state = handler.getState();
 	const selectedActorId = input?.selectedActorId ?? (input?.start ? handler.getEntityManager().getEntityAt(input.start.x, input.start.y)?.getId() ?? null : null);
-	const actor = selectedActorId ? handler.getEntityManager().getEntityById(selectedActorId) : handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(rule.activeTeam));
+	const activeActors = handler.getEntityManager().getEntities().filter(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(rule.activeTeam));
 	const dx = input?.start ? input.currentMouse.x - input.start.x : 0; const dy = input?.start ? input.currentMouse.y - input.start.y : 0;
 	const length = Math.hypot(dx, dy);
 	const aimAngle = input?.aimAngle ?? (input?.start && length >= 1 ? ((Math.atan2(dy, dx) * 180 / Math.PI + 180) % 360 + 360) % 360 : null);
@@ -41,13 +42,27 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	return {
 		revision: rule.turnNumber * 10_000 + rule.activeTeam * 100 + (result ? 1 : 0),
 		turn: { number: rule.turnNumber, activeTeam: rule.activeTeam, phase: rule.phase, engineState: state, selectedActorId: selectedActorId ?? null, aimAngle, power },
-		inventory: (actor?.getInventory() ?? []).filter(item => item.remainingUses > 0).map(item => { const document = handler.getSettings()?.items?.find(candidate => candidate.id === item.itemId); return { itemId: item.itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), remainingUses: item.remainingUses, enabled: rule.phase === RulePhase.Item && state === GameState.Your_turn, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true }; }),
+		inventory: projectTeamInventory(handler, activeActors, rule.phase === RulePhase.Item && state === GameState.Your_turn),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
 		aiThinking,
 		...(rule.turnNumber === 0 && rule.phase === RulePhase.Physics && state === GameState.Your_turn && !result ? { tutorial: true } : {}),
 		guidance: { activeMarkers, ...(aimPreview ? { aimPreview } : {}) },
 		...(rejection ? { rejection: rejection.replace(/[\r\n]+/g, " ").slice(0, 160) } : {}),
 	};
+}
+
+function projectTeamInventory(handler: GameHandler, actors: IEntity[], enabled: boolean): KoreHudItemProjection[] {
+	// A fixed loadout is copied to every figure for authoritative targeting, but
+	// it represents one team allowance. Display one entry per item and the
+	// highest remaining value instead of multiplying it by the figure count.
+	const totals = new Map<string, number>();
+	for (const actor of actors) for (const item of actor.getInventory()) {
+		if (item.remainingUses > 0) totals.set(item.itemId, Math.max(totals.get(item.itemId) ?? 0, item.remainingUses));
+	}
+	return [...totals].map(([itemId, remainingUses]) => {
+		const document = handler.getSettings()?.items?.find(candidate => candidate.id === itemId);
+		return { itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), remainingUses, enabled, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true };
+	});
 }
 
 /** Converts the active pointer drag into immutable world-space arrow geometry. */
