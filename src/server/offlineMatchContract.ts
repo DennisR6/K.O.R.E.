@@ -20,6 +20,7 @@ export type OfflineMatchReport = {
 	result: MatchResult;
 	replay: ReplayDocument;
 	performanceLogs?: unknown[];
+	playtest?: boolean;
 };
 
 /** Strict structural validation for untrusted browser uploads. */
@@ -28,6 +29,7 @@ export function validateOfflineMatchReport(value: unknown): asserts value is Off
 		throw new Error("Offline match reports require a mode and map id");
 	}
 	if (value.difficulty !== undefined && !isOfflineMatchDifficulty(value.difficulty)) throw new Error("Unknown offline match difficulty");
+	if (value.playtest !== undefined && typeof value.playtest !== "boolean") throw new Error("Invalid offline playtest marker");
 	if (typeof value.seed !== "number" || !Number.isSafeInteger(value.seed)) throw new Error("Offline match seed must be a safe integer");
 	if (!Array.isArray(value.players) || value.players.length === 0 || !value.players.every(player => typeof player === "string" && player)) throw new Error("Offline match players must be non-empty team names");
 	if (!isMatchResult(value.result)) throw new Error("Offline match result is invalid");

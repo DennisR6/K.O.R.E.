@@ -25,6 +25,8 @@ export type OfflineMatchRecordPayload = {
 	result: MatchResult;
 	replay: ReplayDocument;
 	performanceLogs?: unknown[];
+	/** True when launched from the Human Playtest menu flow. */
+	playtest?: boolean;
 };
 
 const OFFLINE_MATCH_PATH = "offline-matches";
@@ -47,7 +49,7 @@ export function buildOfflineMatchEndpoint(origin: string): string {
 }
 
 /** Builds the full persisted record for a finished handler, or undefined when no recorder exists. */
-export function collectOfflineMatchRecord(handler: GameHandler, mode: MatchMode, mapId: string, result: MatchResult): OfflineMatchRecordPayload | undefined {
+export function collectOfflineMatchRecord(handler: GameHandler, mode: MatchMode, mapId: string, result: MatchResult, playtest = false): OfflineMatchRecordPayload | undefined {
 	const replay = collectReplay(handler);
 	if (!replay) return undefined;
 	const difficulty = handler.getSettings()?.ai?.difficulty;
@@ -59,6 +61,7 @@ export function collectOfflineMatchRecord(handler: GameHandler, mode: MatchMode,
 		result,
 		replay,
 		performanceLogs: handler.getLogs(LoggerType.Performance).filter(isPersistedPerformanceLog),
+		...(playtest ? { playtest: true } : {}),
 	};
 	if (difficulty === "easy" || difficulty === "medium" || difficulty === "hard") record.difficulty = difficulty;
 	return record;
@@ -83,7 +86,7 @@ function isPersistedPerformanceLog(entry: { type: string }): boolean {
  * overlay becomes visible. Failures never throw: an unreachable or absent
  * report endpoint must never break the local match or the menu.
  */
-export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode, mapId: string, reporter: (record: OfflineMatchRecordPayload) => void | boolean | Promise<void | boolean>, onDelivered?: (record: OfflineMatchRecordPayload) => void | Promise<void>): void {
+export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode, mapId: string, reporter: (record: OfflineMatchRecordPayload) => void | boolean | Promise<void | boolean>, onDelivered?: (record: OfflineMatchRecordPayload) => void | Promise<void>, playtest = false): void {
 	let reported = false;
 	let reporting = false;
 	let retryAt = 0;
@@ -102,7 +105,7 @@ export function installOfflineMatchReport(handler: GameHandler, mode: MatchMode,
 			if (reported || reporting || Date.now() < retryAt) return;
 			const result = handler.getMatchResult();
 			if (!result) return;
-			const record = collectOfflineMatchRecord(handler, mode, mapId, result);
+			const record = collectOfflineMatchRecord(handler, mode, mapId, result, playtest);
 			if (!record) return;
 			reporting = true;
 			const reportGeneration = generation;

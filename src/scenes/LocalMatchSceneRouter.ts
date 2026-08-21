@@ -33,6 +33,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	private error: string | undefined;
 	private mapId: string | null = null;
 	private mode: MatchMode | undefined;
+	private playtest = false;
 	private aiBattle = false;
 	private battleSeed: number | undefined;
 	private menuPreview: MenuBattlePreview | undefined;
@@ -90,11 +91,19 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	/** Starts exactly one canonical hotseat match on the given map; failures leave the menu handler usable. */
 	public startLocalMatch(mapId: string = "magma-cradle", modeId?: string): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = false;
 		this.mode = "hotseat";
 		return this.startScene(() => this.createLocalHandler(mapId, modeId), mapId);
 	}
+	public startPlaytest(): boolean {
+		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = true;
+		this.mode = "hotseat";
+		return this.startScene(() => this.createLocalHandler("magma-cradle"), "magma-cradle");
+	}
 	public startModMatch(mod: LoadedContentPackage): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = false;
 		this.mode = "hotseat";
 		const mapId = mod.package.maps?.[0]?.metadata.id ?? "mod-map";
 		return this.startScene(() => createLocalGameplayHandler(mapId, undefined, mod), mapId);
@@ -106,6 +115,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	 */
 	public startAiBattle(mapId: string = "magma-cradle"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = false;
 		const seed = this.battleSeedSource();
 		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "ai-battle";
@@ -120,6 +130,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	}
 	public startModAiBattle(mod: LoadedContentPackage): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = false;
 		const seed = this.battleSeedSource();
 		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "ai-battle";
@@ -135,6 +146,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 	/** Starts one human-controlled team against a computer-controlled team. */
 	public startAiOpponent(difficulty: AiDifficulty, mapId: string = "magma-cradle"): boolean {
 		if (this.starting || this.isLocalMatch()) return false;
+		this.playtest = false;
 		const seed = this.battleSeedSource();
 		const workerHost = this.takePrewarmedWorkerHost();
 		this.mode = "human-vs-ai";
@@ -172,7 +184,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 			this.mapId = mapId;
 			if (this.mode) installOfflineMatchReport(next, this.mode, mapId ?? "magma-cradle", record => reportOfflineMatch(record), this.autoRestartAiBattle && this.mode === "ai-battle" ? () => {
 				if (this.aiBattle && this.handler === next) this.restartAiBattle();
-			} : undefined);
+			} : undefined, this.playtest);
 			if (this.mode === "hotseat" || this.mode === "human-vs-ai") {
 				// Scene construction is also used by headless tests and desktop hosts;
 				// do not require the browser `window` global just to install the
@@ -250,6 +262,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.pendingSoundCommands.push(koreAudio.command.menuMusic("kore.menu"));
 		this.mapId = null;
 		this.mode = undefined;
+		this.playtest = false;
 		this.hud = undefined;
 		this.aiBattle = false;
 		this.battleSeed = undefined;
@@ -273,7 +286,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		this.menuPreview = preview;
 		return createKoreMainMenuSurface({
 			onPlayLocal: () => this.startLocalMatch(),
-			onStartPlaytest: () => this.startLocalMatch("magma-cradle"),
+			onStartPlaytest: () => this.startPlaytest(),
 			onSelectMap: (mapId, modeId) => this.startLocalMatch(mapId, modeId),
 			getStartError: () => this.error,
 			onPlayOnline: (mapId, modeId) => this.onPlayOnline?.(mapId, modeId),

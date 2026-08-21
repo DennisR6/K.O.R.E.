@@ -226,10 +226,12 @@ export class GameDatabase {
 				result_json TEXT NOT NULL,
 				replay_json TEXT NOT NULL,
 				performance_logs_json TEXT NOT NULL DEFAULT '[]',
+				playtest INTEGER NOT NULL DEFAULT 0,
 				created_at INTEGER NOT NULL
 			)
 		`);
 		try { this.db.run("ALTER TABLE offline_matches ADD COLUMN performance_logs_json TEXT NOT NULL DEFAULT '[]'"); } catch { /* Existing databases already have the column. */ }
+		try { this.db.run("ALTER TABLE offline_matches ADD COLUMN playtest INTEGER NOT NULL DEFAULT 0"); } catch { /* Existing databases already have the column. */ }
 		this.db.run(`
 			CREATE TABLE IF NOT EXISTS game_performance_reports (
 				id TEXT PRIMARY KEY NOT NULL,
@@ -568,10 +570,10 @@ export class GameDatabase {
 		const id = crypto.randomUUID();
 		const replay = structuredClone(report.replay);
 		this.db.query(`
-			INSERT INTO offline_matches (id, mode, map_id, difficulty, seed, players_json, result_json, replay_json, performance_logs_json, created_at)
-			VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-		`).run(id, report.mode, report.mapId, report.difficulty ?? null, report.seed, JSON.stringify(report.players), JSON.stringify(report.result), JSON.stringify(replay), JSON.stringify(report.performanceLogs ?? []), now);
-		return { id, mode: report.mode, mapId: report.mapId, difficulty: report.difficulty, seed: report.seed, players: [...report.players], result: structuredClone(report.result), replay, performanceLogs: structuredClone(report.performanceLogs ?? []), createdAt: now };
+			INSERT INTO offline_matches (id, mode, map_id, difficulty, seed, players_json, result_json, replay_json, performance_logs_json, playtest, created_at)
+			VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+		`).run(id, report.mode, report.mapId, report.difficulty ?? null, report.seed, JSON.stringify(report.players), JSON.stringify(report.result), JSON.stringify(replay), JSON.stringify(report.performanceLogs ?? []), report.playtest ? 1 : 0, now);
+		return { id, mode: report.mode, mapId: report.mapId, difficulty: report.difficulty, seed: report.seed, players: [...report.players], result: structuredClone(report.result), replay, performanceLogs: structuredClone(report.performanceLogs ?? []), ...(report.playtest ? { playtest: true } : {}), createdAt: now };
 	}
 
 	/** Stores one idempotent client performance report for a completed game. */
@@ -611,8 +613,8 @@ export class GameDatabase {
 	/** Lists offline match summaries (the heavy replay document is excluded). */
 	public listOfflineMatches(limit: number = 100): StoredOfflineMatchSummary[] {
 		const bounded = Math.max(1, Math.min(limit, 1_000));
-		const rows = this.db.query("SELECT id, mode, map_id, difficulty, seed, players_json, result_json, created_at FROM offline_matches ORDER BY created_at DESC, id ASC LIMIT ?1")
-			.all(bounded) as Array<{ id: string; mode: string; map_id: string; difficulty: string | null; seed: number; players_json: string; result_json: string; created_at: number }>;
+		const rows = this.db.query("SELECT id, mode, map_id, difficulty, seed, players_json, result_json, playtest, created_at FROM offline_matches ORDER BY created_at DESC, id ASC LIMIT ?1")
+			.all(bounded) as Array<{ id: string; mode: string; map_id: string; difficulty: string | null; seed: number; players_json: string; result_json: string; playtest: number; created_at: number }>;
 		return rows.map(row => ({
 			id: row.id,
 			mode: row.mode as StoredOfflineMatch["mode"],
@@ -621,6 +623,7 @@ export class GameDatabase {
 			seed: row.seed,
 			players: JSON.parse(row.players_json) as string[],
 			result: JSON.parse(row.result_json) as MatchResult,
+			...(row.playtest ? { playtest: true } : {}),
 			createdAt: row.created_at,
 		}));
 	}
