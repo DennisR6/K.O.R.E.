@@ -2,9 +2,19 @@
 
 ## Current conclusion
 
-The game has a usable authoritative casual online foundation, but it is **not ready for ranked play**. The server validates shots, owns simulation and match completion, persists lifecycle/replays, supports reconnect restoration, and records state-hash diagnostics. It does not yet have authenticated player accounts, a rating ledger, ranked matchmaking, competitive result finalization, abuse controls, or a leaderboard.
+The game has a usable authoritative casual online foundation, but it is **not ready for public ranked play**. The server validates shots, owns simulation and match completion, persists lifecycle/replays, supports reconnect restoration, and records state-hash diagnostics. Ranked foundations now exist for signed sessions, rate limiting, Elo calculation, seasons, transactional rating events, leaderboard persistence, frozen map/ruleset selection, and deterministic queue/service composition. Public ranked still lacks full account lifecycle, WebSocket queue/game integration, automatic ranked result binding, penalties/moderation, and player-facing ranked UI.
 
 ## What already exists and can be reused
+
+### Newly implemented ranked foundations
+
+- `src/server/playerSession.ts`: signed, expiring player sessions.
+- `src/server/rateLimiter.ts`: deterministic token-bucket limits; network packets are rate-limited and can require sessions through `ServerRuntime` configuration.
+- `src/server/ranked.ts`: deterministic provisional Elo calculation and authoritative result-to-outcome conversion.
+- `src/server/rankedQueue.ts`: season/region/rating-compatible queue with wait-time expansion.
+- `src/server/rankedRuleset.ts`: frozen `ranked-v1` ruleset and deterministic map selection.
+- `src/server/rankedService.ts`: queue, active-season, and result-finalization composition.
+- `GameDatabase`: seasons, player ratings, idempotent ranked matches, append-only rating events, and leaderboard reads.
 
 - Native WebSocket server and authoritative `GameRegistry`.
 - Server-approved maps and server-side settings expansion.
