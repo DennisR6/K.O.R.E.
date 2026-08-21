@@ -15,6 +15,7 @@ import type { MatchResult } from "../rules/types.js";
 import { aggregatePerformanceLogs, validateMatchPerformanceReport, type MatchPerformanceReport } from "../performance/matchPerformance.js";
 import type { RuntimeLogEntry } from "../kore/runtime/runtimeLog.js";
 import type { FeedbackSubmission } from "./feedback.js";
+import { calculateRankedRatingChange, rankedOutcome, type RankedRating } from "./ranked.js";
 
 export type StoredGame = {
 	id: string;
@@ -48,6 +49,8 @@ export type DashboardPerformanceMetrics = { today: DashboardPerformancePeriod; y
 export type StoredPerformanceReport = MatchPerformanceReport & { id: string; createdAt: number; updatedAt: number };
 export type StoredDashboardApiToken = { id: string; label: string; createdAt: number; lastUsedAt: number | null };
 export type StoredDebugAssetToken = StoredDashboardApiToken;
+export type StoredRankedRatingEvent = { id: string; matchId: string; seasonId: string; playerId: string; beforeRating: number; afterRating: number; delta: number; createdAt: number };
+export type RankedFinalization = { matchId: string; seasonId: string; result: MatchResult; events: StoredRankedRatingEvent[] };
 const DASHBOARD_PERFORMANCE_CACHE_KEY = "latency";
 const DASHBOARD_PERFORMANCE_CACHE_TTL_MS = 15_000;
 type PerformanceSample = { createdAt: number; value: number };
@@ -268,6 +271,39 @@ export class GameDatabase {
 				cache_key TEXT PRIMARY KEY NOT NULL,
 				calculated_at INTEGER NOT NULL,
 				metrics_json TEXT NOT NULL
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS ranked_players (
+				season_id TEXT NOT NULL,
+				player_id TEXT NOT NULL,
+				rating INTEGER NOT NULL,
+				games INTEGER NOT NULL,
+				provisional INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				PRIMARY KEY (season_id, player_id)
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS ranked_matches (
+				match_id TEXT PRIMARY KEY NOT NULL,
+				season_id TEXT NOT NULL,
+				result_json TEXT NOT NULL,
+				finalized_at INTEGER NOT NULL
+			)
+		`);
+		this.db.run(`
+			CREATE TABLE IF NOT EXISTS ranked_rating_events (
+				id TEXT PRIMARY KEY NOT NULL,
+				match_id TEXT NOT NULL,
+				season_id TEXT NOT NULL,
+				player_id TEXT NOT NULL,
+				before_rating INTEGER NOT NULL,
+				after_rating INTEGER NOT NULL,
+				delta INTEGER NOT NULL,
+				created_at INTEGER NOT NULL,
+				UNIQUE (match_id, player_id),
+				FOREIGN KEY (match_id) REFERENCES ranked_matches(match_id) ON DELETE CASCADE
 			)
 		`);
 		this.db.run(`
@@ -565,6 +601,38 @@ export class GameDatabase {
 		const bounded = Math.max(1, Math.min(1_000, Math.trunc(limit)));
 		const rows = this.db.query("SELECT id, game_id, user_id, mode, map_id, topic, rating, playtest, text, created_at FROM user_feedback ORDER BY created_at DESC, id ASC LIMIT ?1").all(bounded) as Array<{ id: string; game_id: string | null; user_id: string | null; mode: FeedbackSubmission["mode"] | null; map_id: string | null; topic: FeedbackSubmission["topic"] | null; rating: number | null; playtest: number; text: string; created_at: number }>;
 		return rows.map(row => ({ id: row.id, ...(row.game_id ? { gameId: row.game_id } : {}), ...(row.user_id ? { userId: row.user_id } : {}), ...(row.mode ? { mode: row.mode } : {}), ...(row.map_id ? { mapId: row.map_id } : {}), ...(row.topic ? { topic: row.topic } : {}), ...(row.rating === null ? {} : { rating: row.rating }), ...(row.playtest ? { playtest: true } : {}), text: row.text, createdAt: row.created_at }));
+	}
+
+	public getRankedRating(seasonId: string, playerId: string): RankedRating {
+		if (!seasonId || !playerId) throw new Error("Ranked season and player IDs are required");
+		const row = this.db.query("SELECT rating, games, provisional FROM ranked_players WHERE season_id = ?1 AND player_id = ?2").get(seasonId, playerId) as { rating: number; games: number; provisional: number } | null;
+		return row ? { rating: row.rating, games: row.games, provisional: row.provisional !== 0 } : { rating: 1000, games: 0, provisional: true };
+	}
+
+	/** Finalizes one authoritative two-player ranked result exactly once. */
+	public finalizeRankedMatch(input: { matchId: string; seasonId: string; result: MatchResult; players: Array<{ playerId: string; team: number }>; now?: number }): RankedFinalization {
+		if (!input.matchId || !input.seasonId || input.players.length !== 2 || input.players[0]!.playerId === input.players[1]!.playerId || input.players[0]!.team === input.players[1]!.team) throw new Error("Ranked matches require two distinct opposing players");
+		const existing = this.db.query("SELECT result_json FROM ranked_matches WHERE match_id = ?1").get(input.matchId) as { result_json: string } | null;
+		if (existing) return { matchId: input.matchId, seasonId: input.seasonId, result: JSON.parse(existing.result_json) as MatchResult, events: this.rankedEvents(input.matchId) };
+		const now = input.now ?? Date.now();
+		const first = input.players[0]!; const second = input.players[1]!;
+		const firstChange = calculateRankedRatingChange(this.getRankedRating(input.seasonId, first.playerId), this.getRankedRating(input.seasonId, second.playerId), rankedOutcome(input.result, first.team));
+		const secondChange = calculateRankedRatingChange(this.getRankedRating(input.seasonId, second.playerId), this.getRankedRating(input.seasonId, first.playerId), rankedOutcome(input.result, second.team));
+		this.db.run("BEGIN IMMEDIATE");
+		try {
+			this.db.query("INSERT INTO ranked_matches (match_id, season_id, result_json, finalized_at) VALUES (?1, ?2, ?3, ?4)").run(input.matchId, input.seasonId, JSON.stringify(input.result), now);
+			for (const [player, change] of [[first, firstChange], [second, secondChange]] as const) {
+				this.db.query("INSERT INTO ranked_players (season_id, player_id, rating, games, provisional, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(season_id, player_id) DO UPDATE SET rating = excluded.rating, games = excluded.games, provisional = excluded.provisional, updated_at = excluded.updated_at").run(input.seasonId, player.playerId, change.after.rating, change.after.games, change.after.provisional ? 1 : 0, now);
+				this.db.query("INSERT INTO ranked_rating_events (id, match_id, season_id, player_id, before_rating, after_rating, delta, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)").run(crypto.randomUUID(), input.matchId, input.seasonId, player.playerId, change.before.rating, change.after.rating, change.delta, now);
+			}
+			this.db.run("COMMIT");
+		} catch (error) { this.db.run("ROLLBACK"); throw error; }
+		return { matchId: input.matchId, seasonId: input.seasonId, result: structuredClone(input.result), events: this.rankedEvents(input.matchId) };
+	}
+
+	private rankedEvents(matchId: string): StoredRankedRatingEvent[] {
+		const rows = this.db.query("SELECT id, match_id, season_id, player_id, before_rating, after_rating, delta, created_at FROM ranked_rating_events WHERE match_id = ?1 ORDER BY player_id").all(matchId) as Array<{ id: string; match_id: string; season_id: string; player_id: string; before_rating: number; after_rating: number; delta: number; created_at: number }>;
+		return rows.map(row => ({ id: row.id, matchId: row.match_id, seasonId: row.season_id, playerId: row.player_id, beforeRating: row.before_rating, afterRating: row.after_rating, delta: row.delta, createdAt: row.created_at }));
 	}
 
 	/** Persists one completed offline/KI match for later data analysis. */
