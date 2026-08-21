@@ -7,7 +7,7 @@ import type { UiComponentSettings } from "@coffeemakerstudio/drip";
 import type { ItemTargetType } from "../../item/types.js";
 import type { IEntity } from "../../entity/Entity.js";
 
-export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; timing?: string; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
+export interface KoreHudItemProjection { itemId: string; name?: string; description?: string; targetType?: ItemTargetType; timing?: string; range?: number; remainingUses: number; enabled: boolean; component?: UiComponentSettings; showLabel: boolean }
 export interface KoreHudWorldPoint { x: number; y: number }
 export interface KoreHudWorldGuidance {
 	activeMarkers: Array<KoreHudWorldPoint & { radius: number }>;
@@ -62,7 +62,8 @@ function projectTeamInventory(handler: GameHandler, actors: IEntity[], enabled: 
 	return [...totals].map(([itemId, remainingUses]) => {
 		const document = handler.getSettings()?.items?.find(candidate => candidate.id === itemId);
 		const timing = document ? document.duration.type === "instant" ? "Immediate" : `${document.duration.value} ${document.duration.type}` : undefined;
-		return { itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), ...(timing ? { timing } : {}), remainingUses, enabled, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true };
+		const range = document?.targetValidation?.maxRange;
+		return { itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), ...(timing ? { timing } : {}), ...(range === undefined ? {} : { range }), remainingUses, enabled, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true };
 	});
 }
 
