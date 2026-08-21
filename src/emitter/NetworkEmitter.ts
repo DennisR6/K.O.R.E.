@@ -16,9 +16,14 @@ import type { ItemTarget } from "../item/target.js";
  */
 export class NetworkEmitter implements IInputEmitter {
 	socket: WebSocket
+	private static readonly bySocket = new WeakMap<object, NetworkEmitter>();
+	public static forSocket(socket: WebSocket): NetworkEmitter | undefined { return NetworkEmitter.bySocket.get(socket as unknown as object); }
+	private rankedQueued = false;
+	private rankedQueueSize = 0;
 
 	constructor(socket: WebSocket) {
 		this.socket = socket
+		NetworkEmitter.bySocket.set(socket as unknown as object, this);
 	}
 
 	/**
@@ -36,6 +41,8 @@ export class NetworkEmitter implements IInputEmitter {
 		this.socket.send(wrap<NetworkRankedQueueJoin>({ type: NetworkMessageType.RANKED_QUEUE_JOIN, region: region.toLowerCase() }));
 	}
 	cancelRankedQueue(): void { this.socket.send(wrap<NetworkRankedQueueCancel>({ type: NetworkMessageType.RANKED_QUEUE_CANCEL })); }
+	public getRankedQueueStatus(): { queued: boolean; size: number } { return { queued: this.rankedQueued, size: this.rankedQueueSize }; }
+	public applyRankedQueueStatus(queued: boolean, size: number): void { this.rankedQueued = queued; this.rankedQueueSize = size; }
 
 	sendItemUse(actorId: string, itemId: string, target: ItemTarget): void {
 		this.socket.send(wrap<NetworkUseItem>({ type: NetworkMessageType.USE_ITEM, actorId, itemId, target }))
@@ -106,6 +113,8 @@ export function installTurnReceiver(socket: WebSocket, handler: GameHandler): vo
 		}
 		if (message.type === NetworkMessageType.RANKED_QUEUE_STATUS) {
 			const status = message as { type: NetworkMessageType.RANKED_QUEUE_STATUS; queued: boolean; size: number };
+			const networkEmitter = NetworkEmitter.forSocket(socket);
+			if (networkEmitter) networkEmitter.applyRankedQueueStatus(status.queued, status.size);
 			handler.log("ranked.queue.status", { queued: status.queued, size: status.size });
 		}
 		if (message.type === NetworkMessageType.ERROR) {
