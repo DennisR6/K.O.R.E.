@@ -33,7 +33,7 @@ test("HUD projection exposes authoritative turn, selection, aim, power, and item
 	expect(state.turn.aimAngle).toBe(45);
 	expect(state.turn.power).toBe(7.5);
 	expect(state.inventory).toEqual([
-		{ itemId: "power-dash", name: "Power-Dash", description: "Boosts the next applied force by a configured multiplier.", targetType: "self", remainingUses: 1, enabled: true, showLabel: true },
+		{ itemId: "power-dash", name: "Power-Dash", description: "Boosts the next applied force by a configured multiplier.", targetType: "self", timing: "Immediate", remainingUses: 1, enabled: true, showLabel: true },
 	]);
 	expect(state.match.inputLocked).toBe(false);
 	expect(state.tutorial).toBeUndefined();
