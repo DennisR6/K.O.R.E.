@@ -18,6 +18,27 @@ body {
     width: 32px;
     height: 32px;
     background-image: url('./pointer_toon_b.png');
-    pointer-events: none; 
+    pointer-events: none;
     z-index: 9999;
+}
+
+/* The arena is intentionally landscape-first on phones. Keep the game
+   mounted, but make the recovery action obvious instead of presenting a
+   tiny portrait canvas with inaccessible HUD controls. */
+@media (orientation: portrait) and (max-width: 768px) {
+    body::before {
+        content: "Rotate your device to landscape to play";
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: white;
+        background: rgba(0, 0, 0, 0.92);
+        font: 600 1.1rem/1.5 system-ui, sans-serif;
+        text-align: center;
+        pointer-events: none;
+    }
 }
