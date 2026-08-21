@@ -13,6 +13,7 @@ import { WinningSystem } from "../systems/WinningSystem.js";
 import type { AuthoritativeMatchStatus, MatchMetrics, PersistedMatchLifecycle } from "./types.js";
 import type { MapRepository } from "./mapRepository.js";
 import { kore } from "../kore/sdk/index.js";
+import type { RankedService } from "./rankedService.js";
 export { isValidInput } from "../input/validate.js";
 
 export type GameRecord = {
@@ -32,6 +33,7 @@ export type GameRecord = {
 	mapId: string;
 	pauseRequests: Set<string>;
 	resumeRequests: Set<string>;
+	ranked?: { seasonId: string; rulesetVersion: string };
 };
 
 export type SubmitTurnResult =
@@ -62,9 +64,10 @@ export class GameRegistry {
 	constructor(
 		private readonly database: GameDatabase = new GameDatabase(),
 		private readonly idleTimeoutMs: number = 60_000,
+		private readonly rankedService?: RankedService,
 	) { }
 
-	public create(settings: GameSettings, users: string[], mapId: string = "ice-map-v1"): GameRecord {
+	public create(settings: GameSettings, users: string[], mapId: string = "ice-map-v1", ranked?: { seasonId: string; rulesetVersion: string }): GameRecord {
 		if (users.length < 2) throw new Error("A game requires at least two users")
 		validateGameSettings(settings)
 		const id = crypto.randomUUID()
@@ -74,13 +77,18 @@ export class GameRegistry {
 			allTeams: [...users],
 			myTeam: [],
 		}
-		const record = this.createRecord(id, this.buildAuthoritativeHandler(gameSettings, users.length), users, 0, 0, undefined, undefined, undefined, undefined, mapId)
+		const record = this.createRecord(id, this.buildAuthoritativeHandler(gameSettings, users.length), users, 0, 0, undefined, undefined, undefined, undefined, mapId, undefined, ranked)
 		this.games.set(id, record)
 		this.persist(record)
 		return record
 	}
 
 	/** Builds a new authoritative match from a server-approved map ID only. */
+	public createRanked(settings: GameSettings, users: string[], mapId: string, seasonId: string, rulesetVersion: string): GameRecord {
+		if (!this.rankedService) throw new Error("Ranked service is not configured");
+		return this.create(settings, users, mapId, { seasonId, rulesetVersion });
+	}
+
 	public createFromApprovedMap(repository: MapRepository, mapId: string, template: GameSettings, users: string[]): GameRecord {
 		const { map, settings } = repository.buildSettings(mapId, template);
 		return this.create(settings, users, map.id);
@@ -138,6 +146,7 @@ export class GameRegistry {
 		if (!record || record.lifecycle.status === "completed") return false;
 		record.handler.finishMatch({ status: MatchStatus.Draw, winnerTeam: null, reason: MatchEndReason.Draw, turnNumber: record.turnNumber });
 		this.transition(record, "completed");
+		this.finalizeRanked(record);
 		this.persist(record);
 		this.storeCompletedReplay(record);
 		return true;
@@ -154,6 +163,7 @@ export class GameRegistry {
 			: { status: MatchStatus.Winner, winnerTeam: opponentTeam, reason: MatchEndReason.Surrendered, turnNumber: record.turnNumber };
 		record.handler.finishMatch(result);
 		this.transition(record, "completed");
+		this.finalizeRanked(record);
 		this.persist(record);
 		this.storeCompletedReplay(record);
 		return { record, result };
@@ -251,6 +261,7 @@ export class GameRegistry {
 				record.currentTeam = record.ruleState.activeTeam
 				record.turnNumber = record.ruleState.turnNumber
 			}
+			if (completed) this.finalizeRanked(record)
 			this.persist(record)
 			// Every completed match receives a secret replay token immediately.
 			// It stays private until an explicit player share or operator lookup.
@@ -380,7 +391,7 @@ export class GameRegistry {
 		// Legacy rows without one get a fresh recorder so a broken origin is
 		// never persisted or served; their past actions stay unplayable.
 		const origin = stored.initialSettings
-		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, origin ? stored.actions ?? [] : [], stored.lifecycle, stored.mapId, origin)
+		const record = this.createRecord(stored.id, handler, stored.users, stored.currentTeam, stored.turnNumber, undefined, stored.settings.ruleState, origin ? stored.actions ?? [] : [], stored.lifecycle, stored.mapId, origin, stored.ranked)
 		this.games.set(id, record)
 		if (record.lifecycle.status === "sleeping") this.transition(record, "resident")
 		return record
@@ -398,6 +409,7 @@ export class GameRegistry {
 		lifecycle: PersistedMatchLifecycle = createLifecycle("resident", Date.now()),
 		mapId: string = "ice-map-v1",
 		initialSettings?: GameSettings,
+		ranked?: { seasonId: string; rulesetVersion: string },
 	): GameRecord {
 		const mode = handler.getSettings()?.gameMode ?? currentTurnMode
 		const rules = new RuleInterpreter(mode)
@@ -419,6 +431,7 @@ export class GameRegistry {
 			mapId,
 			pauseRequests: new Set(),
 			resumeRequests: new Set(),
+			...(ranked ? { ranked: structuredClone(ranked) } : {}),
 		}
 	}
 
@@ -434,11 +447,19 @@ export class GameRegistry {
 			actions: record.recorder.getReplay().actions,
 			lifecycle: record.lifecycle,
 			mapId: record.mapId,
+			...(record.ranked ? { ranked: structuredClone(record.ranked) } : {}),
 		}
 		if (this.database.hasGame(record.id)) this.database.saveGame(game)
 		else this.database.createGame(game)
 		record.lastAccess = game.updatedAt
 	}
+	private finalizeRanked(record: GameRecord): void {
+		if (!record.ranked || !this.rankedService) return;
+		const result = record.handler.getMatchResult();
+		if (!result) throw new Error("Ranked match completed without a result");
+		this.rankedService.finalize(record.id, result, record.users.map((playerId, team) => ({ playerId, team })), record.lifecycle.completedAt ?? Date.now());
+	}
+
 	/** Idempotently stores the frozen replay token without publishing it to clients. */
 	private storeCompletedReplay(record: GameRecord): string | undefined {
 		const result = record.handler.getMatchResult();

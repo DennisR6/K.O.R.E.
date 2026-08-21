@@ -29,6 +29,7 @@ export type StoredGame = {
 	mapId?: string;
 	actions?: ReplayAction[];
 	lifecycle?: PersistedMatchLifecycle;
+	ranked?: { seasonId: string; rulesetVersion: string };
 };
 export type StoredFeedback = FeedbackSubmission & { id: string; createdAt: number };
 export type StoredReplayShare = { token: string; replay: FrozenReplayDocument; createdAt: number; revokedAt: number | null };
@@ -356,7 +357,7 @@ export class GameDatabase {
 		// The immutable origin is stored independently from the mutable live
 		// snapshot. Never fabricate it from `settings`: a live snapshot from a
 		// later turn is not a reproducible replay origin.
-		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [] });
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [], ...(game.ranked ? { ranked: game.ranked } : {}) });
 		const lifecycle = game.lifecycle ?? createLifecycle("resident", game.updatedAt, game.updatedAt);
 		this.db.transaction(() => {
 			this.db.query(`
@@ -370,7 +371,7 @@ export class GameDatabase {
 	}
 
 	public saveGame(game: StoredGame): void {
-		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [] });
+		const snapshot = compress({ settings: game.settings, initialSettings: game.initialSettings, actions: game.actions ?? [], ...(game.ranked ? { ranked: game.ranked } : {}) });
 		this.db.transaction(() => {
 			this.db.query(`
 			UPDATE games
@@ -402,6 +403,7 @@ export class GameDatabase {
 			turnNumber: row.turn_number,
 			updatedAt: row.updated_at,
 			mapId: row.map_id,
+			...(decompressed.ranked ? { ranked: decompressed.ranked } : {}),
 			lifecycle,
 		};
 	}
@@ -983,7 +985,7 @@ function compress(data: { settings: EngineSettings; initialSettings?: GameSettin
 	return gzipSync(JSON.stringify(data));
 }
 
-function decompress(snapshot: Uint8Array): { settings: EngineSettings; initialSettings?: GameSettings; actions: ReplayAction[] } {
+function decompress(snapshot: Uint8Array): { settings: EngineSettings; initialSettings?: GameSettings; actions: ReplayAction[]; ranked?: { seasonId: string; rulesetVersion: string } } {
 	const parsed = JSON.parse(gunzipSync(snapshot).toString());
 	if (parsed && typeof parsed === "object" && "settings" in parsed) {
 		return { settings: parsed.settings as EngineSettings, initialSettings: parsed.initialSettings as GameSettings | undefined, actions: (parsed.actions ?? []) as ReplayAction[] };
