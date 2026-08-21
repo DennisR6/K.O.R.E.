@@ -68,7 +68,7 @@ export class EngineAssetManager {
 		try {
 			const override = this.overrides.get(key);
 			const rawUrl = override ?? (typeof key === "string" ? key : `./public/${AssetPaths[key]}?t=${Date.now()}`);
-			const fetchUrl = (typeof key === "string" && key.startsWith("/public/")) ? `.${key}` : rawUrl;
+			const fetchUrl = override ? rawUrl : resolveApplicationAssetUrl(rawUrl);
 			const response = await this.fetchImpl(fetchUrl);
 			if (!response.ok) throw new Error("Netzwerkfehler");
 
@@ -150,6 +150,20 @@ function assetCategory(key: ImageKey): "images" | "fonts" | "audio" | "json/conf
 	if (/\.(?:mp3|wav|ogg|m4a)(?:$|[?#])/i.test(path)) return "audio";
 	if (/\.(?:json|map)(?:$|[?#])/i.test(path)) return "json/config";
 	return "other";
+}
+
+/** Resolves public assets against the deployed application root, not the current
+ * document directory. This matters for Discord Activities and embedded pages
+ * mounted below a path such as `/kore/activity/`. */
+function resolveApplicationAssetUrl(rawUrl: string): string {
+	if (typeof window === "undefined" || typeof document === "undefined") return rawUrl;
+	const normalized = rawUrl.replace(/^\.\//, "");
+	if (!normalized.startsWith("public/")) return rawUrl;
+	const script = [...document.scripts].find(candidate => /\/dist\/main(?:\.js)?(?:[?#]|$)/.test(candidate.src));
+	if (!script?.src) return new URL(normalized, document.baseURI).toString();
+	const scriptUrl = new URL(script.src, document.baseURI);
+	const applicationRoot = scriptUrl.pathname.replace(/\/dist\/main(?:\.js)?$/, "");
+	return `${scriptUrl.origin}${applicationRoot}/${normalized}`;
 }
 
 function isSvgAsset(key: ImageKey): boolean {

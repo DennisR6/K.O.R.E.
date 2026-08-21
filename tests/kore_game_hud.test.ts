@@ -31,7 +31,7 @@ test("item cards expose the description and target type so the picker is underst
 	const hud = createKoreGameHudSurface({ handle() {} });
 	hud.applyProjection(projection({ inventory: [{ itemId: "magnet", name: "Magnet", description: "Pull a nearby opponent", targetType: "entity", remainingUses: 1, enabled: true, showLabel: true }] }));
 	const element = hud.getRuntime().toSettings().screens[0]?.elements.find(candidate => candidate.id === "hud-item-0");
-	expect(element && "component" in element ? element.component?.source : "").toBe("public/items/placeholder.svg");
+	expect(element && "component" in element ? element.component?.source : "").toBe("public/items/magnet.svg");
 });
 
 test("targeted item cards select first and use the next world click as the target", () => {
@@ -55,11 +55,11 @@ test("item-phase skip button remains clickable while gameplay input is locked", 
 	expect(commands).toEqual([{ type: KoreHudCommand.SkipItemPhase, payload: undefined }]);
 });
 
-test("item phase explains that dragging skips item use", () => {
+test("item phase explains that hovering shows item details", () => {
 	const hud = createKoreGameHudSurface({ handle() {} });
 	hud.applyProjection(projection());
 	const title = hud.getRuntime().toSettings().screens[0]?.elements.find(element => element.id === KoreHudElement.ItemsTitle);
-	expect(title && "text" in title ? title.text : "").toContain("press an icon");
+	expect(title && "text" in title ? title.text : "").toContain("Hover an icon");
 });
 
 test("HUD command parser rejects unknown and malformed generic UI commands", () => {
