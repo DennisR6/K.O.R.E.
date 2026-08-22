@@ -14,6 +14,17 @@ test("ranked game metadata survives authoritative persistence", () => {
 	expect(registry.get(record.id)?.ranked).toEqual(record.ranked);
 });
 
+test("authoritative ranked termination finalizes exactly one rating result", () => {
+	const database = new GameDatabase(":memory:");
+	const service = new RankedService(database, { id: "season", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" });
+	const registry = new GameRegistry(database, 60_000, service);
+	const record = registry.createRanked(createDefaultGameSettings(2, 1), ["a", "b"], "ice-map-v1", "season", "ranked-v1");
+	expect(registry.killGame(record.id)).toBe(true);
+	expect(database.listRankedLeaderboard("season")).toHaveLength(2);
+	expect(registry.killGame(record.id)).toBe(false);
+	expect(database.listRankedLeaderboard("season")).toHaveLength(2);
+});
+
 test("ranked service composes season, queue, and finalization boundaries", () => {
 	const service = new RankedService(new GameDatabase(":memory:"), { id: "season", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" });
 	service.enqueue("a", 1000, "eu", 0);
