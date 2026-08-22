@@ -5,6 +5,7 @@ import { GameEmitter } from "../../src/emitter/EngineEmitter.js";
 import { GameHandler, GameHandlerBuilder } from "../../src/kore/runtime/Handler.js";
 import { GameState } from "../../src/kore/runtime/types.js";
 import { MatchStatus } from "../../src/rules/types.js";
+import { WinningSystem } from "../../src/systems/WinningSystem.js";
 import { makeAiArena } from "./aiMatchFuzz.ts";
 
 export type FairnessVariant = "original" | "swapped-sides" | "first-turn-swapped";
@@ -17,7 +18,7 @@ const MAX_TURNS = 40;
 const MAX_TICKS = 1200;
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
-function build(settings: ReturnType<typeof makeAiArena>): GameHandler { return new GameHandlerBuilder().defaultSystems().fromSettings(settings).build(); }
+function build(settings: ReturnType<typeof makeAiArena>): GameHandler { return new GameHandlerBuilder().defaultSystems().addSystem(new WinningSystem(2)).fromSettings(settings).build(); }
 
 function settingsFor(seed: number, variant: FairnessVariant) {
 	const settings = clone(makeAiArena(seed));

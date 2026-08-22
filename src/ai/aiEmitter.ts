@@ -7,6 +7,7 @@ import type { AiSettings } from "./types.js";
 // browser bundle.
 import { isValidInput } from "../input/validate.js";
 import { runtimeNow } from "../kore/runtime/runtimeLog.js";
+import { RulePhase } from "../rules/types.js";
 
 export interface AiDecision {
 	shot?: { actorId: string; angle: number; power: number };
@@ -25,6 +26,20 @@ export class AiTurnEmitter {
 		handler.log("ai.decision.started", { team: aiSettings.team, difficulty: aiSettings.difficulty });
 		const decision = this.producer.computeTurn(handler, aiSettings);
 		if (!decision) {
+			// A producer may have no tactical choice when the opponent has just
+			// been eliminated but the completion system has not flushed yet. Keep
+			// the authoritative turn alive with a legal neutral shot whenever a
+			// controlled actor still exists; this is not a gameplay decision and
+			// is recorded as a safety fallback for diagnostics.
+			if (handler.getRuleState().phase === RulePhase.Physics) {
+				const fallback = handler.getEntityManager().getEntities().find(entity => !entity.isDead() && entity.getTeam().includes(aiSettings.team) && handler.isActorEligibleForAction(entity.getId()));
+				if (fallback && isValidInput({ actorId: fallback.getId(), angle: 0, power: 4 })) {
+					targetEmitter.sendShot(fallback.getId(), 0, 4);
+					handler.log("ai.fallback.neutral-shot", { team: aiSettings.team, actorId: fallback.getId() });
+					handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: true, executionMode: "synchronous" });
+					return true;
+				}
+			}
 			handler.log("ai.decision.completed", { team: aiSettings.team, difficulty: aiSettings.difficulty, durationMs: runtimeNow() - started, submitted: false, executionMode: "synchronous" });
 			return false;
 		}
