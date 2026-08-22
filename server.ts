@@ -10,6 +10,7 @@ import { serveMatchReport } from "./src/server/matchReports.ts";
 import { serveFeedback } from "./src/server/feedbackRoute.ts";
 import { serveDebugAssets } from "./src/server/debugAssets.ts";
 import { join } from "node:path";
+import { RankedService } from "./src/server/rankedService.ts";
 import type { WebSocketData } from "./src/server/types.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -20,7 +21,11 @@ const serverConfig = readServerConfig(process.env);
 const dashboardConfig = readDashboardConfig(process.env);
 const databasePath = resolveGameDatabasePath(process.env, import.meta.dir);
 const database = new GameDatabase(databasePath);
-const runtime = new ServerRuntime(new GameRegistry(database));
+const rankedService = process.env.KORE_PLAYER_SESSION_SECRET
+	? new RankedService(database, { id: process.env.KORE_RANKED_SEASON_ID ?? "ranked-2026", rulesetVersion: "ranked-v1", startsAt: 0, endsAt: null, status: "active" })
+	: undefined;
+const registry = new GameRegistry(database, 60_000, rankedService);
+const runtime = new ServerRuntime(registry, undefined, process.env.KORE_ROAST_PACKED_INIT === "1", process.env.KORE_PLAYER_SESSION_SECRET, rankedService);
 const debugAssetRoot = join(import.meta.dir, "data", "debug-assets");
 
 Bun.serve<WebSocketData>({
