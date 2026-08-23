@@ -55,6 +55,11 @@ test("HUD keeps collected items visible when the collecting figure is not select
 	expect(projection.inventory).toHaveLength(1);
 	expect(projection.inventory[0]?.itemId).toBe("power-dash");
 	expect(selectActiveItemActor(handler, "power-dash", ui)?.getId()).toBe(owner.getId());
+
+	// A collected team item remains visible even if its collecting figure is
+	// eliminated before the next item phase refresh.
+	owner.setIsDead(true);
+	expect(createKoreHudProjection(handler, ui).inventory[0]?.itemId).toBe("power-dash");
 });
 
 test("HUD projection marks playback as locked and clears results after rematch", () => {

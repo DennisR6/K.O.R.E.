@@ -28,7 +28,10 @@ export interface KoreHudProjection {
 export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, rejection?: string): KoreHudProjection {
 	const rule = handler.getRuleState(); const state = handler.getState();
 	const selectedActorId = input?.selectedActorId ?? (input?.start ? handler.getEntityManager().getEntityAt(input.start.x, input.start.y, 6)?.getId() ?? null : null);
-	const activeActors = handler.getEntityManager().getEntities().filter(entity => !entity.isDead() && entity.isActorEligible() && entity.getTeam().includes(rule.activeTeam));
+	// Inventory is team-owned from the player's perspective. Keep projecting
+	// collected items from every team figure, including a dead collector, so a
+	// pickup cannot disappear from the bag until another figure dies or moves.
+	const teamActors = handler.getEntityManager().getEntities().filter(entity => entity.getTeam().includes(rule.activeTeam));
 	const dx = input?.start ? input.currentMouse.x - input.start.x : 0; const dy = input?.start ? input.currentMouse.y - input.start.y : 0;
 	const length = Math.hypot(dx, dy);
 	const aimAngle = input?.aimAngle ?? (input?.start && length >= 1 ? ((Math.atan2(dy, dx) * 180 / Math.PI + 180) % 360 + 360) % 360 : null);
@@ -42,7 +45,7 @@ export function createKoreHudProjection(handler: GameHandler, input?: UiSystem, 
 	return {
 		revision: rule.turnNumber * 10_000 + rule.activeTeam * 100 + (result ? 1 : 0),
 		turn: { number: rule.turnNumber, activeTeam: rule.activeTeam, phase: rule.phase, engineState: state, selectedActorId: selectedActorId ?? null, aimAngle, power },
-		inventory: projectTeamInventory(handler, activeActors, rule.phase === RulePhase.Item && state === GameState.Your_turn),
+		inventory: projectTeamInventory(handler, teamActors, rule.phase === RulePhase.Item && state === GameState.Your_turn),
 		match: { ...(result ? { result } : {}), inputLocked: state !== GameState.Your_turn || result !== undefined, waiting: state === GameState.Waiting_for_server || state === GameState.Opponents_turn, paused: handler.isPaused() },
 		aiThinking,
 		...(rule.turnNumber === 0 && rule.phase === RulePhase.Physics && state === GameState.Your_turn && !result ? { tutorial: true } : {}),

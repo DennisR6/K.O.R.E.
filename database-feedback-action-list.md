@@ -16,7 +16,7 @@ Analysis source: downloaded `data/kore.db` (read-only), analyzed 2026-08-21.
 
 | Finding | Current status | Evidence in source/tests | Remaining work |
 |---|---|---|---|
-| Inventory refresh after pickup | **Mostly implemented** | `MapPickupSystem` mutates canonical inventory, records same-tick pickup feedback, HUD reprojects every post-tick, and pickup/HUD tests exist. | Add a real browser regression proving the visible card updates immediately after collection. Investigate the historical report as a stale-build or scene-refresh regression. |
+| Inventory refresh after pickup | **Fixed in source, browser qualification pending** | `MapPickupSystem` mutates canonical inventory, records same-tick pickup feedback, HUD reprojects every post-tick, and the HUD now projects team inventory even when the collecting figure is eliminated; pickup/HUD tests cover same-turn collection and persistence. | Add a real browser regression proving the visible card updates immediately after collection. Investigate the historical report as a stale-build or scene-refresh regression. |
 | Online desync/premature completion | **Improved, browser qualification pending** | Server owns completion; TURN packets carry state hashes; stale/hash-mismatch logs and diagnostic feedback exist; `NetworkEmitter` now restores the authoritative final player state on mismatch; reconnect and authority tests exist. | Add a browser reconnect/desync test and define voiding behavior for unrecoverable rule-state mismatches. |
 | Hazard force inconsistency | **Partially implemented** | Force hazards validate degrees and use the shared degree-based impulse path; deterministic hazard tests exist. | Add player-facing direction/strength preview and tests covering collision angle, mass, and map conversion. |
 | Item timing and comprehension | **Partially implemented** | Cards show descriptions/target types; item phases, validation, delayed effects, and inventory are tested. | Explain timing/arming/trigger conditions and define post-shot defensive-item windows explicitly. |
@@ -35,8 +35,8 @@ Evidence: `Iteems erscheinen nach Einsammeln nicht sofort in der Item Tasche. Ko
 Implement/verify:
 
 - Refresh the HUD projection immediately after `MapPickupSystem` grants an item.
-- Preserve inventory updates across selection changes, playback, death, rematch, and reconnect.
-- Add a regression test that collects a pickup and asserts the item card changes in the same frame/turn.
+- Preserve inventory updates across selection changes, playback, death, rematch, and reconnect; the HUD projection now reads team inventory rather than only live collectors.
+- Add a regression test that collects a pickup and asserts the item card changes in the same frame/turn; deterministic pickup and HUD coverage now passes, with browser coverage still pending.
 
 ### 2. Online desynchronization and premature match end
 
