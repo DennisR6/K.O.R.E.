@@ -18,8 +18,8 @@ Analysis source: downloaded `data/kore.db` (read-only), analyzed 2026-08-21.
 |---|---|---|---|
 | Inventory refresh after pickup | **Fixed in source, browser qualification pending** | `MapPickupSystem` mutates canonical inventory, records same-tick pickup feedback, HUD reprojects every post-tick, and the HUD now projects team inventory even when the collecting figure is eliminated; pickup/HUD tests cover same-turn collection and persistence. | Add a real browser regression proving the visible card updates immediately after collection. Investigate the historical report as a stale-build or scene-refresh regression. |
 | Online desync/premature completion | **Improved, browser qualification pending** | Server owns completion; TURN packets carry state hashes; stale/hash-mismatch logs and diagnostic feedback exist; `NetworkEmitter` now restores the authoritative final player state on mismatch; reconnect and authority tests exist. | Add a browser reconnect/desync test and define voiding behavior for unrecoverable rule-state mismatches. |
-| Hazard force inconsistency | **Partially implemented** | Force hazards validate degrees and use the shared degree-based impulse path; deterministic hazard tests exist. | Add player-facing direction/strength preview and tests covering collision angle, mass, and map conversion. |
-| Item timing and comprehension | **Partially implemented** | Cards show descriptions/target types; item phases, validation, delayed effects, and inventory are tested. | Explain timing/arming/trigger conditions and define post-shot defensive-item windows explicitly. |
+| Hazard force inconsistency | **Improved, gameplay qualification pending** | Force hazards validate degrees and use the shared degree-based impulse path; hazard feedback now displays force magnitude and scales its directional arrow; deterministic hazard tests exist. | Add broader player-facing tests covering collision angle, mass, and map conversion, plus human confirmation on the affected maps. |
+| Item timing and comprehension | **Improved, gameplay qualification pending** | Cards show descriptions, target types, and explicit timing labels (`This phase`, turns, or rounds); item phases, validation, delayed effects, and inventory are tested. | Explain timing/arming/trigger conditions and define post-shot defensive-item windows explicitly. |
 | Mobile layout/input | **Improved, browser qualification pending** | Touch input shares pointer validation; coarse touch gets a larger actor-selection target; portrait rotation prompt, safe-area/dynamic-viewport CSS, gesture suppression, mobile layout tests, and native cursor handling exist. | Real-device/browser evidence and confirmation that HUD/world fit at common narrow-landscape sizes remain. |
 | Gameplay animation visibility | **Implemented in source, not yet human-qualified** | Deterministic presentation surface, feedback events, focused tests, and browser builds pass. | Verify in a production browser scene and add stronger procedural particles if effects remain too subtle. |
 | AI forgiveness/balance | **Partially implemented** | AI fuzz/tournament infrastructure, deterministic difficulty settings, and termination tests exist. | Run controlled human-facing balance experiments; current database results are confounded by map/team/seed selection. |
@@ -55,7 +55,7 @@ Evidence: hazard input sometimes feels strong or weak; tester asks whether the a
 
 Implement/verify:
 
-- Display hazard direction and force magnitude in the HUD/debug feedback.
+- Display hazard direction and force magnitude in the HUD/debug feedback; implemented with a directional arrow and `Hazard force` label.
 - Confirm coordinate/angle convention and normalize all hazard vectors at the conversion boundary.
 - Add deterministic tests for the same hazard at multiple entry angles and for repeated snapshot restores.
 - Surface whether force is additive, mass-scaled, or collision-normal-based so the result is understandable.

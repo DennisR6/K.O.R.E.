@@ -64,7 +64,7 @@ function projectTeamInventory(handler: GameHandler, actors: IEntity[], enabled: 
 	}
 	return [...totals].map(([itemId, remainingUses]) => {
 		const document = handler.getSettings()?.items?.find(candidate => candidate.id === itemId);
-		const timing = document ? document.duration.type === "instant" ? "Immediate" : `${document.duration.value} ${document.duration.type}` : undefined;
+		const timing = document ? document.duration.type === "instant" ? "This phase" : `${document.duration.value} ${document.duration.type}${document.duration.value === 1 ? "" : "s"}` : undefined;
 		const range = document?.targetValidation?.maxRange;
 		return { itemId, ...(document?.name ? { name: document.name } : {}), ...(document?.description ? { description: document.description } : {}), ...(document?.targetType ? { targetType: document.targetType } : {}), ...(timing ? { timing } : {}), ...(range === undefined ? {} : { range }), remainingUses, enabled, ...(document?.ui?.component ? { component: structuredClone(document.ui.component) } : {}), showLabel: document?.ui?.showLabel ?? true };
 	});

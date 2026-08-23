@@ -630,7 +630,7 @@ export class GameHandler implements ITicker, IMouse, ISettingsSerialize<GameSett
 			const entity = [a, b].find(value => typeof (value as IEntity).getId === "function" && typeof (value as IEntity).getTeam === "function") as IEntity | undefined;
 			if (ids.length === 1) {
 				const vector = structure ? collisionVelocityVector(structure.getCollisionCommands()) : undefined;
-				this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true, ...(vector ? { vectorX: vector.x, vectorY: vector.y } : {}) } });
+				this.recordFeedback(KoreGameplayFeedbackType.Hazard, { actorId: ids[0], data: { structure: true, ...(vector ? { vectorX: vector.x, vectorY: vector.y, force: Math.hypot(vector.x, vector.y) } : {}) } });
 			}
 			if (structure && entity) dispatchCollisionCommands({ ctx: this.context, systems: this.systems, commands: structure.getCollisionCommands(), target: entity });
 		}

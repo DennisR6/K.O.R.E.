@@ -124,7 +124,8 @@ export class KoreGameplayFeedbackSurface implements ITicker, IDrawer, ISoundEmit
 			const radius = (event.type === KoreGameplayFeedbackType.Elimination ? 24 : event.type === KoreGameplayFeedbackType.Shield ? 20 : 14) * scale;
 			if (event.type === KoreGameplayFeedbackType.Hazard && typeof data?.vectorX === "number" && typeof data?.vectorY === "number") {
 				const magnitude = Math.hypot(data.vectorX, data.vectorY) || 1;
-				const length = 34 * scale;
+				const force = typeof data?.force === "number" && Number.isFinite(data.force) ? Math.max(0, Math.min(10, data.force)) : magnitude;
+				const length = (24 + force * 3) * scale;
 				const dx = data.vectorX / magnitude * length;
 				const dy = data.vectorY / magnitude * length;
 				renderer.line(position.x, position.y, position.x + dx, position.y + dy);
@@ -186,5 +187,6 @@ function feedbackLabel(event: KoreGameplayFeedbackEvent): string {
 	if (event.type === KoreGameplayFeedbackType.Message && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.message === "string") return event.data.message;
 	if (event.type === KoreGameplayFeedbackType.Item && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.itemId === "string") return `Item activated: ${event.data.itemId}`;
 	if (event.type === KoreGameplayFeedbackType.Item && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.rewardName === "string") return `Mystery Box: ${event.data.rewardName}`;
+	if (event.type === KoreGameplayFeedbackType.Hazard && event.data && typeof event.data === "object" && !Array.isArray(event.data) && typeof event.data.force === "number") return `Hazard force: ${event.data.force.toFixed(1)}`;
 	return event.type[0]!.toUpperCase() + event.type.slice(1);
 }

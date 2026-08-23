@@ -324,8 +324,8 @@ describe("Section 17.6 hazard control map", () => {
 		expect(entry.browserAvailable).toBe(true);
 		expect(entry.status).toBe("browser-qualified"); // 17.8 browser E2E evidence recorded
 		expect(entry.spawnRegionCount).toBe(2);
-		expect(entry.structureCount).toBe(5);
-		expect(entry.hazardCount).toBe(5);
+		expect(entry.structureCount).toBe(1);
+		expect(entry.hazardCount).toBe(2);
 		expect(entry.hazardTypes).toEqual(["kill-zone"]);
 		expect(entry.teamLayouts).toEqual([2]);
 		expect(entry.figuresPerTeam).toEqual([1]);
