@@ -522,6 +522,11 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 		})
 		let activeTouchId: number | undefined;
 		let latestTouch: { clientX: number; clientY: number } | undefined;
+		const configureTouchInput = (active: GameHandler): void => {
+			const mouse = active.getMouseHandler() as IMouse & { getGameplayInput?: () => IMouse | undefined };
+			const gameplayInput = mouse.getGameplayInput?.() ?? mouse;
+			if (gameplayInput instanceof UiSystem) gameplayInput.setTouchMode(true);
+		};
 		const touchPoint = (event: TouchEvent): { clientX: number; clientY: number } | undefined => {
 			if (activeTouchId === undefined) return event.changedTouches[0];
 			for (let index = 0; index < event.changedTouches.length; index++) {
@@ -547,6 +552,8 @@ function startGame(h: GameHandler, getActiveHandler: () => GameHandler = () => h
 			if (touch.clientX < bounds.left || touch.clientX > bounds.right || touch.clientY < bounds.top || touch.clientY > bounds.bottom) return;
 			event.preventDefault();
 			canvas.focus();
+			const active = getActiveHandler();
+			configureTouchInput(active);
 			activeTouchId = event.changedTouches[0]!.identifier;
 			updateTouch(touch);
 			getActiveHandler().handleMousePressed();

@@ -10,7 +10,9 @@ export interface IUiSystem extends ISerializableSystem, IDrawer, IMouse { }
 export class UiSystem implements IUiSystem {
 	public readonly systemId = "ui.pointer-input";
 	private static readonly MIN_DRAG_DISTANCE = 8
-	private static readonly SELECTION_PADDING = 6
+	private static readonly DESKTOP_SELECTION_PADDING = 6
+	private static readonly TOUCH_SELECTION_PADDING = 14
+	private selectionPadding = UiSystem.DESKTOP_SELECTION_PADDING
 	start: Vector2D | null = null
 	end: Vector2D | null = null
 	currentMouse: Vector2D = { x: 0, y: 0 }
@@ -62,6 +64,11 @@ export class UiSystem implements IUiSystem {
 		this.chargePower = Math.min(power, 10);
 	}
 
+	/** Enlarges only the initial actor hit target for coarse touch input. */
+	public setTouchMode(enabled: boolean): void {
+		this.selectionPadding = enabled ? UiSystem.TOUCH_SELECTION_PADDING : UiSystem.DESKTOP_SELECTION_PADDING;
+	}
+
 	/** Consumes validated semantic pointer commands from browser/touch adapters. */
 	public dispatchInput(message: KoreInputMessage): void {
 		validateKoreInputMessage(message);
@@ -102,7 +109,7 @@ export class UiSystem implements IUiSystem {
 		}
 
 		if (!this.start) return
-		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y, UiSystem.SELECTION_PADDING)
+		const actor = ctx.entities.getEntityAt(this.start.x, this.start.y, this.selectionPadding)
 		if (!actor || actor.isDead() || !actor.isActorEligible() || (actor.getTeam().length > 0 && !actor.getTeam().includes(ctx.activeTeam))) {
 			this.clearInput()
 			return

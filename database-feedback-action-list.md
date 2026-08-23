@@ -20,7 +20,7 @@ Analysis source: downloaded `data/kore.db` (read-only), analyzed 2026-08-21.
 | Online desync/premature completion | **Improved, browser qualification pending** | Server owns completion; TURN packets carry state hashes; stale/hash-mismatch logs and diagnostic feedback exist; `NetworkEmitter` now restores the authoritative final player state on mismatch; reconnect and authority tests exist. | Add a browser reconnect/desync test and define voiding behavior for unrecoverable rule-state mismatches. |
 | Hazard force inconsistency | **Partially implemented** | Force hazards validate degrees and use the shared degree-based impulse path; deterministic hazard tests exist. | Add player-facing direction/strength preview and tests covering collision angle, mass, and map conversion. |
 | Item timing and comprehension | **Partially implemented** | Cards show descriptions/target types; item phases, validation, delayed effects, and inventory are tested. | Explain timing/arming/trigger conditions and define post-shot defensive-item windows explicitly. |
-| Mobile layout/input | **Partially implemented** | Touch input shares pointer validation; mobile layout tests and native cursor work exist. | Landscape-first behavior, portrait prompt, drag-radius tuning, and real-device/browser evidence remain. |
+| Mobile layout/input | **Improved, browser qualification pending** | Touch input shares pointer validation; coarse touch gets a larger actor-selection target; portrait rotation prompt, safe-area/dynamic-viewport CSS, gesture suppression, mobile layout tests, and native cursor handling exist. | Real-device/browser evidence and confirmation that HUD/world fit at common narrow-landscape sizes remain. |
 | Gameplay animation visibility | **Implemented in source, not yet human-qualified** | Deterministic presentation surface, feedback events, focused tests, and browser builds pass. | Verify in a production browser scene and add stronger procedural particles if effects remain too subtle. |
 | AI forgiveness/balance | **Partially implemented** | AI fuzz/tournament infrastructure, deterministic difficulty settings, and termination tests exist. | Run controlled human-facing balance experiments; current database results are confounded by map/team/seed selection. |
 | Team/map fairness | **Infrastructure exists, evidence incomplete** | Map qualification and mirrored matrix helpers exist. | Exclude aborted fixtures, run balanced team/map tournaments, and publish thresholds. |
@@ -81,9 +81,10 @@ Evidence: multiple reports call mobile UI/view poor or janky; one specifically r
 Implement/verify:
 
 - Prefer landscape on phones, with a clear rotation prompt in portrait mode.
-- Increase the minimum drag target while preserving precise aim after the initial selection.
+- Increase the initial actor-selection target for coarse touch while preserving desktop precision; implemented with a 14-unit touch padding.
 - Add a visible selected-actor marker, drag origin, power scale, and release preview.
 - Ensure the camera/world and item panel fit without overlap at common 16:9 and narrow landscape sizes.
+- Suppress browser gestures/text selection on the canvas and account for safe-area insets and dynamic mobile viewport height.
 - Test touch drag, cancellation, pointer capture, safe-area insets, and low-resolution devices in a real browser.
 
 ### 6. Feedback and animation visibility
