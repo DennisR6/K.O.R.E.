@@ -69,7 +69,10 @@ function projectTeamInventory(handler: GameHandler, actors: IEntity[], enabled: 
 
 /** Converts the active pointer drag into immutable world-space arrow geometry. */
 function createAimPreview(handler: GameHandler, input: UiSystem | undefined): KoreHudWorldGuidance["aimPreview"] {
-	if (handler.getState() !== GameState.Your_turn || !input?.start || input.end) return undefined;
+	// AI turns can briefly keep the engine in Your_turn while the AI decision is
+	// being computed. Never render the human drag preview for that active team;
+	// stale pointer coordinates otherwise produce a stray arrow in the arena.
+	if (handler.getState() !== GameState.Your_turn || handler.getAiSettings()?.team === handler.getActiveTeam() || !input?.start || input.end) return undefined;
 	const actor = handler.getEntityManager().getEntityAt(input.start.x, input.start.y, 6);
 	if (!actor || actor.isDead() || !actor.getTeam().includes(handler.getActiveTeam())) return undefined;
 	const dx = input.start.x - input.currentMouse.x; const dy = input.start.y - input.currentMouse.y;
