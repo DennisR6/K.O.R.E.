@@ -19,6 +19,7 @@ export class UiSystem implements IUiSystem {
 	aimAngle: number | null = null
 	chargePower: number | null = null
 	selectedActorId: string | null = null
+	private pointerActive = false
 
 	constructor() { }
 	public toSettings(): SystemSettings { return { systemId: this.systemId, schemaVersion: 1, state: { start: this.start, end: this.end, currentMouse: this.currentMouse, aimAngle: this.aimAngle, chargePower: this.chargePower, selectedActorId: this.selectedActorId } }; }
@@ -68,6 +69,9 @@ export class UiSystem implements IUiSystem {
 	public setTouchMode(enabled: boolean): void {
 		this.selectionPadding = enabled ? UiSystem.TOUCH_SELECTION_PADDING : UiSystem.DESKTOP_SELECTION_PADDING;
 	}
+
+	/** True only while the current pointer/touch drag is held. */
+	public isPointerActive(): boolean { return this.pointerActive; }
 
 	/** Consumes validated semantic pointer commands from browser/touch adapters. */
 	public dispatchInput(message: KoreInputMessage): void {
@@ -139,11 +143,13 @@ export class UiSystem implements IUiSystem {
 	handleMousePressed(): void {
 		if (this.start) return
 		this.start = { ...this.currentMouse }
+		this.pointerActive = true
 	}
 
 	handleMouseReleased(): void {
 		if (!this.start || this.end) return
 		this.end = { ...this.currentMouse }
+		this.pointerActive = false
 	}
 
 	updateMouse(x: number, y: number): void {
@@ -160,6 +166,7 @@ export class UiSystem implements IUiSystem {
 	private clearInput(): void {
 		this.start = null
 		this.end = null
+		this.pointerActive = false
 	}
 
 	private clearAimAndCharge(): void {
