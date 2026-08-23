@@ -77,9 +77,13 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 		: { myTeam: settings.myTeam, allTeams: settings.allTeams };
 	const definition = kore.createMatchDefinition({ mapId: config.mapId, settings, gameMode: settings.gameMode!, seed, header });
 	const handler = kore.createRuntimeMatch(definition);
-	config.aiWorkerHost?.attachHandler(handler);
+	// The worker computes HardAi decisions. Passing it to Easy/Medium or the
+	// intentionally cheap AI-vs-AI spectator mode makes those turns wait for a
+	// much larger search than the configured producer actually needs.
+	const hardAiWorkerHost = config.mode === "human-vs-ai" && difficulty === "hard" ? config.aiWorkerHost : undefined;
+	hardAiWorkerHost?.attachHandler(handler);
 	const emitters = new CombiEmitter();
-	const gameEmitter = new GameEmitter(handler, handler.getSettings()?.gameMode, CANONICAL_PLAYABLE_MATCH.teamCount, seed, config.aiWorkerHost);
+	const gameEmitter = new GameEmitter(handler, handler.getSettings()?.gameMode, CANONICAL_PLAYABLE_MATCH.teamCount, seed, hardAiWorkerHost);
 	emitters.addEmitter(gameEmitter);
 	switch (config.mode) {
 		case "ai-battle": {
@@ -92,10 +96,12 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 				kore.ai.createSettings({ difficulty: "easy", seed: seed * 2, team: 0 }),
 				kore.ai.createSettings({ difficulty: "easy", seed: seed * 2 + 1, team: 1 }),
 			];
-			gameEmitter.setAiWorkerSettings(aiSettings);
+			// AI-vs-AI deliberately uses Easy producers; do not precompute them
+			// through the HardAi worker.
+			gameEmitter.setAiWorkerSettings([]);
 			// The passive battle input becomes the wrapped gameplay input of the
 			// result overlay; clicks are ignored while the battle plays.
-			handler.addSystem(new AiBattleSystem(handler, emitters, aiSettings[0], aiSettings[1], config.aiWorkerHost));
+			handler.addSystem(new AiBattleSystem(handler, emitters, aiSettings[0], aiSettings[1]));
 			handler.setMouseHandler(handler.getSystems().find(system => system instanceof AiBattleSystem) as AiBattleSystem);
 			break;
 		}
@@ -107,8 +113,8 @@ export function createMatchHandler(config: MatchPipelineConfig): GameHandler {
 			handler.addSystem(new EmitterSystem(emitters));
 			if (config.mode === "human-vs-ai") {
 				const aiSettings: AiSettings = kore.ai.createSettings({ difficulty, seed, team: 1, ...(difficulty === "hard" ? { decisionLimits: AI_BATTLE_LIMITS } : {}) });
-				gameEmitter.setAiWorkerSettings([aiSettings]);
-				handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings, config.aiWorkerHost));
+				gameEmitter.setAiWorkerSettings(hardAiWorkerHost ? [aiSettings] : []);
+				handler.addSystem(new AiOpponentSystem(handler, emitters, aiSettings, hardAiWorkerHost));
 			}
 			break;
 		}

@@ -69,6 +69,17 @@ test("every offline mode builds the same canonical match; only the headers diffe
 	expect(battle.getMouseHandler()).toBeInstanceOf(AiBattleSystem);
 });
 
+test("only Hard human-vs-AI uses the expensive worker decision path", () => {
+	const unavailableWorker = {} as any;
+	const medium = createMatchHandler({ mode: "human-vs-ai", mapId: "ice-map-v1", difficulty: "medium", seed: 7, aiWorkerHost: unavailableWorker });
+	const mediumAi = medium.getSystems().find(system => system instanceof AiOpponentSystem) as AiOpponentSystem;
+	expect(mediumAi.isAiThinking()).toBe(false);
+
+	const battle = createMatchHandler({ mode: "ai-battle", mapId: "ice-map-v1", seed: 9, aiWorkerHost: unavailableWorker });
+	const battleAi = battle.getSystems().find(system => system instanceof AiBattleSystem) as AiBattleSystem;
+	expect(battleAi.isAiThinking()).toBe(false);
+});
+
 test("recorder seeds are stable per pipeline config", () => {
 	expect(recorderSeed(createMatchHandler({ mode: "hotseat", mapId: "ice-map-v1" }))).toBe(12345);
 	expect(recorderSeed(createMatchHandler({ mode: "human-vs-ai", mapId: "ice-map-v1", difficulty: "hard", seed: 42 }))).toBe(42);
