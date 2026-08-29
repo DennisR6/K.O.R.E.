@@ -53,7 +53,9 @@ async function refreshItems(container: Element, status: Element, assets: AssetRo
 function itemCard(row: ItemRow, status: Element, container: Element, assets: AssetRow[]): HTMLElement {
 	const card = document.createElement("article"); card.style.cssText = "display:inline-flex;vertical-align:top;flex-direction:column;gap:.5rem;width:220px;margin:.5rem;padding:1rem;border:1px solid #ccd3df;border-radius:8px";
 	const title = document.createElement("strong"); title.textContent = row.itemId;
-	const image = document.createElement("img"); image.alt = `${row.itemId} item`; image.style.cssText = "width:180px;height:120px;object-fit:contain;background:#eef2f7"; if (row.source) image.src = appUrl(row.source);
+	const image = document.createElement("img"); image.alt = `${row.itemId} item`; image.style.cssText = "width:180px;height:120px;object-fit:contain;background:#eef2f7";
+	const selectedAsset = row.source ? assets.find(asset => `public/${asset.path}` === row.source) : undefined;
+	if (row.source) image.src = appUrl(selectedAsset?.override ? selectedAsset.url : row.source);
 	const select = document.createElement("select"); for (const asset of assets) { const option = document.createElement("option"); option.value = `public/${asset.path}`; option.textContent = asset.path; option.selected = option.value === row.source; select.append(option); }
 	const upload = document.createElement("button"); upload.textContent = "Assign asset key";
 	upload.onclick = async () => { const result = await fetch(appUrl(`debug-assets/items/${encodeURIComponent(row.itemId)}`), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ source: select.value }) }); status.textContent = result.ok ? `Assigned ${row.itemId}.` : `Assignment failed for ${row.itemId}.`; if (result.ok) await refreshItems(container, status, assets); };
@@ -100,7 +102,7 @@ function assetCard(row: AssetRow, status: Element, container: Element): HTMLElem
 	const image = document.createElement("img"); image.src = `${appUrl(row.url)}?t=${Date.now()}`; image.alt = row.path; image.style.cssText = "width:180px;height:120px;object-fit:contain;background:#eef2f7";
 	const input = document.createElement("input"); input.type = "file"; input.accept = "image/png,image/jpeg,image/webp,image/gif";
 	const upload = document.createElement("button"); upload.textContent = "Upload replacement";
-	upload.onclick = async () => { const file = input.files?.[0]; if (!file) return; const result = await fetch(appUrl(`debug-assets/${encodeURIComponent(row.path)}`), { method: "POST", body: file, headers: { "content-type": file.type } }); status.textContent = result.ok ? `Uploaded ${row.path}. Reloading preview.` : `Upload failed for ${row.path}.`; if (result.ok) { image.src = `${appUrl(row.url)}?t=${Date.now()}`; row.override = true; } };
+	upload.onclick = async () => { const file = input.files?.[0]; if (!file) return; const result = await fetch(appUrl(`debug-assets/${encodeURIComponent(row.path)}`), { method: "POST", body: file, headers: { "content-type": file.type } }); status.textContent = result.ok ? `Uploaded ${row.path}. Reloading preview.` : `Upload failed for ${row.path}.`; if (result.ok) { row.override = true; row.url = `/debug-assets/${encodeURIComponent(row.path)}/file`; image.src = `${appUrl(row.url)}?t=${Date.now()}`; } };
 	const restore = document.createElement("button"); restore.textContent = "Use production asset"; restore.disabled = !row.override;
 	restore.onclick = async () => { const result = await fetch(appUrl(`debug-assets/${encodeURIComponent(row.path)}`), { method: "DELETE" }); if (result.ok) await refreshAssets(container, status); };
 	card.append(title, image, input, upload, restore);
@@ -111,6 +113,10 @@ export function installDebugAssetOverrides(rows: AssetRow[]): void {
 	for (const row of rows) {
 		if (!row.override) continue;
 		const numericKey = (Object.entries(AssetPaths).find(([, path]) => path === row.path)?.[0]);
-		if (numericKey !== undefined) assetManager.setOverride(Number(numericKey), appUrl(row.url));
+		const overrideUrl = appUrl(row.url);
+		if (numericKey !== undefined) assetManager.setOverride(Number(numericKey), overrideUrl);
+		// Item UI declarations use the registered `public/...` source string,
+		// while map/player settings commonly use the numeric AssetKey.
+		assetManager.setOverride(`public/${row.path}`, overrideUrl);
 	}
 }

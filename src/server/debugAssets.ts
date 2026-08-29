@@ -113,10 +113,13 @@ function remove(asset: string, root: string): Response {
 }
 
 function debugCookiePath(publicBaseUrl?: string): string {
-	if (!publicBaseUrl) return DEBUG_ASSETS_PATH;
+	// The game loads overrides from `/`, not from `/debug-assets`. Scope the
+	// HttpOnly session to the deployed application root so `?assets=1` requests
+	// carry it as well. The debug API remains the only server-side consumer.
+	if (!publicBaseUrl) return "/";
 	const base = new URL(publicBaseUrl);
-	if (!base.pathname.endsWith("/")) base.pathname += "/";
-	return new URL(DEBUG_ASSETS_PATH.slice(1), base).pathname;
+	const pathname = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
+	return pathname === "/" ? "/" : pathname;
 }
 
 function notFound(): Response { return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } }); }

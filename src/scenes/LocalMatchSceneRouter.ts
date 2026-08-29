@@ -22,6 +22,7 @@ import { HardAiWorkerHost } from "../ai/worker/host.js";
 import type { HardAiWorkerMetrics } from "../ai/worker/host.js";
 import { startupMark } from "../kore/runtime/startupTelemetry.js";
 import { AssetPreloader } from "../assetManager/preloader.js";
+import { applyDebugItemOverrides } from "../debug/assets.js";
 
 export type LocalHandlerFactory = (mapId: string, modeId?: string) => GameHandler;
 type MatchResultAction = "rematch" | "menu" | "replay" | "share";
@@ -51,6 +52,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		private readonly language: LanguageCatalog = createEnglishLanguage(),
 		private readonly autoRestartAiBattle = false,
 		private readonly onPlayOnlineFriends?: () => void,
+		private readonly debugItemOverrides: Map<string, string> = new Map(),
 	) {
 		this.handler = new GameHandler();
 		this.handler.setLanguage(this.language);
@@ -166,6 +168,7 @@ export class LocalMatchSceneRouter implements ISoundEmitter {
 		try {
 			startupMark("game.build.started", { mode: this.mode, mapId });
 			const next = factory();
+			applyDebugItemOverrides(next, this.debugItemOverrides);
 			startupMark("game.build.completed", { mode: this.mode, mapId });
 			// Asset warmup is a browser rendering concern. Headless/server hosts do
 			// not have the public asset URL space and should not emit false load

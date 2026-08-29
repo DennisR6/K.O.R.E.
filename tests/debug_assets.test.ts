@@ -18,7 +18,7 @@ test.serial("debug asset keys exchange into an isolated HttpOnly session", async
 		const session = await serveDebugAssets(new Request("https://example.test/debug-assets/session", { method: "POST", headers: { authorization: `Bearer ${created.token}` } }), database, "0123456789abcdef0123456789abcdef", root, "https://example.test/kore/");
 		expect(session?.status).toBe(200);
 		expect(session?.headers.get("set-cookie")).toContain("HttpOnly");
-		expect(session?.headers.get("set-cookie")).toContain("Path=/kore/debug-assets");
+		expect(session?.headers.get("set-cookie")).toContain("Path=/kore/");
 		const cookie = session!.headers.get("set-cookie")!.split(";")[0]!;
 		const list = await serveDebugAssets(new Request("https://example.test/debug-assets", { headers: { cookie } }), database, "0123456789abcdef0123456789abcdef", root);
 		expect(list?.status).toBe(200);

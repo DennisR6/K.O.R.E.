@@ -70,6 +70,7 @@ const activeLanguage: LanguageCatalog | undefined = !isUiDebugSandboxUrl(uri)
 	: undefined;
 startupMark("assets.load.completed", { category: "json/config" });
 if (usersettings.assetOverrides && !usersettings.debugAssets && !await loadDebugAssetOverrides()) console.warn("Debug asset session unavailable; using production assets");
+const debugItemOverrides = usersettings.assetOverrides && !usersettings.debugAssets ? await loadDebugItemOverrides() : new Map<string, string>();
 void flushOfflineMatchReports();
 window.addEventListener("online", () => { void flushOfflineMatchReports(); });
 
@@ -91,7 +92,7 @@ if (isUiDebugSandboxUrl(uri)) {
 } else if (usersettings.debugGame) {
 	startupMark("scene.init.started", { scene: "debug-game" });
 	handler = createDebugItemSandboxHandler(usersettings.mapPreference ?? "ice-map-v1");
-	if (usersettings.assetOverrides) applyDebugItemOverrides(handler, await loadDebugItemOverrides());
+	if (usersettings.assetOverrides) applyDebugItemOverrides(handler, debugItemOverrides);
 	handler.setLanguage(activeLanguage!);
 	installGameplayHud(handler, { language: activeLanguage!, onReturnToMenu: () => window.location.assign(window.location.pathname) });
 	startGame(handler);
@@ -113,7 +114,7 @@ if (isUiDebugSandboxUrl(uri)) {
 		const code = role === "join" ? window.prompt("Enter the 6-digit friend code")?.trim() : undefined;
 		if (role === "join" && (!code || !/^\d{6}$/.test(code))) return;
 		void buildOnlineJoinUrl(window.location.href, { friendRole: role, ...(code ? { friendCode: code } : {}) }).then(url => { window.location.assign(url) }).catch(error => console.warn("Friend room failed", error));
-	})
+	}, debugItemOverrides)
 	 handler = router.getHandler()
 	 startupMark("scene.init.completed", { scene: "menu" });
 	 startGame(handler, () => router?.getHandler() ?? handler, () => router?.syncResultUi())
@@ -123,6 +124,7 @@ if (isUiDebugSandboxUrl(uri)) {
 	const em = new CombiEmitter()
 	const ems = new EmitterSystem(em);
 	handler = kore.createHandler(GameSettings)
+	applyDebugItemOverrides(handler, debugItemOverrides)
 	handler.setMyTeam([0, 1])
 	handler.addSystem(ui)
 	handler.setMouseHandler(ui)
