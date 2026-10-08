@@ -5,7 +5,10 @@
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC107.svg)](https://tauri.app/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Slipstrike** (code package `game`, browser title `KORE`) is a turn-based 2D arena tactics game. Players drag and release circular figures across slippery arena surfaces, resolving movement, impulses, and collisions through a deterministic frame-counted physics simulation.
+**Slipstrike** (code package `game`, browser title `KORE`) is a turn-based 2D arena tactics game. Players drag and release circular figures across slippery arena surfaces, resolving movement, impulses, and collisions through a deterministic frame-counted physics simulation. 
+
+**Live on [KORE](https://kore.lupricht.net)**
+
 
 ---
 
